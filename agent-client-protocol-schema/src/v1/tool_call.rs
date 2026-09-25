@@ -12,6 +12,8 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::{IntoOption, SkipListener};
 
+#[cfg(feature = "unstable_subagents")]
+use super::SessionId;
 use super::{ContentBlock, Error, Meta, TerminalId};
 
 /// Represents a tool call that the language model has requested.
@@ -554,6 +556,9 @@ pub enum ToolCallContent {
     ///
     /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/terminals)
     Terminal(Terminal),
+    /// **UNSTABLE** Display reference to an already-known session on this ACP connection.
+    #[cfg(feature = "unstable_subagents")]
+    Session(SessionReference),
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
@@ -657,6 +662,122 @@ impl Terminal {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+/// **UNSTABLE** Display reference to an already-known session on this ACP connection.
+///
+/// The enclosing notification's `params.sessionId` identifies the session whose
+/// transcript is updated; this item's `sessionId` links that tool operation to
+/// another known session for display. Ordinary session setup or a
+/// `subagent_update` announcement establishes a known target. A parent can
+/// reference a child, and a child can reference its parent or a sibling.
+/// V1 work-state snapshots are carried by `subagent_update` on the parent stream.
+/// Parent-child associations and controls are announced separately by
+/// `subagent_update`. This item does not create or register a session, reparent
+/// it, grant controls, prompt it, subscribe to it, close it, send a message,
+/// or change ownership. Reference links can point both ways without making the
+/// ownership tree cyclic. A tool call may
+/// reference multiple known sessions, and multiple tool calls may reference
+/// the same session. Tool-call status describes the operation, not whether
+/// the referenced session is idle or terminated.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionReference {
+    /// Identifier of the already-known session linked from this tool operation,
+    /// not the session used to route the enclosing notification.
+    pub session_id: SessionId,
+    /// Optional nullable item metadata. Omission and `null` both mean no metadata.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SessionReference {
+    /// Builds a display reference with no item metadata.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// Sets item-scoped metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(all(test, feature = "unstable_subagents"))]
+mod session_reference_tests {
+    use super::*;
+
+    #[test]
+    fn session_reference_serializes_and_requires_id() {
+        let reference = ToolCallContent::Session(SessionReference::new("child_1"));
+        let wire = serde_json::json!({"type": "session", "sessionId": "child_1"});
+        assert_eq!(serde_json::to_value(&reference).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<ToolCallContent>(wire).unwrap(),
+            reference
+        );
+        for invalid in [
+            serde_json::json!({"type": "session"}),
+            serde_json::json!({"type": "session", "sessionId": null}),
+            serde_json::json!({"type": "session", "sessionId": 1}),
+        ] {
+            assert!(serde_json::from_value::<ToolCallContent>(invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn session_references_to_known_sessions_share_one_wire_shape() {
+        let references: Vec<_> = ["child_1", "parent_1", "sibling_1"]
+            .into_iter()
+            .map(|id| ToolCallContent::Session(SessionReference::new(id)))
+            .collect();
+        let wire = serde_json::json!([
+            {"type": "session", "sessionId": "child_1"},
+            {"type": "session", "sessionId": "parent_1"},
+            {"type": "session", "sessionId": "sibling_1"}
+        ]);
+        assert_eq!(serde_json::to_value(&references).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<Vec<ToolCallContent>>(wire).unwrap(),
+            references
+        );
+    }
+
+    #[test]
+    fn session_reference_meta_is_item_scoped_and_nullable() {
+        let meta: Meta = serde_json::from_value(serde_json::json!({"source": "test"})).unwrap();
+        let reference = SessionReference::new("child_1").meta(meta.clone());
+        assert_eq!(
+            serde_json::to_value(ToolCallContent::Session(reference.clone())).unwrap(),
+            serde_json::json!({"type": "session", "sessionId": "child_1", "_meta": {"source": "test"}})
+        );
+        assert_eq!(reference.meta, Some(meta));
+        for wire in [
+            serde_json::json!({"type": "session", "sessionId": "child_1"}),
+            serde_json::json!({"type": "session", "sessionId": "child_1", "_meta": null}),
+        ] {
+            let ToolCallContent::Session(parsed) =
+                serde_json::from_value::<ToolCallContent>(wire).unwrap()
+            else {
+                panic!("expected session reference");
+            };
+            assert_eq!(parsed.meta, None);
+        }
     }
 }
 

@@ -608,6 +608,23 @@ Custom or future stop reasons can be used when Clients can display a generic sto
   Foreground work is blocked on user action.
 </ResponseField>
 
+<ResponseField name="unknown">
+  The Agent cannot currently determine foreground activity. This experimental
+  state is introduced by the subagents RFD and gated by `unstable_subagents` in
+  the Rust schema. For example, a remote child feed may be lost while ACP
+  remains connected.
+</ResponseField>
+
+Agents report `unknown` on actual loss of observability, not merely after
+silence. Clients must no longer present a prior `running` or `requires_action`
+as confirmed live activity, though they may retain the last-known state for
+context. A subsequent `running`, `requires_action`, or `idle` replaces
+`unknown` for the same session. `unknown` is neither a work outcome nor a
+closure or cancellation, and does not resolve pending requests or automatically
+revoke child mutation capabilities; the Agent updates those capabilities
+separately if a control becomes unavailable. See the experimental
+[subagents RFD](/rfds/subagents) for v1 and recovery behavior.
+
 Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state.
 
 ## Cancellation

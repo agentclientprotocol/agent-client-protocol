@@ -601,6 +601,22 @@
               "$ref": "#/$defs/Terminal"
             }
           ]
+        },
+        {
+          "description": "**UNSTABLE** Display reference to an already-known session on this ACP connection.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "session"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionReference"
+            }
+          ]
         }
       ],
       "discriminator": {
@@ -1075,6 +1091,27 @@
         }
       },
       "required": ["terminalId"]
+    },
+    "SessionReference": {
+      "description": "**UNSTABLE** Display reference to an already-known session on this ACP connection.\n\nThe enclosing notification's `params.sessionId` identifies the session whose\ntranscript is updated; this item's `sessionId` links that tool operation to\nanother known session for display. Ordinary session setup or a\n`subagent_update` announcement establishes a known target. A parent can\nreference a child, and a child can reference its parent or a sibling.\nV1 work-state snapshots are carried by `subagent_update` on the parent stream.\nParent-child associations and controls are announced separately by\n`subagent_update`. This item does not create or register a session, reparent\nit, grant controls, prompt it, subscribe to it, close it, send a message,\nor change ownership. Reference links can point both ways without making the\nownership tree cyclic. A tool call may\nreference multiple known sessions, and multiple tool calls may reference\nthe same session. Tool-call status describes the operation, not whether\nthe referenced session is idle or terminated.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "Identifier of the already-known session linked from this tool operation,\nnot the session used to route the enclosing notification.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "Optional nullable item metadata. Omission and `null` both mean no metadata.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"]
     },
     "ToolCallLocation": {
       "description": "A file location being accessed or modified by a tool.\n\nEnables clients to implement \"follow-along\" features that track\nwhich files the agent is working with in real-time.\n\nSee protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)",
@@ -5153,6 +5190,22 @@
               "$ref": "#/$defs/CompactionSummaryChunk"
             }
           ]
+        },
+        {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for a subagent exposed by this session.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "subagent_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SubagentUpdate"
+            }
+          ]
         }
       ],
       "discriminator": {
@@ -5919,6 +5972,285 @@
       },
       "required": ["compactionId", "content"]
     },
+    "SubagentSessionCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability; support for the method\non ordinary sessions does not grant support on a child.",
+      "type": "object",
+      "properties": {
+        "cancel": {
+          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted or `null` means unsupported; an object (including\n`{}`) means supported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionCancelCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionCancelCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability to cancel work in a subagent session without ending that session.\n\nSupplying `{}` advertises support; an omitted or `null` `cancel` does not.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "StateUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCurrent foreground-work state of a reusable child session.\n\nEach update is a whole-object snapshot. Idle does not terminate the child;\nthe parent can message it again, transitioning it back to running.\nBackground activity may still emit other session updates while idle.",
+      "anyOf": [
+        {
+          "description": "Foreground work is in progress.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "running"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/RunningStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "The child is ready to process another prompt.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "idle"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/IdleStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "Foreground work is blocked on user action.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "requires_action"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequiresActionStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "The Agent cannot currently determine foreground activity.\n\nThis replaces previously confirmed activity without ending the work or session.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "unknown"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/UnknownStateUpdate"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP variants.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "description": "Unrecognized state discriminator.",
+              "type": "string"
+            }
+          },
+          "required": ["state"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "running"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "idle"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "requires_action"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "unknown"
+                  }
+                },
+                "required": ["state"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "RunningStateUpdate": {
+      "description": "Foreground work is in progress.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "IdleStateUpdate": {
+      "description": "The child is ready to process another prompt.",
+      "type": "object",
+      "properties": {
+        "stopReason": {
+          "description": "Reason foreground work stopped. Optional; omitted or `null` means not reported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StopReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "usage": {
+          "description": "**UNSTABLE** Token usage for completed foreground work.\n\nOptional; omitted or `null` means not reported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Usage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "RequiresActionStateUpdate": {
+      "description": "Foreground work is blocked on user action.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "UnknownStateUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe Agent cannot currently determine foreground activity.\n\nReport this when activity becomes unobservable, not merely because the child\nhas been quiet. The Client MUST stop presenting the previous state as confirmed\ncurrent activity, but may retain it as last known. A later state replaces this\nsnapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities; capabilities are updated separately.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SubagentUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for a reusable child session associated with its parent session.\n\nSent on the immediate parent session. The first update for an unknown\n[`SubagentUpdate::session_id`] announces the child and MUST be sent\nbefore any child traffic or reference to the child session. Parents may\nmessage and reuse an announced child across multiple operations.\nChild events are delivered automatically on the same connection; no child\nload, resume, or subscription is needed.\n\nOnly the subagent session ID is required. Omitted fields keep their previous\nvalue; a child whose state was never reported has an unknown state. A\nconcrete state replaces the entire previous state object, not the session.\nThe child's title is reported via `session_info_update`; per-operation tasks\nbelong on tool calls referencing the child.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The opaque session ID identifying the child in all ACP messages.\n\nNested inside `update`; the enclosing notification's `sessionId` identifies\nthe immediate parent, not this child.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "capabilities": {
+          "description": "Client-initiated session mutations permitted for this subagent session.\n\nOmitted and `null` both mean unchanged. If never supplied, no session\nmutations are permitted. Read-only operations retain their normal protocol\nsemantics and capability requirements.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubagentSessionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "state": {
+          "description": "Current state snapshot for the child session.\n\nOmitted and `null` both mean unchanged; a concrete state replaces the\nprevious state object wholesale. If never supplied, the state is unknown.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateUpdate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"]
+    },
     "CompleteElicitationNotification": {
       "description": "Notification sent by the agent when a URL-based elicitation is complete.",
       "type": "object",
@@ -6247,6 +6579,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "subagents": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client understands exposed subagent sessions.\n\nOptional and nullable. Omitted or `null` both mean the client does not\nadvertise support.\nSupplying `{}` means the client understands child associations, work-state\nsnapshots, tool-call session references, and restricted-session semantics.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubagentCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "plan": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client supports `plan_update` and `plan_removed` session updates.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client can receive both update types.",
           "anyOf": [
@@ -6427,6 +6771,18 @@
     "NoticeCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient support for presenting live advisory notices to the user.",
       "type": "object"
+    },
+    "SubagentCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability marker for exposing reusable child sessions as restricted ACP sessions.\n\nSupplying `{}` advertises support for child association and state updates,\ntool-call session references, and restricted-session semantics. The client\nmust advertise this capability before the agent sends subagent updates or\nsession references.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "PlanCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for receiving `plan_update` and `plan_removed` session updates.",

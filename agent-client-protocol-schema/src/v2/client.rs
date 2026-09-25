@@ -172,6 +172,13 @@ pub enum SessionUpdate {
     /// A content block appended to a context compaction's retained summary.
     #[cfg(feature = "unstable_session_compaction")]
     CompactionSummaryChunk(CompactionSummaryChunk),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A subagent exposed by this session has been created or updated.
+    #[cfg(feature = "unstable_subagents")]
+    SubagentUpdate(SubagentUpdate),
     /// Custom or future session update.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -453,6 +460,201 @@ impl CompactionSummaryChunk {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// An upsert associating a reusable child session with its immediate parent.
+///
+/// Sent on the immediate parent session. The first update for an unknown
+/// [`SubagentUpdate::session_id`] announces the child and MUST be sent
+/// before any request or notification bearing the child's session ID, or any
+/// tool-call session reference to it. Child events are delivered automatically;
+/// no separate child load, resume, or subscription is needed.
+/// Understanding this update, registering child sessions, and applying their
+/// operation restrictions are baseline v2 requirements; no Client capability
+/// is required.
+///
+/// Only [`SubagentUpdate::session_id`] is required. Other fields have
+/// patch semantics: omitted fields leave the stored value unchanged, `null`
+/// clears or unsets the value, and concrete values replace it. A child whose
+/// capabilities are unset permits no Client-initiated session mutations.
+///
+/// The child's title is reported through [`SessionInfoUpdate`] on its own
+/// stream. Its foreground work uses ordinary [`StateUpdate`] notifications.
+/// Completing or cancelling work does not end the association: the parent may
+/// message the same child again. Individual operations and their outcomes belong
+/// to tool calls referencing the child, not to this association.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SubagentUpdate {
+    /// The opaque session ID identifying the child in all ACP messages.
+    ///
+    /// Nested inside `update`; the enclosing notification's `sessionId` identifies
+    /// the immediate parent, not this child.
+    pub session_id: SessionId,
+    /// Client-initiated session mutations permitted for this subagent session.
+    ///
+    /// Read-only operations retain their normal protocol semantics and
+    /// capability requirements.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub capabilities: MaybeUndefined<SubagentSessionCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted means no metadata update; `null` is an
+    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SubagentUpdate {
+    /// Builds a subagent upsert with only its required session ID set.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            capabilities: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// Sets, clears, or leaves unchanged the permitted client-initiated session mutations.
+    #[must_use]
+    pub fn capabilities(
+        mut self,
+        capabilities: impl IntoMaybeUndefined<SubagentSessionCapabilities>,
+    ) -> Self {
+        self.capabilities = capabilities.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or leaves unchanged subagent metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Client-initiated session mutations permitted for a specific subagent session.
+///
+/// A mutation requires an explicit per-child capability; support for the method
+/// on ordinary sessions does not grant support on a child.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SubagentSessionCapabilities {
+    /// Permits the client to cancel this child's current work without ending
+    /// the session. Omitted or `null` means unsupported; an object (including
+    /// `{}`) means supported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub cancel: Option<SessionCancelCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SubagentSessionCapabilities {
+    /// Builds an empty capability set; cancellation is disabled.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets or removes permission to cancel this child's current work.
+    #[must_use]
+    pub fn cancel(mut self, cancel: impl IntoOption<SessionCancelCapabilities>) -> Self {
+        self.cancel = cancel.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capability to cancel work in a subagent session without ending that session.
+///
+/// Supplying `{}` advertises support; an omitted or `null` `cancel` does not.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionCancelCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SessionCancelCapabilities {
+    /// Builds an empty capability object advertising cancellation support.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// Custom or future session update payload.
 ///
 /// This preserves the unknown `sessionUpdate` discriminator and the rest of the
@@ -534,6 +736,10 @@ fn is_known_session_update(session_update: &str) -> bool {
     if session_update == "plan_removed" {
         return true;
     }
+    #[cfg(feature = "unstable_subagents")]
+    if session_update == "subagent_update" {
+        return true;
+    }
     matches!(
         session_update,
         "user_message_chunk"
@@ -585,6 +791,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             "compaction_update",
             #[cfg(feature = "unstable_session_compaction")]
             "compaction_summary_chunk",
+            #[cfg(feature = "unstable_subagents")]
+            "subagent_update",
         ],
     );
 }
@@ -782,6 +990,14 @@ pub enum StateUpdate {
     Idle(IdleStateUpdate),
     /// Foreground work is blocked on user action.
     RequiresAction(RequiresActionStateUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The Agent cannot currently determine foreground activity.
+    /// This replaces previously confirmed activity without ending the work or session.
+    #[cfg(feature = "unstable_subagents")]
+    Unknown(UnknownStateUpdate),
     /// Custom or future session state.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -948,6 +1164,52 @@ impl RequiresActionStateUpdate {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// The Agent cannot currently determine foreground activity.
+///
+/// Report this when activity becomes unobservable, not merely because the session
+/// has been quiet. The Client MUST stop presenting the previous state as confirmed
+/// current activity, but may retain it as last known. A later state replaces this
+/// snapshot normally.
+///
+/// This is not a task outcome or session closure. It does not cancel work, resolve
+/// pending requests, or revoke capabilities; capabilities are updated separately.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnknownStateUpdate {
+    /// The _meta property is reserved by ACP for additional metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Optional; omitted and `null` mean no metadata for this state snapshot.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl UnknownStateUpdate {
+    /// Builds an unknown-activity state.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets optional metadata for this state snapshot.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// Custom or future session state payload.
 ///
 /// This preserves the unknown `state` discriminator and the rest of the state
@@ -1006,8 +1268,16 @@ impl<'de> Deserialize<'de> for OtherStateUpdate {
     }
 }
 
+const KNOWN_STATE_UPDATE_STATES: &[&str] = &[
+    "running",
+    "idle",
+    "requires_action",
+    #[cfg(feature = "unstable_subagents")]
+    "unknown",
+];
+
 fn is_known_state_update(state: &str) -> bool {
-    matches!(state, "running" | "idle" | "requires_action")
+    KNOWN_STATE_UPDATE_STATES.contains(&state)
 }
 
 #[cfg(feature = "schemars")]
@@ -1015,7 +1285,7 @@ fn other_state_update_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "state",
-        &["running", "idle", "requires_action"],
+        KNOWN_STATE_UPDATE_STATES,
     );
 }
 
@@ -2583,6 +2853,270 @@ impl AgentNotification {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_update_serializes_as_upsert() {
+        use serde_json::json;
+
+        let announced =
+            SessionUpdate::SubagentUpdate(SubagentUpdate::new("sess_child_1").capabilities(
+                SubagentSessionCapabilities::new().cancel(SessionCancelCapabilities::new()),
+            ));
+        let wire = json!({
+            "sessionUpdate": "subagent_update",
+            "sessionId": "sess_child_1",
+            "capabilities": { "cancel": {} }
+        });
+        assert_eq!(serde_json::to_value(&announced).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+            announced
+        );
+
+        let minimal = SubagentUpdate::new("sess_child_1");
+        assert_eq!(
+            serde_json::to_value(&minimal).unwrap(),
+            json!({
+                "sessionId": "sess_child_1"
+            })
+        );
+        assert!(minimal.capabilities.is_undefined());
+        assert!(minimal.meta.is_undefined());
+
+        // Patch semantics distinguish omitted fields from explicit nulls.
+        let cleared_wire = json!({
+            "sessionId": "sess_child_1",
+            "capabilities": null,
+            "_meta": null
+        });
+        let cleared: SubagentUpdate = serde_json::from_value(cleared_wire.clone()).unwrap();
+        assert!(cleared.capabilities.is_null());
+        assert!(cleared.meta.is_null());
+        assert_eq!(serde_json::to_value(cleared).unwrap(), cleared_wire);
+
+        let revoked: SubagentUpdate = serde_json::from_value(json!({
+            "sessionId": "sess_child_1",
+            "capabilities": {}
+        }))
+        .unwrap();
+        assert_eq!(
+            revoked.capabilities,
+            MaybeUndefined::Value(SubagentSessionCapabilities::new())
+        );
+        assert!(
+            matches!(revoked.capabilities, MaybeUndefined::Value(ref child) if child.cancel.is_none())
+        );
+
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "subagent_update"
+            }))
+            .is_err()
+        );
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_cancel_capability_is_optional_object() {
+        use serde_json::json;
+
+        for wire in [
+            json!({}),
+            json!({"cancel": null}),
+            json!({"cancel": true}),
+            json!({"cancel": false}),
+        ] {
+            let child: SubagentSessionCapabilities = serde_json::from_value(wire).unwrap();
+            assert!(child.cancel.is_none());
+            assert_eq!(serde_json::to_value(child).unwrap(), json!({}));
+        }
+        let enabled = SubagentSessionCapabilities::new().cancel(SessionCancelCapabilities::new());
+        assert_eq!(
+            serde_json::to_value(&enabled).unwrap(),
+            json!({"cancel": {}})
+        );
+        assert_eq!(
+            serde_json::from_value::<SubagentSessionCapabilities>(json!({"cancel": {}})).unwrap(),
+            enabled
+        );
+        let meta: Meta = [("source".into(), json!("worker"))].into_iter().collect();
+        let with_meta =
+            SubagentSessionCapabilities::new().cancel(SessionCancelCapabilities::new().meta(meta));
+        let wire = json!({"cancel": {"_meta": {"source": "worker"}}});
+        assert_eq!(serde_json::to_value(&with_meta).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SubagentSessionCapabilities>(wire).unwrap(),
+            with_meta
+        );
+        assert!(enabled.cancel.is_some());
+        assert!(enabled.cancel(None).cancel.is_none());
+        let removed = SubagentUpdate::new("child").capabilities(SubagentSessionCapabilities::new());
+        assert_eq!(
+            serde_json::to_value(removed).unwrap(),
+            json!({"sessionId": "child", "capabilities": {}})
+        );
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_notification_keeps_parent_and_child_ids_nested() {
+        use serde_json::json;
+
+        let notification = UpdateSessionNotification::new(
+            "parent",
+            SessionUpdate::SubagentUpdate(SubagentUpdate::new("child")),
+        );
+        let wire = json!({
+            "sessionId": "parent",
+            "update": {
+                "sessionUpdate": "subagent_update",
+                "sessionId": "child"
+            }
+        });
+        assert_eq!(serde_json::to_value(&notification).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<UpdateSessionNotification>(wire).unwrap(),
+            notification
+        );
+        for malformed in [
+            json!({"sessionId": "parent", "update": {"sessionUpdate": "subagent_update"}}),
+            json!({"update": {"sessionUpdate": "subagent_update", "sessionId": "child"}}),
+        ] {
+            assert!(serde_json::from_value::<UpdateSessionNotification>(malformed).is_err());
+        }
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_reuses_normal_child_state_notifications() {
+        use serde_json::json;
+
+        let association = SubagentUpdate::new("sess_child");
+        for state in [
+            StateUpdate::Running(RunningStateUpdate::new()),
+            StateUpdate::RequiresAction(RequiresActionStateUpdate::new()),
+            StateUpdate::Unknown(UnknownStateUpdate::new()),
+            StateUpdate::Running(RunningStateUpdate::new()),
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::EndTurn)),
+            StateUpdate::Running(RunningStateUpdate::new()),
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::Cancelled)),
+        ] {
+            let notification = UpdateSessionNotification::new(
+                association.session_id.clone(),
+                SessionUpdate::StateUpdate(state),
+            );
+            let wire = serde_json::to_value(&notification).unwrap();
+            assert_eq!(wire["sessionId"], json!("sess_child"));
+            assert_eq!(wire["update"]["sessionUpdate"], json!("state_update"));
+            assert_eq!(
+                serde_json::from_value::<UpdateSessionNotification>(wire).unwrap(),
+                notification
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn unknown_activity_is_a_known_state_update() {
+        use serde_json::json;
+
+        let update = SessionUpdate::StateUpdate(StateUpdate::Unknown(
+            UnknownStateUpdate::new().meta(
+                [("source".into(), json!("worker"))]
+                    .into_iter()
+                    .collect::<Meta>(),
+            ),
+        ));
+        let wire = json!({
+            "sessionUpdate": "state_update",
+            "state": "unknown",
+            "_meta": { "source": "worker" }
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+            update
+        );
+
+        for meta in [json!(null), json!(false)] {
+            let state: StateUpdate = serde_json::from_value(json!({
+                "state": "unknown",
+                "_meta": meta
+            }))
+            .unwrap();
+            assert_eq!(state, StateUpdate::Unknown(UnknownStateUpdate::new()));
+            assert_eq!(
+                serde_json::to_value(state).unwrap(),
+                json!({"state": "unknown"})
+            );
+        }
+        assert!(serde_json::from_value::<OtherStateUpdate>(json!({"state": "unknown"})).is_err());
+    }
+
+    #[cfg(not(feature = "unstable_subagents"))]
+    #[test]
+    fn unknown_activity_is_preserved_without_subagents_feature() {
+        let wire = serde_json::json!({
+            "sessionUpdate": "state_update",
+            "state": "unknown",
+            "_meta": { "source": "worker" }
+        });
+        let parsed: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
+        let SessionUpdate::StateUpdate(StateUpdate::Other(state)) = &parsed else {
+            panic!("expected unrecognized state payload");
+        };
+        assert_eq!(state.state, "unknown");
+        assert_eq!(serde_json::to_value(parsed).unwrap(), wire);
+    }
+
+    #[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+    #[test]
+    fn subagent_schema_only_carries_association_metadata() {
+        use serde_json::json;
+
+        let schema = serde_json::to_value(schemars::schema_for!(SubagentUpdate)).unwrap();
+        let properties = schema["properties"].as_object().unwrap();
+        assert!(properties.contains_key("sessionId"));
+        assert!(properties.contains_key("capabilities"));
+        assert!(properties.contains_key("_meta"));
+        assert!(!properties.contains_key("name"));
+        assert!(!properties.contains_key("task"));
+        assert!(!properties.contains_key("state"));
+        let child =
+            serde_json::to_value(schemars::schema_for!(SubagentSessionCapabilities)).unwrap();
+        let variants = child["properties"]["cancel"]["anyOf"]
+            .as_array()
+            .expect("cancel must allow the capability object or null");
+        assert!(variants.contains(&json!({"type": "null"})));
+        assert!(
+            variants
+                .iter()
+                .any(|variant| variant["type"] == "object" || variant.get("$ref").is_some())
+        );
+        assert!(!variants.iter().any(|variant| variant["type"] == "boolean"));
+        let cancel =
+            serde_json::to_value(schemars::schema_for!(SessionCancelCapabilities)).unwrap();
+        assert_eq!(cancel["type"], "object");
+        assert!(
+            !child["required"]
+                .as_array()
+                .is_some_and(|required| required.contains(&json!("cancel")))
+        );
+    }
+
+    #[cfg(not(feature = "unstable_subagents"))]
+    #[test]
+    fn unsupported_subagent_update_is_preserved() {
+        let wire = serde_json::json!({
+            "sessionUpdate": "subagent_update",
+            "sessionId": "sess_child",
+            "capabilities": { "cancel": {} }
+        });
+        let parsed: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
+        assert!(matches!(&parsed, SessionUpdate::Other(_)));
+        assert_eq!(serde_json::to_value(parsed).unwrap(), wire);
+    }
 
     #[cfg(feature = "unstable_session_notices")]
     #[test]

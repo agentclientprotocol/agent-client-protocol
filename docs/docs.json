@@ -194,7 +194,8 @@
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",
-              "rfds/get-auth-state"
+              "rfds/get-auth-state",
+              "rfds/subagents"
             ]
           },
           {

@@ -184,6 +184,20 @@ Cost is cumulative session state, similar to context window utilization:
 - Both cost and context window are session-level metrics that can change when agents compact, switch models, or restore sessions
 - Cost is optional because not all agents track it
 
+### Can clients add costs across parent and child sessions?
+
+Not from the session relationship alone. A parent's provider-reported
+cumulative cost may already include subagents or internal helper calls, and
+separately reported child costs may overlap it. Exposing those children should
+not discard a useful parent total or silently change its accounting scope.
+
+Clients can display each session's reported cost, but should not infer a tree
+total or exclusive shares without an accounting contract that establishes the
+values' coverage and how any overlap is handled. Missing child costs are unknown,
+not zero.
+The [Subagent Sessions RFD](/rfds/subagents#cost-reporting-without-inferred-aggregation)
+preserves provider totals without introducing a new cost-scope field.
+
 ### Why not assume USD for cost?
 
 Agents may bill in different currencies:

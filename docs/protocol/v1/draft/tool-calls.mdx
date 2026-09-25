@@ -318,6 +318,67 @@ When a terminal is embedded in a tool call, the Client displays live output as i
   Learn more about Terminals
 </Card>
 
+### Session References (unstable)
+
+A tool call can link to an already-known session on this ACP connection. An
+ordinary session setup or a `subagent_update` announcement establishes a known
+target; the target may be a child, parent, or sibling session. Agents **MUST NOT**
+send this content unless the Client advertised `clientCapabilities.subagents`,
+as defined in the [Subagent Sessions RFD](/rfds/subagents):
+
+```json
+{
+  "type": "session",
+  "sessionId": "child_session_id"
+}
+```
+
+`sessionId` is required. Optional nullable `_meta` belongs to this content item;
+omission and `null` both mean no item metadata. This is only a display
+reference: it does not create or register a session, reparent it, grant controls,
+prompt it, subscribe to it, close it, send a message by itself, or change
+ownership. Parent-child associations and controls are announced separately by
+`subagent_update` on the parent session.
+
+The notification's `params.sessionId` remains the session owning the operation
+and routes its update; the content item's `sessionId` links the operation to
+another known session. For example, these are **params fragments** (not complete
+notifications):
+
+```json
+{
+  "sessionId": "parent_session_id",
+  "update": {
+    "sessionUpdate": "tool_call",
+    "toolCallId": "call_delegate",
+    "title": "Delegate task",
+    "content": [{ "type": "session", "sessionId": "child_session_id" }]
+  }
+}
+```
+
+```json
+{
+  "sessionId": "child_session_id",
+  "update": {
+    "sessionUpdate": "tool_call",
+    "toolCallId": "call_reply",
+    "title": "Reply to parent",
+    "content": [{ "type": "session", "sessionId": "parent_session_id" }]
+  }
+}
+```
+
+The child-to-parent case can show a reply interaction, but the reference does
+not send that reply. Reference links can point both ways without making the
+ownership tree cyclic. The child's own text, plan, and tool updates use
+`params.sessionId: "child_session_id"`. V1 reports the child's work state through
+`subagent_update.state` on the parent stream, rather than a child-addressed
+`state_update` notification. One operation can reference several known sessions,
+and several operations can reference the same session. Keep each operation's
+title, input, output, and status on its tool call; completing the tool call does
+not mean the referenced session is idle or terminated.
+
 ## Following the Agent
 
 Tool calls can report file locations they're working with, enabling Clients to implement "follow-along" features that track which files the Agent is accessing or modifying in real-time.
