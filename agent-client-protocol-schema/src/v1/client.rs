@@ -15,7 +15,10 @@ use std::collections::BTreeMap;
 
 #[cfg(feature = "unstable_subagents")]
 use super::StopReason;
-#[cfg(feature = "unstable_end_turn_token_usage")]
+#[cfg(all(
+    feature = "unstable_subagents",
+    feature = "unstable_end_turn_token_usage"
+))]
 use super::Usage;
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
