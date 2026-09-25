@@ -321,9 +321,11 @@ These tests verify the binding, not every optional MCP feature. Tasks, Apps, and
 
 ### Stabilization gates
 
-The Rust implementation and this RFD are being revised together. The response carrier is defined in the shared schema; the owned-service, bounded-transport, and HTTP re-export changes require integrated verification before this draft is ready to stabilize. Independent item-count limits are not evidence of end-to-end memory bounds, and dropping a task handle is not evidence that its work stopped.
+The Rust reference implementation exercises the shared response carrier, reusable services, bounded transport queues, and native-tool HTTP re-export together. Its cleanup regression deliberately pauses a tool runner while ACP continues dispatching: cancellation cannot settle or release the logical request ID until the runner drops the tool future. Both mutable and concurrent tools use this rule. Independent item-count limits are not evidence of complete memory bounds, and dropping a task handle is not evidence that its work stopped.
 
 Concrete buffer sizes and concurrency quotas are implementation policies, not wire-protocol constants. Their behavior must be configurable or documented, and quota failures must preserve the error-domain distinction above. Both ACP v1 and draft v2 must exercise the same binding semantics; this proposal does not otherwise stabilize ACP v2 or optional MCP extensions.
+
+Custom service adapters are responsible for observing operation cancellation and joining their owned backend work before returning. The binding waits for that completion; it cannot forcibly terminate detached application work. The reference tests establish the covered binding behavior, not full conformance for every MCP feature or readiness to publish packages. The draft schema must be released and dependent SDK major versions coordinated before publication.
 
 ## References and revision history
 
