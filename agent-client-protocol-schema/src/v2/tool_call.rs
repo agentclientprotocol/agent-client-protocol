@@ -12,6 +12,8 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
+#[cfg(feature = "unstable_subagents")]
+use super::SessionId;
 use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 
@@ -397,6 +399,9 @@ pub enum ToolCallContent {
     Diff(Diff),
     /// A display-only reference to an agent-owned terminal.
     Terminal(Terminal),
+    /// **UNSTABLE** Display reference to an already-known session on this ACP connection.
+    #[cfg(feature = "unstable_subagents")]
+    Session(SessionReference),
     /// Custom or future tool call content.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -467,15 +472,16 @@ impl<'de> Deserialize<'de> for OtherToolCallContent {
 
 fn is_known_tool_call_content_type(type_: &str) -> bool {
     matches!(type_, "content" | "diff" | "terminal")
+        || (cfg!(feature = "unstable_subagents") && type_ == "session")
 }
 
 #[cfg(feature = "schemars")]
 fn other_tool_call_content_schema(schema: &mut Schema) {
-    super::schema_util::reject_known_string_discriminators(
-        schema,
-        "type",
-        &["content", "diff", "terminal"],
-    );
+    #[cfg(feature = "unstable_subagents")]
+    const KNOWN: &[&str] = &["content", "diff", "terminal", "session"];
+    #[cfg(not(feature = "unstable_subagents"))]
+    const KNOWN: &[&str] = &["content", "diff", "terminal"];
+    super::schema_util::reject_known_string_discriminators(schema, "type", KNOWN);
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
@@ -493,6 +499,65 @@ impl From<Diff> for ToolCallContent {
 impl From<Terminal> for ToolCallContent {
     fn from(terminal: Terminal) -> Self {
         ToolCallContent::Terminal(terminal)
+    }
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl From<SessionReference> for ToolCallContent {
+    fn from(reference: SessionReference) -> Self {
+        ToolCallContent::Session(reference)
+    }
+}
+
+/// **UNSTABLE** Display reference to an already-known session on this ACP connection.
+///
+/// The enclosing notification's `params.sessionId` identifies the session whose
+/// transcript is updated; this item's `sessionId` links that tool operation to
+/// another known session for display. Ordinary session setup or a
+/// `subagent_update` announcement establishes a known target. A parent can
+/// reference a child, and a child can reference its parent or a sibling.
+/// Parent-child associations and controls are announced separately by
+/// `subagent_update`. This item does not create or register a session, reparent
+/// it, grant controls, prompt it, subscribe to it, close it, send a message,
+/// or change ownership. Reference links can point both ways without making the
+/// ownership tree cyclic. A tool call may
+/// reference multiple known sessions, and multiple tool calls may reference
+/// the same session. Tool-call status describes the operation, not whether
+/// the referenced session is idle or terminated.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionReference {
+    /// Identifier of the already-known session linked from this tool operation,
+    /// not the session used to route the enclosing notification.
+    pub session_id: SessionId,
+    /// Optional nullable item metadata. Omission and `null` both mean no metadata.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SessionReference {
+    /// Builds a display reference with no item metadata.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// Sets item-scoped metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -1200,6 +1265,76 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn session_reference_serializes_and_requires_id() {
+        let reference = ToolCallContent::from(SessionReference::new("child_1"));
+        let wire = serde_json::json!({"type": "session", "sessionId": "child_1"});
+        assert_eq!(serde_json::to_value(&reference).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<ToolCallContent>(wire).unwrap(),
+            reference
+        );
+        for invalid in [
+            serde_json::json!({"type": "session"}),
+            serde_json::json!({"type": "session", "sessionId": null}),
+            serde_json::json!({"type": "session", "sessionId": 1}),
+        ] {
+            assert!(serde_json::from_value::<ToolCallContent>(invalid).is_err());
+        }
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn session_references_to_known_sessions_share_one_wire_shape() {
+        let references: Vec<_> = ["child_1", "parent_1", "sibling_1"]
+            .into_iter()
+            .map(|id| ToolCallContent::from(SessionReference::new(id)))
+            .collect();
+        let wire = serde_json::json!([
+            {"type": "session", "sessionId": "child_1"},
+            {"type": "session", "sessionId": "parent_1"},
+            {"type": "session", "sessionId": "sibling_1"}
+        ]);
+        assert_eq!(serde_json::to_value(&references).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<Vec<ToolCallContent>>(wire).unwrap(),
+            references
+        );
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn session_reference_meta_is_item_scoped_and_nullable() {
+        let meta: Meta = serde_json::from_value(serde_json::json!({"source": "test"})).unwrap();
+        let reference = SessionReference::new("child_1").meta(meta.clone());
+        assert_eq!(
+            serde_json::to_value(ToolCallContent::Session(reference.clone())).unwrap(),
+            serde_json::json!({"type": "session", "sessionId": "child_1", "_meta": {"source": "test"}})
+        );
+        assert_eq!(reference.meta, Some(meta));
+        for wire in [
+            serde_json::json!({"type": "session", "sessionId": "child_1"}),
+            serde_json::json!({"type": "session", "sessionId": "child_1", "_meta": null}),
+        ] {
+            let ToolCallContent::Session(parsed) =
+                serde_json::from_value::<ToolCallContent>(wire).unwrap()
+            else {
+                panic!("expected session reference");
+            };
+            assert_eq!(parsed.meta, None);
+        }
+    }
+
+    #[cfg(not(feature = "unstable_subagents"))]
+    #[test]
+    fn session_reference_is_unknown_when_feature_disabled() {
+        let wire = serde_json::json!({"type": "session", "sessionId": "child_1"});
+        let content: ToolCallContent = serde_json::from_value(wire.clone()).unwrap();
+        assert!(matches!(content, ToolCallContent::Other(_)));
+        assert_eq!(serde_json::to_value(content).unwrap(), wire);
+    }
+
     #[test]
     fn diff_patch_serializes_git_patch_with_structured_changes() {
         let patch_text = "diff --git /repo/config.json /repo/config.json\n--- /repo/config.json\n+++ /repo/config.json\n@@ -1 +1 @@\n-old\n+new\n";
@@ -1379,6 +1514,13 @@ mod tests {
         assert!(
             serde_json::from_value::<ToolCallContent>(serde_json::json!({
                 "type": "terminal"
+            }))
+            .is_err()
+        );
+        #[cfg(feature = "unstable_subagents")]
+        assert!(
+            serde_json::from_value::<ToolCallContent>(serde_json::json!({
+                "type": "session"
             }))
             .is_err()
         );
