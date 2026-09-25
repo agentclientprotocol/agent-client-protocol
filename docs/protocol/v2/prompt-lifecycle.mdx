@@ -5,9 +5,38 @@ description: "How prompts, state updates, and completion fit together"
 
 A prompt starts or contributes to foreground work in a session. The [Agent](/protocol/v2/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
 
-`session/prompt` only lasts until the Agent accepts the prompt. The Agent reports the accepted user message, running state, output, and completion through `session/update` notifications.
+`session/prompt` lasts until the Agent inserts the user message into the ACP conversation. This is what acceptance means for a prompt. The response returns that message's `messageId`; the Agent reports its content and placement, foreground state, output, and completion through `session/update` notifications.
 
 Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase and [session setup](/protocol/v2/session-setup).
+
+## Session Updates
+
+Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
+
+| `sessionUpdate` value       | Description                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                          |
+| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                 |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                    |
+| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                               |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                   |
+| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                     |
+| `state_update`              | A change to the Agent's [foreground work state](#session-states).                                                            |
+| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/tool-calls#streaming-content).                                         |
+| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/tool-calls#reporting).                                                         |
+| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/tool-calls#display-only-terminals).                                |
+| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/tool-calls#display-only-terminals).                           |
+| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/agent-plan) identified by ID.                                        |
+| `available_commands_update` | The set of [available slash commands](/protocol/v2/slash-commands) is ready or has changed.                                  |
+| `config_option_update`      | The session's [configuration options](/protocol/v2/session-config-options#from-the-agent) have changed.                      |
+| `session_info_update`       | [Session metadata](/protocol/v2/session-list#updating-session-metadata), such as the title or last update time, has changed. |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                            |
+
+This is the complete set of standard variants defined in the current [`SessionUpdate` schema](/protocol/v2/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
+
+The protocol also supports [custom and future variants](/protocol/v2/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update should preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
+
+Session updates are not limited to prompt-driven foreground work. For example, Agents may advertise commands after creating a session, and background activity may emit updates while the Agent is [idle](#session-states).
 
 ## Prompt Lifecycle
 
@@ -24,13 +53,14 @@ sequenceDiagram
 
     Note left of Client: User sends message
     Client->>Agent: session/prompt (user message)
-    Agent-->>Client: session/prompt response ({})
+    Note right of Agent: Insert user message
+    Agent-->>Client: "session/prompt response (messageId)"
     Agent->>Client: session/update (user_message)
     Agent->>Client: session/update (state_update: running)
 
     loop While foreground work is in progress
         Note right of Agent: LLM responds with<br/>content/tool calls
-        Agent->>Client: session/update (plan)
+        Agent->>Client: session/update (plan_update)
         Agent->>Client: session/update (agent_message)
 
         opt Tool calls requested
@@ -106,17 +136,26 @@ The Client sends a user message with `session/prompt`:
 
 ### 2. Prompt Accepted
 
-Upon receiving a prompt request, the Agent **MUST** respond once it has accepted the prompt. The response body is empty because completion is reported through `state_update` notifications, not through the `session/prompt` response:
+**Acceptance means insertion**, not receipt, queueing, or processing completion. The Agent **MUST** respond successfully once it has inserted the user message into the ACP conversation, without waiting for foreground work to finish. It **MUST NOT** send a successful response merely because it has received the input or assigned an ID. Requests rejected before insertion use a JSON-RPC error response.
+
+The response contains the inserted user message's agent-generated `messageId`:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 2,
-  "result": {}
+  "result": {
+    "messageId": "msg_user_8f7a1"
+  }
 }
 ```
 
-After accepting the prompt, the Agent **MUST** report where the user message was inserted in session history. It can send either a `user_message` update with the full `content` array or streamed `user_message_chunk` updates. This update is the source of truth for the agent-owned `messageId`.
+<ResponseField name="messageId" type="MessageId" required>
+  The opaque ID of the inserted user message. This field is a required, non-null
+  string; omission and explicit `null` are invalid.
+</ResponseField>
+
+The Agent **MUST** also report the inserted user message through a `user_message` update with the full `content` array or streamed `user_message_chunk` updates. All updates for that message **MUST** use the returned `messageId`. The response and updates describe the same insertion, but Clients **MUST** tolerate the updates arriving before or after the response.
 
 ```json
 {
@@ -137,6 +176,12 @@ After accepting the prompt, the Agent **MUST** report where the user message was
   }
 }
 ```
+
+The Client uses the JSON-RPC response ID to identify its submission, then associates it with `(sessionId, messageId)`. If the message update arrived first, the Client reconciles with that existing message rather than creating a duplicate. Agents **MUST** assign distinct message IDs to distinct inserted submissions, even if their content is identical; Clients must not infer the association from content or arrival order.
+
+Insertion is not a promise of durable storage or model consumption. Every inserted input, including a locally handled command, is reported live, but Agents are not required to persist it or retain it for any minimum period. If the message is retained and replayed, the Agent **MUST** use the same ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
+
+A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. If the response is lost, the submission's outcome remains uncertain: replay may omit live-only or discarded messages, and a retry can create another submission.
 
 ### 3. Agent Reports Output
 

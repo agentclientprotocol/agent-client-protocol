@@ -10,7 +10,9 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 Add a fire-and-forget `notice` session update to ACP v1 and v2 for advisory
 information that should be visible to the user without becoming conversation
-history or a durable protocol entity.
+history or a durable protocol entity. In v1, a Client capability lets Agents
+choose between notices and an existing presentation channel such as agent
+messages.
 
 ## Status quo
 
@@ -103,19 +105,39 @@ cases belong in the relevant request, permission, elicitation, message, tool,
 or lifecycle primitive. The Agent must behave as though the notice may not have
 been received, understood, displayed, or seen by the user.
 
-### No client capability
+### Version-specific capability
 
-Neither protocol version adds a Client capability for notices. An Agent may
-send a notice without first negotiating support, and a Client that does not
-understand or present notices may ignore it.
+For v1, add an optional `notices` object to `ClientSessionCapabilities`:
 
-The versions reach that outcome through their existing compatibility models.
-ACP v1 keeps its closed `SessionUpdate` union, so a typed v1 decoder without
-notice support may reject and drop the individual notification; it must not
-fail the surrounding session. ACP v2 preserves the payload through its unknown
-session-update fallback, after which the Client may ignore or generically
-present it. This implementation does not broaden v1's stable union solely to
-introduce v2-style forwarding behavior.
+```json
+{
+  "clientCapabilities": {
+    "session": {
+      "notices": {}
+    }
+  }
+}
+```
+
+The object appears at `clientCapabilities.session.notices` in the v1
+`initialize` request. Omitting `session`, setting `session` to `null`, omitting
+`notices`, or setting `notices` to `null` all mean the Client does not advertise
+support. Supplying `{}` for `notices` means the Client can present notices to
+the user with the semantics in this RFD. Agents **MUST NOT** send `notice`
+updates to a v1 Client unless it advertises this capability.
+
+The capability lets the Agent choose where to send advisory information. When
+the Client does not advertise notice support, the Agent may use an ordinary
+agent message instead if the information should still be surfaced to the user.
+That fallback is conversation content and follows normal message-history
+semantics. Advertising notice support does not acknowledge delivery or
+guarantee that the user has seen an individual notice; Clients still control
+presentation and user preferences.
+
+V2 does not add or require a capability. It preserves unknown notices through
+its unknown session-update fallback, after which the Client may ignore or
+generically present them. V1 keeps its closed `SessionUpdate` union and uses the
+capability rather than requiring unsupported Clients to accept a new variant.
 
 ## Shiny future
 
@@ -129,24 +151,44 @@ and accessibility model.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. Add `Notice` and `NoticeSeverity` types in both versions behind the
-   `unstable_session_notices` Rust feature.
-2. Add the `notice` variant to both `SessionUpdate` unions without a Client
-   capability.
-3. Document the presentation, dismissal, severity, replay semantics, and
-   non-conversational semantics in both protocol versions.
-4. Add schema tests for serialization, nullable-field semantics, open severity,
-   version-specific unsupported-update behavior, malformed known-update
-   handling, and cross-version wire parity. The schema crate intentionally
-   provides no built-in v1/v2 conversion layer.
+### Implemented
 
-The recommendation against replay is part of the protocol contract rather
-than something the schema crate can enforce. Runtime SDKs and example Agents
-and Clients can adopt notices separately after consuming the schema surface.
+The protocol implementation landed in
+[PR #2004](https://github.com/agentclientprotocol/agent-client-protocol/pull/2004),
+with the v1 Client capability added in
+[PR #2171](https://github.com/agentclientprotocol/agent-client-protocol/pull/2171):
+
+- Both protocol versions define `Notice`, the open `NoticeSeverity` string
+  enum, and the `notice` variant in their `SessionUpdate` unions.
+- V1 defines the optional `ClientSessionCapabilities.notices` capability;
+  v2 does not require a capability.
+- Generated unstable schemas and draft protocol guides include the feature.
+  See the [v1 guide](/protocol/v1/draft/prompt-turn#session-notices) and
+  [v2 guide](/protocol/v2/draft/prompt-lifecycle#session-notices).
+
+The feature remains behind `unstable_session_notices` and is not included in
+the stable schemas. Preview does not stabilize the wire contract. The schema
+crate intentionally provides no built-in v1/v2 conversion layer.
+
+V1 runtime implementations have also landed:
+
+| Implementation       | Reference                                                                                                                                                                          | Behavior                                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zed                  | [PR #64606](https://github.com/zed-industries/zed/pull/64606)                                                                                                                      | Advertises support with ACP beta enabled; presents session-local, dismissible notices outside the transcript, with generic presentation for unknown severities. |
+| Claude Agent adapter | [PR #1155](https://github.com/agentclientprotocol/claude-agent-acp/pull/1155), included in [v0.81.1](https://github.com/agentclientprotocol/claude-agent-acp/releases/tag/v0.81.1) | Gates live advisory notices on the Client capability, retains fallback behavior, and keeps notices separate from history and task/error control flow.           |
+| Codex adapter        | [PR #532](https://github.com/agentclientprotocol/codex-acp/pull/532), included in [v1.13.1](https://github.com/agentclientprotocol/codex-acp/releases/tag/v1.13.1)                 | Gates advisory notices on the Client capability, preserves legacy fallback behavior, and excludes notices from loaded history.                                  |
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why is the capability required in v1?
+
+Without it, an Agent cannot tell whether a v1 Client can present notices or
+will simply drop them. As with compaction, the capability lets the Agent use
+the dedicated presentation event when supported and fall back to an agent
+message when the information should still reach users of older Clients. It
+advertises a presentation channel, not acknowledgement of any individual notice.
 
 ### Why is there no notice ID?
 
@@ -170,14 +212,16 @@ elicitation or permission, not a notice.
 
 `session/update` is already ACP's Agent-to-Client carrier for session-scoped
 activity. The known `notice` variant can define its live-only lifetime without
-adding another notification method. Clients that do not implement the variant
-can ignore it, while the replay guidance makes clear that supporting Clients
-should not treat it as durable history.
+adding another notification method. The v1 capability lets Agents choose a
+fallback for Clients that do not implement the variant, while the replay
+guidance makes clear that supporting Clients should not treat notices as
+durable history.
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 **Agent messages** - Universally visible, but they pollute conversation history
-and can be easily missed in the rest of the text.
+and can be easily missed in the rest of the text. They remain a fallback for
+v1 Clients that do not advertise notice support.
 
 **Structured actions and acknowledgements** - Useful when user interaction is
 required, but those cases should use response-bearing primitives rather than
@@ -185,6 +229,9 @@ turning notices into a second elicitation system.
 
 ## Revision history
 
+- 2026-09-24: Moved to Preview
+- 2026-09-17: Added a v1 Client capability so Agents can choose between notices
+  and an agent-message fallback. V2 remains capability-free.
 - 2026-08-20: Updated the implementation plan for the schema-only architecture,
   which keeps v1 and v2 types separate, documents replay guidance normatively,
   and leaves runtime and example adoption to downstream SDKs.

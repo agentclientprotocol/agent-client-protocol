@@ -495,14 +495,14 @@ Used in all subsequent requests for this conversation.
 
 Processes a user prompt within a session.
 
-This request accepts the prompt:
+Acceptance means insertion into the ACP conversation:
 
 - Receives user messages with optional context (files, images, etc.)
-- Returns once the prompt is accepted
+- Returns the inserted user message's ID without waiting for processing to finish
 
-After acceptance, the Agent reports the accepted user message,
-processing state, output, tool calls, and completion through
-`session/update` notifications.
+The Agent reports the user message with the same ID through `session/update`;
+this notification may arrive before or after the response. Processing state,
+output, tool calls, and completion are also reported through session updates.
 
 See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)
 
@@ -548,9 +548,10 @@ pieces of context from sources the agent may not have access to.
 
 #### <span class="font-mono">PromptResponse</span>
 
-Response acknowledging that a user prompt was accepted.
+Response acknowledging that a user prompt was inserted into the ACP conversation.
 
-This response does not indicate that the agent has finished processing.
+This response does not indicate that the prompt was merely received or queued, nor that the
+agent has finished processing it.
 Processing and completion are reported through `state_update` session updates.
 
 See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#2-prompt-accepted)
@@ -567,6 +568,16 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  Identifies the user message inserted into the ACP conversation.
+
+Required and non-null. Omission and explicit `null` are both invalid.
+
+The corresponding user-message session update carries this same identifier and may arrive
+before or after this response. Agents must echo the message during the live session, but are
+not required to retain it. If retained and replayed, the message keeps this identifier.
+
+</ResponseField>
 
 <a id="session-resume"></a>
 ### <span class="font-mono">session/resume</span>
@@ -575,13 +586,13 @@ Resumes an existing session.
 
 The agent should resume the session context, allowing the conversation
 to continue. If `replayFrom` is set, the agent should replay
-conversation history before responding.
+retained conversation history before responding.
 
 #### <span class="font-mono">ResumeSessionRequest</span>
 
 Request parameters for resuming an existing session.
 
-Resumes an existing session and optionally replays prior conversation
+Resumes an existing session and optionally replays retained conversation
 history according to `replayFrom`.
 
 **Type:** Object
@@ -617,8 +628,8 @@ the request `cwd` matches the session's `cwd`.
 Optional. Omitted or `null` both mean the Agent should resume without
 replaying previous conversation history. Replay cursors are inclusive:
 replay includes the position identified by the cursor. Supplying
-`\{ "type": "start" \}` means the Agent should replay the whole
-conversation before responding.
+`\{ "type": "start" \}` means the Agent should replay all retained
+conversation history before responding.
 
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
@@ -842,6 +853,45 @@ Form-based elicitation where the client renders a form from the provided schema.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="url" type="object">
@@ -863,6 +913,45 @@ URL-based elicitation where the client directs the user to a URL.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="other" type="object">
@@ -888,6 +977,45 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 #### <span class="font-mono">CreateElicitationResponse</span>
@@ -4391,7 +4519,7 @@ Replay includes the position identified by the cursor.
 **Type:** Union
 
 <ResponseField name="start" type="object">
-Replay the whole conversation from its first replayable entry.
+Replay all retained conversation history from its first replayable entry.
 
 <Expandable title="Properties">
 
@@ -4445,7 +4573,7 @@ future ACP variants.
 
 ## <span class="font-mono">ReplayFromStart</span>
 
-Inclusive replay cursor requesting replay from the start of the conversation.
+Inclusive replay cursor requesting replay from the start of retained conversation history.
 
 **Type:** Object
 
@@ -5408,6 +5536,97 @@ The state of the agent's foreground work has changed.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="running" type="object">
+Foreground work is in progress.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"running"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="idle" type="object">
+The agent is ready to process a new prompt.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"idle"`.
+</ResponseField>
+<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
+  Indicates why foreground work stopped.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
+Agents SHOULD include this when the idle transition ends foreground work.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="requires_action" type="object">
+Foreground work is blocked on user action.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"requires_action"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future session state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="state" type={"string"} required>
+  Custom or future session state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="tool_call_content_chunk" type="object">
@@ -5459,6 +5678,15 @@ Helps clients choose appropriate icons and UI treatment.
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Programmatic name of the tool being invoked.
+
+This field is optional and has patch semantics. Omission means no
+change, `null` clears the name, and a string replaces it. For a tool
+call ID the client has not seen before, omission or `null` means that no
+tool name is available.
+
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.
@@ -6525,6 +6753,15 @@ Helps clients choose appropriate icons and UI treatment.
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Programmatic name of the tool being invoked.
+
+This field is optional and has patch semantics. Omission means no
+change, `null` clears the name, and a string replaces it. For a tool
+call ID the client has not seen before, omission or `null` means that no
+tool name is available.
+
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.

@@ -225,11 +225,11 @@ Stable v2 defines `type: "agent"`. Custom types **MUST** begin with `_`. Unknown
 
 ## The new prompt lifecycle
 
-This is the most significant semantic change in v2. Read this section even if you skim the rest. In short, everything that v1 expressed through the pending `session/prompt` request moved into `session/update` notifications:
+This is the most significant semantic change in v2. Read this section even if you skim the rest. In short, foreground progress and completion moved from the pending `session/prompt` request into `session/update` notifications, while the response now acknowledges user-message insertion:
 
 | Foreground signal       | v1                                             | v2                                                   |
 | ----------------------- | ---------------------------------------------- | ---------------------------------------------------- |
-| Prompt accepted         | Implicit                                       | `session/prompt` response (`{}`)                     |
+| Prompt inserted         | Implicit                                       | `session/prompt` response with `messageId`           |
 | User message in history | Implicit (the request itself)                  | `user_message` update with agent-owned `messageId`   |
 | Foreground work running | `session/prompt` still pending                 | `state_update` with `state: "running"`               |
 | Foreground work waiting | Implicit (pending permission request)          | `state_update` with `state: "requires_action"`       |
@@ -246,17 +246,19 @@ In v1, `session/prompt` stayed pending for the entire turn. The Agent streamed `
 
 This entangled prompt acceptance with turn completion, which made replay, multi-client sessions, background work, and queued messages awkward to express.
 
-### v2: the response is an acknowledgment
+### v2: the response acknowledges insertion
 
-In v2, the Agent **MUST** respond to `session/prompt` as soon as it has _accepted_ the prompt, with an empty result:
+In v2, acceptance means insertion of the user message into the ACP conversation. The Agent **MUST** respond to `session/prompt` once the message has been inserted, without waiting for foreground processing to finish. Merely receiving, queueing, or assigning an ID to the input does not justify a successful response:
 
 ```json
-{ "jsonrpc": "2.0", "id": 2, "result": {} }
+{ "jsonrpc": "2.0", "id": 2, "result": { "messageId": "msg_user_8f7a1" } }
 ```
+
+`messageId` is a required, non-null string identifying the inserted user message. The request is unchanged; Clients do not generate this ID.
 
 Everything else happens through `session/update` notifications:
 
-1. **User message acknowledgment.** After accepting the prompt, the Agent **MUST** report where the user message was inserted into session history, either as a `user_message` update with a full `content` array or as streamed `user_message_chunk` updates. This update is the source of truth for the agent-owned `messageId`:
+1. **User message update.** The Agent **MUST** report the inserted message's content and placement, either as a `user_message` update with a full `content` array or as streamed `user_message_chunk` updates. These use the same agent-owned `messageId` as the response. The response and updates describe the same insertion, but updates may arrive before or after the response:
 
    ```json
    {
@@ -293,6 +295,10 @@ Everything else happens through `session/update` notifications:
      }
    }
    ```
+
+Clients reconcile their submitted input with the response's `(sessionId, messageId)`, including when the message update arrived first. They must not match by content or assume that a successful response means the session is idle. SDKs must keep the session's processing and notification handling alive after the prompt RPC completes.
+
+User messages, including locally handled commands, must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response remains ambiguous; neither replay omission nor an identical message proves which submission was inserted, and retrying is not automatically safe.
 
 ### Session states
 
@@ -342,13 +348,24 @@ v1 had `tool_call` (create) and `tool_call_update` (modify). In practice the spl
 {
   "sessionUpdate": "tool_call_update",
   "toolCallId": "call_001",
+  "name": "read_file",
   "title": "Reading configuration file",
   "kind": "read",
   "status": "pending"
 }
 ```
 
-The patch semantics are the same three-state model as messages: omitted fields stay unchanged, `null` explicitly clears a field, and concrete values replace. Array fields such as `content` and `locations` are replaced wholesale when present. The field set (`title`, `kind`, `status`, `content`, `locations`, `rawInput`, `rawOutput`) and `kind` values are unchanged from v1. The `status` enum adds `cancelled`, and both enums are now extensible.
+The patch semantics are the same three-state model as messages: omitted fields
+stay unchanged, `null` explicitly clears a field, and concrete values replace.
+Array fields such as `content` and `locations` are replaced wholesale when
+present. The optional `name` metadata is available in both versions; concrete
+names map directly between versions, but v2's `name: null`
+clear cannot be represented by a v1 update because v1 treats `null` like
+omission. A strict adapter must reject that conversion, while an intentionally
+lossy adapter may omit the clear. The remaining fields (`title`, `kind`,
+`status`, `content`, `locations`, `rawInput`, `rawOutput`) and `kind` values are
+unchanged from v1. The `status` enum adds `cancelled`, and both enums are now
+extensible.
 
 ### Streaming tool-call content
 
@@ -606,7 +623,7 @@ The dedicated modes API is removed: the `modes` field on session responses, `ses
 
 - The option's identifier field is renamed from `id` to `configId`, matching the parameter name used by `session/set_config_option`.
 - The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and must tolerate unknown categories.
-- Clients change values with `session/set_config_option` (`sessionId`, `configId`, `value`), and the response returns the full updated `configOptions` array, since one change can affect other options. Agent-initiated changes arrive as `config_option_update` session updates, which replace the v1 `current_mode_update`.
+- Clients change values with `session/set_config_option` (`sessionId`, `configId`, `type`, `value`). The required `type` discriminator is `"id"` with a string option ID or `"boolean"` with a boolean value. The response returns the full updated `configOptions` array, since one change can affect other options. Agent-initiated changes arrive as `config_option_update` session updates, which replace the v1 `current_mode_update`.
 
 ## Client file system and terminal execution removed
 
@@ -711,7 +728,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 1. **Initialization.** Read `params.capabilities` / `params.info`. Return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers.
 2. **Implement the baseline.** If you advertise `session`, implement `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
 3. **Auth.** Rename `authenticate` → `auth/login` for method types that define protocol-driven login. If you return one or more valid `authMethods`, implement both `auth/login` and `auth/logout`; if you omit the field or return an empty array, Clients **MUST NOT** call either method. Do not add a logout support marker: `capabilities.auth` is only for authentication-related extensions. Add `type` and `methodId` to your auth method descriptors.
-4. **Prompt lifecycle.** Respond to `session/prompt` immediately with `{}` on acceptance. Emit a `user_message` acknowledgment with an agent-generated `messageId`, a `running` state update when foreground work starts, and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Background updates may continue while idle.
+4. **Prompt lifecycle.** Respond to an accepted `session/prompt` with `{ "messageId": "…" }`, carrying the agent-generated ID of the inserted user message. Emit a `user_message` acknowledgment with the same `messageId`, a `running` state update when foreground work starts, and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Background updates may continue while idle.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.
 7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, snapshots, and exit state; send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.

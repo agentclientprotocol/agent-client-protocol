@@ -26,20 +26,20 @@ We have had a fairly successful time adding new features via new capabilities an
 
 ### Current Active RFDs
 
-Current RFDs with active maintainer focus that are targeting the v2 release
+Current RFDs with active maintainer focus that are targeting the v2 release:
 
+- [Remote Transports](../streamable-http-websocket-transport.mdx)
 - [New Prompt Lifecycle](./prompt.mdx)
 - [Enum Variant Extension](./enum-variant-extension.mdx)
-- [Required Session Methods](./required-session-methods.mdx)
-- [Session Resume Replay](./session-resume-replay.mdx)
 - [Client Filesystem and Terminal Execution Surface](./client-filesystem-terminal-capabilities.mdx)
-- [Terminal Output](./terminal-output.mdx)
 - [Plan Variants](./plan-variants.mdx)
 - [Tool Call Updates](./tool-call-updates.mdx)
-- [Diff File States](./diff-file-states.mdx)
-- [Permission Requests](./permission-requests.mdx)
 - [Message Updates and Chunks](./message-updates.mdx)
-- [Remote Transports](../streamable-http-websocket-transport.mdx)
+- [Permission Requests](./permission-requests.mdx)
+- [Required Session Methods](./required-session-methods.mdx)
+- [Session Resume Replay](./session-resume-replay.mdx)
+- [Diff File States](./diff-file-states.mdx)
+- [Terminal Output](./terminal-output.mdx)
 
 Other RFDs will progress separately and are not dependent on breaking changes (specifically the new prompt lifecycle) and can land in either or both v1 and v2.
 
@@ -56,6 +56,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Make [permission requests](./permission-requests.mdx) carry a required prompt `title` and optional extensible `subject` tagged union. Tool-call permissions use `subject.type: "tool_call"` with the same `ToolCallUpdate` payload shape as session updates, command permissions use `subject.type: "command"` with the command, required absolute working directory, and optional display associations, and subject-less permissions rely on the common prompt fields.
 - Add [whole-message updates](./message-updates.mdx) for `user_message`, `agent_message`, and `agent_thought` alongside streamed chunks. Message updates are upserts keyed by `messageId`; their `content` arrays replace current message content, while chunks append to the current content.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
+- Acknowledge [prompt insertion](./prompt.mdx) by returning the inserted user message's `messageId` from `session/prompt`, without waiting for foreground work to finish. Live user-message updates use the same ID; retention remains optional.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.

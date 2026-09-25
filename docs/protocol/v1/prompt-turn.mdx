@@ -7,6 +7,28 @@ A prompt turn represents a complete interaction cycle between the [Client](/prot
 
 Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v1/initialization) phase and [session setup](/protocol/v1/session-setup).
 
+## Session Updates
+
+Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
+
+| `sessionUpdate` value       | Description                                                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                          |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                    |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                   |
+| `tool_call`                 | A new [tool call](/protocol/v1/tool-calls#creating).                                                                         |
+| `tool_call_update`          | A change to a [tool call's status or results](/protocol/v1/tool-calls#updating).                                             |
+| `plan`                      | The Agent's [execution plan](/protocol/v1/agent-plan).                                                                       |
+| `available_commands_update` | The set of [available slash commands](/protocol/v1/slash-commands) is ready or has changed.                                  |
+| `current_mode_update`       | The current [session mode](/protocol/v1/session-modes#from-the-agent) has changed.                                           |
+| `config_option_update`      | The session's [configuration options](/protocol/v1/session-config-options#from-the-agent) have changed.                      |
+| `session_info_update`       | [Session metadata](/protocol/v1/session-list#updating-session-metadata), such as the title or last update time, has changed. |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                            |
+
+This is the complete set of variants defined in the current [`SessionUpdate` schema](/protocol/v1/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
+
+Session updates are not limited to active prompt turns. For example, Agents may advertise commands after creating a session, and replay user and Agent messages when [loading a session](/protocol/v1/session-setup#loading-sessions).
+
 ## The Prompt Turn Lifecycle
 
 A prompt turn follows a structured flow that enables rich interactions between the user, Agent, and any connected tools.
@@ -83,10 +105,10 @@ The turn begins when the Client sends a `session/prompt`:
 }
 ```
 
-<ParamField path="sessionId" type="SessionId">
+<ParamField path="sessionId" type="SessionId" required>
     The [ID](/protocol/v1/session-setup#session-id) of the session to send this message to.
 </ParamField>
-<ParamField path="prompt" type="ContentBlock[]">
+<ParamField path="prompt" type="ContentBlock[]" required>
     The contents of the user message, e.g. text, images, files, etc.
 
     Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v1/initialization#prompt-capabilities) established during [initialization](/protocol/v1/initialization).

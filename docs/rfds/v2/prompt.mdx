@@ -10,7 +10,9 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 For v2 of the protocol wire format, I am proposing a change in the lifecycle of the prompt request, allowing for more dynamic session updates from the agent, and unlocking new capabilities in the process.
 
-Once a session is created, the agent will be able to send session updates at any point in time, and prompt requests will last until the prompt is accepted, not until the end of the turn. As I'll go into later, this not only removes some current awkwardness around the prompt request lifecycle, but also provides a more flexible foundation to add features like queued messages and multi-client replay. This can even allow the agent to initiate an interaction in a session rather than requiring it to wait for a user prompt, which is becoming increasingly important for background tasks and agents which may send updates before or after a "turn" is over since its runtime might be different than the main conversation.
+Once a session is created, the agent will be able to send session updates at any point in time, and prompt requests will last until the user message is inserted into the conversation, not until the end of the turn. As I'll go into later, this not only removes some current awkwardness around the prompt request lifecycle, but also provides a more flexible foundation to add features like queued messages and multi-client replay. This can even allow the agent to initiate an interaction in a session rather than requiring it to wait for a user prompt, which is becoming increasingly important for background tasks and agents which may send updates before or after a "turn" is over since its runtime might be different than the main conversation.
+
+This sketch explores returning an agent-generated `messageId` in the prompt response. For `session/prompt`, acceptance means insertion of the user message into the ACP conversation. The same ID identifies that message in live updates and, if retained, later replay, so clients that receive the response can correlate their submissions without introducing a second identifier. Insertion is distinct from processing completion and does not require persistent history.
 
 ## Status quo
 
@@ -24,6 +26,8 @@ What if the agent wants to submit some text at the start of a session _before_ t
 
 Some clients handle these out-of-turn updates more gracefully than others. But it is a constant point of confusion in discussions and issues.
 
+Decoupling the prompt response from session updates also leaves a correlation gap: when the agent reports an accepted user message, how does the submitting client know which pending prompt it belongs to? Matching by content or arrival order is unreliable when users submit identical prompts, multiple clients share a session, or insertion is delayed. The same problem appears after reconnecting if the agent accepted a prompt but the client never received its response.
+
 In the spirit of allowing as much flexibility in the protocol for new paradigms and designs to emerge in the prompt lifecycle, I think imposing fewer restrictions in the protocol, whether explicitly described or just implicitly inferred because of vague wording, on when participants can make session updates will allow for more dynamic sessions, as well as make it easier to extend to new use cases in the future.
 
 ## What we propose to do about it
@@ -34,39 +38,60 @@ In the spirit of allowing as much flexibility in the protocol for new paradigms 
 
 `session/prompt` is still a request, but its response lifecycle will change.
 
-The agent will respond once the prompt has been _accepted_, not when the turn is over. Message IDs do not need to be returned from the prompt response; per the [message id RFD](/rfds/message-id), the agent remains the source of truth for message IDs and provides them through the session update stream when it emits the accepted user message.
+For this method, **acceptance means insertion**: the agent has added the user message to its ACP conversation, with a `messageId` and a position relative to other messages. Receiving the request, assigning an ID, or holding the input for later insertion is not acceptance.
+
+The agent **MUST** respond successfully once the user message has been inserted, without waiting for foreground processing to finish. It **MUST NOT** send a successful response before insertion. The proposed successful response **MUST** include the inserted message's `messageId` as a non-null string; omission and explicit `null` are both invalid. A request rejected before insertion uses a JSON-RPC error response instead.
+
+Insertion is a logical conversation event, not a durable-storage guarantee or a claim that the model has consumed the input. Locally handled commands follow the same rule by inserting a live-only user message into the ACP conversation, without requiring a persisted transcript entry.
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": "req_12345",
-  "result": {}
+  "result": {
+    "messageId": "mess_456def"
+  }
 }
 ```
 
-The completed Message ID RFD keeps message IDs agent-owned. The accepted user message notification becomes the natural point to provide the required v2 message ID.
+This extends the [Message ID RFD](/rfds/message-id) without changing ID ownership: the agent still generates opaque message IDs, but now returns the accepted user message's ID to the submitting client as well as including it in session updates. No client-generated `promptId` is added to the request or updates.
 
-Queueing messages (still an ongoing discussion) would also fit much nicer in this pattern. Either by adding additional parameters or a separate method, we can allow a client to submit queued messages and either cancel or edit them before they get accepted without having to mess with the turn semantics of the previous prompt request approach. Again, queueing is decidedly not part of this RFD, but it seems to fall more naturally into this semantic change in the prompt request.
+The response confirms insertion and establishes the submitting client's association with the message. The corresponding message updates report its content and placement; `state_update` notifications report foreground work. These are reports of insertion and processing, not separate acceptance and insertion phases.
+
+### Correlate prompts with accepted user messages
+
+The JSON-RPC request ID links a response to the client's submission. The returned `messageId` then links that submission to session updates and replay:
+
+| Field         | Identifies                        | Generated by       |
+| ------------- | --------------------------------- | ------------------ |
+| JSON-RPC `id` | One request/response exchange     | The request sender |
+| `messageId`   | The accepted logical user message | The agent          |
+
+The working assumption is **one accepted submission, one logical ACP user message**. The agent **MUST** assign a distinct `messageId` to each accepted submission, even when its content is identical to another submission. IDs are unique within the session and **MUST NOT** be reused for a different submission.
+
+The agent **MUST** use the returned ID for all updates and chunks for that user message. The response and the user-message update describe the same insertion, but clients **MUST** tolerate those updates arriving before or after the response. On receiving the response, the submitting client can associate its local pending input with `(sessionId, messageId)`, reconciling with an already-received message rather than creating a second canonical message.
+
+Only the submitting client has the request/response association. Other clients identify the message by `messageId` without needing the original request. Neither content equality nor notification arrival order should be used to infer which client submitted a message.
+
+An adapter can use an underlying agent's user-message echo or insertion event as evidence of insertion and respond with the message's ID while processing continues. It may use a private per-submission token to match that event to the outstanding request; this does not require a new field in ACP. An ID assigned in advance is not by itself evidence of insertion. The returned ID may be native to the underlying agent or adapter-owned, provided updates and replay preserve it consistently.
 
 ### Additional Agent `session/update` notification types
 
 Because `session/update`s can more freely flow from the agent, and we lost the ability to pass end_turn and other information from the prompt response, we need to provide the agent with the affordance for a few more notification types.
 
-#### User message accepted/acknowledged
+#### User message reported to clients
 
-In order to have a consistent understanding between agent and client on where the user message appears within the session history in relation to other messages, it is important to see when and where the agent has accepted the user message into the feed.
+The prompt response acknowledges insertion. The agent **MUST** report each inserted user message through `user_message` or `user_message_chunk` updates, using the same `messageId`. These updates establish its content and placement in the client-visible conversation, not a guarantee that the agent stored it for later replay.
 
-This will also be important for queueing messages, depending on how we implement that, so that the client can know if it is still allowed to edit the queued message, or where in the turn order it got inserted.
-
-Even without a new queue, which may allow for editing the queued message, it means that the client doesn't necessarily have to send a `session/cancel` before prompting. This would need some exploration, but potentially the agent could decide whether it cancels the current turn and inserts it immediately, or inserts it at the next convenient break point. This should probably still be defined as "as soon as possible" and queueing would enable some later points, but it could still be more graceful than needing to cancel all current tool calls for example, as is required at the moment.
+This RFD does not specify queueing, steering, or whether agents insert new prompts while busy.
 
 The question then turns to what makes up this notification. Which brings us to:
 
 **Who owns the user message id?**
 
-The [message id RFD](/rfds/message-id) defines that the agent owns message IDs. This means the client cannot eagerly create a protocol message ID for a prompt, but it also means we avoid a shared uniqueness or UUID requirement between clients and agents.
+The [Message ID RFD](/rfds/message-id) defines that the agent owns message IDs. The client sends the prompt without a message ID, and the agent returns the ID when acknowledging insertion.
 
-By allowing the agent to replay or acknowledge the user message as a session update, we have a natural place for the agent to provide both the content and the ID once it is inserted in the session. Ultimately the agent is responsible for session persistence. If there is only one source for IDs, we can continue to treat them as opaque strings that fit well into each agent's implementation.
+The corresponding user-message update reports the agent-owned content and placement under that same ID. The response does not add content to the conversation a second time; it establishes the submitting client's association with the inserted message.
 
 My current proposal is that this would look like the client sending the following message:
 
@@ -93,11 +118,13 @@ And the Agent responds with:
 {
   "jsonrpc": "2.0",
   "id": "req_12345",
-  "result": {}
+  "result": {
+    "messageId": "mess_456def"
+  }
 }
 ```
 
-And also send the notification:
+And reports the user message with the notification:
 
 ```json
 {
@@ -119,9 +146,54 @@ And also send the notification:
 }
 ```
 
-The client can then make sure the prompt sits nicely in the feed at the right place, and also allows for multiple clients to be attached to the same session because they would receive a user message that they didn't prompt. The agent-provided `messageId` in that notification gives the client the ID for future message-specific operations.
+The submitting client uses the response's `messageId` to reconcile its optimistic message with the agent-reported message. If the notification arrives first, the response later establishes that association. Other clients simply render the message under the same ID. The response does not determine the message's position in the feed.
 
 This is a new message type as well. Not a `user_message_chunk` but just a `user_message` that allows for sending the entire message at once. The [Message Updates and Chunks](./message-updates.mdx) RFD defines the corresponding whole-message update and streamed-chunk patterns for user messages, agent messages, and agent thoughts.
+
+##### Correlation and replay
+
+Live correlation and history retention are separate:
+
+- The response and all updates for the accepted user message **MUST** use the same `messageId`.
+- Agents are **NOT REQUIRED** to persist every accepted input or retain it for any minimum period. A message may be live-only, or later omitted under the agent's history-retention policy.
+- If an agent retains and replays that same message within the session, it **MUST** reuse the returned `messageId`, including after reconnecting or restarting. This is an identity guarantee for retained messages, not a requirement to retain them.
+
+Clients **MUST NOT** assume that every acknowledged message will appear after resuming a session. Adapters do not need a separate permanent transcript for messages their underlying runtime does not retain, or to reconstruct cleared or discarded messages solely for correlation. This does not change v1's replay rules.
+
+A client that received the response and retained its `(sessionId, messageId)` association can recognize the message if it is replayed. It requests retained history with `session/resume` and `replayFrom: { "type": "start" }`, as described in the [Session Resume Replay RFD](./session-resume-replay.mdx). Omitting `replayFrom` resumes without replay.
+
+**A lost response remains an ambiguous outcome.** The agent may have accepted the input, but the client does not know its ID. Replay can restore retained conversation history, but cannot reliably associate a message with that uncertain submission. Clients must not guess from content or order, or assume retrying cannot create a second submission. A client-generated correlation token could address this limitation for retained messages separately.
+
+A successful response confirms that the message was inserted. Its absence from later replay does not contradict that acknowledgment: the message may have been live-only or may no longer be retained. Imported or non-ACP messages continue to use agent-generated message IDs without a corresponding prompt response.
+
+##### Streaming user messages
+
+The agent can stream a newly inserted user message using `user_message_chunk` updates with the returned `messageId`. No metadata-only `user_message` update is required just to establish correlation, and the chunk schema remains unchanged:
+
+```json
+{
+  "sessionUpdate": "user_message_chunk",
+  "messageId": "mess_456def",
+  "content": {
+    "type": "text",
+    "text": "What's the capital of France?"
+  }
+}
+```
+
+When replay reconstructs a user message from its beginning using chunks, the agent **MUST** first send a `user_message` update with `content: []`. This clears any content the client already holds for that `messageId`, preventing the replayed chunks from being appended to an earlier copy:
+
+```json
+{
+  "sessionUpdate": "user_message",
+  "messageId": "mess_456def",
+  "content": []
+}
+```
+
+The agent then sends the message's chunks. Alternatively, a full-content `user_message` update replaces the retained content directly. A metadata-only update does not clear content and is not sufficient for restarting the message's content from the beginning.
+
+These rules use the existing message-upsert semantics without an implicit client-side reset. When reconciling an optimistic message, clients should not append streamed content to their local copy of the submitted prompt; the agent's content stream is authoritative.
 
 #### `state_update` notification
 
@@ -186,6 +258,7 @@ This isn't a huge schema change, but it is a fundamental behavior change in the 
 
 - Provides agents with much more flexibility in how they want to update a client about a given session
 - Solves some concrete pain points in the current model (i.e. how to integrate prompts into session replay and multi-client replays, message IDs, etc)
+- Lets clients that received a prompt response reconcile optimistic submissions with live or replayed user messages without content matching or assuming a particular arrival order
 
 Ultimately, after months of using the current model, I am quite excited for what these small tweaks can unlock, and also how we can build on top of this in the future!
 
@@ -194,6 +267,16 @@ Ultimately, after months of using the current model, I am quite excited for what
 > Tell me more about your implementation. What is your detailed implementation plan?
 
 Overall, this isn't a huge lift on schema definition, but it is a large, **breaking** change in behavior which means we can only stabilize in protocol version 2.
+
+The v2 schema and guides define the insertion-receipt response. The implementation checklist is:
+
+1. Add a required non-null `messageId` to `PromptResponse`, reusing the existing `MessageId` type. Leave `PromptRequest`, `UserMessage`, `ContentChunk`, and v1 unchanged; do not introduce `PromptId`.
+2. Update the prompt lifecycle and session replay guides with insertion as the acknowledgment point, distinct from processing completion; response/update ordering; optional retention; stable IDs when retained messages are replayed; and the content reset when replaying chunks from the beginning.
+3. Add serialization and schema coverage for valid response IDs and rejection of missing, `null`, or non-string IDs.
+4. Exercise an ID assigned before insertion without an early successful response, notifications before and after the response, identical prompts with distinct IDs, submissions from multiple clients, retained associations across replay, imported messages without prompt responses, and both full-content and streamed updates. Include a locally handled command reported live but omitted from later replay, and a retained command replayed with the same ID without re-executing it. Cover the lost-response limitation rather than promising recovery, and verify that streamed replay does not duplicate retained content.
+5. Update examples and generated artifacts, then run `npm run generate` and `npm run check`.
+
+The schema and serialization tests establish the wire shape; adapters still need to implement and validate insertion timing, live reporting for local commands, and replay identity for retained messages. Broader v2 lifecycle follow-ups include post-insertion failure reporting, cancellation races, and current-state synchronization on resume. Those are separate from the insertion receipt's identity and are not resolved by adding another prompt ID. Queueing, steering, sender identity, safe retries, and idempotency guarantees remain outside this change.
 
 Depending on how the rest of v2 testing goes, we can either:
 
@@ -208,7 +291,45 @@ We definitely need 2 regardless, and can likely handle this in a similar "unstab
 
 I've hopefully addressed all of the questions and concerns for what motivated this above, but happy to engage with others on this.
 
+### Does `messageId` identify the client or user?
+
+No. It identifies a logical message. The submitting client recognizes its own message through the request/response association, not by parsing the message ID. Sender attribution and authorization remain separate concerns.
+
+### Does the returned ID identify a turn or the agent's response?
+
+No. It identifies the accepted user message. A prompt may contribute to work already in progress, and agents may produce output without a prompt. Agent messages and tool calls retain their own IDs; `state_update` remains session-scoped.
+
+### Does returning `messageId` make retrying safe?
+
+No. The ID is an acknowledgment, not a client-supplied idempotency key. A retry can be accepted as a distinct submission with a different ID, including after a lost response. This proposal does not promise automatic deduplication or exactly-once processing.
+
+### Do locally handled commands need persistent history?
+
+No. Some local control commands complete without the runtime recording the submitted input. The adapter inserts a live-only user message for the command into the ACP conversation, assigns its `messageId`, and reports that insertion through the response and the user-message update. This is the command's insertion point; it does not require a runtime insertion event that will never arrive or a permanent transcript entry.
+
+The command may be absent from later history replay. If the agent does retain and replay it, it uses the same ID and reports the message without executing the command again. Returning a `messageId` promises live correlation, not archival storage.
+
 ### What alternative approaches did you consider, and why did you settle on this one?
+
+#### Client-generated correlation token
+
+A client-generated `promptId` on the request, preserved with the accepted input and its replayed user message, could identify a submission even if the response is lost. It could also identify pending input before the agent assigns a history-message ID. This is separate from letting the client choose the canonical `messageId`.
+
+That alternative adds a second identifier, a uniqueness requirement across clients, and a mapping between submissions and history messages. It would still need to define that mapping if several submissions could become one ACP history message, and would not by itself define queue lifecycle or safe retries.
+
+The returned-ID approach is the simpler candidate when one submission remains one logical ACP message and its ID is returned on insertion. A client-generated correlation token remains an option if reliable lost-response recovery or a separate submission lifecycle becomes a requirement; it could be combined with a returned `messageId`.
+
+#### Require acknowledgment before insertion
+
+An earlier response would acknowledge receipt or reservation rather than insertion, and could require agents to reserve an ID before their runtime creates the message. This RFD instead keeps the prompt request pending until insertion or rejection. If a future queueing design needs an earlier receipt, that is a separate acknowledgment from the insertion response defined here.
+
+#### Reuse the JSON-RPC request ID
+
+JSON-RPC IDs already associate the response with the submitting request. They are not suitable as persisted message identities: different clients or connections can reuse the same ID, and proxies may rewrite it. Returning the agent-owned `messageId` keeps these responsibilities separate.
+
+#### Let the client choose the canonical message ID
+
+The Message ID RFD rejected client-generated IDs as canonical message identities because they introduce multiple sources of IDs and require shared collision-avoidance rules. Returning an agent-generated ID preserves agent ownership while still giving the submitting client a correlation handle.
 
 #### Prompt as a notification
 

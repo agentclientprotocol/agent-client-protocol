@@ -43,18 +43,28 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   The programmatic name of the invoked tool, such as `read_file`. This
   identifies which tool is being used; `title` describes this invocation for
   users, while `kind` provides a coarse presentation category. If omitted or
-  `null` on the initial tool call, no name is provided.
+  `null` on the initial tool call, no name is provided. Names are opaque,
+  informational metadata and do not advertise a capability or grant
+  authorization. Agents **SHOULD** include the name when available and **SHOULD
+  NOT** change it later except to correct metadata.
 </ParamField>
 
 <ParamField path="kind" type="ToolKind">
   The category of tool being invoked.
 
 <Expandable title="kinds">
-  - `read` - Reading files or data - `edit` - Modifying files or content -
-  `delete` - Removing files or data - `move` - Moving or renaming files -
-  `search` - Searching for information - `execute` - Running commands or code -
-  `think` - Internal reasoning or planning - `fetch` - Retrieving external data
-  - `other` - Other tool types (default)
+
+- `read` - Reading files or data
+- `edit` - Modifying files or content
+- `delete` - Removing files or data
+- `move` - Moving or renaming files
+- `search` - Searching for information
+- `execute` - Running commands or code
+- `think` - Internal reasoning or planning
+- `fetch` - Retrieving external data
+- `switch_mode` - Switching the session mode
+- `other` - Other tool types (default)
+
 </Expandable>
 
 Tool kinds help Clients choose appropriate icons and optimize how they display tool execution progress.
@@ -73,13 +83,19 @@ Tool kinds help Clients choose appropriate icons and optimize how they display t
   [File locations](#following-the-agent) affected by this tool call
 </ParamField>
 
-<ParamField path="rawInput" type="object">
-  The raw input parameters sent to the tool
+<ParamField path="rawInput" type="unknown">
+  The raw input sent to the tool. Any JSON value is accepted, including objects,
+  arrays, strings, numbers, booleans, and `null`.
 </ParamField>
 
-<ParamField path="rawOutput" type="object">
-  The raw output returned by the tool
+<ParamField path="rawOutput" type="unknown">
+  The raw output returned by the tool. Any JSON value is accepted, including
+  objects, arrays, strings, numbers, booleans, and `null`.
 </ParamField>
+
+Omission and `null` are equivalent for `rawInput` and `rawOutput`.
+On an initial tool call, both mean no value is provided. On a tool call
+update, both leave the previously reported value unchanged.
 
 ## Updating
 
@@ -114,7 +130,8 @@ Updates use the `session/update` notification with `tool_call_update`:
 All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
 
 For `name`, a string sets or replaces the tool name. Omission and `null` both
-leave the existing name unchanged.
+leave the existing name unchanged, so ACP v1 cannot clear a previously reported
+name.
 
 ## Requesting Permission
 
@@ -377,6 +394,8 @@ Tool calls can report file locations they're working with, enabling Clients to i
   The absolute file path being accessed or modified
 </ParamField>
 
-<ParamField path="line" type="number">
-  Optional line number within the file
+<ParamField path="line" type="integer | null">
+  Optional line number within the file, represented as an unsigned 32-bit
+  integer. Omission and `null` are equivalent and mean no specific line was
+  provided.
 </ParamField>

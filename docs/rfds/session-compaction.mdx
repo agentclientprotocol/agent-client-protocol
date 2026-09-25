@@ -184,7 +184,7 @@ V2 does not add or require a capability.
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
 Users can see context compaction begin and finish at the point where it
 occurred. Clients can keep one stable timeline row, optionally make the retained
@@ -199,19 +199,53 @@ implementations with only lifecycle signals remain fully conformant.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. Add `compaction` to v1 `ClientSessionCapabilities` behind an unstable
-   feature; do not add a v2 capability.
-2. Add `CompactionId`, `CompactionStatus`, `CompactionUpdate`, and
-   `CompactionSummaryChunk` to both protocol versions.
-3. Add `compaction_update` and `compaction_summary_chunk` to both
-   `SessionUpdate` unions.
-4. Implement the same open status enum in both versions and preserve known and
-   unknown statuses through v1/v2 conversion.
-5. Document lifecycle, patch, placement, replay, and summary-safety semantics
-   in both protocol versions.
-6. Add serialization, v1 capability-gating, v2 unknown-update, transition,
-   update/chunk ordering, replay materialization, and conversion tests, then
-   update example Clients and Agents.
+### Implemented
+
+The protocol implementation landed in
+[PR #2002](https://github.com/agentclientprotocol/agent-client-protocol/pull/2002):
+
+- Both protocol versions define `CompactionId`, `CompactionStatus`,
+  `CompactionUpdate`, and `CompactionSummaryChunk`, with `compaction_update` and
+  `compaction_summary_chunk` variants in their `SessionUpdate` unions.
+- V1 defines the optional `ClientSessionCapabilities.compaction` capability;
+  v2 does not require a capability.
+- Both versions preserve unknown status strings and distinguish omitted,
+  `null`, and concrete patch values.
+- Generated unstable schemas and draft protocol guides include the feature.
+  See the [v1 guide](/protocol/v1/draft/prompt-turn#session-compaction) and
+  [v2 guide](/protocol/v2/draft/prompt-lifecycle#session-compaction).
+
+The feature remains behind `unstable_session_compaction` and is not included
+in the stable schemas. Preview does not stabilize the wire contract.
+
+The schema crate [does not provide cross-version conversion](/rfds/v2/overview).
+SDKs supporting both versions should use explicit versioned implementations or
+purpose-specific runtime adapters rather than schema-level conversion helpers.
+
+### Preview validation
+
+The four compaction-specific schema tests cover serialization and
+deserialization, omitted and `null` patch representation, unknown status
+strings, v1 capability representation, and rejection of malformed known v2
+updates. These are wire-format tests, not end-to-end validation of lifecycle,
+capability enforcement, or replay behavior.
+
+During Preview, Agent and Client implementers should add or update examples and
+integration tests to exercise:
+
+- V1 capability enforcement for both live updates and replay, including Clients
+  that omit the capability or send `null`.
+- Lifecycle transitions to `completed`, `failed`, and `cancelled`, including
+  runtimes that only expose completed compactions.
+- Summary chunk ordering, authoritative replacement and clearing, completion
+  with an omitted summary, and failure or cancellation after partial output.
+- Materialized replay with stable IDs and timeline placement, without
+  duplicating accumulated summary content after reconnecting.
+- Unknown statuses and v2 updates, and safe omission of summaries that cannot
+  be exposed to the user.
+
+Agent/Client interoperability feedback on these behaviors should inform the
+decision to stabilize the feature.
 
 ## Frequently asked questions
 
@@ -278,3 +312,5 @@ materialized entity.
 ## Revision history
 
 - 2026-07-22: Initial draft.
+- 2026-09-23: Moved to Preview; documented the implemented protocol support and
+  remaining integration validation.

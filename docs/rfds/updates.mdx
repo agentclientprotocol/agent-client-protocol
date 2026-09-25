@@ -6,6 +6,50 @@ rss: true
 
 This page tracks lifecycle changes for ACP Requests for Dialog. For broader ACP announcements, see [Updates](/updates).
 
+<Update label="September 24, 2026" tags={["Preview"]}>
+## Session Notices RFD moves to Preview stage
+
+The Session Notices RFD has moved to Preview. Agents can send live advisory
+notices without adding conversation history, with Client-controlled
+presentation and dismissal. The protocol implementation covers ACP v1 and v2;
+v1 implementations have landed in Zed and the Claude Agent and Codex adapters.
+The feature remains unstable. Please review the [RFD](/rfds/session-notices)
+and provide Agent/Client interoperability feedback before stabilization.
+
+</Update>
+
+<Update label="September 23, 2026" tags={["Preview"]}>
+## Session Compaction RFD moves to Preview stage
+
+The Session Compaction RFD has moved to Preview. Agents can report
+ID-addressed context compaction lifecycle updates and optionally stream or
+provide retained summaries in ACP v1 and v2. The feature remains unstable.
+Please review the [RFD](/rfds/session-compaction), especially the
+[Preview validation targets](/rfds/session-compaction#preview-validation), and
+provide Agent/Client implementation feedback before the feature is stabilized.
+
+</Update>
+
+<Update label="September 17, 2026" tags={["Completed"]}>
+## Tool Call Name RFD moves to Completed
+
+The Tool Call Name RFD has been stabilized and is now part of the protocol.
+Agents can report an optional programmatic tool `name` alongside each
+human-readable tool-call title in ACP v1 and v2. The field is informational
+metadata and does not grant capabilities or authorization. Please review the
+[v1 tool-call documentation](/protocol/v1/tool-calls), the
+[v2 tool-call documentation](/protocol/v2/tool-calls), and the
+[RFD](/rfds/tool-call-name) for the version-specific update semantics.
+
+</Update>
+
+<Update label="September 14, 2026" tags={["Preview"]}>
+## Tool Call Name RFD moves to Preview stage
+
+The RFD for adding an optional programmatic `name` to tool calls in ACP v1 and v2 has moved to Preview stage. Please review the [RFD](/rfds/tool-call-name) for more information on the current proposal and provide feedback before the feature is stabilized.
+
+</Update>
+
 <Update label="August 20, 2026" tags={["Completed"]}>
 ## Terminal Authentication RFD moves to Completed
 

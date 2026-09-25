@@ -39,17 +39,12 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 pub struct ToolCallUpdate {
     /// Unique identifier for this tool call within the session.
     pub tool_call_id: ToolCallId,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
     ///
     /// This field is optional and has patch semantics. Omission means no
     /// change, `null` clears the name, and a string replaces it. For a tool
     /// call ID the client has not seen before, omission or `null` means that no
     /// tool name is available.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -112,7 +107,6 @@ impl ToolCallUpdate {
     pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
         Self {
             tool_call_id: tool_call_id.into(),
-            #[cfg(feature = "unstable_tool_call_name")]
             name: MaybeUndefined::Undefined,
             title: MaybeUndefined::Undefined,
             kind: MaybeUndefined::Undefined,
@@ -125,12 +119,7 @@ impl ToolCallUpdate {
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[must_use]
     pub fn name(mut self, name: impl IntoMaybeUndefined<String>) -> Self {
         self.name = name.into_maybe_undefined();
@@ -205,7 +194,6 @@ impl ToolCallUpdate {
     /// render an explicitly cleared value.
     pub fn apply_update(&mut self, update: ToolCallUpdate) {
         debug_assert_eq!(self.tool_call_id, update.tool_call_id);
-        #[cfg(feature = "unstable_tool_call_name")]
         if !update.name.is_undefined() {
             self.name = update.name;
         }
@@ -1072,6 +1060,7 @@ impl ToolCallLocation {
 mod tests {
     use super::*;
     use crate::MaybeUndefined;
+    use serde_json::{from_value, json, to_value};
 
     #[test]
     fn tool_call_serializes_as_upsert() {
@@ -1119,7 +1108,6 @@ mod tests {
         assert_eq!(deserialized.locations, MaybeUndefined::Value(Vec::new()));
     }
 
-    #[cfg(feature = "unstable_tool_call_name")]
     #[test]
     fn tool_call_name_patch_distinguishes_omitted_null_and_value() {
         let named = ToolCallUpdate::new("tc_1").name("read_file");
@@ -1188,6 +1176,84 @@ mod tests {
         let mut stored = ToolCallUpdate::new("tc_1").meta(meta);
         stored.apply_update(ToolCallUpdate::new("tc_1").meta(None::<Meta>));
         assert_eq!(stored.meta, MaybeUndefined::Null);
+    }
+
+    #[test]
+    fn tool_call_wire_patches_preserve_omitted_fields_and_replace_values() {
+        let initial = json!({
+            "toolCallId": "tc_1",
+            "_meta": {"source": "replay", "opaque": {"sequence": 1}}
+        });
+        let mut stored: ToolCallUpdate = from_value(initial.clone()).unwrap();
+        // A metadata-only first update must not invent content or a status.
+        assert_eq!(to_value(&stored).unwrap(), initial);
+
+        let populated = json!({
+            "toolCallId": "tc_1",
+            "name": "read_file",
+            "title": "Reading configuration",
+            "kind": "read",
+            "status": "in_progress",
+            "content": [{
+                "type": "content",
+                "content": {
+                    "type": "text",
+                    "text": "old",
+                    "_meta": {"source": "tool"}
+                }
+            }],
+            "locations": [{"path": "/workspace/config.json", "line": 3}],
+            "rawInput": {"path": "/workspace/config.json"},
+            "rawOutput": {"text": "old"}
+        });
+        stored.apply_update(from_value(populated.clone()).unwrap());
+        let mut expected = populated;
+        expected["_meta"] = initial["_meta"].clone();
+        assert_eq!(to_value(&stored).unwrap(), expected);
+
+        for (field, empty) in [
+            ("content", json!([])),
+            ("locations", json!([])),
+            ("rawInput", json!({})),
+            ("rawOutput", json!({})),
+            ("_meta", json!({})),
+        ] {
+            let original = expected[field].clone();
+            // Empty values replace rather than merge; null remains distinct.
+            // Restoring the value also checks that clearing is not permanent.
+            for replacement in [empty, json!(null), original] {
+                stored.apply_update(
+                    from_value(json!({"toolCallId": "tc_1", (field): replacement})).unwrap(),
+                );
+                expected[field] = replacement;
+                assert_eq!(to_value(&stored).unwrap(), expected, "patching {field}");
+
+                stored.apply_update(from_value(json!({"toolCallId": "tc_1"})).unwrap());
+                assert_eq!(to_value(&stored).unwrap(), expected, "omitting {field}");
+            }
+        }
+    }
+
+    #[test]
+    fn tool_call_wire_patches_preserve_unknown_statuses() {
+        for status in ["deferred", "_awaiting_review"] {
+            let mut stored = ToolCallUpdate::new("tc_1").status(ToolCallStatus::InProgress);
+            stored
+                .apply_update(from_value(json!({"toolCallId": "tc_1", "status": status})).unwrap());
+            let expected_status = MaybeUndefined::Value(ToolCallStatus::Other(status.to_owned()));
+            assert_eq!(stored.status, expected_status);
+
+            // An unrelated patch must not reset a future or extension status
+            // to a known value, including a success or failure state.
+            stored.apply_update(
+                from_value(json!({"toolCallId": "tc_1", "title": "Still waiting"})).unwrap(),
+            );
+            assert_eq!(stored.status, expected_status);
+            assert_eq!(
+                to_value(&stored).unwrap(),
+                json!({"toolCallId": "tc_1", "title": "Still waiting", "status": status})
+            );
+        }
     }
 
     #[test]
