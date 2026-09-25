@@ -33,6 +33,8 @@ The binding uses one method name, `mcp/message`, in two directions:
 - An **agent-to-provider request** invokes one MCP operation and eventually receives one result or error.
 - A **provider-to-agent notification** carries an MCP notification belonging to that active operation.
 
+`mcp/message` is this binding's ACP transport envelope, not an MCP-defined method. JSON-RPC distinguishes the two forms by the outer `id`: requests have one, notifications do not. The inner MCP method is preserved, such as `tools/call` for a request or `notifications/progress` for a notification. Implementations dispatch by JSON-RPC message kind and direction, not the outer method name alone.
+
 There are no provider-originated MCP requests. Interactive tools use MCP's multi round-trip request pattern (MRTR).
 
 ## Declaring a server
@@ -94,7 +96,9 @@ The v2 field is an optional object: omission or `null` means support is not adve
 
 An intermediary only advertises support when its downstream chain can consume this transport. The conductor does not unconditionally add the capability. A proxy that provides no adaptation preserves its successor's capabilities.
 
-Advertising this binding also commits the implementation to request-scoped notifications and `$/cancel_request` forwarding and handling. Cancellation is required for this binding even on ACP versions where general request cancellation is otherwise optional. Support for ordinary tool calls alone is insufficient.
+The advertised capability covers this request-scoped transport, including notification delivery and a per-request cancellation path. Agents can cancel their outgoing MCP operations using `$/cancel_request`; providers handle cancellation for those operations, and adapting proxies forward it using the appropriate hop-local request ID. This does not make cancellation mandatory for unrelated ACP methods or require support for every optional MCP feature.
+
+The cancellation requirement is a choice of this binding, not a claim that MCP universally mandates ACP cancellation. A `subscriptions/listen` request can remain open indefinitely, and an HTTP adapter must translate response-stream closure into cancellation of that request. Without a per-request signal, the caller would have to close the whole ACP connection to release one stream, disrupting unrelated work. [MCP defines cancellation per transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation); this binding reuses ACP's existing mechanism rather than adding another cancellation message. Cancellation remains subject to completion races and cannot undo external side effects.
 
 ## Requests and results
 
@@ -299,11 +303,9 @@ Tool lists vary by explicit server identity and authorization scope, not hidden 
 
 ## Implementation and validation
 
-The Rust implementation uses the shared schema's unstable `MessageMcpRequest`, `MessageMcpResponse`, `MessageMcpNotification`, `McpError`, and `McpRequestId` types for both ACP versions. The response and error carrier types are shared across versions.
+The Rust implementation uses each ACP version's unstable `MessageMcpRequest`, `MessageMcpResponse`, `MessageMcpNotification`, `McpError`, and `McpRequestId` schema types. The v1 and v2 response and error types are defined independently so either version can evolve without changing the other. Their JSON representation is currently the same.
 
 The SDK's target API separates a reusable `McpService` from each owned operation. A `McpRequestContext` supplies logical/server identity, validated metadata and capabilities, cancellation, and request-scoped notifications. A backend factory is an explicit adapter for implementations that need per-operation construction, not a requirement imposed by stateless MCP. Integration adapters must supervise any tasks spawned by their underlying library, not assume dropping a wrapper joins detached handlers.
-
-The [rmcp 3.4 upgrade](https://github.com/agentclientprotocol/rust-sdk/pull/372) is landed. It supplies modern discovery, MRTR, and subscription APIs, although its default protocol-version constant still selects 2025-11-25. Tests and clients for this binding explicitly select 2026-07-28.
 
 Acceptance tests must demonstrate:
 
@@ -321,7 +323,7 @@ These tests verify the binding, not every optional MCP feature. Tasks, Apps, and
 
 ### Stabilization gates
 
-The Rust reference implementation exercises the shared response carrier, reusable services, bounded transport queues, and native-tool HTTP re-export together. Its cleanup regression deliberately pauses a tool runner while ACP continues dispatching: cancellation cannot settle or release the logical request ID until the runner drops the tool future. Both mutable and concurrent tools use this rule. Independent item-count limits are not evidence of complete memory bounds, and dropping a task handle is not evidence that its work stopped.
+The Rust reference implementation exercises the versioned response carriers, reusable services, bounded transport queues, and native-tool HTTP re-export together. Its cleanup regression deliberately pauses a tool runner while ACP continues dispatching: cancellation cannot settle or release the logical request ID until the runner drops the tool future. Both mutable and concurrent tools use this rule. Independent item-count limits are not evidence of complete memory bounds, and dropping a task handle is not evidence that its work stopped.
 
 Concrete buffer sizes and concurrency quotas are implementation policies, not wire-protocol constants. Their behavior must be configurable or documented, and quota failures must preserve the error-domain distinction above. Both ACP v1 and draft v2 must exercise the same binding semantics; this proposal does not otherwise stabilize ACP v2 or optional MCP extensions.
 
