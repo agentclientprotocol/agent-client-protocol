@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.10.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.1...v1.10.0) - 2026-09-26
+
+### Added
+
+- *(unstable)* make MCP-over-ACP request-scoped ([#2223](https://github.com/agentclientprotocol/agent-client-protocol/pull/2223))
+
 ## [1.9.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.0...v1.9.1) - 2026-09-18
 
 ### Fixed
