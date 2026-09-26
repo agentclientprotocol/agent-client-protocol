@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.6](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.5...schema-v2.0.0-alpha.6) - 2026-09-26
+
+### Added
+
+- *(unstable)* make MCP-over-ACP request-scoped ([#2223](https://github.com/agentclientprotocol/agent-client-protocol/pull/2223))
+
 ## [2.0.0-alpha.5](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.4...schema-v2.0.0-alpha.5) - 2026-09-18
 
 ### Added
