@@ -21,6 +21,9 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                     |
 | `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                         |
 | `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                           |
+| `subagent_update`           | **Draft only.** Announces an owned child session or updates its display metadata, capabilities, and mirrored work-state snapshot.  |
+| `session_message`           | **Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable).                  |
+| `session_message_chunk`     | **Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable).                              |
 | `state_update`              | A change to the Agent's [foreground work state](#session-states).                                                                  |
 | `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/draft/tool-calls#streaming-content).                                         |
 | `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/draft/tool-calls#reporting).                                                         |
@@ -41,6 +44,51 @@ This is the complete set of standard variants defined in the current draft [`Ses
 The protocol also supports [custom and future variants](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update should preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
 
 Session updates are not limited to prompt-driven foreground work. For example, Agents may advertise commands after creating a session, and background activity may emit updates while the Agent is [idle](#session-states).
+
+### Session-directed messages (unstable)
+
+The Agent may report outgoing and incoming messages between sessions,
+separately from user-facing responses and tool calls. The outer
+`params.sessionId` identifies the transcript being updated. Every
+`session_message` or `session_message_chunk` requires `messageId`, scoped to
+that transcript. Optional `senderSessionId` and `recipientSessionId` metadata
+identify the participants. Include them on the first update when available;
+later updates may omit them or add missing identities.
+
+For example, an incoming message in the child can begin with a streamed chunk:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message_chunk",
+      "messageId": "received_message_1",
+      "senderSessionId": "parent_session",
+      "recipientSessionId": "child_session",
+      "content": { "type": "text", "text": "Please investigate " }
+    }
+  }
+}
+```
+
+Chunks append normal message content for the same IDs. A `session_message`
+upsert may replace the whole `content` array or update message metadata.
+Omission leaves either field unchanged; `null` clears it. `content: []` also
+clears accumulated content. Chunk `_meta` is scoped to that chunk and does not
+patch message metadata.
+
+Clients can render "To …" with a recipient link or "From …" with a sender link.
+Without sufficient participant metadata, use a generic inter-session
+presentation and add links when the metadata arrives. Omitted or `null`
+participant IDs mean not supplied and leave previously known identities intact.
+The two views have independent message IDs. The Agent reports each side only
+when observed; Clients must not synthesize an incoming entry from an outgoing
+one or forward the content themselves. Neither view acknowledges completed
+recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
+for participant registration, history gaps, and ownership rules.
 
 ## Prompt Lifecycle
 
@@ -597,6 +645,11 @@ Custom or future stop reasons can be used when Clients can display a generic sto
 ## Session States
 
 `state_update` reports foreground work.
+
+For exposed subagents, Agents **SHOULD** also mirror the same snapshot in the
+immediate parent's `subagent_update.state`. This keeps the parent's roster and
+the child's own stream informed about one logical state; duplicate snapshots
+do not represent additional work or usage. See [current child work state](/rfds/subagents#current-work-state).
 
 <ResponseField name="running">Foreground work is in progress.</ResponseField>
 

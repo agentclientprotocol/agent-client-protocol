@@ -181,9 +181,490 @@ pub enum SessionUpdate {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// An upsert for a subagent exposed by this session.
+    /// Announces a child session created and owned by this session, or updates
+    /// that ownership association's metadata.
     #[cfg(feature = "unstable_subagents")]
     SubagentUpdate(SubagentUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A message upsert observed in this session's transcript, sent to or
+    /// received from another session.
+    #[cfg(feature = "unstable_subagents")]
+    SessionMessage(SessionMessage),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// One content block appended to a sent or received session message.
+    #[cfg(feature = "unstable_subagents")]
+    SessionMessageChunk(SessionMessageChunk),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A content block appended to a transcript-local message in arrival order.
+/// Endpoints are optional identity metadata, not content patches: omitted or
+/// `null` does not clear a known endpoint. Agents SHOULD supply available
+/// endpoints on the first event; later events may omit them or enrich missing
+/// endpoints. Supplied endpoints must agree with the enclosing transcript.
+/// Live IDs refer to known sessions; history may retain unavailable counterparts.
+/// Missing identities permit generic inter-session UI, not guessed participants
+/// or human authorship.
+/// Chunk metadata applies only to that chunk. This does not instruct the Client
+/// to deliver content or imply that the recipient processed it.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionMessageChunk {
+    /// Identifier of this message within the enclosing session's transcript.
+    pub message_id: MessageId,
+    /// Optional sending session identity; omission or `null` retains a known value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub sender_session_id: Option<SessionId>,
+    /// Optional receiving session identity; omission or `null` retains a known value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub recipient_session_id: Option<SessionId>,
+    /// A single content block appended to the message.
+    pub content: ContentBlock,
+    /// Optional and nullable chunk-scoped metadata; omitted or `null` means none.
+    ///
+    /// Implementations MUST NOT make assumptions about values in `_meta`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SessionMessageChunk {
+    /// Builds a single streamed content block without chunk metadata.
+    #[must_use]
+    pub fn new(message_id: impl Into<MessageId>, content: ContentBlock) -> Self {
+        Self {
+            message_id: message_id.into(),
+            sender_session_id: None,
+            recipient_session_id: None,
+            content,
+            meta: None,
+        }
+    }
+
+    /// Supplies the sending session identity, when known.
+    #[must_use]
+    pub fn sender_session_id(mut self, sender_session_id: impl IntoOption<SessionId>) -> Self {
+        self.sender_session_id = sender_session_id.into_option();
+        self
+    }
+
+    /// Supplies the receiving session identity, when known.
+    #[must_use]
+    pub fn recipient_session_id(
+        mut self,
+        recipient_session_id: impl IntoOption<SessionId>,
+    ) -> Self {
+        self.recipient_session_id = recipient_session_id.into_option();
+        self
+    }
+
+    /// Sets optional chunk-scoped metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// An upsert of an inter-session message in the enclosing transcript.
+/// `messageId` is local to that transcript; separate views may use independent
+/// IDs. Endpoints are optional identity metadata, not content patches: omitted
+/// or `null` retains a known endpoint. Agents SHOULD supply available endpoints
+/// on the first event; later events may omit them or enrich missing endpoints.
+/// Supplied endpoints must agree with the enclosing transcript. Live IDs refer
+/// to known sessions; history may retain unavailable counterparts. Missing
+/// identities permit generic inter-session UI, not guessed participants or
+/// human authorship.
+/// Omitted `content` and `_meta` leave their stored values unchanged; `null`
+/// clears them. A concrete `content` array replaces existing content
+/// (`[]` also clears it); later chunks append. This neither changes session
+/// ownership nor instructs the Client to deliver content.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionMessage {
+    /// Identifier of this message within the enclosing session's transcript.
+    pub message_id: MessageId,
+    /// Optional sending session identity; omission or `null` retains a known value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub sender_session_id: Option<SessionId>,
+    /// Optional receiving session identity; omission or `null` retains a known value.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub recipient_session_id: Option<SessionId>,
+    /// Omitted leaves content unchanged; `null` or `[]` clears it.
+    /// A non-empty array replaces all content.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub content: MaybeUndefined<Vec<ContentBlock>>,
+    /// Omitted leaves metadata unchanged; `null` removes it.
+    ///
+    /// Implementations MUST NOT make assumptions about values in `_meta`.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(
+        default,
+        rename = "_meta",
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SessionMessage {
+    /// Builds a message upsert with its transcript-local ID.
+    #[must_use]
+    pub fn new(message_id: impl Into<MessageId>) -> Self {
+        Self {
+            message_id: message_id.into(),
+            sender_session_id: None,
+            recipient_session_id: None,
+            content: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// Supplies the sending session identity, when known.
+    #[must_use]
+    pub fn sender_session_id(mut self, sender_session_id: impl IntoOption<SessionId>) -> Self {
+        self.sender_session_id = sender_session_id.into_option();
+        self
+    }
+
+    /// Supplies the receiving session identity, when known.
+    #[must_use]
+    pub fn recipient_session_id(
+        mut self,
+        recipient_session_id: impl IntoOption<SessionId>,
+    ) -> Self {
+        self.recipient_session_id = recipient_session_id.into_option();
+        self
+    }
+
+    /// Replaces, clears, or omits the complete content patch.
+    #[must_use]
+    pub fn content(mut self, content: impl IntoMaybeUndefined<Vec<ContentBlock>>) -> Self {
+        self.content = content.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or omits the metadata patch.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
+        self
+    }
+}
+
+#[cfg(all(test, feature = "unstable_subagents"))]
+mod session_message_tests {
+    use super::*;
+    use serde_json::{Value, json};
+
+    #[test]
+    fn envelopes_preserve_participants_and_multimodal_content() {
+        let content = json!([
+            {"type": "text", "text": "Please inspect this"},
+            {"type": "image", "data": "aGVsbG8=", "mimeType": "image/png"}
+        ]);
+        for (transcript, sender, recipient, id) in [
+            ("parent", "parent", "child", "sent-1"),
+            ("child", "parent", "child", "received-9"),
+            ("child", "child", "parent", "sent-2"),
+        ] {
+            let wire = json!({"sessionId": transcript, "update": {
+                "sessionUpdate": "session_message", "messageId": id,
+                "senderSessionId": sender, "recipientSessionId": recipient, "content": content
+            }});
+            let decoded: SessionNotification = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(serde_json::to_value(&decoded).unwrap(), wire);
+            assert!(matches!(decoded.update, SessionUpdate::SessionMessage(_)));
+            let message = SessionMessage::new(id)
+                .sender_session_id(SessionId::new(sender))
+                .recipient_session_id(SessionId::new(recipient))
+                .content(vec![]);
+            assert_eq!(serde_json::to_value(message).unwrap()["content"], json!([]));
+        }
+    }
+
+    #[test]
+    fn message_upserts_validate_ids_and_patch_fields() {
+        let base = json!({"sessionUpdate": "session_message", "messageId": "m1",
+            "senderSessionId": "parent", "recipientSessionId": "child", "content": []});
+        {
+            let key = "messageId";
+            let mut missing = base.clone();
+            missing.as_object_mut().unwrap().remove(key);
+            assert!(
+                serde_json::from_value::<SessionUpdate>(missing).is_err(),
+                "{key}"
+            );
+            let mut null = base.clone();
+            null[key] = Value::Null;
+            assert!(
+                serde_json::from_value::<SessionUpdate>(null).is_err(),
+                "{key}"
+            );
+            let mut non_string = base.clone();
+            non_string[key] = json!(42);
+            assert!(
+                serde_json::from_value::<SessionUpdate>(non_string).is_err(),
+                "{key}"
+            );
+        }
+        for content in [None, Some(json!({}))] {
+            let mut wire = base.clone();
+            wire.as_object_mut().unwrap().remove("content");
+            if let Some(content) = content {
+                wire["content"] = content;
+            }
+            let decoded: SessionUpdate = serde_json::from_value(wire).unwrap();
+            let encoded = serde_json::to_value(decoded).unwrap();
+            let mut unchanged = base.clone();
+            unchanged.as_object_mut().unwrap().remove("content");
+            assert_eq!(encoded, unchanged);
+        }
+        let clear = SessionMessage::new("m1")
+            .sender_session_id(SessionId::new("parent"))
+            .recipient_session_id(SessionId::new("child"))
+            .content(None)
+            .meta(None);
+        let mut clear_wire = base.clone();
+        clear_wire["content"] = Value::Null;
+        clear_wire["_meta"] = Value::Null;
+        assert_eq!(
+            serde_json::to_value(&clear).unwrap()["content"],
+            Value::Null
+        );
+        let clear_update: SessionUpdate = serde_json::from_value(clear_wire.clone()).unwrap();
+        assert_eq!(serde_json::to_value(clear_update).unwrap(), clear_wire);
+        assert!(clear.content.is_null());
+        assert!(clear.meta.is_null());
+        for meta in [None, Some(Value::Null), Some(json!({"tag": "value"}))] {
+            let mut wire = base.clone();
+            if let Some(meta) = meta {
+                wire["_meta"] = meta;
+            }
+            let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
+            let encoded = serde_json::to_value(decoded).unwrap();
+            assert_eq!(encoded, wire);
+        }
+        let metadata_only = json!({"sessionUpdate": "session_message",
+            "messageId": "m1", "senderSessionId": "parent",
+            "recipientSessionId": "child", "_meta": {"tag": "value"}});
+        let decoded: SessionUpdate = serde_json::from_value(metadata_only.clone()).unwrap();
+        assert_eq!(serde_json::to_value(decoded).unwrap(), metadata_only);
+        let unset = SessionMessage::new("m1");
+        assert_eq!(
+            serde_json::to_value(&unset).unwrap(),
+            json!({"messageId": "m1"})
+        );
+        assert!(unset.content.is_undefined());
+        assert!(unset.meta.is_undefined());
+        let reset = SessionMessage::new("m1").content(vec![]);
+        assert_eq!(serde_json::to_value(reset).unwrap()["content"], json!([]));
+        let malformed: SessionMessage = serde_json::from_value(json!({
+            "messageId": "m1", "senderSessionId": "parent", "recipientSessionId": "child",
+            "content": false, "_meta": false
+        }))
+        .unwrap();
+        assert!(malformed.content.is_undefined());
+        assert!(malformed.meta.is_undefined());
+    }
+
+    #[test]
+    fn first_chunk_and_upsert_share_transcript_local_identity() {
+        for (transcript, id) in [("parent", "sent-1"), ("child", "received-9")] {
+            let wire = json!({"sessionId": transcript, "update": {
+                "sessionUpdate": "session_message_chunk", "messageId": id,
+                "senderSessionId": "parent", "recipientSessionId": "child",
+                "content": {"type": "text", "text": "first"}
+            }});
+            let decoded: SessionNotification = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(serde_json::to_value(decoded).unwrap(), wire);
+            let upsert = SessionMessage::new(id)
+                .sender_session_id(SessionId::new("parent"))
+                .recipient_session_id(SessionId::new("child"));
+            let chunk = SessionMessageChunk::new(
+                id,
+                ContentBlock::Text(crate::v1::TextContent::new("first")),
+            )
+            .sender_session_id(SessionId::new("parent"))
+            .recipient_session_id(SessionId::new("child"));
+            assert_eq!(chunk.message_id, upsert.message_id);
+            assert_eq!(chunk.sender_session_id, upsert.sender_session_id);
+            assert_eq!(chunk.recipient_session_id, upsert.recipient_session_id);
+            assert_eq!(
+                serde_json::to_value(SessionUpdate::SessionMessageChunk(chunk)).unwrap(),
+                wire["update"]
+            );
+        }
+        let wire = json!({"sessionId": "child", "update": {
+            "sessionUpdate": "session_message_chunk", "messageId": "received-9",
+            "senderSessionId": "parent", "recipientSessionId": "child",
+            "content": {"type": "text", "text": "first"}
+        }});
+        let base = wire["update"].clone();
+        for key in ["messageId", "content"] {
+            let mut missing = base.clone();
+            missing.as_object_mut().unwrap().remove(key);
+            assert!(
+                serde_json::from_value::<SessionUpdate>(missing).is_err(),
+                "{key}"
+            );
+            let mut null = base.clone();
+            null[key] = Value::Null;
+            assert!(
+                serde_json::from_value::<SessionUpdate>(null).is_err(),
+                "{key}"
+            );
+            let mut non_string = base.clone();
+            non_string[key] = json!(42);
+            assert!(
+                serde_json::from_value::<SessionUpdate>(non_string).is_err(),
+                "{key}"
+            );
+        }
+        for meta in [None, Some(Value::Null), Some(json!({"chunk": true}))] {
+            let mut value = base.clone();
+            if let Some(meta) = meta {
+                value["_meta"] = meta;
+            }
+            let decoded: SessionUpdate = serde_json::from_value(value.clone()).unwrap();
+            let encoded = serde_json::to_value(decoded).unwrap();
+            if value["_meta"].is_null() {
+                assert_eq!(encoded, base);
+            } else {
+                assert_eq!(encoded, value);
+            }
+        }
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn schema_requires_ids_and_chunk_content() {
+        let schema = serde_json::to_value(schemars::schema_for!(SessionMessage)).unwrap();
+        let required = schema["required"].as_array().unwrap();
+        assert_eq!(required, &vec![json!("messageId")]);
+        let chunk = serde_json::to_value(schemars::schema_for!(SessionMessageChunk)).unwrap();
+        let required = chunk["required"].as_array().unwrap();
+        assert_eq!(required.len(), 2);
+        assert!(required.contains(&json!("messageId")));
+        assert!(required.contains(&json!("content")));
+    }
+
+    #[test]
+    fn endpoints_can_arrive_late_or_be_omitted_from_later_events() {
+        let block = ContentBlock::Text(crate::v1::TextContent::new("hello"));
+        let minimal = SessionMessage::new("m1");
+        let first = SessionMessageChunk::new("m1", block.clone());
+        assert_eq!(
+            serde_json::to_value(&minimal).unwrap(),
+            json!({"messageId": "m1"})
+        );
+        assert_eq!(
+            serde_json::to_value(&first).unwrap(),
+            json!({"messageId": "m1", "content": {"type": "text", "text": "hello"}})
+        );
+        let enriched = SessionMessage::new("m1")
+            .sender_session_id(SessionId::new("parent"))
+            .recipient_session_id(SessionId::new("child"));
+        assert_eq!(enriched.sender_session_id, Some(SessionId::new("parent")));
+        assert_eq!(enriched.recipient_session_id, Some(SessionId::new("child")));
+        let later =
+            SessionMessageChunk::new("m1", block).sender_session_id(SessionId::new("parent"));
+        assert_eq!(later.sender_session_id, Some(SessionId::new("parent")));
+        assert_eq!(later.recipient_session_id, None);
+        for update in [
+            SessionUpdate::SessionMessage(minimal),
+            SessionUpdate::SessionMessageChunk(first),
+            SessionUpdate::SessionMessage(enriched),
+            SessionUpdate::SessionMessageChunk(later),
+        ] {
+            let wire = serde_json::to_value(&update).unwrap();
+            let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(serde_json::to_value(decoded).unwrap(), wire);
+        }
+    }
+
+    #[test]
+    fn invalid_or_null_endpoints_are_absent_but_message_id_is_required() {
+        for (kind, content) in [
+            ("session_message", None),
+            (
+                "session_message_chunk",
+                Some(json!({"type": "text", "text": "hello"})),
+            ),
+        ] {
+            let mut base = json!({"sessionUpdate": kind, "messageId": "m1",
+                "senderSessionId": null, "recipientSessionId": 42});
+            if let Some(content) = content {
+                base["content"] = content;
+            }
+            let decoded: SessionUpdate = serde_json::from_value(base.clone()).unwrap();
+            let encoded = serde_json::to_value(decoded).unwrap();
+            base.as_object_mut().unwrap().remove("senderSessionId");
+            base.as_object_mut().unwrap().remove("recipientSessionId");
+            assert_eq!(encoded, base);
+            for bad in [Value::Null, json!(42)] {
+                let mut invalid = base.clone();
+                invalid["messageId"] = bad;
+                assert!(serde_json::from_value::<SessionUpdate>(invalid).is_err());
+            }
+        }
+    }
+}
+
+#[cfg(all(test, not(feature = "unstable_subagents")))]
+mod disabled_session_message_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn message_updates_require_subagents_gate() {
+        for (kind, content) in [
+            ("session_message", json!([])),
+            (
+                "session_message_chunk",
+                json!({"type": "text", "text": "hello"}),
+            ),
+        ] {
+            let wire = json!({"sessionUpdate": kind, "messageId": "m1", "content": content});
+            assert!(serde_json::from_value::<SessionUpdate>(wire).is_err());
+        }
+    }
 }
 
 /// **UNSTABLE**
@@ -463,20 +944,25 @@ impl CompactionSummaryChunk {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// An upsert for a reusable child session associated with its parent session.
+/// Notification that the enclosing parent session created and owns a child session.
+///
+/// Later updates modify the existing association's metadata, not its ownership.
 ///
 /// Sent on the immediate parent session. The first update for an unknown
 /// [`SubagentUpdate::session_id`] announces the child and MUST be sent
-/// before any child traffic or reference to the child session. Parents may
-/// message and reuse an announced child across multiple operations.
+/// before any live child traffic or live message naming the child as sender
+/// or recipient. Parents may message and reuse an announced child across
+/// multiple operations.
 /// Child events are delivered automatically on the same connection; no child
 /// load, resume, or subscription is needed.
 ///
-/// Only the subagent session ID is required. Omitted fields keep their previous
-/// value; a child whose state was never reported has an unknown state. A
-/// concrete state replaces the entire previous state object, not the session.
-/// The child's title is reported via `session_info_update`; per-operation tasks
-/// belong on tool calls referencing the child.
+/// Only the subagent session ID is required. Omitted patch fields keep their
+/// previous values; `null` clears them. Clearing capabilities disables child
+/// mutations. Clearing state leaves current activity unset/unconfirmed: it does
+/// not imply idle, stop work, or create an `unknown` state snapshot. A concrete
+/// state replaces the entire previous state object, not the session.
+/// The title and description provide the parent's display metadata for the
+/// child. They do not replace the content of individual messages or operations.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -490,33 +976,57 @@ pub struct SubagentUpdate {
     /// Nested inside `update`; the enclosing notification's `sessionId` identifies
     /// the immediate parent, not this child.
     pub session_id: SessionId,
+    /// The parent's human-readable display title for this child. It need not be unique.
+    ///
+    /// Omitted means unchanged; `null` clears it. If unset, the Client chooses
+    /// a fallback presentation.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub title: MaybeUndefined<String>,
+    /// The parent's human-readable description of the child's role or purpose.
+    ///
+    /// Omitted means unchanged; `null` clears it. If unset, the Client chooses
+    /// a fallback presentation. This is current display metadata, not the
+    /// history of instructions sent to the child.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub description: MaybeUndefined<String>,
     /// Client-initiated session mutations permitted for this subagent session.
     ///
-    /// Omitted and `null` both mean unchanged. If never supplied, no session
-    /// mutations are permitted. Read-only operations retain their normal protocol
-    /// semantics and capability requirements.
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// Omitted means unchanged; `null` clears the capability set and disables
+    /// child mutations. If never supplied, no session mutations are permitted.
+    /// Read-only operations retain their normal protocol semantics and capability
+    /// requirements. A concrete object replaces the whole capability set.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub capabilities: Option<SubagentSessionCapabilities>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub capabilities: MaybeUndefined<SubagentSessionCapabilities>,
     /// Current state snapshot for the child session.
     ///
-    /// Omitted and `null` both mean unchanged; a concrete state replaces the
-    /// previous state object wholesale. If never supplied, the state is unknown.
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// Omitted means unchanged; `null` clears the current activity without
+    /// asserting idle or sending an `unknown` snapshot. A concrete state
+    /// replaces the previous state object wholesale. If never supplied, the
+    /// current activity is unset/unconfirmed.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub state: Option<StateUpdate>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub state: MaybeUndefined<StateUpdate>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// Omitted means unchanged; `null` removes the metadata.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    #[serde(
+        default,
+        rename = "_meta",
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
 }
 
 #[cfg(feature = "unstable_subagents")]
@@ -526,35 +1036,51 @@ impl SubagentUpdate {
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
             session_id: session_id.into(),
-            capabilities: None,
-            state: None,
-            meta: None,
+            title: MaybeUndefined::Undefined,
+            description: MaybeUndefined::Undefined,
+            capabilities: MaybeUndefined::Undefined,
+            state: MaybeUndefined::Undefined,
+            meta: MaybeUndefined::Undefined,
         }
     }
 
-    /// Sets or leaves unchanged the permitted client-initiated session mutations.
+    /// Sets, clears, or omits the parent's display title patch.
     #[must_use]
-    pub fn capabilities(
-        mut self,
-        capabilities: impl IntoOption<SubagentSessionCapabilities>,
-    ) -> Self {
-        self.capabilities = capabilities.into_option();
+    pub fn title(mut self, title: impl IntoMaybeUndefined<String>) -> Self {
+        self.title = title.into_maybe_undefined();
         self
     }
 
-    /// Replaces the current state snapshot, or leaves it unchanged when omitted.
+    /// Sets, clears, or omits the parent's description patch.
     #[must_use]
-    pub fn state(mut self, state: impl IntoOption<StateUpdate>) -> Self {
-        self.state = state.into_option();
+    pub fn description(mut self, description: impl IntoMaybeUndefined<String>) -> Self {
+        self.description = description.into_maybe_undefined();
+        self
+    }
+
+    /// Replaces, clears, or omits the permitted client-initiated mutations patch.
+    #[must_use]
+    pub fn capabilities(
+        mut self,
+        capabilities: impl IntoMaybeUndefined<SubagentSessionCapabilities>,
+    ) -> Self {
+        self.capabilities = capabilities.into_maybe_undefined();
+        self
+    }
+
+    /// Replaces, clears, or omits the current activity patch.
+    #[must_use]
+    pub fn state(mut self, state: impl IntoMaybeUndefined<StateUpdate>) -> Self {
+        self.state = state.into_maybe_undefined();
         self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// these keys. Sets, clears, or omits this metadata patch.
     #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
         self
     }
 }
@@ -2607,7 +3133,7 @@ pub struct ClientCapabilities {
     /// Optional and nullable. Omitted or `null` both mean the client does not
     /// advertise support.
     /// Supplying `{}` means the client understands child associations, work-state
-    /// snapshots, tool-call session references, and restricted-session semantics.
+    /// snapshots, session-directed messages, and restricted-session semantics.
     #[cfg(feature = "unstable_subagents")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -2790,9 +3316,9 @@ impl ClientCapabilities {
 /// Capability marker for exposing reusable child sessions as restricted ACP sessions.
 ///
 /// Supplying `{}` advertises support for child association and state updates,
-/// tool-call session references, and restricted-session semantics. The client
+/// session-directed messages, and restricted-session semantics. The client
 /// must advertise this capability before the agent sends subagent updates or
-/// session references.
+/// session-directed messages.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -3799,8 +4325,8 @@ mod tests {
         );
         let minimal: SubagentUpdate =
             serde_json::from_value(json!({ "sessionId": "sess_child_3" })).unwrap();
-        assert!(minimal.capabilities.is_none());
-        assert!(minimal.state.is_none());
+        assert!(minimal.capabilities.is_undefined());
+        assert!(minimal.state.is_undefined());
 
         let nulls: SubagentUpdate = serde_json::from_value(json!({
             "sessionId": "sess_child_3",
@@ -3808,7 +4334,104 @@ mod tests {
             "state": null
         }))
         .unwrap();
-        assert_eq!(nulls, minimal);
+        assert!(nulls.capabilities.is_null());
+        assert!(nulls.state.is_null());
+        assert_eq!(
+            serde_json::to_value(nulls).unwrap(),
+            json!({"sessionId": "sess_child_3", "capabilities": null, "state": null})
+        );
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn test_subagent_display_metadata() {
+        use serde_json::json;
+
+        let update = SubagentUpdate::new("child")
+            .title("Test investigator".to_string())
+            .description("Investigates platform-specific test failures.".to_string());
+        let wire = json!({
+            "sessionId": "child",
+            "title": "Test investigator",
+            "description": "Investigates platform-specific test failures."
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SubagentUpdate>(wire).unwrap(),
+            update
+        );
+
+        let minimal = SubagentUpdate::new("child");
+        assert_eq!(
+            serde_json::to_value(&minimal).unwrap(),
+            json!({"sessionId": "child"})
+        );
+        let cleared: SubagentUpdate = serde_json::from_value(json!({
+            "sessionId": "child", "title": null, "description": null
+        }))
+        .unwrap();
+        assert!(cleared.title.is_null());
+        assert!(cleared.description.is_null());
+        assert_eq!(
+            serde_json::to_value(cleared).unwrap(),
+            json!({"sessionId": "child", "title": null, "description": null})
+        );
+        let invalid: SubagentUpdate = serde_json::from_value(json!({
+            "sessionId": "child", "title": false, "description": false
+        }))
+        .unwrap();
+        assert_eq!(invalid, minimal);
+
+        let title_only: SubagentUpdate = serde_json::from_value(json!({
+            "sessionId": "child", "title": "Updated title"
+        }))
+        .unwrap();
+        assert_eq!(
+            title_only.title.value().map(String::as_str),
+            Some("Updated title")
+        );
+        assert!(title_only.description.is_undefined());
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_patch_fields_preserve_omitted_null_and_concrete() {
+        use serde_json::json;
+
+        let omitted = SubagentUpdate::new("child");
+        for field in ["title", "description", "capabilities", "state", "_meta"] {
+            let wire = json!({"sessionId": "child", field: null});
+            let decoded: SubagentUpdate = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(serde_json::to_value(decoded).unwrap(), wire, "{field}");
+            let malformed = json!({"sessionId": "child", field: false});
+            let decoded: SubagentUpdate = serde_json::from_value(malformed).unwrap();
+            assert_eq!(decoded, omitted, "{field}");
+        }
+        let concrete = json!({
+            "sessionId": "child", "title": "Investigator",
+            "description": "Tests", "capabilities": {"cancel": {}},
+            "state": {"state": "running"}, "_meta": {"source": "parent"}
+        });
+        let decoded: SubagentUpdate = serde_json::from_value(concrete.clone()).unwrap();
+        assert!(decoded.title.value().is_some());
+        assert!(decoded.description.value().is_some());
+        assert!(decoded.capabilities.value().is_some());
+        assert!(decoded.state.value().is_some());
+        assert!(decoded.meta.value().is_some());
+        assert_eq!(serde_json::to_value(decoded).unwrap(), concrete);
+        let cleared = SubagentUpdate::new("child")
+            .title(None)
+            .description(None)
+            .capabilities(None)
+            .state(None)
+            .meta(None);
+        assert_eq!(
+            serde_json::to_value(cleared).unwrap(),
+            json!({
+                "sessionId": "child", "title": null, "description": null,
+                "capabilities": null, "state": null, "_meta": null
+            })
+        );
     }
 
     #[cfg(feature = "unstable_subagents")]
@@ -3887,7 +4510,7 @@ mod tests {
             let SessionUpdate::SubagentUpdate(update) = &parsed else {
                 panic!("expected subagent update");
             };
-            assert_eq!(update.state.as_ref(), Some(&expected));
+            assert_eq!(update.state.value(), Some(&expected));
             assert_eq!(serde_json::to_value(parsed).unwrap(), wire);
         }
 
@@ -3923,7 +4546,7 @@ mod tests {
                 serde_json::from_value::<SubagentUpdate>(wire)
                     .unwrap()
                     .state,
-                Some(state)
+                MaybeUndefined::Value(state)
             );
         }
         assert_eq!(
@@ -3960,7 +4583,7 @@ mod tests {
             update
         );
         // Reporting unknown activity does not send a capability revocation.
-        assert!(update.capabilities.is_none());
+        assert!(update.capabilities.is_undefined());
 
         for meta in [json!(null), json!(false)] {
             let state: StateUpdate = serde_json::from_value(json!({
@@ -3989,7 +4612,7 @@ mod tests {
                 "sessionId": "child", "state": malformed
             }))
             .unwrap();
-            assert_eq!(update.state, None);
+            assert!(update.state.is_undefined());
         }
         let bad_reason: StateUpdate =
             serde_json::from_value(json!({"state": "idle", "stopReason": "not_a_reason"})).unwrap();

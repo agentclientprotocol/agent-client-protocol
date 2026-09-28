@@ -11,28 +11,77 @@ Before sending prompts, Clients **MUST** first complete the [initialization](/pr
 
 Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
 
-| `sessionUpdate` value       | Description                                                                                                                                             |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                                     |
-| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                                               |
-| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                              |
-| `tool_call`                 | A new [tool call](/protocol/v1/draft/tool-calls#creating).                                                                                              |
-| `tool_call_update`          | A change to a [tool call's status or results](/protocol/v1/draft/tool-calls#updating).                                                                  |
-| `plan`                      | The Agent's [execution plan](/protocol/v1/draft/agent-plan).                                                                                            |
-| `plan_update`               | **Draft only.** A [content update for a plan](/protocol/v1/draft/agent-plan#plan-operations) identified by ID. Requires the Client's `plan` capability. |
-| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v1/draft/agent-plan#removing-plans) identified by ID. Requires the Client's `plan` capability.            |
-| `available_commands_update` | The set of [available slash commands](/protocol/v1/draft/slash-commands) is ready or has changed.                                                       |
-| `current_mode_update`       | The current [session mode](/protocol/v1/draft/session-modes#from-the-agent) has changed.                                                                |
-| `config_option_update`      | The session's [configuration options](/protocol/v1/draft/session-config-options#from-the-agent) have changed.                                           |
-| `session_info_update`       | [Session metadata](/protocol/v1/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.                      |
-| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                                       |
-| `notice`                    | **Draft only.** A live [advisory notice](#session-notices) that is not part of session history. Requires the Client's `session.notices` capability.     |
-| `compaction_update`         | **Draft only.** Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.                  |
-| `compaction_summary_chunk`  | **Draft only.** Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.       |
+| `sessionUpdate` value       | Description                                                                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                                             |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                                                       |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                                      |
+| `subagent_update`           | **Draft only.** Announces an owned child session or updates its parent-owned metadata and work state. Requires the Client's `subagents` capability.             |
+| `session_message`           | **Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable). Requires the Client's `subagents` capability. |
+| `session_message_chunk`     | **Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable). Requires the Client's `subagents` capability.             |
+| `tool_call`                 | A new [tool call](/protocol/v1/draft/tool-calls#creating).                                                                                                      |
+| `tool_call_update`          | A change to a [tool call's status or results](/protocol/v1/draft/tool-calls#updating).                                                                          |
+| `plan`                      | The Agent's [execution plan](/protocol/v1/draft/agent-plan).                                                                                                    |
+| `plan_update`               | **Draft only.** A [content update for a plan](/protocol/v1/draft/agent-plan#plan-operations) identified by ID. Requires the Client's `plan` capability.         |
+| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v1/draft/agent-plan#removing-plans) identified by ID. Requires the Client's `plan` capability.                    |
+| `available_commands_update` | The set of [available slash commands](/protocol/v1/draft/slash-commands) is ready or has changed.                                                               |
+| `current_mode_update`       | The current [session mode](/protocol/v1/draft/session-modes#from-the-agent) has changed.                                                                        |
+| `config_option_update`      | The session's [configuration options](/protocol/v1/draft/session-config-options#from-the-agent) have changed.                                                   |
+| `session_info_update`       | [Session metadata](/protocol/v1/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.                              |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                                               |
+| `notice`                    | **Draft only.** A live [advisory notice](#session-notices) that is not part of session history. Requires the Client's `session.notices` capability.             |
+| `compaction_update`         | **Draft only.** Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.                          |
+| `compaction_summary_chunk`  | **Draft only.** Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.               |
 
 This is the complete set of variants defined in the current draft [`SessionUpdate` schema](/protocol/v1/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 
 Session updates are not limited to active prompt turns. For example, Agents may advertise commands after creating a session, and replay user and Agent messages when [loading a session](/protocol/v1/draft/session-setup#loading-sessions).
+
+### Session-directed messages (unstable)
+
+When the Client advertises `subagents: {}`, the Agent may report outgoing and
+incoming messages between sessions, separately from user-facing responses and
+tool calls. The outer `params.sessionId` identifies the transcript being
+updated. Every message and chunk requires a `messageId` scoped to that
+transcript. Optional `senderSessionId` and `recipientSessionId` metadata
+identify the participants. Include them on the first update when available;
+later updates may omit them or add missing identities.
+
+For example, an incoming message in the child can begin with a streamed chunk:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message_chunk",
+      "messageId": "received_message_1",
+      "senderSessionId": "parent_session",
+      "recipientSessionId": "child_session",
+      "content": { "type": "text", "text": "Please investigate " }
+    }
+  }
+}
+```
+
+Every chunk carries one normal `ContentBlock`; later chunks append content
+for the same `messageId`. `session_message` can supply a whole
+`content` array to replace accumulated content. Its optional `content` and
+`_meta` fields leave prior values unchanged when omitted; `null` clears them.
+`content: []` also clears content. Chunk metadata is local to the chunk, not a
+message-level patch.
+
+Clients can render "To …" with a recipient link or "From …" with a sender link.
+Without sufficient participant metadata, use a generic inter-session
+presentation and add links when the metadata arrives. Omitted or `null`
+participant IDs mean not supplied and leave previously known identities intact.
+The two views have independent message IDs. The Agent reports each side only
+when observed; Clients must not synthesize an incoming entry from an outgoing
+one or forward the content themselves. Neither view acknowledges completed
+recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
+for participant registration, history gaps, and ownership rules.
 
 ## The Prompt Turn Lifecycle
 

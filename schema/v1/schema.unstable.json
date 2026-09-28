@@ -619,22 +619,6 @@
               "$ref": "#/$defs/Terminal"
             }
           ]
-        },
-        {
-          "description": "**UNSTABLE** Display reference to an already-known session on this ACP connection.",
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "session"
-            }
-          },
-          "required": ["type"],
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionReference"
-            }
-          ]
         }
       ],
       "discriminator": {
@@ -1109,27 +1093,6 @@
         }
       },
       "required": ["terminalId"]
-    },
-    "SessionReference": {
-      "description": "**UNSTABLE** Display reference to an already-known session on this ACP connection.\n\nThe enclosing notification's `params.sessionId` identifies the session whose\ntranscript is updated; this item's `sessionId` links that tool operation to\nanother known session for display. Ordinary session setup or a\n`subagent_update` announcement establishes a known target. A parent can\nreference a child, and a child can reference its parent or a sibling.\nV1 work-state snapshots are carried by `subagent_update` on the parent stream.\nParent-child associations and controls are announced separately by\n`subagent_update`. This item does not create or register a session, reparent\nit, grant controls, prompt it, subscribe to it, close it, send a message,\nor change ownership. Reference links can point both ways without making the\nownership tree cyclic. A tool call may\nreference multiple known sessions, and multiple tool calls may reference\nthe same session. Tool-call status describes the operation, not whether\nthe referenced session is idle or terminated.",
-      "type": "object",
-      "properties": {
-        "sessionId": {
-          "description": "Identifier of the already-known session linked from this tool operation,\nnot the session used to route the enclosing notification.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/SessionId"
-            }
-          ]
-        },
-        "_meta": {
-          "description": "Optional nullable item metadata. Omission and `null` both mean no metadata.",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["sessionId"]
     },
     "ToolCallLocation": {
       "description": "A file location being accessed or modified by a tool.\n\nEnables clients to implement \"follow-along\" features that track\nwhich files the agent is working with in real-time.\n\nSee protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)",
@@ -5271,7 +5234,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for a subagent exposed by this session.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAnnounces a child session created and owned by this session, or updates\nthat ownership association's metadata.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5283,6 +5246,38 @@
           "allOf": [
             {
               "$ref": "#/$defs/SubagentUpdate"
+            }
+          ]
+        },
+        {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA message upsert observed in this session's transcript, sent to or\nreceived from another session.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "session_message"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionMessage"
+            }
+          ]
+        },
+        {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nOne content block appended to a sent or received session message.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "session_message_chunk"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionMessageChunk"
             }
           ]
         }
@@ -6286,7 +6281,7 @@
       }
     },
     "SubagentUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for a reusable child session associated with its parent session.\n\nSent on the immediate parent session. The first update for an unknown\n[`SubagentUpdate::session_id`] announces the child and MUST be sent\nbefore any child traffic or reference to the child session. Parents may\nmessage and reuse an announced child across multiple operations.\nChild events are delivered automatically on the same connection; no child\nload, resume, or subscription is needed.\n\nOnly the subagent session ID is required. Omitted fields keep their previous\nvalue; a child whose state was never reported has an unknown state. A\nconcrete state replaces the entire previous state object, not the session.\nThe child's title is reported via `session_info_update`; per-operation tasks\nbelong on tool calls referencing the child.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n[`SubagentUpdate::session_id`] announces the child and MUST be sent\nbefore any live child traffic or live message naming the child as sender\nor recipient. Parents may message and reuse an announced child across\nmultiple operations.\nChild events are delivered automatically on the same connection; no child\nload, resume, or subscription is needed.\n\nOnly the subagent session ID is required. Omitted patch fields keep their\nprevious values; `null` clears them. Clearing capabilities disables child\nmutations. Clearing state leaves current activity unset/unconfirmed: it does\nnot imply idle, stop work, or create an `unknown` state snapshot. A concrete\nstate replaces the entire previous state object, not the session.\nThe title and description provide the parent's display metadata for the\nchild. They do not replace the content of individual messages or operations.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -6297,8 +6292,18 @@
             }
           ]
         },
+        "title": {
+          "description": "The parent's human-readable display title for this child. It need not be unique.\n\nOmitted means unchanged; `null` clears it. If unset, the Client chooses\na fallback presentation.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "description": {
+          "description": "The parent's human-readable description of the child's role or purpose.\n\nOmitted means unchanged; `null` clears it. If unset, the Client chooses\na fallback presentation. This is current display metadata, not the\nhistory of instructions sent to the child.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
         "capabilities": {
-          "description": "Client-initiated session mutations permitted for this subagent session.\n\nOmitted and `null` both mean unchanged. If never supplied, no session\nmutations are permitted. Read-only operations retain their normal protocol\nsemantics and capability requirements.",
+          "description": "Client-initiated session mutations permitted for this subagent session.\n\nOmitted means unchanged; `null` clears the capability set and disables\nchild mutations. If never supplied, no session mutations are permitted.\nRead-only operations retain their normal protocol semantics and capability\nrequirements. A concrete object replaces the whole capability set.",
           "anyOf": [
             {
               "$ref": "#/$defs/SubagentSessionCapabilities"
@@ -6310,7 +6315,7 @@
           "x-deserialize-default-on-error": true
         },
         "state": {
-          "description": "Current state snapshot for the child session.\n\nOmitted and `null` both mean unchanged; a concrete state replaces the\nprevious state object wholesale. If never supplied, the state is unknown.",
+          "description": "Current state snapshot for the child session.\n\nOmitted means unchanged; `null` clears the current activity without\nasserting idle or sending an `unknown` snapshot. A concrete state\nreplaces the previous state object wholesale. If never supplied, the\ncurrent activity is unset/unconfirmed.",
           "anyOf": [
             {
               "$ref": "#/$defs/StateUpdate"
@@ -6322,13 +6327,120 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)\nOmitted means unchanged; `null` removes the metadata.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
         }
       },
       "required": ["sessionId"]
+    },
+    "SessionMessage": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert of an inter-session message in the enclosing transcript.\n`messageId` is local to that transcript; separate views may use independent\nIDs. Endpoints are optional identity metadata, not content patches: omitted\nor `null` retains a known endpoint. Agents SHOULD supply available endpoints\non the first event; later events may omit them or enrich missing endpoints.\nSupplied endpoints must agree with the enclosing transcript. Live IDs refer\nto known sessions; history may retain unavailable counterparts. Missing\nidentities permit generic inter-session UI, not guessed participants or\nhuman authorship.\nOmitted `content` and `_meta` leave their stored values unchanged; `null`\nclears them. A concrete `content` array replaces existing content\n(`[]` also clears it); later chunks append. This neither changes session\nownership nor instructs the Client to deliver content.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "Identifier of this message within the enclosing session's transcript.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "senderSessionId": {
+          "description": "Optional sending session identity; omission or `null` retains a known value.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "recipientSessionId": {
+          "description": "Optional receiving session identity; omission or `null` retains a known value.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "content": {
+          "description": "Omitted leaves content unchanged; `null` or `[]` clears it.\nA non-empty array replaces all content.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "Omitted leaves metadata unchanged; `null` removes it.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId"]
+    },
+    "SessionMessageChunk": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content block appended to a transcript-local message in arrival order.\nEndpoints are optional identity metadata, not content patches: omitted or\n`null` does not clear a known endpoint. Agents SHOULD supply available\nendpoints on the first event; later events may omit them or enrich missing\nendpoints. Supplied endpoints must agree with the enclosing transcript.\nLive IDs refer to known sessions; history may retain unavailable counterparts.\nMissing identities permit generic inter-session UI, not guessed participants\nor human authorship.\nChunk metadata applies only to that chunk. This does not instruct the Client\nto deliver content or imply that the recipient processed it.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "Identifier of this message within the enclosing session's transcript.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "senderSessionId": {
+          "description": "Optional sending session identity; omission or `null` retains a known value.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "recipientSessionId": {
+          "description": "Optional receiving session identity; omission or `null` retains a known value.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "content": {
+          "description": "A single content block appended to the message.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ContentBlock"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "Optional and nullable chunk-scoped metadata; omitted or `null` means none.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId", "content"]
     },
     "CompleteElicitationNotification": {
       "description": "Notification sent by the agent when a URL-based elicitation is complete.",
@@ -6701,7 +6813,7 @@
           "x-deserialize-default-on-error": true
         },
         "subagents": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client understands exposed subagent sessions.\n\nOptional and nullable. Omitted or `null` both mean the client does not\nadvertise support.\nSupplying `{}` means the client understands child associations, work-state\nsnapshots, tool-call session references, and restricted-session semantics.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the client understands exposed subagent sessions.\n\nOptional and nullable. Omitted or `null` both mean the client does not\nadvertise support.\nSupplying `{}` means the client understands child associations, work-state\nsnapshots, session-directed messages, and restricted-session semantics.",
           "anyOf": [
             {
               "$ref": "#/$defs/SubagentCapabilities"
@@ -6894,7 +7006,7 @@
       "type": "object"
     },
     "SubagentCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability marker for exposing reusable child sessions as restricted ACP sessions.\n\nSupplying `{}` advertises support for child association and state updates,\ntool-call session references, and restricted-session semantics. The client\nmust advertise this capability before the agent sends subagent updates or\nsession references.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability marker for exposing reusable child sessions as restricted ACP sessions.\n\nSupplying `{}` advertises support for child association and state updates,\nsession-directed messages, and restricted-session semantics. The client\nmust advertise this capability before the agent sends subagent updates or\nsession-directed messages.",
       "type": "object",
       "properties": {
         "_meta": {
