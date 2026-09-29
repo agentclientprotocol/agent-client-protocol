@@ -51,6 +51,17 @@ don't work across Agents. Clients also cannot tell whether an Agent will
 reject, queue, or steer with a prompt sent mid-turn, so they cannot show the
 right UI.
 
+This gap has already come up in the community. Goose is prototyping steering
+as an ACP extension ([aaif-goose/goose#9560](https://github.com/aaif-goose/goose/pull/9560)),
+and it has been discussed on Zulip in
+[#general > Steering?](https://agentclientprotocol.zulipchat.com/#narrow/channel/543465-general/topic/Steering.3F/with/602495365)
+and
+[#general > ACP 2.0 Session Ambiguities](https://agentclientprotocol.zulipchat.com/#narrow/channel/543465-general/topic/ACP.202.2E0.20Session.20Ambiguities/with/622119441),
+where the open question was whether a `session/prompt` sent while the session
+is running should steer or be queued. This RFD takes the first option: a prompt
+sent while the session is running is a steering message, and queueing is left
+to the Client.
+
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
