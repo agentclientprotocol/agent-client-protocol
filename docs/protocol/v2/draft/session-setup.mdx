@@ -153,9 +153,15 @@ any minimum period. Live-only messages, including locally handled commands, may
 be absent from replay. A successful prompt response confirms insertion, not
 future availability in history; absence from replay does not contradict it.
 
-Live-only `notice` updates are not conversation history and **SHOULD NOT** be
-replayed. If the underlying condition is still relevant after resuming
-finishes, the Agent may emit a new notice as a new live event.
+[Session compactions](/protocol/v2/draft/prompt-lifecycle#session-compaction)
+are replayed as materialized `compaction_update` entries with the original IDs,
+timeline positions, and full retained summaries when available, not as the
+transient start/chunk/finish sequence. No Client capability is required.
+
+Live-only [notices](/protocol/v2/draft/prompt-lifecycle#session-notices) are not
+conversation history and **SHOULD NOT** be replayed. If the underlying condition
+is still relevant after resuming finishes, the Agent may emit a new notice as a
+new live event.
 
 For example, a user message from the conversation history:
 

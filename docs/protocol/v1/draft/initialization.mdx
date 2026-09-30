@@ -54,6 +54,14 @@ They **SHOULD** also provide a name and version to the Agent.
 }
 ```
 
+<Note>
+  `session.compaction` and `session.notices` are independent Preview
+  capabilities available only in the draft schema. Advertise each only when the
+  Client implements its corresponding
+  [compaction](/protocol/v1/draft/prompt-turn#session-compaction) or
+  [notice](/protocol/v1/draft/prompt-turn#session-notices) semantics.
+</Note>
+
 The Agent **MUST** respond with the chosen [protocol version](#protocol-version) and the [capabilities](#agent-capabilities) it supports. It **SHOULD** also provide a name and version to the Client as well:
 
 ```json
@@ -197,6 +205,14 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   means unsupported. Supplying `{}` advertises the complete contract. Agents
   must not send these updates to a v1 Client that does not advertise it.
 </ParamField>
+
+<Card
+  icon="compress"
+  horizontal
+  href="/protocol/v1/draft/prompt-turn#session-compaction"
+>
+  Learn more about Session Compaction
+</Card>
 
 #### Session Notices
 
