@@ -80,6 +80,41 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 }
 ```
 
+## Initial Session State
+
+Agents **MAY** include initial [configuration options](/protocol/v2/draft/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/draft/slash-commands) in `availableCommands` in `session/new`, `session/resume`, and, when supported, `session/fork` responses. For example, a new session can return both:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "configOptions": [
+      {
+        "configId": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
+      }
+    ],
+    "availableCommands": [
+      {
+        "name": "test",
+        "description": "Run tests for the current project"
+      }
+    ]
+  }
+}
+```
+
+`availableCommands` is optional. Omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing setup responses. Agents **MUST NOT** send `null` for this field. Tolerant receivers treat `null` or a malformed non-array value like omission and skip invalid command items within an array.
+
+Returning commands in the response avoids requiring command notifications before the `session/new` response. Agents can still advertise commands later or update the list through `available_commands_update` notifications. Each notification replaces the complete command list, including `[]` to clear it.
+
+For a fork, `availableCommands` advertises commands available in the newly created session, not the source session.
+
 ## Resuming Sessions
 
 Agents that support the `session` method surface **MUST** support
@@ -235,8 +270,9 @@ When all requested replay entries have been reported to the Client, the Agent
 }
 ```
 
-The response **MAY** also include initial session configuration state when that
-feature is supported by the Agent.
+The response **MAY** also include `configOptions` and `availableCommands` as
+described in [Initial Session State](#initial-session-state), whether or not
+history replay was requested.
 
 ## Closing Active Sessions
 

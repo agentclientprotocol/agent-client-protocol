@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
-    AbsolutePath, ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse,
-    MessageId, Meta, SessionId,
+    AbsolutePath, AvailableCommand, ClientCapabilities, ContentBlock, ExtNotification, ExtRequest,
+    ExtResponse, MessageId, Meta, SessionId,
 };
 use crate::{IntoOption, ProtocolVersion, SkipListener};
 
@@ -977,6 +977,15 @@ pub struct NewSessionResponse {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<SessionConfigOption>,
+    /// Initial commands the agent can execute in this session.
+    ///
+    /// Optional. Omitted or empty means no initial commands are advertised.
+    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Later `available_commands_update` notifications replace this list.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -996,6 +1005,7 @@ impl NewSessionResponse {
         Self {
             session_id: session_id.into(),
             config_options: Vec::new(),
+            available_commands: Vec::new(),
             meta: None,
         }
     }
@@ -1004,6 +1014,13 @@ impl NewSessionResponse {
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
+        self
+    }
+
+    /// Initial commands the agent can execute in this session.
+    #[must_use]
+    pub fn available_commands(mut self, available_commands: Vec<AvailableCommand>) -> Self {
+        self.available_commands = available_commands;
         self
     }
 
@@ -1135,6 +1152,15 @@ pub struct ForkSessionResponse {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<SessionConfigOption>,
+    /// Initial commands the agent can execute in this session.
+    ///
+    /// Optional. Omitted or empty means no initial commands are advertised.
+    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Later `available_commands_update` notifications replace this list.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1155,6 +1181,7 @@ impl ForkSessionResponse {
         Self {
             session_id: session_id.into(),
             config_options: Vec::new(),
+            available_commands: Vec::new(),
             meta: None,
         }
     }
@@ -1163,6 +1190,13 @@ impl ForkSessionResponse {
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
+        self
+    }
+
+    /// Initial commands the agent can execute in this session.
+    #[must_use]
+    pub fn available_commands(mut self, available_commands: Vec<AvailableCommand>) -> Self {
+        self.available_commands = available_commands;
         self
     }
 
@@ -1471,6 +1505,15 @@ crate::serde_util::default_on_null! {
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub config_options: Vec<SessionConfigOption>,
+        /// Initial commands the agent can execute in this session.
+        ///
+        /// Optional. Omitted or empty means no initial commands are advertised.
+        /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+        /// Later `available_commands_update` notifications replace this list.
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub available_commands: Vec<AvailableCommand>,
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
         /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
         /// these keys.
@@ -1495,6 +1538,13 @@ impl ResumeSessionResponse {
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
+        self
+    }
+
+    /// Initial commands the agent can execute in this session.
+    #[must_use]
+    pub fn available_commands(mut self, available_commands: Vec<AvailableCommand>) -> Self {
+        self.available_commands = available_commands;
         self
     }
 
@@ -5899,7 +5949,7 @@ mod test_serialization {
     }
 
     #[test]
-    fn test_session_response_config_options_default_empty_and_skip_serializing() {
+    fn test_session_response_initial_state_default_empty_and_skip_serializing() {
         assert_eq!(
             serde_json::to_value(NewSessionResponse::new("sess")).unwrap(),
             json!({ "sessionId": "sess" })
@@ -5957,6 +6007,107 @@ mod test_serialization {
                 serde_json::from_value(json!({ "sessionId": "fork" })).unwrap();
             assert!(fork.config_options.is_empty());
         }
+    }
+
+    #[test]
+    fn test_session_response_available_commands_roundtrip_with_config_options() {
+        use super::super::{AvailableCommandInput, TextCommandInput};
+
+        let commands = vec![
+            AvailableCommand::new("web", "Search the web")
+                .input(AvailableCommandInput::Text(TextCommandInput::new("Query"))),
+            AvailableCommand::new("test", "Run project tests"),
+        ];
+        let mut expected = json!({
+            "sessionId": "sess",
+            "configOptions": [test_config_option()],
+            "availableCommands": [
+                {
+                    "name": "web",
+                    "description": "Search the web",
+                    "input": { "type": "text", "hint": "Query" }
+                },
+                { "name": "test", "description": "Run project tests" }
+            ]
+        });
+
+        let new = NewSessionResponse::new("sess")
+            .config_options(vec![test_config_option()])
+            .available_commands(commands.clone());
+        assert_eq!(serde_json::to_value(&new).unwrap(), expected);
+        assert_eq!(
+            serde_json::from_value::<NewSessionResponse>(expected.clone()).unwrap(),
+            new
+        );
+
+        expected.as_object_mut().unwrap().remove("sessionId");
+        let resume = ResumeSessionResponse::new()
+            .config_options(vec![test_config_option()])
+            .available_commands(commands.clone());
+        assert_eq!(serde_json::to_value(&resume).unwrap(), expected);
+        assert_eq!(
+            serde_json::from_value::<ResumeSessionResponse>(expected.clone()).unwrap(),
+            resume
+        );
+
+        #[cfg(feature = "unstable_session_fork")]
+        {
+            expected["sessionId"] = json!("fork");
+            let fork = ForkSessionResponse::new("fork")
+                .config_options(vec![test_config_option()])
+                .available_commands(commands);
+            assert_eq!(serde_json::to_value(&fork).unwrap(), expected);
+            assert_eq!(
+                serde_json::from_value::<ForkSessionResponse>(expected).unwrap(),
+                fork
+            );
+        }
+    }
+
+    #[test]
+    fn test_session_response_available_commands_deserialize_missing_null_and_invalid() {
+        let command = AvailableCommand::new("test", "Run project tests");
+        let config_options = vec![test_config_option()];
+
+        for (commands, expected) in [
+            (None, vec![]),
+            (Some(json!(null)), vec![]),
+            (Some(json!([])), vec![]),
+            (Some(json!("oops")), vec![]),
+            (Some(json!({})), vec![]),
+            (Some(json!([null, {}, { "name": "invalid" }])), vec![]),
+            (
+                Some(json!([null, command, { "name": "invalid" }])),
+                vec![command.clone()],
+            ),
+        ] {
+            let mut value = json!({
+                "sessionId": "sess",
+                "configOptions": config_options
+            });
+            if let Some(commands) = commands {
+                value["availableCommands"] = commands;
+            }
+
+            let new: NewSessionResponse = serde_json::from_value(value.clone()).unwrap();
+            assert_eq!(new.available_commands, expected);
+            assert_eq!(new.config_options, config_options);
+
+            #[cfg(feature = "unstable_session_fork")]
+            {
+                let fork: ForkSessionResponse = serde_json::from_value(value.clone()).unwrap();
+                assert_eq!(fork.available_commands, expected);
+                assert_eq!(fork.config_options, config_options);
+            }
+
+            value.as_object_mut().unwrap().remove("sessionId");
+            let resume: ResumeSessionResponse = serde_json::from_value(value).unwrap();
+            assert_eq!(resume.available_commands, expected);
+            assert_eq!(resume.config_options, config_options);
+        }
+
+        let resume: ResumeSessionResponse = serde_json::from_value(json!(null)).unwrap();
+        assert!(resume.available_commands.is_empty());
     }
 
     #[test]

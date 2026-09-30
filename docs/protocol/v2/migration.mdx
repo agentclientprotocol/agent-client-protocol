@@ -595,7 +595,7 @@ The cursor is a tagged union so future versions can add replay-from-a-point vari
 
 ### Consistent lifecycle requests
 
-`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Omitting it and sending `[]` are equivalent. Both responses carry the session's `configOptions`. Neither carries `modes` anymore.
+`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Omitting it and sending `[]` are equivalent. Both responses **MAY** include the session's `configOptions` and initial `availableCommands`. Neither carries `modes` anymore.
 
 `additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list. Omitting the field or sending `[]` activates no additional roots rather than restoring previous ones.
 
@@ -671,7 +671,13 @@ If you maintain a validator or generated models, v2 also tightens schema-level d
 
 ## Slash commands
 
-The advertisement model (`available_commands_update` carrying commands with `name` and `description`) is unchanged, but a command's optional `input` specification is now a tagged union. The v1 untagged unstructured input gains an explicit `type: "text"` discriminator so richer input types can be added later:
+Agents **MAY** now return initial `availableCommands` alongside `configOptions` in `session/new` and `session/resume` responses. The draft `session/fork` response also supports commands for the newly created session when forking is supported. This avoids requiring command notifications before the `session/new` response; see the [setup response example](/protocol/v2/session-setup#initial-session-state).
+
+In setup responses, `availableCommands` is an optional array: omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing. `null` is not a valid outbound value. Tolerant v2 receivers treat `null` or a malformed non-array value like omission and skip invalid command items within an array.
+
+`available_commands_update` notifications remain supported for advertising commands later or changing them. Each notification replaces the complete list previously advertised in a response or notification; `[]` clears it.
+
+A command still carries `name` and `description`, but its optional `input` specification is now a tagged union. The v1 untagged unstructured input gains an explicit `type: "text"` discriminator so richer input types can be added later:
 
 <CodeGroup>
 
@@ -739,7 +745,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, including terminal replacement snapshots rather than requiring every historical output chunk. Remove `session/load`.
 13. **Client surface.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
 14. **MCP config.** Require and emit `type` discriminators. Drop SSE. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
-15. **Slash commands.** Add the `type: "text"` discriminator to command `input` specifications.
+15. **Slash commands.** Add the `type: "text"` discriminator to command `input` specifications. Optionally advertise initial commands in setup responses via `availableCommands`, and use complete-replacement `available_commands_update` notifications for later changes.
 16. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists, and accept batch arrays on stdio.
 
 ## Migration checklist: Clients
@@ -757,7 +763,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 11. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and plain reconnects with `session/resume` without `replayFrom`.
 12. **Client surface.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`; do not treat display terminals as Client resources.
 13. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
-14. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read command `input` as a tagged union, and accept batch arrays on stdio.
+14. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read command `input` as a tagged union, and accept batch arrays on stdio. Read initial `availableCommands` from setup responses and replace the list on each `available_commands_update`, including `[]` to clear it.
 
 ## Migration checklist: SDKs
 

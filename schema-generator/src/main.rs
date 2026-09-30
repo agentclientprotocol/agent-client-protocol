@@ -420,6 +420,33 @@ mod schema_annotation_tests {
 
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
+    fn generated_v2_session_responses_include_optional_available_commands() {
+        let schema = root_schema_value();
+        for definition in [
+            "NewSessionResponse",
+            "ResumeSessionResponse",
+            #[cfg(feature = "unstable")]
+            "ForkSessionResponse",
+        ] {
+            let commands = property_schema(&schema, definition, "availableCommands");
+            assert_eq!(commands["type"], "array");
+            assert_eq!(commands["items"]["$ref"], "#/$defs/AvailableCommand");
+            assert!(
+                !def_schema(&schema, definition)
+                    .get("required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required
+                        .iter()
+                        .any(|field| field == "availableCommands")),
+                "{definition}.availableCommands must remain optional"
+            );
+            assert_bool_extension(commands, DEFAULT_ON_ERROR_EXTENSION);
+            assert_bool_extension(commands, SKIP_INVALID_ITEMS_EXTENSION);
+        }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
     fn generated_v2_schema_includes_json_rpc_batch_messages() {
         let schema = root_schema_value();
         for title in [

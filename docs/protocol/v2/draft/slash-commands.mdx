@@ -7,7 +7,43 @@ Agents can advertise a set of slash commands that users can invoke. These comman
 
 ## Advertising commands
 
-After creating a session, the Agent **MAY** send a list of available commands via the `available_commands_update` session notification:
+### Initial commands
+
+The Agent **MAY** include `availableCommands` in the `session/new`, `session/resume`, and, when supported, `session/fork` responses, alongside `configOptions` when supported. This lets the Client display commands as soon as [session setup](/protocol/v2/draft/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
+
+For example, a `session/new` response can advertise a command with text input:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "availableCommands": [
+      {
+        "name": "web",
+        "description": "Search the web for information",
+        "input": {
+          "type": "text",
+          "hint": "query to search for"
+        }
+      }
+    ]
+  }
+}
+```
+
+<ResponseField name="availableCommands" type="AvailableCommand[]">
+  Optional initial list of commands available in this session. Omission or `[]`
+  means no initial commands are advertised. Empty lists are omitted when
+  serializing setup responses.
+</ResponseField>
+
+`null` is not a valid outbound value for this field. Consistent with v2's tolerant deserialization rules, receivers treat `null` or a malformed non-array value like omission and skip invalid command items within an array.
+
+### Notifications
+
+After session setup, the Agent **MAY** announce commands that were not included in the response, or update the list, via the `available_commands_update` session notification:
 
 ```json
 {
@@ -44,9 +80,7 @@ After creating a session, the Agent **MAY** send a list of available commands vi
 }
 ```
 
-<ResponseField name="availableCommands" type="AvailableCommand[]">
-  The list of commands available in this session
-</ResponseField>
+The notification's `availableCommands` array is the complete replacement list, not a delta. An empty array clears all advertised commands.
 
 ### AvailableCommand
 
@@ -74,7 +108,7 @@ Command input specifications can add custom or future `type` values. Custom inpu
 
 ## Dynamic updates
 
-The Agent can update the list of available commands at any time during a session by sending another `available_commands_update` notification. This allows commands to be added based on context, removed when no longer relevant, or modified with updated descriptions.
+The Agent can update the list of available commands at any time during a session by sending another `available_commands_update` notification. Each notification replaces the list previously advertised in a setup response or notification, including `[]` to clear it. This allows commands to be added based on context, removed when no longer relevant, or modified with updated descriptions.
 
 ## Running commands
 

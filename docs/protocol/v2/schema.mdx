@@ -480,6 +480,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
+<ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} >
+  Initial commands the agent can execute in this session.
+
+Optional. Omitted or empty means no initial commands are advertised.
+Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Later `available_commands_update` notifications replace this list.
+
+</ResponseField>
 <ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
   Initial session configuration options.
 </ResponseField>
@@ -650,6 +658,14 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} >
+  Initial commands the agent can execute in this session.
+
+Optional. Omitted or empty means no initial commands are advertised.
+Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
 <ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
