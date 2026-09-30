@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.10.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.0...v1.10.1) - 2026-09-30
+
+### Fixed
+
+- *(unstable)* allow MCP response extensions ([#2265](https://github.com/agentclientprotocol/agent-client-protocol/pull/2265))
+
 ## [1.10.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.1...v1.10.0) - 2026-09-30
 
 ### Added
