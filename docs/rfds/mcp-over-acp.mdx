@@ -171,7 +171,7 @@ An inner MCP protocol error is also a successful **outer ACP response**, using t
 
 This preserves error-domain provenance. An inner error code is an MCP code; it must not be interpreted as an ACP error, even if the numerical codes collide. For example, an inner `-32000` must not trigger ACP authentication. An MCP tool-execution error remains a result with `isError`, not either kind of protocol error.
 
-The carrier requires exactly one of `result` or `error`. `result` accepts any JSON value, including explicit `null`. `error` is a non-null object with required integer `code` and string `message`; optional `data` distinguishes omission from explicit `null`. Unknown inner result and error fields are preserved. An optional carrier `_meta` contains ACP metadata and is separate from the inner outcome's metadata; omission and `null` are equivalent.
+Senders MUST include exactly one of `result` or `error` in the carrier. `result` must be present on the result branch and accepts any JSON value, including explicit `null`. `error` is a non-null object with required integer `code` and string `message`; optional `data` distinguishes omission from explicit `null`. Receivers ignore unknown outer carrier fields and prefer `result` if both outcome keys are present, matching the existing JSON-RPC response handling. Unknown inner result and error fields remain opaque and are preserved. An optional carrier `_meta` contains ACP metadata and is separate from the inner outcome's metadata; omission, `null`, and invalid non-object values are all treated as absent.
 
 ### Binding failures
 

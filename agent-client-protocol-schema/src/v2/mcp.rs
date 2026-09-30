@@ -64,17 +64,20 @@ impl McpError {
 /// Outer ACP errors are reserved for binding and runtime failures.
 ///
 /// Both branches require their carrier key. An error must be a non-null object.
-/// Carrier `_meta` is optional; null is equivalent to omission.
+/// Unknown outer fields are ignored; inner result and error fields are preserved.
+/// Carrier `_meta` is optional; null or invalid values are treated as absent.
+/// Senders must include exactly one outcome; receivers prefer `result` if both are present.
 #[serde_as]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(untagged, deny_unknown_fields)]
+#[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = "mcp/message")))]
 #[non_exhaustive]
 pub enum MessageMcpResponse {
     /// An opaque inner MCP result.
     Result {
         /// Required, even if JSON null.
+        #[serde(deserialize_with = "Deserialize::deserialize")]
         result: Value,
         /// Optional ACP carrier metadata.
         #[serde_as(deserialize_as = "DefaultOnError")]
@@ -323,20 +326,23 @@ mod tests {
     }
 
     #[test]
-    fn only_one_non_null_carrier_key_is_valid() {
+    fn a_carrier_key_is_required_and_errors_must_be_valid() {
         for wire in [
             Value::Null,
+            json!([]),
             json!({}),
             json!({"_meta": null}),
-            json!({"result": 1, "error": {"code": 1, "message": "x"}}),
-            json!({"result": 1, "error": null}),
+            json!({"unexpected": 1}),
             json!({"error": null}),
             json!({"error": 1}),
+            json!({"error": []}),
             json!({"error": {}}),
+            json!({"error": {"code": 1}}),
+            json!({"error": {"message": "x"}}),
             json!({"error": {"code": null, "message": "x"}}),
             json!({"error": {"code": 1, "message": null}}),
             json!({"error": {"code": 1.5, "message": "x"}}),
-            json!({"unexpected": 1, "result": 1}),
+            json!({"error": {"code": "1", "message": "x"}}),
         ] {
             assert!(
                 serde_json::from_value::<MessageMcpResponse>(wire.clone()).is_err(),
@@ -346,13 +352,61 @@ mod tests {
     }
 
     #[test]
-    fn carrier_metadata_is_optional_and_null_means_absent() {
+    fn result_takes_precedence_when_both_outcome_keys_are_present() {
+        for result in [Value::Null, json!(42), json!({"opaque": [null, true]})] {
+            for error in [
+                Value::Null,
+                json!({"code": 1, "message": "x"}),
+                json!({}),
+                json!({"code": 1, "message": null}),
+            ] {
+                let wire = json!({"result": result, "error": error});
+                assert_eq!(
+                    serde_json::from_value::<MessageMcpResponse>(wire).unwrap(),
+                    MessageMcpResponse::success(result.clone())
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn unknown_outer_fields_are_ignored_and_inner_extensions_are_preserved() {
         for wire in [
-            json!({"result": null, "_meta": null}),
-            json!({"error": {"code": 1, "message": "x"}, "_meta": null}),
+            json!({"result": null, "unexpected": {"nested": true}}),
+            json!({"result": {"future": [null, {"error": "opaque"}]}, "unexpected": 1}),
+            json!({"error": {"code": 1, "message": "x", "future": [null, true]}, "unexpected": null}),
         ] {
-            let parsed: MessageMcpResponse = serde_json::from_value(wire).unwrap();
-            assert!(serde_json::to_value(parsed).unwrap().get("_meta").is_none());
+            let parsed: MessageMcpResponse = serde_json::from_value(wire.clone()).unwrap();
+            let mut expected = wire;
+            expected.as_object_mut().unwrap().remove("unexpected");
+            assert_eq!(serde_json::to_value(parsed).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn carrier_metadata_is_optional_and_invalid_values_are_salvaged() {
+        for outcome in [
+            json!({"result": null}),
+            json!({"error": {"code": 1, "message": "x"}}),
+        ] {
+            let parsed: MessageMcpResponse = serde_json::from_value(outcome.clone()).unwrap();
+            assert_eq!(serde_json::to_value(parsed).unwrap(), outcome);
+            for meta in [
+                Value::Null,
+                json!(true),
+                json!(1),
+                json!("invalid"),
+                json!([]),
+            ] {
+                let mut wire = outcome.clone();
+                wire["_meta"] = meta;
+                let parsed: MessageMcpResponse = serde_json::from_value(wire).unwrap();
+                assert_eq!(serde_json::to_value(parsed).unwrap(), outcome);
+            }
+            let mut wire = outcome;
+            wire["_meta"] = json!({"extension": [null, true]});
+            let parsed: MessageMcpResponse = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(serde_json::to_value(parsed).unwrap(), wire);
         }
         let meta = json!({"extension": [null, true]})
             .as_object()
@@ -364,5 +418,24 @@ mod tests {
             serde_json::to_value(response).unwrap(),
             json!({"result": {"_meta": {"inner": true}}, "_meta": meta})
         );
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn response_schema_requires_a_key_without_closing_outer_fields() {
+        let schema = serde_json::to_value(schemars::schema_for!(MessageMcpResponse)).unwrap();
+        assert!(schema.get("not").is_none());
+        let branches = schema["anyOf"].as_array().unwrap();
+        assert_eq!(branches.len(), 2);
+        assert_eq!(branches[0]["required"], json!(["result"]));
+        assert_eq!(branches[1]["required"], json!(["error"]));
+        for branch in branches {
+            assert_ne!(branch.get("additionalProperties"), Some(&json!(false)));
+            assert_eq!(
+                branch["properties"]["_meta"]["x-deserialize-default-on-error"],
+                true
+            );
+        }
+        assert_ne!(schema.get("additionalProperties"), Some(&json!(false)));
     }
 }

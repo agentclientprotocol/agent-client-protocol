@@ -8785,7 +8785,7 @@
       }
     },
     "MessageMcpResponse": {
-      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nCarrier `_meta` is optional; null is equivalent to omission.",
+      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nUnknown outer fields are ignored; inner result and error fields are preserved.\nCarrier `_meta` is optional; null or invalid values are treated as absent.\nSenders must include exactly one outcome; receivers prefer `result` if both are present.",
       "anyOf": [
         {
           "title": "Result",
@@ -8802,8 +8802,7 @@
               "additionalProperties": true
             }
           },
-          "required": ["result"],
-          "additionalProperties": false
+          "required": ["result"]
         },
         {
           "title": "Error",
@@ -8825,8 +8824,7 @@
               "additionalProperties": true
             }
           },
-          "required": ["error"],
-          "additionalProperties": false
+          "required": ["error"]
         }
       ],
       "x-side": "client",

@@ -2109,7 +2109,9 @@ inner MCP outcome: an opaque result (including JSON null), or an MCP error.
 Outer ACP errors are reserved for binding and runtime failures.
 
 Both branches require their carrier key. An error must be a non-null object.
-Carrier `_meta` is optional; null is equivalent to omission.
+Unknown outer fields are ignored; inner result and error fields are preserved.
+Carrier `_meta` is optional; null or invalid values are treated as absent.
+Senders must include exactly one outcome; receivers prefer `result` if both are present.
 
 **Type:** Union
 
