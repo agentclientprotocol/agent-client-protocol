@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.1...v1.10.0) - 2026-09-30
+
+### Added
+
+- *(unstable-v2)* return available commands in session responses ([#2259](https://github.com/agentclientprotocol/agent-client-protocol/pull/2259))
+- *(unstable)* Intial RFD and schema for subagents ([#1992](https://github.com/agentclientprotocol/agent-client-protocol/pull/1992))
+- *(unstable)* make MCP-over-ACP request-scoped ([#2223](https://github.com/agentclientprotocol/agent-client-protocol/pull/2223))
+
 ## [1.9.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.0...v1.9.1) - 2026-09-18
 
 ### Fixed
