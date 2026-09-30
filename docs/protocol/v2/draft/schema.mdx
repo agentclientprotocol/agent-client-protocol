@@ -8225,17 +8225,7 @@ An opaque cursor used to paginate `session/list` results.
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-An upsert of an inter-session message in the enclosing transcript.
-`messageId` is local to that transcript; separate views may use independent
-IDs. Endpoints are optional identity metadata, not content patches: omitted
-or `null` retains a known endpoint. Agents SHOULD supply available endpoints
-on the first event; later events may omit them or enrich missing endpoints.
-Supplied endpoints must agree with the enclosing transcript. Live IDs refer
-to known sessions; history may retain unavailable counterparts. Missing
-identities permit generic inter-session UI, not guessed participants or
-human authorship.
-A concrete `content` array replaces existing content; later chunks append.
-This neither changes session ownership nor instructs the Client to deliver content.
+An upsert for an inter-session message.
 
 **Type:** Object
 
@@ -8267,16 +8257,7 @@ replaces the whole content collection.
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-A content block appended to a transcript-local message in arrival order.
-Endpoints are optional identity metadata, not content patches: omitted or
-`null` does not clear a known endpoint. Agents SHOULD supply available
-endpoints on the first event; later events may omit them or enrich missing
-endpoints. Supplied endpoints must agree with the enclosing transcript.
-Live IDs refer to known sessions; history may retain unavailable counterparts.
-Missing identities permit generic inter-session UI, not guessed participants
-or human authorship.
-Chunk metadata applies only to that chunk. This does not instruct the Client
-to deliver content or imply that the recipient processed it.
+A streamed content block of an inter-session message.
 
 **Type:** Object
 
@@ -9090,10 +9071,6 @@ current display metadata, not the history of instructions sent to the child.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The opaque session ID identifying the child in all ACP messages.
-
-Nested inside `update`; the enclosing notification's `sessionId` identifies
-the immediate parent, not this child.
-
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"subagent_update"`.
@@ -9611,10 +9588,6 @@ current display metadata, not the history of instructions sent to the child.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The opaque session ID identifying the child in all ACP messages.
-
-Nested inside `update`; the enclosing notification's `sessionId` identifies
-the immediate parent, not this child.
-
 </ResponseField>
 <ResponseField name="state" type={<><span><a href="#stateupdate">StateUpdate</a></span><span> | null</span></>} >
   The child's current foreground state, mirrored onto its parent association.

@@ -206,16 +206,7 @@ pub enum SessionUpdate {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// A content block appended to a transcript-local message in arrival order.
-/// Endpoints are optional identity metadata, not content patches: omitted or
-/// `null` does not clear a known endpoint. Agents SHOULD supply available
-/// endpoints on the first event; later events may omit them or enrich missing
-/// endpoints. Supplied endpoints must agree with the enclosing transcript.
-/// Live IDs refer to known sessions; history may retain unavailable counterparts.
-/// Missing identities permit generic inter-session UI, not guessed participants
-/// or human authorship.
-/// Chunk metadata applies only to that chunk. This does not instruct the Client
-/// to deliver content or imply that the recipient processed it.
+/// A streamed content block of an inter-session message.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -290,19 +281,7 @@ impl SessionMessageChunk {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// An upsert of an inter-session message in the enclosing transcript.
-/// `messageId` is local to that transcript; separate views may use independent
-/// IDs. Endpoints are optional identity metadata, not content patches: omitted
-/// or `null` retains a known endpoint. Agents SHOULD supply available endpoints
-/// on the first event; later events may omit them or enrich missing endpoints.
-/// Supplied endpoints must agree with the enclosing transcript. Live IDs refer
-/// to known sessions; history may retain unavailable counterparts. Missing
-/// identities permit generic inter-session UI, not guessed participants or
-/// human authorship.
-/// Omitted `content` and `_meta` leave their stored values unchanged; `null`
-/// clears them. A concrete `content` array replaces existing content
-/// (`[]` also clears it); later chunks append. This neither changes session
-/// ownership nor instructs the Client to deliver content.
+/// An upsert for an inter-session message.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -972,9 +951,6 @@ impl CompactionSummaryChunk {
 #[non_exhaustive]
 pub struct SubagentUpdate {
     /// The opaque session ID identifying the child in all ACP messages.
-    ///
-    /// Nested inside `update`; the enclosing notification's `sessionId` identifies
-    /// the immediate parent, not this child.
     pub session_id: SessionId,
     /// The parent's human-readable display title for this child. It need not be unique.
     ///

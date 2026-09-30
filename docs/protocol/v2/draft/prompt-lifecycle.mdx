@@ -87,8 +87,7 @@ participant IDs mean not supplied and leave previously known identities intact.
 The two views have independent message IDs. The Agent reports each side only
 when observed; Clients must not synthesize an incoming entry from an outgoing
 one or forward the content themselves. Neither view acknowledges completed
-recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
-for participant registration, history gaps, and ownership rules.
+recipient processing.
 
 ## Prompt Lifecycle
 
@@ -649,7 +648,7 @@ Custom or future stop reasons can be used when Clients can display a generic sto
 For exposed subagents, Agents **SHOULD** also mirror the same snapshot in the
 immediate parent's `subagent_update.state`. This keeps the parent's roster and
 the child's own stream informed about one logical state; duplicate snapshots
-do not represent additional work or usage. See [current child work state](/rfds/subagents#current-work-state).
+do not represent additional work or usage.
 
 <ResponseField name="running">Foreground work is in progress.</ResponseField>
 
@@ -662,10 +661,8 @@ do not represent additional work or usage. See [current child work state](/rfds/
 </ResponseField>
 
 <ResponseField name="unknown">
-  The Agent cannot currently determine foreground activity. This experimental
-  state is introduced by the subagents RFD and gated by `unstable_subagents` in
-  the Rust schema. For example, a remote child feed may be lost while ACP
-  remains connected.
+  **Draft only.** The Agent cannot currently determine foreground activity. For
+  example, a remote child feed may be lost while ACP remains connected.
 </ResponseField>
 
 Agents report `unknown` on actual loss of observability, not merely after
@@ -675,8 +672,7 @@ context. A subsequent `running`, `requires_action`, or `idle` replaces
 `unknown` for the same session. `unknown` is neither a work outcome nor a
 closure or cancellation, and does not resolve pending requests or automatically
 revoke child mutation capabilities; the Agent updates those capabilities
-separately if a control becomes unavailable. See the experimental
-[subagents RFD](/rfds/subagents) for v1 and recovery behavior.
+separately if a control becomes unavailable.
 
 Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state.
 

@@ -7662,7 +7662,7 @@
       "type": "object",
       "properties": {
         "sessionId": {
-          "description": "The opaque session ID identifying the child in all ACP messages.\n\nNested inside `update`; the enclosing notification's `sessionId` identifies\nthe immediate parent, not this child.",
+          "description": "The opaque session ID identifying the child in all ACP messages.",
           "allOf": [
             {
               "$ref": "#/$defs/SessionId"
@@ -7713,7 +7713,7 @@
       "required": ["sessionId"]
     },
     "SessionMessage": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert of an inter-session message in the enclosing transcript.\n`messageId` is local to that transcript; separate views may use independent\nIDs. Endpoints are optional identity metadata, not content patches: omitted\nor `null` retains a known endpoint. Agents SHOULD supply available endpoints\non the first event; later events may omit them or enrich missing endpoints.\nSupplied endpoints must agree with the enclosing transcript. Live IDs refer\nto known sessions; history may retain unavailable counterparts. Missing\nidentities permit generic inter-session UI, not guessed participants or\nhuman authorship.\nA concrete `content` array replaces existing content; later chunks append.\nThis neither changes session ownership nor instructs the Client to deliver content.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn upsert for an inter-session message.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -7767,7 +7767,7 @@
       "required": ["messageId"]
     },
     "SessionMessageChunk": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content block appended to a transcript-local message in arrival order.\nEndpoints are optional identity metadata, not content patches: omitted or\n`null` does not clear a known endpoint. Agents SHOULD supply available\nendpoints on the first event; later events may omit them or enrich missing\nendpoints. Supplied endpoints must agree with the enclosing transcript.\nLive IDs refer to known sessions; history may retain unavailable counterparts.\nMissing identities permit generic inter-session UI, not guessed participants\nor human authorship.\nChunk metadata applies only to that chunk. This does not instruct the Client\nto deliver content or imply that the recipient processed it.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA streamed content block of an inter-session message.",
       "type": "object",
       "properties": {
         "messageId": {
