@@ -29,7 +29,6 @@ schemars = ["dep:schemars", "serde_with/schemars_1"]
 unstable = [
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
-    "unstable_nes",
     "unstable_plan_operations",
     "unstable_session_fork",
     "unstable_subagents",
@@ -43,7 +42,6 @@ unstable = [
 unstable_protocol_v2 = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
-unstable_nes = []
 unstable_plan_operations = []
 unstable_session_fork = []
 unstable_session_compaction = []

@@ -157,12 +157,6 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
   `session/update`.
 </ResponseField>
 
-<ResponseField name="nes" type="NesCapabilities Object">
-  The Agent supports the `nes/*` method surface. Omitted or `null` means the
-  Agent does not support NES methods. Supplying `{}` means the Agent supports
-  NES sessions. NES can be advertised independently from `session`.
-</ResponseField>
-
 <ResponseField name="auth" type="AgentAuthCapabilities Object">
   Authentication-related extensions supported by the Agent. This field is
   orthogonal to `authMethods` and does not advertise the availability of

@@ -16,17 +16,7 @@
     "session_fork": "session/fork",
     "session_resume": "session/resume",
     "session_close": "session/close",
-    "auth_logout": "auth/logout",
-    "nes_start": "nes/start",
-    "nes_suggest": "nes/suggest",
-    "nes_accept": "nes/accept",
-    "nes_reject": "nes/reject",
-    "nes_close": "nes/close",
-    "document_did_open": "document/didOpen",
-    "document_did_change": "document/didChange",
-    "document_did_close": "document/didClose",
-    "document_did_save": "document/didSave",
-    "document_did_focus": "document/didFocus"
+    "auth_logout": "auth/logout"
   },
   "clientMethods": {
     "session_request_permission": "session/request_permission",
