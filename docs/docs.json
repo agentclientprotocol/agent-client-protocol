@@ -191,7 +191,6 @@
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
               "rfds/diff-delete",
-              "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",
@@ -226,6 +225,10 @@
           {
             "group": "Preview",
             "pages": ["rfds/session-compaction", "rfds/session-notices"]
+          },
+          {
+            "group": "To be removed",
+            "pages": ["rfds/next-edit-suggestions"]
           },
           {
             "group": "Completed",
