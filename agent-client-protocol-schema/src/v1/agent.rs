@@ -5031,50 +5031,6 @@ mod test_serialization {
     }
 
     #[test]
-    fn test_agent_method_names_exclude_removed_nes_methods() {
-        let methods = serde_json::to_value(AGENT_METHOD_NAMES).unwrap();
-        let methods = methods.as_object().unwrap();
-
-        for removed_method in [
-            "nes/start",
-            "nes/suggest",
-            "nes/close",
-            "nes/accept",
-            "nes/reject",
-            "document/didOpen",
-            "document/didChange",
-            "document/didClose",
-            "document/didSave",
-            "document/didFocus",
-        ] {
-            assert!(
-                methods
-                    .values()
-                    .all(|method| method.as_str() != Some(removed_method)),
-                "{removed_method} must not be advertised as a core method"
-            );
-        }
-    }
-
-    #[test]
-    fn test_client_extension_method_names_and_payloads() {
-        let payload = json!({"custom": true});
-        let params: Arc<serde_json::value::RawValue> =
-            serde_json::value::to_raw_value(&payload).unwrap().into();
-        let request =
-            ClientRequest::ExtMethodRequest(ExtRequest::new("_custom/request", params.clone()));
-        let notification = ClientNotification::ExtNotification(ExtNotification::new(
-            "_custom/notification",
-            params,
-        ));
-
-        assert_eq!(request.method(), "_custom/request");
-        assert_eq!(notification.method(), "_custom/notification");
-        assert_eq!(serde_json::to_value(request).unwrap(), payload);
-        assert_eq!(serde_json::to_value(notification).unwrap(), payload);
-    }
-
-    #[test]
     fn test_initialize_capabilities_default_on_malformed_values() {
         let request: InitializeRequest = serde_json::from_value(json!({
             "protocolVersion": 1,

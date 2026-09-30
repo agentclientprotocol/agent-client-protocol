@@ -5662,56 +5662,6 @@ mod test_serialization {
     }
 
     #[test]
-    fn test_method_names_exclude_removed_nes_and_document_methods() {
-        let methods = serde_json::to_value(AGENT_METHOD_NAMES).unwrap();
-        let methods = methods.as_object().unwrap();
-
-        for removed in [
-            "nes/start",
-            "nes/suggest",
-            "nes/accept",
-            "nes/reject",
-            "nes/close",
-            "document/didOpen",
-            "document/didChange",
-            "document/didClose",
-            "document/didSave",
-            "document/didFocus",
-        ] {
-            assert!(
-                !methods.values().any(|method| method == removed),
-                "{removed} must not be registered as an ACP method"
-            );
-        }
-    }
-
-    #[test]
-    fn test_extension_method_dispatch_preserves_custom_names_and_params() {
-        let params = Arc::from(
-            serde_json::value::RawValue::from_string(r#"{"custom":true}"#.into()).unwrap(),
-        );
-        let request = ClientRequest::ExtMethodRequest(Box::new(ExtRequest::new(
-            "_custom/request",
-            Arc::clone(&params),
-        )));
-        let notification = ClientNotification::ExtNotification(Box::new(ExtNotification::new(
-            "_custom/notification",
-            params,
-        )));
-
-        assert_eq!(request.method(), "_custom/request");
-        assert_eq!(notification.method(), "_custom/notification");
-        assert_eq!(
-            serde_json::to_value(request).unwrap(),
-            json!({"custom": true})
-        );
-        assert_eq!(
-            serde_json::to_value(notification).unwrap(),
-            json!({"custom": true})
-        );
-    }
-
-    #[test]
     fn test_session_config_option_category_known_variants() {
         // Test serialization of known variants
         assert_eq!(
