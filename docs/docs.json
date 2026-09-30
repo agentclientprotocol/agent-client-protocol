@@ -173,7 +173,8 @@
               "libraries/python",
               "libraries/rust",
               "libraries/typescript",
-              "libraries/community"
+              "libraries/community",
+              "libraries/testing"
             ]
           }
         ]
