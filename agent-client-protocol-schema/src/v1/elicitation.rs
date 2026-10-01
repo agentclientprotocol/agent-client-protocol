@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
-use crate::SkipListener;
 
 #[cfg(feature = "schemars")]
 use super::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
@@ -860,7 +859,7 @@ pub struct MultiSelectPropertySchema {
     /// Default selected values.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default selections are provided.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub default: Option<Vec<String>>,

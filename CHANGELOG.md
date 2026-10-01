@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- *(rust)* silently skip malformed list entries without logging Serde errors or private payload values. The `tracing` feature remains available as a backwards-compatible no-op.
+
 ## [1.10.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.0...v1.10.1) - 2026-09-30
 
 ### Fixed

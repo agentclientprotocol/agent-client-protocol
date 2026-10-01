@@ -51,10 +51,9 @@ unstable_session_notices = []
 unstable_subagents = []
 unstable_end_turn_token_usage = []
 
-# Emit `tracing::warn!` events when `VecSkipError` drops a malformed list
-# entry during deserialization. When disabled (the default), the inspector
-# hook compiles down to serde_with's built-in no-op and has zero runtime cost.
-tracing = ["dep:tracing"]
+# Backwards-compatible no-op: malformed list entries are silently skipped
+# regardless of whether this feature is enabled.
+tracing = []
 
 [dependencies]
 anyhow = "1"
@@ -67,4 +66,3 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
 serde_with = { version = "3.20.0", features = ["json"] }
 strum = { version = "0.28", features = ["derive"] }
-tracing = { version = "0.1", default-features = false, optional = true }

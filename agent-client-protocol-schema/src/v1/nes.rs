@@ -10,7 +10,7 @@ use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, SkipListener};
+use crate::IntoOption;
 
 use super::{Meta, SessionId};
 
@@ -1113,7 +1113,7 @@ pub struct DidChangeDocumentNotification {
     /// The new version number of the document.
     pub version: i64,
     /// The content changes.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub content_changes: Vec<TextDocumentContentChangeEvent>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

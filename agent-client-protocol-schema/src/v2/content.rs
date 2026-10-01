@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::Meta;
-use crate::{IntoOption, SkipListener};
+use crate::IntoOption;
 
 /// An Internet media type identifying the format of protocol content.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -606,7 +606,7 @@ pub struct ResourceLink {
     #[serde(default)]
     pub description: Option<String>,
     /// Optional set of sized icons that the client can display in a user interface.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub icons: Option<Vec<Icon>>,
@@ -729,7 +729,7 @@ pub struct Icon {
     /// `"any"` for scalable formats like SVG.
     ///
     /// If not provided, the client should assume that the icon can be used at any size.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub sizes: Option<Vec<String>>,
@@ -802,7 +802,7 @@ pub enum IconTheme {
 #[non_exhaustive]
 pub struct Annotations {
     /// Intended recipients for this content, such as the user or assistant.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
