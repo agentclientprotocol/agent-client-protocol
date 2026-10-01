@@ -227,10 +227,6 @@
             "pages": ["rfds/session-compaction", "rfds/session-notices"]
           },
           {
-            "group": "To be removed",
-            "pages": ["rfds/next-edit-suggestions"]
-          },
-          {
             "group": "Completed",
             "pages": [
               "rfds/introduce-rfd-process",

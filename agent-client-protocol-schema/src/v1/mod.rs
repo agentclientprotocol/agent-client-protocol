@@ -8,8 +8,6 @@ mod error;
 mod ext;
 #[cfg(feature = "unstable_mcp_over_acp")]
 mod mcp;
-#[cfg(feature = "unstable_nes")]
-mod nes;
 mod plan;
 mod protocol_level;
 mod tool_call;
@@ -24,8 +22,6 @@ pub use error::*;
 pub use ext::*;
 #[cfg(feature = "unstable_mcp_over_acp")]
 pub use mcp::*;
-#[cfg(feature = "unstable_nes")]
-pub use nes::*;
 pub use plan::*;
 pub use protocol_level::*;
 pub use serde_json::value::RawValue;
