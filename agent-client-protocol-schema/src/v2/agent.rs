@@ -5684,8 +5684,8 @@ mod test_serialization {
         else {
             panic!("Expected Stdio variant");
         };
-        assert!(args.is_empty());
-        assert!(env.is_empty());
+        assert_eq!(args, Vec::<String>::new());
+        assert_eq!(env, []);
 
         let http = McpServer::Http(McpServerHttp::new("http-server", "https://api.example.com"));
         assert_eq!(
@@ -5707,7 +5707,7 @@ mod test_serialization {
         else {
             panic!("Expected Http variant");
         };
-        assert!(headers.is_empty());
+        assert_eq!(headers, []);
     }
 
     #[test]
@@ -5975,21 +5975,21 @@ mod test_serialization {
     fn test_session_response_config_options_deserialize_missing_null_and_invalid() {
         let missing: NewSessionResponse =
             serde_json::from_value(json!({ "sessionId": "sess" })).unwrap();
-        assert!(missing.config_options.is_empty());
+        assert_eq!(missing.config_options, []);
 
         let null: NewSessionResponse = serde_json::from_value(json!({
             "sessionId": "sess",
             "configOptions": null
         }))
         .unwrap();
-        assert!(null.config_options.is_empty());
+        assert_eq!(null.config_options, []);
 
         let wrong_shape: NewSessionResponse = serde_json::from_value(json!({
             "sessionId": "sess",
             "configOptions": "oops"
         }))
         .unwrap();
-        assert!(wrong_shape.config_options.is_empty());
+        assert_eq!(wrong_shape.config_options, []);
 
         let valid_option = serde_json::to_value(test_config_option()).unwrap();
         let mixed: NewSessionResponse = serde_json::from_value(json!({
@@ -6000,12 +6000,12 @@ mod test_serialization {
         assert_eq!(mixed.config_options.len(), 1);
 
         let resume: ResumeSessionResponse = serde_json::from_value(json!({})).unwrap();
-        assert!(resume.config_options.is_empty());
+        assert_eq!(resume.config_options, []);
         #[cfg(feature = "unstable_session_fork")]
         {
             let fork: ForkSessionResponse =
                 serde_json::from_value(json!({ "sessionId": "fork" })).unwrap();
-            assert!(fork.config_options.is_empty());
+            assert_eq!(fork.config_options, []);
         }
     }
 
@@ -6107,7 +6107,7 @@ mod test_serialization {
         }
 
         let resume: ResumeSessionResponse = serde_json::from_value(json!(null)).unwrap();
-        assert!(resume.available_commands.is_empty());
+        assert_eq!(resume.available_commands, []);
     }
 
     #[test]
@@ -6432,8 +6432,8 @@ mod test_serialization {
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         match deserialized {
             AuthMethod::Terminal(AuthMethodTerminal { args, env, .. }) => {
-                assert!(args.is_empty());
-                assert!(env.is_empty());
+                assert_eq!(args, Vec::<String>::new());
+                assert_eq!(env, []);
             }
             _ => panic!("Expected Terminal variant"),
         }

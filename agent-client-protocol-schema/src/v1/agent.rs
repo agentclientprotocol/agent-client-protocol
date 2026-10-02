@@ -5768,7 +5768,7 @@ mod test_serialization {
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         match deserialized {
             AuthMethod::Terminal(AuthMethodTerminal { args, env, .. }) => {
-                assert!(args.is_empty());
+                assert_eq!(args, Vec::<String>::new());
                 assert!(env.is_empty());
             }
             _ => panic!("Expected Terminal variant"),
