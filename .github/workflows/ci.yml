@@ -88,6 +88,21 @@ jobs:
       - name: Run tests
         run: cargo test --all-features
 
+      # The generator builds one schema per feature set, and `--all-features`
+      # only selects the unstable v2 one, so test the other published schemas too.
+      - name: Run schema generator tests for each published schema
+        run: |
+          cargo test -p schema-generator
+          cargo test -p schema-generator --features unstable
+          cargo test -p schema-generator --features unstable_protocol_v2
+
+      # Some schema tests check behavior that only applies when an unstable
+      # feature such as `unstable_end_turn_token_usage` is off.
+      - name: Run schema tests without every unstable feature
+        run: |
+          cargo test -p agent-client-protocol-schema --features unstable_protocol_v2
+          cargo test -p agent-client-protocol-schema --features unstable_subagents
+
       - name: Check generated files are up to date
         run: |
           npm run generate

@@ -57,6 +57,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Add [whole-message updates](./message-updates.mdx) for `user_message`, `agent_message`, and `agent_thought` alongside streamed chunks. Message updates are upserts keyed by `messageId`; their `content` arrays replace current message content, while chunks append to the current content.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
 - Acknowledge [prompt insertion](./prompt.mdx) by returning the inserted user message's `messageId` from `session/prompt`, without waiting for foreground work to finish. Live user-message updates use the same ID; retention remains optional.
+- Report [failures after prompt insertion](./prompt.mdx#report-failures-after-insertion) by ending foreground work with an idle `state_update` whose `stopReason` is `error`, carrying an optional JSON-RPC error object. A JSON-RPC error on `session/prompt` always means the message was not inserted.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
@@ -111,6 +112,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-10-01: Recorded that failures after prompt insertion end foreground work with an `error` stop reason that carries an optional JSON-RPC error.
 - 2026-07-20: Clarified `git_patch` and renamed its payload from `diff` to `text`.
 - 2026-07-20: Clarified that `idle` means ready for a new prompt while background updates may continue; steering and queueing remain separate concerns.
 - 2026-07-20: Scoped the v2 authentication surface to Agents that return one or more valid `authMethods`; those Agents must implement both `auth/login` and `auth/logout`, while omission or an empty array means Clients must not call either method.

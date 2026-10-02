@@ -1531,20 +1531,20 @@ impl RunningStateUpdate {
 }
 
 /// The agent is ready to process a new prompt.
+///
+/// Agents SHOULD include a `stopReason` when the idle transition ends foreground
+/// work. An omitted, `null`, or malformed `stopReason` means the agent is not
+/// reporting one.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schemars", schemars(transform = idle_state_update_schema))]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IdleStateUpdate {
-    /// Indicates why foreground work stopped.
-    ///
-    /// Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-    /// Agents SHOULD include this when the idle transition ends foreground work.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
+    /// Indicates why foreground work stopped, with any fields of that stop reason.
+    #[serde(flatten)]
     pub stop_reason: Option<StopReason>,
     /// **UNSTABLE**
     ///
@@ -1558,7 +1558,7 @@ pub struct IdleStateUpdate {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub usage: Option<Usage>,
+    pub usage: Option<Box<Usage>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1593,7 +1593,7 @@ impl IdleStateUpdate {
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
-        self.usage = usage.into_option();
+        self.usage = usage.into_option().map(Box::new);
         self
     }
 
@@ -1606,6 +1606,49 @@ impl IdleStateUpdate {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+/// Makes the schema check stop reasons and keeps their default-on-error hint.
+///
+/// Flattening `Option<StopReason>` adds an empty `{}` branch to the `anyOf`. It
+/// matches any value, so the stop reason branches would check nothing; this
+/// replaces it with a branch for an omitted or `null` `stopReason`. Flattening
+/// also removes the `stopReason` property that carried
+/// `x-deserialize-default-on-error`, which SDKs generated from the schema rely on
+/// to tolerate a malformed value, so this adds it back as a shared property.
+#[cfg(feature = "schemars")]
+fn idle_state_update_schema(schema: &mut Schema) {
+    if let Some(properties) = schema
+        .get_mut("properties")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        properties.insert(
+            "stopReason".into(),
+            serde_json::json!({
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-lifecycle#stop-reasons)",
+                "type": ["string", "null"],
+                "x-deserialize-default-on-error": true
+            }),
+        );
+    }
+    let Some(variants) = schema
+        .get_mut("anyOf")
+        .and_then(serde_json::Value::as_array_mut)
+    else {
+        return;
+    };
+    for variant in variants {
+        if variant.as_object().is_some_and(serde_json::Map::is_empty) {
+            *variant = serde_json::json!({
+                "title": "none",
+                "description": "No stop reason: `stopReason` is omitted or `null`.",
+                "type": "object",
+                "properties": {
+                    "stopReason": { "type": "null" }
+                }
+            });
+        }
     }
 }
 
@@ -4375,6 +4418,199 @@ mod tests {
         };
 
         assert_eq!(update.cost, None);
+    }
+
+    #[test]
+    fn error_stop_reason_carries_failure_beside_discriminator() {
+        use crate::v2::{Error, ErrorStopReason};
+        use serde_json::json;
+
+        let update =
+            SessionUpdate::StateUpdate(StateUpdate::Idle(IdleStateUpdate::new().stop_reason(
+                StopReason::from(ErrorStopReason::new().error(Error::auth_required())),
+            )));
+        let wire = json!({
+            "sessionUpdate": "state_update",
+            "state": "idle",
+            "stopReason": "error",
+            "error": { "code": -32000, "message": "Authentication required" }
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+            update
+        );
+
+        let with_data =
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::from(
+                ErrorStopReason::new().error(
+                    Error::new(-32099, "Provider unavailable").data(json!({ "status": 503 })),
+                ),
+            )));
+        let wire = json!({
+            "state": "idle",
+            "stopReason": "error",
+            "error": {
+                "code": -32099,
+                "message": "Provider unavailable",
+                "data": { "status": 503 }
+            }
+        });
+        assert_eq!(serde_json::to_value(&with_data).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<StateUpdate>(wire).unwrap(),
+            with_data
+        );
+
+        // Missing, null, and malformed details leave a failure without details;
+        // the stop reason still ends foreground work.
+        let without_details = StateUpdate::Idle(
+            IdleStateUpdate::new().stop_reason(StopReason::from(ErrorStopReason::new())),
+        );
+        for error in [
+            None,
+            Some(json!(null)),
+            Some(json!("failed")),
+            Some(json!({ "message": "missing code" })),
+        ] {
+            let mut wire = json!({ "state": "idle", "stopReason": "error" });
+            if let Some(error) = error {
+                wire["error"] = error;
+            }
+            assert_eq!(
+                serde_json::from_value::<StateUpdate>(wire).unwrap(),
+                without_details
+            );
+        }
+        assert_eq!(
+            serde_json::to_value(&without_details).unwrap(),
+            json!({ "state": "idle", "stopReason": "error" })
+        );
+
+        // `error` is a field of the `error` stop reason only. Beside any other
+        // stop reason it is an unknown field: the update stays readable and the
+        // error has nowhere to go.
+        let parsed: StateUpdate = serde_json::from_value(json!({
+            "state": "idle",
+            "stopReason": "end_turn",
+            "error": { "code": -32603, "message": "Internal error" }
+        }))
+        .unwrap();
+        assert_eq!(
+            parsed,
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::EndTurn))
+        );
+    }
+
+    #[test]
+    fn flattened_stop_reason_keeps_open_enum_tolerance() {
+        use crate::v2::OtherStopReason;
+        use serde_json::json;
+
+        let meta: Meta = [("source".into(), json!("test"))].into_iter().collect();
+
+        // Omitted, null, and malformed stop reasons all mean no stop reason, as
+        // when `stopReason` was a separate default-on-error field.
+        for stop_reason in [None, Some(json!(null)), Some(json!(true)), Some(json!({}))] {
+            let mut wire = json!({ "state": "idle", "_meta": { "source": "test" } });
+            if let Some(stop_reason) = stop_reason {
+                wire["stopReason"] = stop_reason;
+            }
+            let StateUpdate::Idle(idle) = serde_json::from_value(wire).unwrap() else {
+                panic!("expected idle state update");
+            };
+            assert_eq!(idle.stop_reason, None);
+            assert_eq!(idle.meta, Some(meta.clone()));
+        }
+
+        // Unknown stop reasons keep their own fields for proxies and replay,
+        // while the idle update's fields stay on the idle update.
+        let wire = json!({
+            "state": "idle",
+            "stopReason": "_paused",
+            "resumeAfter": 30,
+            "_meta": { "source": "test" }
+        });
+        let parsed: StateUpdate = serde_json::from_value(wire.clone()).unwrap();
+        let expected = StateUpdate::Idle(
+            IdleStateUpdate::new()
+                .stop_reason(StopReason::Other(OtherStopReason::new(
+                    "_paused",
+                    [("resumeAfter".into(), json!(30))].into_iter().collect(),
+                )))
+                .meta(meta),
+        );
+        assert_eq!(parsed, expected);
+        assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+    }
+
+    #[test]
+    fn known_stop_reasons_are_never_read_as_other() {
+        use crate::v2::{ErrorStopReason, OtherStopReason};
+        use serde_json::json;
+
+        let known = [
+            StopReason::EndTurn,
+            StopReason::MaxTokens,
+            StopReason::MaxTurnRequests,
+            StopReason::Refusal,
+            StopReason::Cancelled,
+            StopReason::Error(ErrorStopReason::new()),
+        ];
+        // Adding a variant breaks this match, so `known` stays complete.
+        for stop_reason in &known {
+            match stop_reason {
+                StopReason::EndTurn
+                | StopReason::MaxTokens
+                | StopReason::MaxTurnRequests
+                | StopReason::Refusal
+                | StopReason::Cancelled
+                | StopReason::Error(_)
+                | StopReason::Other(_) => {}
+            }
+        }
+
+        for stop_reason in known {
+            let update = StateUpdate::Idle(IdleStateUpdate::new().stop_reason(stop_reason));
+            let wire = serde_json::to_value(&update).unwrap();
+            assert_eq!(
+                serde_json::from_value::<StateUpdate>(wire.clone()).unwrap(),
+                update
+            );
+            assert!(
+                serde_json::from_value::<OtherStopReason>(
+                    json!({ "stopReason": wire["stopReason"] })
+                )
+                .is_err(),
+                "{} must not be accepted as a custom stop reason",
+                wire["stopReason"]
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_stop_reason_leaves_usage_on_the_idle_update() {
+        use serde_json::json;
+
+        let usage = json!({ "totalTokens": 10, "inputTokens": 6, "outputTokens": 4 });
+        let wire = json!({ "state": "idle", "stopReason": "_paused", "usage": usage });
+        let StateUpdate::Idle(idle) = serde_json::from_value(wire.clone()).unwrap() else {
+            panic!("expected idle state update");
+        };
+        let Some(StopReason::Other(other)) = &idle.stop_reason else {
+            panic!("expected a custom stop reason");
+        };
+        assert!(other.fields.is_empty());
+
+        #[cfg(feature = "unstable_end_turn_token_usage")]
+        {
+            assert!(idle.usage.is_some());
+            assert_eq!(serde_json::to_value(&idle).unwrap()["usage"], usage);
+        }
+        // Without the feature, `usage` is not a field of the idle update, and it
+        // must not be smuggled through as a field of the stop reason either.
+        #[cfg(not(feature = "unstable_end_turn_token_usage"))]
+        assert!(serde_json::to_value(&idle).unwrap().get("usage").is_none());
     }
 
     #[test]

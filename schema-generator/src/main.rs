@@ -418,6 +418,61 @@ mod schema_annotation_tests {
         assert_bool_extension(auth_methods, SKIP_INVALID_ITEMS_EXTENSION);
     }
 
+    /// v1 has the idle snapshot only for unstable subagents; it matches v2's shape.
+    #[cfg(any(feature = "unstable_protocol_v2", feature = "unstable"))]
+    #[test]
+    fn generated_idle_state_update_ties_error_to_error_stop_reason() {
+        let schema = root_schema_value();
+        let idle = def_schema(&schema, "IdleStateUpdate");
+
+        assert!(
+            idle.pointer("/properties/error").is_none(),
+            "`error` must not be a shared idle property"
+        );
+        let stop_reason = property_schema(&schema, "IdleStateUpdate", "stopReason");
+        assert_bool_extension(stop_reason, DEFAULT_ON_ERROR_EXTENSION);
+        assert_eq!(stop_reason["type"], serde_json::json!(["string", "null"]));
+
+        let variants = idle["anyOf"].as_array().unwrap();
+        assert!(
+            variants.iter().any(|variant| variant["title"] == "none"
+                && variant.pointer("/properties/stopReason/type") == Some(&Value::from("null"))),
+            "the omitted stop reason must be a described branch, not an empty schema"
+        );
+        assert!(!variants.contains(&serde_json::json!({})));
+        let stop_reason_variant = |stop_reason: &str| {
+            variants
+                .iter()
+                .find(|variant| {
+                    variant.pointer("/properties/stopReason/const")
+                        == Some(&Value::from(stop_reason))
+                })
+                .unwrap_or_else(|| panic!("missing `{stop_reason}` stop reason variant"))
+        };
+        let end_turn = stop_reason_variant("end_turn");
+        assert!(!schema_contains_ref(end_turn, "#/$defs/ErrorStopReason"));
+        let error_variant = stop_reason_variant("error");
+        assert!(schema_contains_ref(
+            error_variant,
+            "#/$defs/ErrorStopReason"
+        ));
+
+        let error_stop_reason = def_schema(&schema, "ErrorStopReason");
+        assert!(
+            error_stop_reason.get("required").is_none(),
+            "`error` must remain optional"
+        );
+        let error = property_schema(&schema, "ErrorStopReason", "error");
+        assert!(schema_contains_ref(error, "#/$defs/Error"));
+        assert!(
+            error["anyOf"]
+                .as_array()
+                .is_some_and(|variants| variants.iter().any(|variant| variant["type"] == "null")),
+            "ErrorStopReason.error must accept null"
+        );
+        assert_bool_extension(error, DEFAULT_ON_ERROR_EXTENSION);
+    }
+
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
     fn generated_v2_session_responses_include_optional_available_commands() {
@@ -774,7 +829,7 @@ mod schema_annotation_tests {
         );
     }
 
-    #[cfg(feature = "unstable_protocol_v2")]
+    #[cfg(any(feature = "unstable_protocol_v2", feature = "unstable"))]
     fn schema_contains_ref(schema: &Value, ref_path: &str) -> bool {
         match schema {
             Value::Object(object) => object.iter().any(|(key, value)| {

@@ -4982,64 +4982,200 @@
         }
       }
     },
-    "StopReason": {
-      "description": "Reasons why an agent stops active session work.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
-      "anyOf": [
-        {
-          "description": "The active work ended successfully.",
-          "type": "string",
-          "const": "end_turn"
-        },
-        {
-          "description": "The active work ended because the agent reached the maximum number of tokens.",
-          "type": "string",
-          "const": "max_tokens"
-        },
-        {
-          "description": "The active work ended because the agent reached the maximum number of\nallowed agent requests before returning idle.",
-          "type": "string",
-          "const": "max_turn_requests"
-        },
-        {
-          "description": "The active work ended because the agent refused to continue. The user\nprompt and everything that comes after it won't be included in the next\nprompt, so this should be reflected in the UI.",
-          "type": "string",
-          "const": "refusal"
-        },
-        {
-          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents should report this stop reason on an idle `state_update` session update\nwhen cancellation succeeds, even if cancellation causes exceptions in\nunderlying operations.",
-          "type": "string",
-          "const": "cancelled"
-        },
-        {
-          "title": "other",
-          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
-          "type": "string"
-        }
-      ]
-    },
-    "IdleStateUpdate": {
-      "description": "The agent is ready to process a new prompt.",
+    "ErrorStopReason": {
+      "description": "Details of a failure that ended active work.",
       "type": "object",
       "properties": {
-        "stopReason": {
-          "description": "Indicates why foreground work stopped.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\nAgents SHOULD include this when the idle transition ends foreground work.",
+        "error": {
+          "description": "The failure, as a JSON-RPC error object.\n\nOptional. Omitted or `null` both mean the agent is not reporting failure details.\nAgents SHOULD include it.",
           "anyOf": [
             {
-              "$ref": "#/$defs/StopReason"
+              "$ref": "#/$defs/Error"
             },
             {
               "type": "null"
             }
           ],
           "x-deserialize-default-on-error": true
-        },
+        }
+      }
+    },
+    "IdleStateUpdate": {
+      "description": "The agent is ready to process a new prompt.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An omitted, `null`, or malformed `stopReason` means the agent is not\nreporting one.",
+      "type": "object",
+      "properties": {
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
+        },
+        "stopReason": {
+          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         }
-      }
+      },
+      "anyOf": [
+        {
+          "description": "The active work ended successfully.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "end_turn"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent reached the maximum number of tokens.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_tokens"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent reached the maximum number of\nallowed agent requests before returning idle.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_turn_requests"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent refused to continue. The user\nprompt and everything that comes after it won't be included in the next\nprompt, so this should be reflected in the UI.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "refusal"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents should report this stop reason on an idle `state_update` session update\nwhen cancellation succeeds, even if cancellation causes exceptions in\nunderlying operations.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "cancelled"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because something failed.\n\nFor work started by a prompt, this covers failures after the user message\nwas inserted; earlier failures are an error response to `session/prompt`.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "error"
+            }
+          },
+          "required": ["stopReason"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorStopReason"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["stopReason"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "end_turn"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_tokens"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_turn_requests"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "refusal"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "cancelled"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "error"
+                  }
+                },
+                "required": ["stopReason"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        },
+        {
+          "title": "none",
+          "description": "No stop reason: `stopReason` is omitted or `null`.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "null"
+            }
+          }
+        }
+      ]
     },
     "RequiresActionStateUpdate": {
       "description": "Foreground work is blocked on user action.",
@@ -5789,7 +5925,7 @@
                 },
                 {
                   "title": "PromptRequest",
-                  "description": "Processes a user prompt within a session.\n\nAcceptance means insertion into the ACP conversation:\n- Receives user messages with optional context (files, images, etc.)\n- Returns the inserted user message's ID without waiting for processing to finish\n\nThe Agent reports the user message with the same ID through `session/update`;\nthis notification may arrive before or after the response. Processing state,\noutput, tool calls, and completion are also reported through session updates.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)",
+                  "description": "Processes a user prompt within a session.\n\nAcceptance means insertion into the ACP conversation:\n- Receives user messages with optional context (files, images, etc.)\n- Returns the inserted user message's ID without waiting for processing to finish\n\nThe Agent reports the user message with the same ID through `session/update`;\nthis notification may arrive before or after the response. Processing state,\noutput, tool calls, and completion are also reported through session updates.\n\nAn error response means the user message was not inserted. Once it is\ninserted, the Agent MUST NOT answer with an error, even if the work fails\nbefore the response is sent; it ends that work with the `error` stop reason.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/PromptRequest"

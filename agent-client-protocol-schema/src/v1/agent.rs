@@ -5232,6 +5232,21 @@ mod test_serialization {
             .count()
     }
 
+    /// v1 reports prompt failures as JSON-RPC errors. Only the unstable subagent
+    /// snapshot has an `error` stop reason, because a child has no prompt response.
+    #[test]
+    fn prompt_response_has_no_error_stop_reason() {
+        assert_eq!(
+            serde_json::from_value::<PromptResponse>(json!({ "stopReason": "end_turn" }))
+                .unwrap()
+                .stop_reason,
+            StopReason::EndTurn
+        );
+        assert!(
+            serde_json::from_value::<PromptResponse>(json!({ "stopReason": "error" })).is_err()
+        );
+    }
+
     #[test]
     fn test_initialize_capabilities_default_on_malformed_values() {
         let request: InitializeRequest = serde_json::from_value(json!({

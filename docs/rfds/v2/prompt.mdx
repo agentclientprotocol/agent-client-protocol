@@ -14,6 +14,8 @@ Once a session is created, the agent will be able to send session updates at any
 
 This sketch explores returning an agent-generated `messageId` in the prompt response. For `session/prompt`, acceptance means insertion of the user message into the ACP conversation. The same ID identifies that message in live updates and, if retained, later replay, so clients that receive the response can correlate their submissions without introducing a second identifier. Insertion is distinct from processing completion and does not require persistent history.
 
+Because the response no longer spans the turn, it can no longer report failures that happen during it. A failure after insertion instead ends foreground work with an `error` stop reason on the idle `state_update`, carrying the same JSON-RPC error object a v1 prompt error response carries.
+
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
@@ -77,7 +79,7 @@ An adapter can use an underlying agent's user-message echo or insertion event as
 
 ### Additional Agent `session/update` notification types
 
-Because `session/update`s can more freely flow from the agent, and we lost the ability to pass end_turn and other information from the prompt response, we need to provide the agent with the affordance for a few more notification types.
+Because `session/update`s can more freely flow from the agent, and we lost the ability to pass end_turn, errors, and other information from the prompt response, we need to provide the agent with the affordance for a few more notification types.
 
 #### User message reported to clients
 
@@ -250,6 +252,59 @@ This would be a notification from the agent to indicate that it's current status
 
 We could explore adding which permission or elicitation it is waiting on if we wanted to make it clearer if we wanted.
 
+### Report failures after insertion
+
+In v1, `session/prompt` lasts until the end of the turn, so its error response can report a failure at any point: an expired credential, a provider outage, an exhausted quota. Once the response arrives at insertion, that channel is gone, and a failure after insertion has to end foreground work through the same `state_update` that reports every other outcome.
+
+When foreground work ends because of a failure after the user message was inserted, the Agent reports `idle` with the `error` stop reason and, when it has one, the error:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "idle",
+      "stopReason": "error",
+      "error": {
+        "code": -32000,
+        "message": "Authentication required"
+      }
+    }
+  }
+}
+```
+
+- `stopReason: "error"` means foreground work ended because something failed, not because it finished, reached a limit, was refused, or was cancelled. It applies to any foreground work, including work no prompt started; the insertion rule below is specific to `session/prompt`.
+- `error` is a field of the `error` stop reason, sitting beside `stopReason` on the idle update. It is optional and nullable; omission and `null` are equivalent: the Agent supplied no error details. When present, it is a JSON-RPC error object, with required `code` and `message` and optional `data`. The Agent **SHOULD** include it, and Clients may show `message` to the user.
+- `error` exists only on the `error` stop reason, the same way `stopReason` exists only on the `idle` state. Beside any other stop reason it is an unknown field.
+
+To express this, stop reasons become a union tagged by `stopReason` and flattened into the idle `state_update`, so a stop reason can carry fields of its own. The existing stop reasons have none, and their wire format is unchanged.
+
+Once the user message is inserted, the Agent **MUST NOT** report a later failure as an error response to `session/prompt`, even if it has not sent the response yet. The request succeeds with the inserted `messageId`, and the failure ends foreground work as above. A JSON-RPC error on `session/prompt` therefore always means the message was not inserted. This includes request cancellation: a `$/cancel_request` or internal cancellation answers `session/prompt` with `-32800` only before insertion. Afterwards the request still succeeds with the `messageId`, and the work is stopped with `session/cancel`.
+
+`error` uses the same codes as JSON-RPC error responses, so Clients can handle them the same way. For example, `-32000` (authentication required) can prompt the user to authenticate before sending another prompt. More specific categories, such as rate limits, an exhausted context window, or an overloaded provider, can be added later as codes or as structured `data` without changing this shape.
+
+As with every stop reason, the idle update follows all updates for the work that ended. Before sending it, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Sending the prompt again submits a new message; see [Does returning `messageId` make retrying safe?](#does-returning-messageid-make-retrying-safe).
+
+The `error` stop reason is only for failures that end foreground work:
+
+| Situation                                                    | How it is reported                                                                                 |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Rejected before the user message is inserted                 | JSON-RPC error response to `session/prompt`                                                        |
+| Request cancelled after the user message is inserted         | Success response with the `messageId`; the work is stopped with `session/cancel`                   |
+| Fails after insertion, and foreground work stops             | Idle `state_update` with `stopReason: "error"` and `error`                                         |
+| Fails, and work continues (a retried request, a failed tool) | A [`notice`](/rfds/session-notices) or a tool call with status `failed`; the state does not change |
+| Work is cancelled, even if aborting raises errors            | Idle `state_update` with `stopReason: "cancelled"`, as the cancellation rules already require      |
+| Background activity fails while the Agent is `idle`          | Not a stop reason, since no foreground work ended                                                  |
+| The Agent process exits or the connection is lost            | Detected by the Client; no update can report it                                                    |
+
+A v2 Client that predates the `error` stop reason handles it like any unknown stop reason: foreground work has ended, and it shows a generic stopped state. It does not need `error` to know that the work ended. Because the error is part of the idle snapshot, anything that carries that snapshot carries the failure too, including an exposed subagent's `subagent_update.state` and any later mechanism for synchronizing current state on resume.
+
+v1's `session/prompt` is unchanged; it already reports these failures as an error response. The one v1 surface that carries this idle snapshot, the draft [subagent](/rfds/subagents#current-work-state) `subagent_update.state`, gains the same `error` stop reason, because a v1 child has no prompt response that could report its failure. A bridge from a v1 Agent to a v2 Client maps an error response that arrives after the bridge reported the message inserted to an idle `state_update` with the `error` stop reason and the same error object. A bridge from a v2 Agent to a v1 Client maps that update to an error response for the pending v1 prompt, using `-32603` (internal error) when `error` is absent.
+
 ## Shiny future
 
 > How will things play out once this feature exists?
@@ -274,9 +329,11 @@ The v2 schema and guides define the insertion-receipt response. The implementati
 2. Update the prompt lifecycle and session replay guides with insertion as the acknowledgment point, distinct from processing completion; response/update ordering; optional retention; stable IDs when retained messages are replayed; and the content reset when replaying chunks from the beginning.
 3. Add serialization and schema coverage for valid response IDs and rejection of missing, `null`, or non-string IDs.
 4. Exercise an ID assigned before insertion without an early successful response, notifications before and after the response, identical prompts with distinct IDs, submissions from multiple clients, retained associations across replay, imported messages without prompt responses, and both full-content and streamed updates. Include a locally handled command reported live but omitted from later replay, and a retained command replayed with the same ID without re-executing it. Cover the lost-response limitation rather than promising recovery, and verify that streamed replay does not duplicate retained content.
-5. Update examples and generated artifacts, then run `npm run generate` and `npm run check`.
+5. Make `StopReason` a union tagged by `stopReason` and flattened into the idle `state_update`, keeping the existing values' wire format and the tolerance for omitted, `null`, malformed, and unknown stop reasons. Add an `error` variant with an optional, nullable `error` field, reusing the existing `Error` type. Document the failure rules in the prompt lifecycle guide's stop reasons and cancellation sections.
+6. Add serialization and schema coverage for the idle update with an `error`, without one, and with `error: null`, and verify that an `error` beside another stop reason is treated as an unknown field. Exercise a failure after insertion but before the response is sent: the response still succeeds and the idle update reports the failure.
+7. Update examples and generated artifacts, then run `npm run generate` and `npm run check`.
 
-The schema and serialization tests establish the wire shape; adapters still need to implement and validate insertion timing, live reporting for local commands, and replay identity for retained messages. Broader v2 lifecycle follow-ups include post-insertion failure reporting, cancellation races, and current-state synchronization on resume. Those are separate from the insertion receipt's identity and are not resolved by adding another prompt ID. Queueing, steering, sender identity, safe retries, and idempotency guarantees remain outside this change.
+The schema and serialization tests establish the wire shape; adapters still need to implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. Broader v2 lifecycle follow-ups include cancellation races and current-state synchronization on resume. Those are separate from the insertion receipt's identity and are not resolved by adding another prompt ID. Queueing, steering, sender identity, safe retries, and idempotency guarantees remain outside this change.
 
 Depending on how the rest of v2 testing goes, we can either:
 
@@ -341,7 +398,30 @@ Early discussions revolved around having this be a bidirectional stream of notif
 
 Given that the agent is ultimately the owner of the session history, it makes sense that it is the sole notifier of the session, because it is the source of truth. By having all client interactions on the session remain requests, albeit much shorter-lived ones in theory, we still have a semantically meaningful way to communicate errors and when and how a given request was incorporated into the session.
 
+#### Report failures after insertion with a `failed` state
+
+`state` says whether the agent can accept a prompt now, and after a failure it can: it is idle. How the work ended belongs with the stop reason. A new state would also leave existing v2 clients unable to tell that foreground work ended: a client that doesn't know `failed` can only present it generically, which says nothing about whether the agent is still working. An unknown stop reason always arrives on an `idle` update, so the client still knows the work ended.
+
+#### Report failures after insertion with a separate error update
+
+An `error` update followed by `idle` gives clients two signals that must agree. The protocol would need rules for an error with no idle after it and for which idle an error belongs to, and the error would not be part of the state snapshot that `subagent_update.state` mirrors. Putting the error on the idle update avoids those rules.
+
+#### Report failures after insertion with an error-severity notice
+
+Notices are advisory. Clients may ignore them, and they must not report fatal errors or change session state. That contract fits failures the agent recovers from, not one that ends the work.
+
+#### Put `error` beside the stop reason with a cross-field rule
+
+Keeping `stopReason` a plain string and adding `error` as a sibling field produces the same wire format, but the schema cannot say that `error` belongs to one stop reason. The protocol would need a prose rule that Agents send `error` only with `stopReason: "error"` and that Clients ignore it otherwise, and every implementation would have to enforce it by hand. Making `error` a field of the `error` stop reason states the rule in the schema, the same way `stopReason` belongs to the `idle` state.
+
+#### Define a new error type for failures after insertion
+
+Reusing the JSON-RPC error object keeps failures before and after insertion in one shape, lets clients reuse the code handling they already have, and lets v1 and v2 bridges convert in both directions without losing information. Finer categories can be added later as codes or in `data`.
+
+Codex's app-server makes the same split. A failed turn ends with `turn/completed` whose status is `failed` and whose details are in `turn.error`, while a separate `error` notification with `willRetry` reports transient errors that don't end the turn, which `notice` covers here.
+
 ## Revision history
 
 2026-04-13: Initial draft
 2026-04-22: Move from bidirectional notification approach to a change in the prompt request lifecycle
+2026-10-01: Report failures after insertion with an `error` stop reason that carries an optional JSON-RPC error

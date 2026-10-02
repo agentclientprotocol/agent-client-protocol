@@ -512,6 +512,10 @@ The Agent reports the user message with the same ID through `session/update`;
 this notification may arrive before or after the response. Processing state,
 output, tool calls, and completion are also reported through session updates.
 
+An error response means the user message was not inserted. Once it is
+inserted, the Agent MUST NOT answer with an error, even if the work fails
+before the response is sent; it ends that work with the `error` stop reason.
+
 See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)
 
 #### <span class="font-mono">PromptRequest</span>
@@ -3466,6 +3470,22 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
   Other undefined error code.
 </ResponseField>
 
+## <span class="font-mono">ErrorStopReason</span>
+
+Details of a failure that ended active work.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+
 ## <span class="font-mono">ExtNotification</span>
 
 Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -3569,9 +3589,13 @@ future ACP variants.
 
 The agent is ready to process a new prompt.
 
-**Type:** Object
+Agents SHOULD include a `stopReason` when the idle transition ends foreground
+work. An omitted, `null`, or malformed `stopReason` means the agent is not
+reporting one.
 
-**Properties:**
+**Type:** Union
+
+**Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3581,12 +3605,135 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why foreground work stopped.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends foreground work.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
 
+See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
+
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="end_turn" type="object">
+The active work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+allowed agent requests before returning idle.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue. The user
+prompt and everything that comes after it won't be included in the next
+prompt, so this should be reflected in the UI.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+Active session work was cancelled by the client via `session/cancel`.
+
+Agents should report this stop reason on an idle `state_update` session update
+when cancellation succeeds, even if cancellation causes exceptions in
+underlying operations.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+For work started by a prompt, this covers failures after the user message
+was inserted; earlier failures are an error response to `session/prompt`.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ImageContent</span>
@@ -5591,15 +5738,139 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"idle"`.
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why foreground work stopped.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends foreground work.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
 
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="end_turn" type="object">
+The active work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+allowed agent requests before returning idle.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue. The user
+prompt and everything that comes after it won't be included in the next
+prompt, so this should be reflected in the UI.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+Active session work was cancelled by the client via `session/cancel`.
+
+Agents should report this stop reason on an idle `state_update` session update
+when cancellation succeeds, even if cancellation causes exceptions in
+underlying operations.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+For work started by a prompt, this covers failures after the user message
+was inserted; earlier failures are an error response to `session/prompt`.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="requires_action" type="object">
@@ -5995,15 +6266,139 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"idle"`.
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why foreground work stopped.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends foreground work.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
 
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="end_turn" type="object">
+The active work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+allowed agent requests before returning idle.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue. The user
+prompt and everything that comes after it won't be included in the next
+prompt, so this should be reflected in the UI.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+Active session work was cancelled by the client via `session/cancel`.
+
+Agents should report this stop reason on an idle `state_update` session update
+when cancellation succeeds, even if cancellation causes exceptions in
+underlying operations.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+For work started by a prompt, this covers failures after the user message
+was inserted; earlier failures are an error response to `session/prompt`.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="requires_action" type="object">
@@ -6045,51 +6440,6 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
-</ResponseField>
-
-## <span class="font-mono">StopReason</span>
-
-Reasons why an agent stops active session work.
-
-See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
-
-**Type:** Union
-
-<ResponseField name="end_turn" type="string">
-  The active work ended successfully.
-</ResponseField>
-
-<ResponseField name="max_tokens" type="string">
-  The active work ended because the agent reached the maximum number of tokens.
-</ResponseField>
-
-<ResponseField name="max_turn_requests" type="string">
-  The active work ended because the agent reached the maximum number of allowed
-  agent requests before returning idle.
-</ResponseField>
-
-<ResponseField name="refusal" type="string">
-  The active work ended because the agent refused to continue. The user prompt
-  and everything that comes after it won't be included in the next prompt, so
-  this should be reflected in the UI.
-</ResponseField>
-
-<ResponseField name="cancelled" type="string">
-Active session work was cancelled by the client via `session/cancel`.
-
-Agents should report this stop reason on an idle `state_update` session update
-when cancellation succeeds, even if cancellation causes exceptions in
-underlying operations.
-
-</ResponseField>
-
-<ResponseField name="other" type="string">
-Custom or future stop reason.
-
-Values beginning with `_` are reserved for implementation-specific
-extensions. Unknown values that do not begin with `_` are reserved for
-future ACP variants.
-
 </ResponseField>
 
 ## <span class="font-mono">StringFormat</span>

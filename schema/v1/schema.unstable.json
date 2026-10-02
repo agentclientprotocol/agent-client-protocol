@@ -6141,22 +6141,28 @@
         }
       }
     },
-    "IdleStateUpdate": {
-      "description": "The child is ready to process another prompt.",
+    "ErrorStopReason": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nDetails of a failure that ended a child's foreground work.",
       "type": "object",
       "properties": {
-        "stopReason": {
-          "description": "Reason foreground work stopped. Optional; omitted or `null` means not reported.",
+        "error": {
+          "description": "The failure, as a JSON-RPC error object.\n\nOptional. Omitted or `null` both mean the agent is not reporting failure details.\nAgents SHOULD include it.",
           "anyOf": [
             {
-              "$ref": "#/$defs/StopReason"
+              "$ref": "#/$defs/Error"
             },
             {
               "type": "null"
             }
           ],
           "x-deserialize-default-on-error": true
-        },
+        }
+      }
+    },
+    "IdleStateUpdate": {
+      "description": "The child is ready to process another prompt.\n\nAn omitted, `null`, or malformed `stopReason` means not reported.",
+      "type": "object",
+      "properties": {
         "usage": {
           "description": "**UNSTABLE** Token usage for completed foreground work.\n\nOptional; omitted or `null` means not reported.",
           "anyOf": [
@@ -6174,8 +6180,173 @@
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
+        },
+        "stopReason": {
+          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Current work state](https://agentclientprotocol.com/rfds/subagents#current-work-state)",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         }
-      }
+      },
+      "anyOf": [
+        {
+          "description": "The work ended successfully.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "end_turn"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because the agent reached the maximum number of tokens.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_tokens"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because the agent reached the maximum number of allowed\nagent requests.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_turn_requests"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because the agent refused to continue.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "refusal"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work was cancelled.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "cancelled"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because something failed.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "error"
+            }
+          },
+          "required": ["stopReason"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorStopReason"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP variants.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "description": "Unrecognized stop reason.",
+              "type": "string"
+            }
+          },
+          "required": ["stopReason"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "end_turn"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_tokens"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_turn_requests"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "refusal"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "cancelled"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "error"
+                  }
+                },
+                "required": ["stopReason"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        },
+        {
+          "title": "none",
+          "description": "No stop reason: `stopReason` is omitted or `null`.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "null"
+            }
+          }
+        }
+      ]
     },
     "RequiresActionStateUpdate": {
       "description": "Foreground work is blocked on user action.",

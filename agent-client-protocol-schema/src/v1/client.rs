@@ -14,7 +14,7 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 use std::collections::BTreeMap;
 
 #[cfg(feature = "unstable_subagents")]
-use super::StopReason;
+use super::Error;
 #[cfg(all(
     feature = "unstable_subagents",
     feature = "unstable_end_turn_token_usage"
@@ -1229,19 +1229,20 @@ impl RunningStateUpdate {
 }
 
 /// The child is ready to process another prompt.
+///
+/// An omitted, `null`, or malformed `stopReason` means not reported.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schemars", schemars(transform = idle_state_update_schema))]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IdleStateUpdate {
-    /// Reason foreground work stopped. Optional; omitted or `null` means not reported.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub stop_reason: Option<StopReason>,
+    /// Reason foreground work stopped, with any fields of that stop reason.
+    #[serde(flatten)]
+    pub stop_reason: Option<IdleStopReason>,
     /// **UNSTABLE** Token usage for completed foreground work.
     ///
     /// Optional; omitted or `null` means not reported.
@@ -1249,7 +1250,7 @@ pub struct IdleStateUpdate {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub usage: Option<Usage>,
+    pub usage: Option<Box<Usage>>,
     /// The _meta property is reserved by ACP for additional metadata.
     /// Implementations MUST NOT make assumptions about values at these keys.
     /// Optional; omitted and `null` mean no metadata for this state snapshot.
@@ -1269,7 +1270,7 @@ impl IdleStateUpdate {
 
     /// Reason foreground work stopped.
     #[must_use]
-    pub fn stop_reason(mut self, stop_reason: impl IntoOption<StopReason>) -> Self {
+    pub fn stop_reason(mut self, stop_reason: impl IntoOption<IdleStopReason>) -> Self {
         self.stop_reason = stop_reason.into_option();
         self
     }
@@ -1278,7 +1279,7 @@ impl IdleStateUpdate {
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
-        self.usage = usage.into_option();
+        self.usage = usage.into_option().map(Box::new);
         self
     }
 
@@ -1288,6 +1289,229 @@ impl IdleStateUpdate {
         self.meta = meta.into_option();
         self
     }
+}
+
+/// Makes the schema check stop reasons and keeps their default-on-error hint.
+///
+/// Flattening `Option<IdleStopReason>` adds an empty `{}` branch to the `anyOf`. It
+/// matches any value, so the stop reason branches would check nothing; this
+/// replaces it with a branch for an omitted or `null` `stopReason`. Flattening
+/// also removes the `stopReason` property that carried
+/// `x-deserialize-default-on-error`, which SDKs generated from the schema rely on
+/// to tolerate a malformed value, so this adds it back as a shared property.
+#[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+fn idle_state_update_schema(schema: &mut Schema) {
+    if let Some(properties) = schema
+        .get_mut("properties")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        properties.insert(
+            "stopReason".into(),
+            serde_json::json!({
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Current work state](https://agentclientprotocol.com/rfds/subagents#current-work-state)",
+                "type": ["string", "null"],
+                "x-deserialize-default-on-error": true
+            }),
+        );
+    }
+    let Some(variants) = schema
+        .get_mut("anyOf")
+        .and_then(serde_json::Value::as_array_mut)
+    else {
+        return;
+    };
+    for variant in variants {
+        if variant.as_object().is_some_and(serde_json::Map::is_empty) {
+            *variant = serde_json::json!({
+                "title": "none",
+                "description": "No stop reason: `stopReason` is omitted or `null`.",
+                "type": "object",
+                "properties": {
+                    "stopReason": { "type": "null" }
+                }
+            });
+        }
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Reason a child's foreground work stopped, reported on its idle state snapshot.
+///
+/// Tagged by `stopReason` and flattened into [`IdleStateUpdate`], so the snapshot
+/// matches v2's idle `state_update`, including its handling of unknown values.
+/// The known values are those of [`StopReason`](super::StopReason) plus `error`.
+/// A child has no prompt response of its own, so this snapshot is the only place
+/// to report that its work failed. The prompt response keeps
+/// [`StopReason`](super::StopReason) and reports failures as JSON-RPC errors.
+#[cfg(feature = "unstable_subagents")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "stopReason", rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum IdleStopReason {
+    /// The work ended successfully.
+    EndTurn,
+    /// The work ended because the agent reached the maximum number of tokens.
+    MaxTokens,
+    /// The work ended because the agent reached the maximum number of allowed
+    /// agent requests.
+    MaxTurnRequests,
+    /// The work ended because the agent refused to continue.
+    Refusal,
+    /// The work was cancelled.
+    Cancelled,
+    /// The work ended because something failed.
+    Error(ErrorStopReason),
+    /// Custom or future stop reason.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Other unknown values are reserved for future ACP variants.
+    #[serde(untagged)]
+    Other(OtherStopReason),
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl From<ErrorStopReason> for IdleStopReason {
+    fn from(value: ErrorStopReason) -> Self {
+        Self::Error(value)
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Details of a failure that ended a child's foreground work.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ErrorStopReason {
+    /// The failure, as a JSON-RPC error object.
+    ///
+    /// Optional. Omitted or `null` both mean the agent is not reporting failure details.
+    /// Agents SHOULD include it.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub error: Option<Box<Error>>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl ErrorStopReason {
+    /// Builds [`ErrorStopReason`] with the required fields set; optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The failure, as a JSON-RPC error object.
+    #[must_use]
+    pub fn error(mut self, error: impl IntoOption<Error>) -> Self {
+        self.error = error.into_option().map(Box::new);
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Custom or future stop reason payload, preserving its discriminator and fields.
+#[cfg(feature = "unstable_subagents")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_stop_reason_schema))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherStopReason {
+    /// Unrecognized stop reason.
+    pub stop_reason: String,
+    /// Remaining fields of the unknown stop reason.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl OtherStopReason {
+    /// Builds a custom stop reason, preserving its extension fields.
+    #[must_use]
+    pub fn new(
+        stop_reason: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        remove_idle_state_update_fields(&mut fields);
+        Self {
+            stop_reason: stop_reason.into(),
+            fields,
+        }
+    }
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl<'de> Deserialize<'de> for OtherStopReason {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let stop_reason = fields
+            .remove("stopReason")
+            .ok_or_else(|| serde::de::Error::missing_field("stopReason"))?;
+        let serde_json::Value::String(stop_reason) = stop_reason else {
+            return Err(serde::de::Error::custom("`stopReason` must be a string"));
+        };
+        if KNOWN_STOP_REASONS.contains(&stop_reason.as_str()) {
+            return Err(serde::de::Error::custom(format!(
+                "known stop reason `{stop_reason}` did not match its schema"
+            )));
+        }
+        remove_idle_state_update_fields(&mut fields);
+        Ok(Self {
+            stop_reason,
+            fields,
+        })
+    }
+}
+
+#[cfg(feature = "unstable_subagents")]
+const KNOWN_STOP_REASONS: &[&str] = &[
+    "end_turn",
+    "max_tokens",
+    "max_turn_requests",
+    "refusal",
+    "cancelled",
+    "error",
+];
+
+/// Keeps the idle snapshot's own fields out of an unknown stop reason's payload.
+#[cfg(feature = "unstable_subagents")]
+fn remove_idle_state_update_fields(fields: &mut BTreeMap<String, serde_json::Value>) {
+    fields.remove("stopReason");
+    fields.remove("usage");
+    fields.remove("_meta");
+}
+
+#[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+fn other_stop_reason_schema(schema: &mut Schema) {
+    let known = KNOWN_STOP_REASONS
+        .iter()
+        .map(|stop_reason| {
+            serde_json::json!({
+                "properties": { "stopReason": { "const": stop_reason, "type": "string" } },
+                "required": ["stopReason"],
+                "type": "object"
+            })
+        })
+        .collect::<Vec<_>>();
+    schema.insert("not".into(), serde_json::json!({ "anyOf": known }));
 }
 
 /// Foreground work is blocked on user action.
@@ -4405,7 +4629,7 @@ mod tests {
             ),
             (
                 json!({"state": "idle", "stopReason": "end_turn"}),
-                StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::EndTurn)),
+                StateUpdate::Idle(IdleStateUpdate::new().stop_reason(IdleStopReason::EndTurn)),
             ),
             (
                 json!({"state": "requires_action"}),
@@ -4464,7 +4688,7 @@ mod tests {
             StateUpdate::RequiresAction(RequiresActionStateUpdate::new()),
             StateUpdate::Unknown(UnknownStateUpdate::new()),
             StateUpdate::Running(RunningStateUpdate::new()),
-            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::EndTurn)),
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(IdleStopReason::EndTurn)),
             StateUpdate::Unknown(UnknownStateUpdate::new()),
             StateUpdate::Running(RunningStateUpdate::new()),
         ] {
@@ -4485,6 +4709,167 @@ mod tests {
             .unwrap()["state"],
             json!({"state": "idle"})
         );
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_idle_snapshot_reports_child_failure() {
+        use serde_json::json;
+
+        let update = SubagentUpdate::new("sess_child").state(StateUpdate::Idle(
+            IdleStateUpdate::new().stop_reason(IdleStopReason::from(
+                ErrorStopReason::new().error(Error::auth_required()),
+            )),
+        ));
+        let wire = json!({
+            "sessionId": "sess_child",
+            "state": {
+                "state": "idle",
+                "stopReason": "error",
+                "error": { "code": -32000, "message": "Authentication required" }
+            }
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SubagentUpdate>(wire).unwrap(),
+            update
+        );
+
+        // Missing, null, and malformed details still end the work as a failure.
+        let without_details = StateUpdate::Idle(
+            IdleStateUpdate::new().stop_reason(IdleStopReason::from(ErrorStopReason::new())),
+        );
+        for error in [None, Some(json!(null)), Some(json!("failed"))] {
+            let mut wire = json!({ "state": "idle", "stopReason": "error" });
+            if let Some(error) = error {
+                wire["error"] = error;
+            }
+            assert_eq!(
+                serde_json::from_value::<StateUpdate>(wire).unwrap(),
+                without_details
+            );
+        }
+
+        // `error` belongs to the `error` stop reason; beside another one it is
+        // an unknown field.
+        let parsed: StateUpdate = serde_json::from_value(json!({
+            "state": "idle",
+            "stopReason": "end_turn",
+            "error": { "code": -32603, "message": "Internal error" }
+        }))
+        .unwrap();
+        assert_eq!(
+            parsed,
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(IdleStopReason::EndTurn))
+        );
+
+        // Omitted, null, and malformed stop reasons mean none was reported,
+        // and the rest of the snapshot survives.
+        let meta: Meta = [("source".into(), json!("worker"))].into_iter().collect();
+        for stop_reason in [None, Some(json!(null)), Some(json!(true))] {
+            let mut wire = json!({ "state": "idle", "_meta": { "source": "worker" } });
+            if let Some(stop_reason) = stop_reason {
+                wire["stopReason"] = stop_reason;
+            }
+            assert_eq!(
+                serde_json::from_value::<StateUpdate>(wire).unwrap(),
+                StateUpdate::Idle(IdleStateUpdate::new().meta(meta.clone()))
+            );
+        }
+
+        // Unknown stop reasons keep their own fields, as in v2, while the
+        // snapshot's fields stay on the snapshot.
+        for stop_reason in ["_paused", "not_a_reason"] {
+            let wire = json!({
+                "state": "idle",
+                "stopReason": stop_reason,
+                "resumeAfter": 30,
+                "_meta": { "source": "worker" }
+            });
+            let parsed: StateUpdate = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(
+                parsed,
+                StateUpdate::Idle(
+                    IdleStateUpdate::new()
+                        .stop_reason(IdleStopReason::Other(OtherStopReason::new(
+                            stop_reason,
+                            [("resumeAfter".into(), json!(30))].into_iter().collect(),
+                        )))
+                        .meta(meta.clone())
+                )
+            );
+            assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+        }
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_known_stop_reasons_are_never_read_as_other() {
+        use serde_json::json;
+
+        let known = [
+            IdleStopReason::EndTurn,
+            IdleStopReason::MaxTokens,
+            IdleStopReason::MaxTurnRequests,
+            IdleStopReason::Refusal,
+            IdleStopReason::Cancelled,
+            IdleStopReason::Error(ErrorStopReason::new()),
+        ];
+        // Adding a variant breaks this match, so `known` stays complete.
+        for stop_reason in &known {
+            match stop_reason {
+                IdleStopReason::EndTurn
+                | IdleStopReason::MaxTokens
+                | IdleStopReason::MaxTurnRequests
+                | IdleStopReason::Refusal
+                | IdleStopReason::Cancelled
+                | IdleStopReason::Error(_)
+                | IdleStopReason::Other(_) => {}
+            }
+        }
+
+        for stop_reason in known {
+            let state = StateUpdate::Idle(IdleStateUpdate::new().stop_reason(stop_reason));
+            let wire = serde_json::to_value(&state).unwrap();
+            assert_eq!(
+                serde_json::from_value::<StateUpdate>(wire.clone()).unwrap(),
+                state
+            );
+            assert!(
+                serde_json::from_value::<OtherStopReason>(
+                    json!({ "stopReason": wire["stopReason"] })
+                )
+                .is_err(),
+                "{} must not be accepted as a custom stop reason",
+                wire["stopReason"]
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_unknown_stop_reason_leaves_usage_on_the_snapshot() {
+        use serde_json::json;
+
+        let usage = json!({ "totalTokens": 10, "inputTokens": 6, "outputTokens": 4 });
+        let wire = json!({ "state": "idle", "stopReason": "_paused", "usage": usage });
+        let StateUpdate::Idle(idle) = serde_json::from_value(wire).unwrap() else {
+            panic!("expected idle state snapshot");
+        };
+        let Some(IdleStopReason::Other(other)) = &idle.stop_reason else {
+            panic!("expected a custom stop reason");
+        };
+        assert!(other.fields.is_empty());
+
+        #[cfg(feature = "unstable_end_turn_token_usage")]
+        {
+            assert!(idle.usage.is_some());
+            assert_eq!(serde_json::to_value(&idle).unwrap()["usage"], usage);
+        }
+        // Without the feature, `usage` is not a field of the snapshot, and it
+        // must not be smuggled through as a field of the stop reason either.
+        #[cfg(not(feature = "unstable_end_turn_token_usage"))]
+        assert!(serde_json::to_value(&idle).unwrap().get("usage").is_none());
     }
 
     #[cfg(feature = "unstable_subagents")]
@@ -4544,7 +4929,7 @@ mod tests {
             assert!(update.state.is_undefined());
         }
         let bad_reason: StateUpdate =
-            serde_json::from_value(json!({"state": "idle", "stopReason": "not_a_reason"})).unwrap();
+            serde_json::from_value(json!({"state": "idle", "stopReason": false})).unwrap();
         assert_eq!(bad_reason, StateUpdate::Idle(IdleStateUpdate::new()));
         let null_reason: StateUpdate =
             serde_json::from_value(json!({"state": "idle", "stopReason": null})).unwrap();

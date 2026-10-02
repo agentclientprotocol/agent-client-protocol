@@ -85,6 +85,11 @@ sequenceDiagram
           Note right of Agent: Abort operations
           Agent->>Client: session/update (state_update: idle, stopReason: cancelled)
       end
+
+      opt Work fails after insertion
+          Note right of Agent: Stop work
+          Agent->>Client: session/update (state_update: idle, stopReason: error)
+      end
     end
 
     Agent->>Client: session/update (state_update: idle, stopReason)
@@ -136,7 +141,7 @@ The Client sends a user message with `session/prompt`:
 
 ### 2. Prompt Accepted
 
-**Acceptance means insertion**, not receipt, queueing, or processing completion. The Agent **MUST** respond successfully once it has inserted the user message into the ACP conversation, without waiting for foreground work to finish. It **MUST NOT** send a successful response merely because it has received the input or assigned an ID. Requests rejected before insertion use a JSON-RPC error response.
+**Acceptance means insertion**, not receipt, queueing, or processing completion. The Agent **MUST** respond successfully once it has inserted the user message into the ACP conversation, without waiting for foreground work to finish. It **MUST NOT** send a successful response merely because it has received the input or assigned an ID. Requests rejected before insertion use a JSON-RPC error response. Once the user message is inserted, the Agent **MUST NOT** report a later failure as an error response, even if it has not sent the response yet: it responds successfully and reports the failure as described in [Failures](#failures). This includes [request cancellation](/protocol/v2/cancellation): once the message is inserted, the Agent answers `session/prompt` with its `messageId` rather than a `-32800` error, and foreground work is stopped with [`session/cancel`](#cancellation) or ends with a stop reason.
 
 The response contains the inserted user message's agent-generated `messageId`:
 
@@ -507,7 +512,53 @@ When an Agent stops foreground work, it must specify the corresponding `StopReas
 
 <ResponseField name="cancelled">The Client cancels active work</ResponseField>
 
+<ResponseField name="error">
+  Foreground work ended because something failed. See [Failures](#failures).
+</ResponseField>
+
 Custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`; unknown non-underscore stop reasons are reserved for future ACP variants.
+
+## Failures
+
+When foreground work ends because something failed, the corresponding stop reason is `error`. For work started by a prompt, this covers failures after the user message was inserted; earlier failures are an error response to `session/prompt`. This stop reason carries the failure in an `error` field beside `stopReason`, which the Agent **SHOULD** include:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "idle",
+      "stopReason": "error",
+      "error": {
+        "code": -32000,
+        "message": "Authentication required"
+      }
+    }
+  }
+}
+```
+
+<ResponseField name="error" type="Error">
+  The failure that ended foreground work, as a JSON-RPC error object with
+  required `code` and `message` and optional `data`. Optional and nullable:
+  omission and `null` both mean the Agent supplied no failure details.
+</ResponseField>
+
+`error` belongs to the `error` stop reason; beside any other stop reason it is an unknown field. Clients may show `message` to the user and can handle `code` as they would for an error response: for example, `-32000` (authentication required) can prompt the user to authenticate before sending another prompt.
+
+Before reporting the failure, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Sending the prompt again submits a new message.
+
+The `error` stop reason is only for failures that end foreground work:
+
+- A failure before the user message is inserted is a JSON-RPC error response to `session/prompt`.
+- A failure the Agent recovers from while work continues, such as a failed tool call, is reported on the affected entity, for example a tool call whose status is `failed`, and does not change the state.
+- Errors raised while aborting cancelled work are reported with the `cancelled` stop reason, as described in [Cancellation](#cancellation).
+- A failure in background activity while the Agent is `idle` is not a stop reason, since no foreground work ended.
+
+Clients detect a lost connection or an exited Agent process themselves; no update can report them.
 
 ## Session States
 
@@ -552,7 +603,7 @@ After all ongoing operations have been successfully aborted and pending updates 
 
 Clients often display unrecognized errors from the Agent to the user, which would be undesirable for cancellations as they aren't considered errors.
 
-Agents **MUST** catch these errors and report the semantically meaningful `cancelled` stop reason on a `state_update` notification, so that Clients can reliably confirm the cancellation.
+Agents **MUST** catch these errors and report the semantically meaningful `cancelled` stop reason, not `error`, on a `state_update` notification, so that Clients can reliably confirm the cancellation.
 
 </Warning>
 

@@ -4598,6 +4598,26 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
   Other undefined error code.
 </ResponseField>
 
+## <span class="font-mono">ErrorStopReason</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Details of a failure that ended a child's foreground work.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+
 ## <span class="font-mono">ExtNotification</span>
 
 Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -4680,23 +4700,137 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 The child is ready to process another prompt.
 
-**Type:** Object
+An omitted, `null`, or malformed `stopReason` means not reported.
 
-**Properties:**
+**Type:** Union
+
+**Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP for additional metadata.
 Implementations MUST NOT make assumptions about values at these keys.
 Optional; omitted and `null` mean no metadata for this state snapshot.
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Reason foreground work stopped. Optional; omitted or `null` means not reported.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Current work state](https://agentclientprotocol.com/rfds/subagents#current-work-state)
+
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
   **UNSTABLE** Token usage for completed foreground work.
 
 Optional; omitted or `null` means not reported.
 
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="end_turn" type="object">
+The work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The work ended because the agent reached the maximum number of allowed
+agent requests.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The work ended because the agent refused to continue.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+The work was cancelled.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The work ended because something failed.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Unrecognized stop reason.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ImageContent</span>
@@ -8652,8 +8786,13 @@ Optional; omitted and `null` mean no metadata for this state snapshot.
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"idle"`.
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Reason foreground work stopped. Optional; omitted or `null` means not reported.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Current work state](https://agentclientprotocol.com/rfds/subagents#current-work-state)
+
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
   **UNSTABLE** Token usage for completed foreground work.
@@ -8663,6 +8802,114 @@ Optional; omitted or `null` means not reported.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="end_turn" type="object">
+The work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The work ended because the agent reached the maximum number of allowed
+agent requests.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The work ended because the agent refused to continue.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+The work was cancelled.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The work ended because something failed.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Unrecognized stop reason.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="requires_action" type="object">

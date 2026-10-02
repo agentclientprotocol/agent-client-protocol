@@ -525,9 +525,11 @@ The v1 payload mirrors the v2 state object:
   example after losing a remote child's event feed while the ACP connection
   remains live. This is a nonterminal work state, not a work outcome.
 - `idle`: foreground work is not in progress; the parent may assign more work.
-  Optional nullable `stopReason` uses v1's existing `StopReason`. Omitted or
-  `null` means no reason was reported. When the draft end-turn usage feature is
-  supported, optional nullable `usage` follows the same convention.
+  Optional nullable `stopReason` takes v1's existing `StopReason` values plus
+  `error`, which carries an optional, nullable JSON-RPC `error` object beside
+  it, as in the v2 idle `state_update`. Omitted or `null` means no reason was
+  reported. When the draft end-turn usage feature is supported, optional
+  nullable `usage` follows the same convention.
 - Each known state may contain optional nullable `_meta`; omitted and `null`
   both mean no metadata for that snapshot.
 
@@ -537,7 +539,23 @@ It **SHOULD** report `requires_action` while observed foreground work is
 blocked on user action, and include `stopReason` when the reason for stopping
 is known. This does not require reconstructing unobserved intermediate
 transitions or guessing activity from provider callbacks. Cancellation uses
-`idle` with `stopReason: "cancelled"`, not a terminal child state.
+`idle` with `stopReason: "cancelled"`, not a terminal child state. A failure
+that ends the child's foreground work uses `idle` with `stopReason: "error"`
+and, when available, the failure in `error`. A v1 child has no prompt response
+that could carry a JSON-RPC error, so this snapshot is the only place a v1
+Client learns that the child's work failed:
+
+```json
+{
+  "sessionUpdate": "subagent_update",
+  "sessionId": "sess_child_1",
+  "state": {
+    "state": "idle",
+    "stopReason": "error",
+    "error": { "code": -32000, "message": "Authentication required" }
+  }
+}
+```
 
 When observability of child foreground work is actually lost, the Agent
 **MUST** report `unknown` using the existing state payload: v1 sends
@@ -565,13 +583,17 @@ current snapshot again. Unrelated association updates need not repeat it.
 Unrecognized state objects preserve both their discriminator and payload. Values
 beginning with `_` are implementation-specific; other unknown values are
 reserved for future ACP states. An unknown value does not imply completion or
-closure. V2 keeps its open state and stop-reason handling, with `unknown` added
-to ordinary `StateUpdate` under the experimental `unstable_subagents` feature.
+closure. Unrecognized stop reasons on an idle snapshot are preserved the same
+way in both versions. V2 keeps its open state and stop-reason handling, with
+`unknown` added to ordinary `StateUpdate` under the experimental
+`unstable_subagents` feature.
 
 Idle is not a successful task outcome or a declaration that the session has
 been released. As in ordinary v2 sessions, background activity may still emit
 updates while foreground work is idle. Operation results and failures are
-reported through the relevant tool calls or other ordinary session output.
+reported through the relevant tool calls or other ordinary session output; the
+`error` stop reason is only for a failure that ends the child's foreground
+work, and does not close the session or fail its parent.
 
 ### Connection loss
 
@@ -1153,6 +1175,10 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-01: Added the `error` stop reason, with an optional JSON-RPC `error`,
+  to the v1 idle snapshot so it keeps the v2 shape and a v1 child can report
+  that its work failed, and preserved unrecognized v1 stop reasons as v2 does.
+  v1's prompt response is unchanged.
 - 2026-09-24: Separated reusable session associations from tool-call operations,
   added whole and streamed session-directed messages with incoming and
   outgoing views, and distinguished parent-owned display metadata from the
