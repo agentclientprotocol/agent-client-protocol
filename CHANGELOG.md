@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [1.11.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.2...v1.11.0) - 2026-10-03
+
+### Added
+
+- *(unstable)* report failures after prompt insertion with an error stop reason ([#2281](https://github.com/agentclientprotocol/agent-client-protocol/pull/2281))
+
+### Other
+
+- *(rust)* compare empty collections with assert_eq! ([#2279](https://github.com/agentclientprotocol/agent-client-protocol/pull/2279))
+
 ## [1.10.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.1...v1.10.2) - 2026-10-01
 
 ### Fixed
