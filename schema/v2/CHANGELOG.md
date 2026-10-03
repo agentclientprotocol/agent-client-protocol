@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.7...schema-v2.0.0-alpha.8) - 2026-10-03
+
+### Added
+
+- *(unstable)* report failures after prompt insertion with an error stop reason ([#2281](https://github.com/agentclientprotocol/agent-client-protocol/pull/2281))
+
 ## [2.0.0-alpha.7](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.6...schema-v2.0.0-alpha.7) - 2026-09-30
 
 ### Fixed
