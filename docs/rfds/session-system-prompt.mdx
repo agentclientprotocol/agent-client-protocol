@@ -1,0 +1,263 @@
+---
+title: "Session-Scoped Instructions"
+---
+
+- Author(s): [CrysisDeu](https://github.com/CrysisDeu)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP does not provide a standard way for a Client to supply instructions that apply to an entire session. Implementations currently rely on private `_meta` keys, files discovered from the working directory, or text inserted into the first user prompt. These mechanisms do not provide portable semantics or a reliable way to detect support.
+
+This RFD proposes an optional field on `NewSessionRequest`:
+
+```ts
+type SessionInstructions =
+  | { mode: "append"; text: string }
+  | { mode: "replace"; text: string };
+
+sessionInstructions?: SessionInstructions;
+```
+
+It also proposes a capability that advertises which modes the Agent supports:
+
+```ts
+sessionInstructions?: {
+  append?: {};
+  replace?: {};
+}
+```
+
+Session instructions become part of the created session. Loading or resuming a session restores them, and forking a session inherits them. This RFD does not add a way to change instructions after a session is created.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP standardizes user prompts and several parts of session setup, including the working directory and MCP servers. It does not standardize session-scoped instructions supplied by the Client.
+
+Implementations use three main approaches today:
+
+1. **Private `_meta` keys.** These can carry implementation-specific instructions and capabilities, but their names and semantics are not portable between Agents.
+2. **Files in the working directory.** These are useful for project instructions, but they are shared by every session using that directory and may not represent the Client's desired session setup.
+3. **Text in the first user prompt.** This works without Agent support, but it changes the meaning of the user message and cannot provide the same instruction priority as a session-level mechanism.
+
+A Client therefore cannot express session-scoped instructions once and know that any supporting Agent will apply them with the same basic semantics.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add `sessionInstructions` to `NewSessionRequest` and advertise support through session capabilities.
+
+The request has one selected mode:
+
+- `append` adds the supplied text after the Agent's replaceable default instructions.
+- `replace` uses the supplied text instead of the Agent's replaceable default instructions.
+
+The Agent decides how these semantics map onto its model, runtime, or internal architecture. ACP does not require a particular model role, message layout, delimiter, or prompt format.
+
+Neither mode changes non-replaceable Agent policy. Authorization rules, sandbox rules, tool constraints, protocol requirements, and other enforced controls remain in effect. An Agent that does not permit replacement can advertise `append` only or advertise no support.
+
+Clients MUST send only a mode advertised by the Agent. An Agent that receives an unadvertised mode MUST reject the request with `invalid_params`; it MUST NOT silently ignore the field.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A Client checks the Agent's capabilities during initialization. If the Agent supports the required mode, the Client creates a session with portable session instructions:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/alice/project",
+    "mcpServers": [],
+    "sessionInstructions": {
+      "mode": "append",
+      "text": "Explain planned changes before editing files."
+    }
+  }
+}
+```
+
+The Agent applies the instructions for the lifetime of that session. If the session is loaded or resumed later, the Agent restores the same instructions. A fork inherits them with the rest of the source session's state.
+
+Clients no longer need Agent-specific `_meta` branches for this feature. Agents remain free to support private extensions that provide additional behavior beyond the standard modes.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Request schema
+
+Add the following optional property to `NewSessionRequest` in both protocol versions:
+
+```ts
+sessionInstructions?: SessionInstructions;
+
+type SessionInstructions =
+  | {
+      mode: "append";
+      text: string;
+      _meta?: Record<string, unknown>;
+    }
+  | {
+      mode: "replace";
+      text: string;
+      _meta?: Record<string, unknown>;
+    };
+```
+
+`text` MUST be a non-empty string.
+
+The field is intentionally absent from `LoadSessionRequest`, `ResumeSessionRequest`, and `ForkSessionRequest`. Those methods restore or inherit the instructions already associated with the source session. They do not mutate session identity.
+
+### Capability schema
+
+For ACP v1, add the following property under `agentCapabilities.sessionCapabilities`:
+
+```ts
+sessionInstructions?: {
+  append?: {};
+  replace?: {};
+  _meta?: Record<string, unknown>;
+}
+```
+
+For ACP v2, add the same property under `agentCapabilities.session`:
+
+```ts
+sessionInstructions?: {
+  append?: {};
+  replace?: {};
+  _meta?: Record<string, unknown>;
+}
+```
+
+The two leaves are independent:
+
+- `append: {}` advertises support for `mode: "append"`.
+- `replace: {}` advertises support for `mode: "replace"`.
+- If both are omitted, the Agent does not advertise this feature.
+
+### Normative behavior
+
+- A Client MUST NOT send `sessionInstructions` unless the Agent advertises the selected mode.
+- An Agent MUST reject an unadvertised or unknown mode with `invalid_params`.
+- An Agent MUST reject an empty `text` value with `invalid_params`.
+- Omitting `sessionInstructions` means the Agent uses its default instructions.
+- `append` MUST preserve the Agent's replaceable default instructions and apply the supplied text after them.
+- `replace` MUST substitute the Agent's replaceable default instructions with the supplied text.
+- Both modes MUST preserve non-replaceable policy and enforced controls.
+- An Agent that supports loading or resuming sessions MUST restore the session instructions created with that session.
+- An Agent that supports forking sessions MUST copy the source session's instructions into the fork.
+- Agents MUST NOT expose session instruction text in logs, telemetry, or discovery responses unless another protocol feature explicitly requests that content.
+
+### Capability advertisement examples
+
+An Agent that supports only `append` advertises:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "sessionInstructions": {
+          "append": {}
+        }
+      }
+    }
+  }
+}
+```
+
+An Agent that supports both modes advertises:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 2,
+    "agentCapabilities": {
+      "session": {
+        "sessionInstructions": {
+          "append": {},
+          "replace": {}
+        }
+      }
+    }
+  }
+}
+```
+
+### Compatibility
+
+Existing private `_meta` extensions remain valid. During migration, an implementation MAY support both its private extension and `sessionInstructions`. When both are present, the standard `sessionInstructions` field MUST take precedence.
+
+Older Agents may reject unknown request fields. Capability gating prevents Clients from sending the field to those Agents.
+
+### Plan
+
+1. Add the request and capability types to the v1 and v2 schemas.
+2. Add conformance tests for each mode and for unsupported modes.
+3. Document the lifecycle and security semantics.
+4. Allow Agent implementations to opt in to either mode independently.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not standardize an `_meta` key?
+
+`_meta` is appropriate for private extensions and experiments. An implementation can also advertise a private capability through `_meta`. The problem is not that `_meta` is one-way or incapable of negotiation; the problem is that private keys do not create shared names, types, lifecycle rules, or error behavior. This feature needs interoperable semantics, so it should be a first-class field.
+
+### Why call this `sessionInstructions` instead of `systemPrompt`?
+
+ACP connects Clients to Agents, not directly to language models. An Agent may use several models, a non-chat model, or no model at all. `sessionInstructions` describes the behavior the Client needs without requiring a particular model role or prompt implementation.
+
+### Why have both `append` and `replace`?
+
+The modes represent different contracts. `append` keeps the Agent's default behavior and adds Client guidance. `replace` lets a Client provide the complete replaceable instruction set. Agents may support either mode, so separate capability leaves are required.
+
+A tagged request makes the selected mode unambiguous. A request cannot ask for both operations at once.
+
+### Why is the field only on `session/new`?
+
+Instructions define the session created from that request. Treating them as session state avoids changing behavior during replay and keeps `load`, `resume`, and `fork` deterministic. An implementation that cannot preserve instructions across the lifecycle methods it advertises cannot safely advertise this capability.
+
+A later RFD could add explicit instruction mutation if there is a proven need. That feature would need separate rules for history, replay, and user visibility.
+
+### Why not use session config options?
+
+Session config options are defined by the Agent and presented for Client or user selection. Session instructions are free text defined by the Client. Giving them a dedicated field provides stable semantics without requiring each Agent to invent a config key.
+
+### Why not put instructions in the first user prompt?
+
+That changes the user's message and gives the text user-message semantics. It also makes loading and replay depend on a hidden convention. A session field lets the Agent apply the instructions at the correct internal level.
+
+### Does `replace` remove Agent safety rules?
+
+No. It replaces only instructions the Agent declares replaceable. Enforced policy and controls remain outside this field. An Agent that cannot safely support replacement does not advertise that mode.
+
+### Should Clients display these instructions to users?
+
+This RFD does not require a specific interface. Clients SHOULD make active session instructions inspectable because they can materially affect Agent behavior. Agents MUST treat the Client as the source of this text and MUST NOT present it as user-authored content.
+
+### What alternative approaches did you consider?
+
+- **A standardized `_meta` key.** This preserves private-extension status but does not establish a first-class shared contract.
+- **A new mutation method.** This adds replay and persistence questions that session creation does not need.
+- **An append-only field.** This is simpler, but it cannot represent Agents that already support full replacement. Independent capability leaves let each Agent choose safely.
+- **In-band injection.** This works as a fallback but does not provide session-level semantics.
+
+## Revision history
+
+- Initial draft.
