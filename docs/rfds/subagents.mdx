@@ -772,14 +772,21 @@ active sessions.
 
 If `capabilities.cancel` is a non-null object, the Client may send the existing
 `session/cancel` notification with the child's session ID. This cancels current
-work in that child and its active descendants, not its parent or siblings.
-Cancelling a parent likewise cascades to its active descendants. The per-child
-capability controls individual Client cancellation; it does not prevent the Agent
-from cancelling its own delegated work.
+work in that child, not its parent or siblings. The per-child capability
+controls individual Client cancellation; it does not prevent the Agent from
+cancelling its own delegated work.
 
-An omitted or `null` per-child `cancel` capability does not waive ancestor
-cancellation. Adapters should verify whether the provider already supplies
-that cascade or needs additional descendant cancellation. Advertise individual
+Cancelling a session's current work, whether a parent's or an individually
+cancelled child's, also cancels the descendant work that the cancelled work is
+waiting on, such as a child whose result a pending tool call needs. Whether
+other descendants keep running is up to the Agent: a background child that the
+cancelled work did not wait on may continue, as it would have if that work had
+ended normally. The Client learns which descendants stopped from their reported
+work state, not from the cancellation itself.
+
+An omitted or `null` per-child `cancel` capability does not waive this cascade
+from an ancestor. Adapters should verify whether the provider already supplies
+it or needs additional descendant cancellation. Advertise individual
 cancellation only when the adapter can target the child's current work
 correctly in that runtime mode.
 
@@ -797,10 +804,11 @@ completion evidence, not merely from a successful command acknowledgement. If
 activity becomes unobservable, it reports `unknown` rather than inventing a
 cancelled outcome.
 
-The Client **SHOULD** optimistically mark the affected unfinished tool calls as
-cancelled, as specified for [v1 prompt cancellation](/protocol/v1/prompt-turn#cancellation)
-and [v2 work cancellation](/protocol/v2/prompt-lifecycle#cancellation). It
-**SHOULD** still accept subsequent Agent updates for those calls. This local
+The Client **SHOULD** optimistically mark the cancelled session's unfinished
+tool calls as cancelled, as specified for [v1 prompt cancellation](/protocol/v1/prompt-turn#cancellation)
+and [v2 work cancellation](/protocol/v2/prompt-lifecycle#cancellation), and a
+descendant's once that descendant reports `idle` with `stopReason: "cancelled"`.
+It **SHOULD** still accept subsequent Agent updates for those calls. This local
 presentation is not a new v1 wire-level tool status.
 
 Cancellation does not close the child session or prevent the parent from
@@ -808,19 +816,27 @@ assigning later work to it. Completing or failing one operation also does not
 close the session or automatically fail its parent.
 
 The Agent owns child resources. Closing the ordinary parent session cancels
-its active descendant work and releases the associated active resources under
-the existing close contract. It does not erase child history or require a new
+all of its active descendant work, background children included, and releases
+the associated active resources under the existing close contract. It does not erase child history or require a new
 terminal-state notification. Whether child runtimes can later be restored is
 left to the Agent.
 
 ### Pending permission and elicitation requests
 
 Optimistically updating a tool's display does not resolve its JSON-RPC
-requests. When the Client cancels child work, directly or through an ancestor,
-it **MUST** respond to pending `session/request_permission` requests for the
-affected work with the `cancelled` outcome, following the existing cancellation
-rule. It **SHOULD** dismiss affected elicitation controls and respond with the
-`cancel` action. The same cleanup applies when closing the parent.
+requests. When the Client cancels a session's current work, it **MUST** respond
+to that session's pending `session/request_permission` requests with the
+`cancelled` outcome, following the existing cancellation rule. It **SHOULD**
+dismiss that session's elicitation controls and respond with the `cancel`
+action.
+
+The cancellation does not by itself resolve a descendant's pending requests.
+Once that descendant reports `idle` with `stopReason: "cancelled"`, the Client
+cleans them up as if it had cancelled the descendant directly; until then the
+user can still answer them. A descendant that keeps running therefore keeps its
+requests, and the Client never denies a tool use of work that continues.
+Closing the parent ends the work of all of its descendants, so the Client
+cleans up their requests together with the parent's.
 
 Generic [`$/cancel_request`](/protocol/v1/cancellation) remains optional.
 Agents may use it to cancel an abandoned child request, including when the
@@ -1010,6 +1026,10 @@ implementation of child routing or the replay freshness boundary.
 - Cancel a child and then an ancestor while interactions are pending: verify
   native work is targeted correctly, acknowledgement is not confused with
   completion, and late responses cannot authorize later assignments.
+- Cancel a parent while a child it waits on and a background child it does not
+  wait on both have pending requests: verify that the waited-on child stops and
+  reports a cancelled `idle` before the Client cleans up its requests, and that
+  the background child may keep running with its request still answerable.
 - Replay after restarting the adapter with complete, partial, and unavailable
   child history. Preserve IDs and relationships for whatever is replayed,
   preserve historical senders and recipients without guessing ancestry, and
@@ -1060,6 +1080,20 @@ Once a child has a real ACP session ID, the existing session-scoped lifecycle
 methods already identify it unambiguously. Reusing them avoids two ways to
 perform the same operation. The subagent capability narrows where those methods
 are valid and defines the required cascade behavior.
+
+### Why doesn't cancelling a parent stop every descendant?
+
+Agents already differ here. In Claude Code, a background subagent keeps running
+after the user interrupts the turn that started it: it runs in the background so
+that it can outlive that turn. A required full cascade would make such an Agent
+stop background work on every cancellation, which its users do not expect.
+Descendant work that the cancelled work is waiting on has no purpose once that
+work is cancelled, so it must still stop.
+
+Because the Client cannot tell in advance which descendants will stop, it acts
+on each one only after that child reports a cancelled `idle`. A Client that
+wants to stop a background child uses that child's `cancel` capability when the
+Agent advertises it.
 
 ### Why one `subagent_update` type instead of separate spawn and state notifications?
 
@@ -1175,6 +1209,11 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-05: Limited the cancellation cascade to the descendant work that the
+  cancelled work waits on, leaving other descendants, such as background
+  children, to the Agent. Clients clean up a descendant's pending requests and
+  tool calls only once it reports a cancelled `idle`. Closing a parent still
+  ends all descendant work.
 - 2026-10-01: Added the `error` stop reason, with an optional JSON-RPC `error`,
   to the v1 idle snapshot so it keeps the v2 shape and a v1 child can report
   that its work failed, and preserved unrecognized v1 stop reasons as v2 does.
