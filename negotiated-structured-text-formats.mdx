@@ -1,0 +1,172 @@
+---
+title: "Negotiated structured text formats for ACP agent messages"
+---
+
+Author(s): zhangchenglong
+
+## Elevator pitch
+
+ACP text content is currently described as plain text or Markdown, and clients are encouraged to render it as Markdown. This makes it difficult for clients such as Emacs Org-mode to receive and render structured Org content directly, especially while responses are streamed.
+
+This RFD proposes an optional, backward-compatible content-format negotiation mechanism. Markdown remains the default, while clients and agents may negotiate formats such as `text/org` for text content blocks.
+
+The proposal also defines a small portable Org profile so that support does not depend on the complete and implementation-specific feature set of Emacs Org.
+
+## Status quo
+
+ACP `TextContent` carries a string and does not identify the markup language used by that string. The current schema says that text may be plain text or Markdown and that clients should render it as Markdown.
+
+Text content appears in prompts, streamed agent messages, progress updates, and tool-call results. A client that prefers Org-mode must currently rely on one of the following approaches:
+
+- prompt the model to emit Org syntax and hope that it complies;
+- infer the format from the text;
+- convert Markdown after the response has arrived;
+- use a client-specific extension.
+
+These approaches are ambiguous, are difficult to make correct for split streaming chunks, and do not provide a portable contract between independent ACP agents and clients.
+
+ACP already provides extension mechanisms through namespaced `_meta` fields, custom methods, and capability negotiation. Those mechanisms can support experimentation, but there is currently no common convention for negotiated text markup formats.
+
+## What we propose to do about it
+
+Add an optional negotiated text-format capability to ACP.
+
+The final field names should be decided during discussion, but the intended model is:
+
+1. During initialization, the client advertises the text formats it can preserve and render.
+2. The agent advertises the formats it can generate.
+3. The agent selects a format supported by the client for each text content block, or falls back to the default format.
+4. The selected format is carried with the content block and remains stable across all chunks belonging to one streamed message.
+
+The negotiation should support at least:
+
+- `text/plain`;
+- `text/markdown`;
+- `text/org`.
+
+`text/org` is a candidate label because it is the de facto media type used for Org files. The protocol should also carry a profile or version identifier so that clients do not need to assume that every implementation supports every Org feature.
+
+An eventual standardized representation could look conceptually like this:
+
+```json
+{
+  "type": "text",
+  "text": "* Question\n** Answer\nContent",
+  "format": "text/org",
+  "profile": "portable",
+  "version": "1"
+}
+```
+
+Whether these fields belong directly on `TextContent` or begin as a namespaced `_meta` extension is an open design question. An experimental implementation should use a namespaced key and advertise the extension during initialization.
+
+## Portable Org profile
+
+The initial profile should cover the structures most useful for agent conversations:
+
+- headlines;
+- paragraphs;
+- ordered and unordered lists;
+- emphasis;
+- links;
+- tables;
+- `#+begin_src` source blocks;
+- `#+begin_quote` and `#+begin_example` blocks.
+
+The profile should not require clients to evaluate Org Babel, Emacs Lisp, dynamic blocks, `#+INCLUDE`, or other directives that can execute code or depend on a particular Emacs installation.
+
+The profile should define how headings, source-block languages, links, tables, and line endings are represented. It should also define the behavior for unsupported constructs, preferably by preserving them as text rather than silently changing their meaning.
+
+## Shiny future
+
+A client such as Emacs, Zed, or another editor can advertise that it accepts `text/org`. An ACP agent can then stream:
+
+```org
+* Question
+** Answer
+The answer is streamed as Org syntax.
+
+#+begin_src python
+print("hello")
+#+end_src
+```
+
+An older client that does not advertise Org continues to receive Markdown. An agent that cannot generate Org continues to operate normally. No existing client or agent needs to break its current behavior.
+
+The client can render the stream immediately without guessing whether a partial code fence or heading is Markdown or Org. Tool-call content and progress messages can use the same negotiated format mechanism when they contain human-readable text.
+
+## Implementation details and plan
+
+### Phase 1: experimental extension
+
+Define a namespaced experimental capability under `_meta`, for example:
+
+```json
+{
+  "clientCapabilities": {
+    "_meta": {
+      "orgmode.org": {
+        "acceptedTextFormats": [
+          "text/org",
+          "text/markdown",
+          "text/plain"
+        ]
+      }
+    }
+  }
+}
+```
+
+Attach the selected format and profile to each experimental text content block. Unknown clients must preserve or ignore the extension without failing the message.
+
+### Phase 2: protocol shape
+
+After feedback, add the negotiated format and profile to the ACP schema in a backward-compatible way. Define whether format negotiation is global to a session, selected per content block, or both. Per-block metadata is preferable because a single update may contain normal text, a diff, a resource, or a tool result.
+
+### Phase 3: SDK support
+
+Update the official SDKs and provide helpers for:
+
+- advertising accepted formats;
+- selecting a mutually supported format;
+- preserving format metadata across streamed chunks;
+- applying fallback to Markdown or plain text;
+- validating the portable Org profile.
+
+### Phase 4: conformance tests
+
+Add fixtures and tests covering:
+
+- headings and nested headings;
+- source blocks and languages;
+- quotes, lists, links, and tables;
+- text split at arbitrary streaming boundaries;
+- tool-call content containing text;
+- unsupported formats and fallback;
+- replay and persistence of format metadata.
+
+## Frequently asked questions
+
+### Why not make Org the default?
+
+Markdown is already the compatibility baseline for existing ACP clients and agents. Making Org mandatory would create an unnecessary breaking change. Negotiation allows clients to opt in without affecting existing integrations.
+
+### Why not put this only in agent-shell?
+
+agent-shell is one ACP client. A client-specific option cannot make independent agents and other clients interoperable. The format contract belongs in ACP; agent-shell can then implement it as one client.
+
+### Is this an MCP change too?
+
+ACP reuses the MCP content-block structure so that tool output can be forwarded without transformation. If the final design changes the shared content-block shape, the proposal should be coordinated with MCP maintainers. The initial experiment can remain an ACP extension and should not require a simultaneous MCP breaking change.
+
+### Does this standardize all of Org-mode?
+
+No. The proposal intentionally defines a portable profile for agent messages. Full Org-mode remains a richer implementation-specific language.
+
+### What happens when a model emits invalid Org?
+
+The client should treat the content as text and preserve it. Conformance tests should focus on valid profile output, while clients may offer diagnostics or a fallback conversion path.
+
+## Revision history
+
+Initial proposal.
