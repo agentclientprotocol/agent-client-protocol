@@ -1,0 +1,180 @@
+---
+title: "Session list for history views: limit, order, row state and change hints"
+---
+
+Author(s): [nikita-ashihmin](https://github.com/nikita-ashihmin)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Make `session/list` good enough to drive a "recent sessions" view without falling back to reading agent files from disk:
+
+- **`limit`** on the request and a **defined order** (most recently active first), so a Client can ask for "the last 50 sessions of this project" in one round trip.
+- **Optional row fields** that such a view shows: the session's **activity state** (`running`, `idle`, `requires_action`), when its **last turn ended**, the **Git branch** it ran on, and its **cost** when the Agent already knows it.
+- A **`session/list_changed`** notification: a lossy hint, without rows, that tells a Client to re-read the first page.
+
+Archiving ([#2161](https://github.com/agentclientprotocol/agent-client-protocol/pull/2161)), client-set titles ([#1987](https://github.com/agentclientprotocol/agent-client-protocol/pull/1987)) and liveness probes ([#986](https://github.com/agentclientprotocol/agent-client-protocol/pull/986)) are covered by other RFDs and are out of scope here. This RFD is designed to compose with them.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+[`session/list`](/protocol/v1/session-list) takes `cwd` and `cursor` and returns `sessionId`, `cwd`, `title` and `updatedAt`. Page size and order are left to the Agent; the `limit` and sort parameters were removed from the original RFD before it was completed.
+
+IDE clients that show a per-project session history therefore cannot rely on ACP for it, and read each agent's files from disk instead (`~/.claude/projects/*.jsonl`, Codex rollouts, a private `codex app-server`, ...). That means per-agent parsers, file watchers and cost scanners in every client, and they break whenever an agent changes its storage.
+
+Measured against today's adapters on a developer machine:
+
+- **No `limit`, no order.** One adapter returns pages of 1000 rows sorted by file mtime and re-reads every skipped row on later pages (page 5 of 5,000 sessions took 3.5 s). Another returns pages of 25 rows sorted by **creation** time and filters by `cwd` after paging, so the first page for a project is often empty but has a `nextCursor`. A client that wants "the latest 50" has to walk every page.
+- **No state.** A list row cannot say that a session is running or waiting for the user. Clients that want a "needs attention" badge parse transcripts themselves.
+- **No cost, no branch.** Both are shown in history views and both are known to many agents, but they can only be reached through `usage_update`/`session_info_update` for sessions that are open on the current connection.
+- **No change signal.** `session_info_update` only reaches connections that have the session loaded. A history view does not know that a session was created, renamed or finished by another process, and either polls the whole list or goes stale.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Capability
+
+Extend `SessionListCapabilities` with optional markers. Omission or `null` means unsupported, `{}` means supported:
+
+```json
+{
+  "agentCapabilities": {
+    "sessionCapabilities": {
+      "list": {
+        "limit": {},
+        "changes": {}
+      }
+    }
+  }
+}
+```
+
+- `limit`: the Agent honors `limit` on `session/list` and guarantees the order below.
+- `changes`: the Agent can send `session/list_changed` (see below).
+
+The new row fields need no capability: they are optional and Clients ignore what is missing.
+
+### `session/list` request and order
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "session/list",
+  "params": {
+    "cwd": "/home/user/project",
+    "limit": 50
+  }
+}
+```
+
+- `limit` (optional, integer ≥ 1): the maximum number of sessions in this page. The Agent MAY return fewer and MAY clamp large values; it MUST NOT return more.
+- When `limit` is supported, sessions are ordered by `updatedAt` descending (ties broken by an agent-defined stable key). `updatedAt` is the time of the last activity in the session, not of agent-side metadata writes, so a rename does not move a session to the top.
+- A page that carries a `nextCursor` MUST NOT be empty.
+- Sub-agent and side-chain sessions are not listed.
+
+### Row fields
+
+New optional fields on `SessionInfo`:
+
+```json
+{
+  "sessionId": "sess_abc123",
+  "cwd": "/home/user/project",
+  "title": "Fix the OAuth timeout",
+  "updatedAt": "2026-10-06T10:00:00Z",
+  "gitBranch": "fix/oauth-timeout",
+  "state": "requires_action",
+  "lastTurnEndedAt": "2026-10-06T09:58:10Z",
+  "cost": { "amount": 1.23, "currency": "USD" }
+}
+```
+
+| Field             | Meaning                                                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `gitBranch`       | The Git branch the session ran on.                                                                                                                                                         |
+| `state`           | `running`, `idle` or `requires_action`, the same values as the v2 `state_update`. Omitted when the Agent does not know, for example for a session driven by another process it cannot see. |
+| `lastTurnEndedAt` | When the last turn ended. Clients use it to decide whether there is unseen output; `updatedAt` cannot be used for that, because it also moves when the user types a prompt elsewhere.      |
+| `cost`            | The existing `Cost` type from `usage_update`. Only sent when the Agent already has the value; Agents are not expected to compute it.                                                       |
+
+All values are best-effort snapshots. A Client that has the session open keeps using the session's own `session/update` stream, which is authoritative.
+
+### `session/list_changed` notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/list_changed",
+  "params": {
+    "cwd": "/home/user/project"
+  }
+}
+```
+
+- Sent from Agent to Client when a session that the Client has listed under `cwd` was created, updated, renamed, archived or deleted, including by another process.
+- It is a hint: it carries no rows, Agents coalesce bursts, and a lost notification is harmless. On receipt the Client re-reads the first page and replaces it.
+- Agents only send it for `cwd` values the Client listed recently on this connection, and only when the Client declared `clientCapabilities.session.listChanged: {}` (exact spelling to be settled with the v2 capability layout).
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+An IDE opens a project and calls `session/list { cwd, limit: 50 }` once per agent. The response arrives in a few milliseconds, already sorted, and each row tells the user which sessions are running, which are waiting for them, which branch they ran on and how much they cost. When the user starts a session in a terminal, finishes one in another window or a turn ends somewhere else, the Agent sends `session/list_changed` and the IDE re-reads one page. Clients stop shipping per-agent file parsers and watchers.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+Prior art: the same design is implemented as a JetBrains `_meta` extension (`_meta.jetbrains.air` capability `sessionIndex`), so it can be tried without protocol changes:
+
+- `claude-agent-acp` ([agentclientprotocol/claude-agent-acp#1268](https://github.com/agentclientprotocol/claude-agent-acp/pull/1268)) keeps an in-memory index over the transcript files. On a real history of 233 sessions, the last 50 sessions of a project take about 80 ms on a cold process and 1.3–4 ms afterwards, against 140–240 ms for today's `session/list`. `state` comes from the SDK for sessions of the process and from Claude Code's live-session registry for others.
+- `codex-acp` ([agentclientprotocol/codex-acp#590](https://github.com/agentclientprotocol/codex-acp/pull/590)) passes `cwd`, `limit` and `sortKey: "recency_at"` to `thread/list`. The last 50 sessions of a project take 2–4 ms warm, against an empty first page today. `state` is only reported for threads loaded in the same process.
+
+Both implementations include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), and report each row's real `cwd`.
+
+Plan:
+
+1. Land this RFD as a draft and collect feedback, especially on the capability spelling and on `session/list_changed`.
+2. Add the fields and the notification to the schema behind the `unstable` feature, and to the v2 draft.
+3. Move the two adapters from the `_meta` extension to the protocol fields.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why bring `limit` back after it was removed from the session list RFD?
+
+Without it, "the latest N sessions" requires walking every page, and agents had to pick page sizes blindly (1000 rows in one adapter, 25 in another). A client-provided upper bound plus a defined order makes the first page useful on its own. Agents can still clamp it.
+
+### Why a hint notification instead of a subscription with row deltas?
+
+A subscription needs sequence numbers, gap detection and resynchronization after a reconnect, and keeps an agent process alive for as long as the subscription exists. A rowless hint is enough: re-reading one page is cheap once `limit` and the order exist, and losing a hint only delays an update until the Client's next read.
+
+### Why is `state` optional instead of always present?
+
+An Agent often cannot see sessions driven by another process. For example, a `codex app-server` only knows the status of threads it loaded itself, and none of the native Codex clients show the status of other processes' threads either. Sending `unknown` would add a value the v2 `state_update` does not have, so the field is omitted instead.
+
+### How does this relate to `session/status` ([#986](https://github.com/agentclientprotocol/agent-client-protocol/pull/986))?
+
+`session/status` asks one Agent instance whether it is handling one session. `state` describes what a session is doing (running, idle, waiting for the user) for every row of a list. They answer different questions and can coexist.
+
+### How does this relate to session archiving ([#2161](https://github.com/agentclientprotocol/agent-client-protocol/pull/2161)) and client-set titles ([#1987](https://github.com/agentclientprotocol/agent-client-protocol/pull/1987))?
+
+They are complementary. The JetBrains extension also implements archive/unarchive and rename, which validated those RFDs' shapes; this RFD intentionally leaves them to their own proposals. `session/list_changed` is how other Clients learn that a session was archived or renamed.
+
+### Why not compute cost for every session?
+
+Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex only exposes token counts for loaded threads. Requiring a value would force Agents to re-read whole transcripts and maintain price tables. `cost` is sent only when the Agent already has it.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Keep it in `_meta`.** That is how it is implemented today, but every Client and Agent pair would need its own extension for a need every history view has.
+- **Separate batch methods for state and usage.** Rejected: the list already returns the rows the Client displays, and open sessions have their own `session/update` stream.
+- **A total count.** Rejected: expensive for file-based agents and not needed to render the first page.
+
+## Revision history
+
+- 2026-10-07: Initial draft.
