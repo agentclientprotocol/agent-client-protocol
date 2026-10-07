@@ -90,6 +90,9 @@ The new row fields need no capability: they are optional and Clients ignore what
 - Filtering (`cwd`, `includeWorktrees`, and `archived` from #2161) and the order below apply before pagination. A cursor is valid only with the same `cwd`, `includeWorktrees` and `archived` values that produced it; otherwise the Agent returns `-32602`. `limit` MAY change between pages.
 - When `limit` is supported, sessions are ordered by last user activity, descending: `lastPromptAt`, or `updatedAt` for rows without it. Ties are broken by an agent-defined stable key. This is the order history views already use (the user's most recent conversations first), and it does not change when an Agent writes metadata or keeps working on its own. Agents advertising `limit` SHOULD send `lastPromptAt` or `updatedAt` on every row; rows with neither sort last. `updatedAt` keeps its meaning of last activity of any kind.
 - A page that carries a `nextCursor` MUST NOT be empty.
+- Reading in chunks: a Client reads the first page with `limit` and asks for a later page only when it needs it (for example when the user scrolls), passing the previous `nextCursor` as `cursor` with the same `cwd`, `includeWorktrees` and `archived`. It MAY use a different `limit` for each page. Clients SHOULD NOT walk every page up front.
+- A cursor SHOULD name a position in the order (the order key and the tie key of the last returned row) rather than server-side state, so it stays valid across Agent restarts and costs nothing to keep. Reading the page after a cursor SHOULD cost about as much as reading the first page, whatever its depth.
+- Pages are not a snapshot. A session that gained activity after the first page was read moves to the top and is not returned again on later pages; it appears when the Client re-reads the first page. Clients SHOULD de-duplicate rows by `sessionId`.
 - Sub-agent and side-chain sessions are not listed.
 
 ### Row fields
@@ -205,5 +208,6 @@ Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex
 
 - 2026-10-07: Initial draft.
 - 2026-10-07: Reframed as an extension of the completed Session List RFD; composed with #2161; added `createdAt`, `lastPromptAt`, `model` and `forkedFrom`.
+- 2026-10-08: Described reading the list in chunks with `cursor`: on demand, position-based cursors, cost independent of depth, no snapshot semantics.
 - 2026-10-07: Defined worktree expansion as the corresponding subdirectory, `null` handling, cursor scope, hint scope and page invalidation; corrected the `unknown` state rationale.
 - 2026-10-07: Ordered by last user activity (`lastPromptAt`, falling back to `updatedAt`) to match history views and native clients.
