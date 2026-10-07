@@ -37,23 +37,36 @@ Measured against today's adapters on a developer machine:
 
 ### Capability
 
-Extend `SessionListCapabilities` with optional markers. Omission or `null` means unsupported, `{}` means supported:
+Agents advertise the new behavior with optional markers. Omission or `null` means unsupported, `{}` means supported:
+
+- `limit`: the Agent honors `limit` and `includeWorktrees` on `session/list` and guarantees the order below.
+- `changes`: the Agent can send `session/list_changed`.
+
+In v1 they extend the existing `SessionListCapabilities`:
 
 ```json
 {
   "agentCapabilities": {
     "sessionCapabilities": {
-      "list": {
-        "limit": {},
-        "changes": {}
-      }
+      "list": { "limit": {}, "changes": {} }
     }
   }
 }
 ```
 
-- `limit`: the Agent honors `limit` on `session/list` and guarantees the order below.
-- `changes`: the Agent can send `session/list_changed` (see below).
+In v2, `session/list` is part of the baseline session surface, so the markers go into a new optional `list` object under `capabilities.session`:
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "list": { "limit": {}, "changes": {} }
+    }
+  }
+}
+```
+
+Clients opt in to `session/list_changed` with a new `listChanged` marker: in v1 on the existing `ClientSessionCapabilities` (`clientCapabilities.session.listChanged: {}`), in v2 on a new `session` object in the Client's capabilities (`capabilities.session.listChanged: {}`). Agents MUST NOT send the notification to a Client that did not declare it.
 
 The new row fields need no capability: they are optional and Clients ignore what is missing.
 
@@ -72,7 +85,8 @@ The new row fields need no capability: they are optional and Clients ignore what
 ```
 
 - `limit` (optional, integer ≥ 1): the maximum number of sessions in this page. The Agent MAY return fewer and MAY clamp large values; it MUST NOT return more.
-- When `limit` is supported, sessions are ordered by `updatedAt` descending (ties broken by an agent-defined stable key). `updatedAt` is the time of the last activity in the session, not of agent-side metadata writes, so a rename does not move a session to the top.
+- `includeWorktrees` (optional, boolean, default `false`): also return sessions whose `cwd` is a linked Git worktree of the repository that contains `cwd`. Without it, `cwd` keeps its current exact-match meaning. Worktrees whose directory no longer exists are not included. Each row reports its own real `cwd`.
+- When `limit` is supported, sessions are ordered by `updatedAt` descending, ties broken by an agent-defined stable key. Agents advertising `limit` SHOULD send `updatedAt` on every row; rows without it sort after all rows that have it. `updatedAt` is the time of the last activity in the session, not of agent-side metadata writes, so a rename does not move a session to the top.
 - A page that carries a `nextCursor` MUST NOT be empty.
 - Sub-agent and side-chain sessions are not listed.
 
@@ -114,15 +128,16 @@ All values are best-effort snapshots. A Client that has the session open keeps u
 }
 ```
 
-- Sent from Agent to Client when a session that the Client has listed under `cwd` was created, updated, renamed, archived or deleted, including by another process.
-- It is a hint: it carries no rows, Agents coalesce bursts, and a lost notification is harmless. On receipt the Client re-reads the first page and replaces it.
-- Agents only send it for `cwd` values the Client listed recently on this connection, and only when the Client declared `clientCapabilities.session.listChanged: {}` (exact spelling to be settled with the v2 capability layout).
+- Sent from Agent to Client when a session in a list the Client read for `cwd` (with the same `includeWorktrees` scope) was created, updated, renamed, archived or deleted, including by another process.
+- Scope: an Agent SHOULD watch every `cwd` the Client listed on this connection during the last 10 minutes and MAY cap how many it watches. A `session/list` call for a `cwd` renews its watch. Lists without `cwd` are not watched.
+- It is an opportunistic hint: it carries no rows, Agents coalesce bursts, and it can be lost or never sent (watch expired, Agent restarted). On receipt the Client re-reads the first page and replaces it.
+- Clients MUST NOT rely on hints alone for freshness: while a list is on screen they SHOULD also re-read its first page periodically (for example every 30–60 seconds) and after reconnecting.
 
 ## Shiny future
 
 > How will things will play out once this feature exists?
 
-An IDE opens a project and calls `session/list { cwd, limit: 50 }` once per agent. The response arrives in a few milliseconds, already sorted, and each row tells the user which sessions are running, which are waiting for them, which branch they ran on and how much they cost. When the user starts a session in a terminal, finishes one in another window or a turn ends somewhere else, the Agent sends `session/list_changed` and the IDE re-reads one page. Clients stop shipping per-agent file parsers and watchers.
+An IDE opens a project and calls `session/list { cwd, limit: 50, includeWorktrees: true }` per agent. The response arrives in a few milliseconds, already sorted, and each row tells the user which sessions are running, which are waiting for them, which branch they ran on and how much they cost. When the user starts a session in a terminal, finishes one in another window or a turn ends somewhere else, the Agent sends `session/list_changed` and the IDE re-reads one page; a slow periodic re-read covers anything a hint missed. Clients stop shipping per-agent file parsers and watchers.
 
 ## Implementation details and plan
 
@@ -133,7 +148,7 @@ Prior art: the same design is implemented as a JetBrains `_meta` extension (`_me
 - `claude-agent-acp` ([agentclientprotocol/claude-agent-acp#1268](https://github.com/agentclientprotocol/claude-agent-acp/pull/1268)) keeps an in-memory index over the transcript files. On a real history of 233 sessions, the last 50 sessions of a project take about 80 ms on a cold process and 1.3–4 ms afterwards, against 140–240 ms for today's `session/list`. `state` comes from the SDK for sessions of the process and from Claude Code's live-session registry for others.
 - `codex-acp` ([agentclientprotocol/codex-acp#590](https://github.com/agentclientprotocol/codex-acp/pull/590)) passes `cwd`, `limit` and `sortKey: "recency_at"` to `thread/list`. The last 50 sessions of a project take 2–4 ms warm, against an empty first page today. `state` is only reported for threads loaded in the same process.
 
-Both implementations include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), and report each row's real `cwd`.
+Both implementations include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), and report each row's real `cwd`. In the extension this is always on; this RFD makes it an explicit request option so that plain `cwd` keeps its exact-match meaning. Both also expire watches after 10 minutes and expect clients to poll as a fallback, which is what the hint rules above describe.
 
 Plan:
 
