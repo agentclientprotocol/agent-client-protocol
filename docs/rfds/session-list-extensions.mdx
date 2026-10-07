@@ -84,8 +84,10 @@ The new row fields need no capability: they are optional and Clients ignore what
 }
 ```
 
-- `limit` (optional, integer ≥ 1): the maximum number of sessions in this page. The Agent MAY return fewer and MAY clamp large values; it MUST NOT return more.
-- `includeWorktrees` (optional, boolean, default `false`): also return sessions whose `cwd` is a linked Git worktree of the repository that contains `cwd`. Without it, `cwd` keeps its current exact-match meaning. Worktrees whose directory no longer exists are not included. Each row reports its own real `cwd`.
+- `limit` (optional, integer ≥ 1; omitted or `null` means the Agent's default): the maximum number of sessions in this page. The Agent MAY return fewer and MAY clamp large values; it MUST NOT return more.
+- `includeWorktrees` (optional, boolean; omitted or `null` means `false`): also return sessions whose `cwd` is the directory corresponding to `cwd` in each linked Git worktree of the repository, that is, the same path relative to the worktree root. For a repository root this is each worktree root; for `/repo/packages/a` it is `<worktree>/packages/a`. Only existing directories are included, so removed worktrees are not. Without it, `cwd` keeps its current exact-match meaning. Each row reports its own real `cwd`.
+- Any other type for `limit` or `includeWorktrees` is an invalid request (`-32602`).
+- Filtering (`cwd`, `includeWorktrees`, and `archived` from #2161) and the order below apply before pagination. A cursor is valid only with the same `cwd`, `includeWorktrees` and `archived` values that produced it; otherwise the Agent returns `-32602`. `limit` MAY change between pages.
 - When `limit` is supported, sessions are ordered by `updatedAt` descending, ties broken by an agent-defined stable key. Agents advertising `limit` SHOULD send `updatedAt` on every row; rows without it sort after all rows that have it. `updatedAt` is the time of the last activity in the session, not of agent-side metadata writes, so a rename does not move a session to the top.
 - A page that carries a `nextCursor` MUST NOT be empty.
 - Sub-agent and side-chain sessions are not listed.
@@ -122,7 +124,7 @@ New optional fields on `SessionInfo`:
 | `lastTurnEndedAt` | When the last turn ended. Clients use it to decide whether there is unseen output; `updatedAt` cannot be used for that, because it also moves when the user types a prompt elsewhere.      |
 | `cost`            | The existing `Cost` type from `usage_update`. Only sent when the Agent already has the value; Agents are not expected to compute it.                                                       |
 
-All values are best-effort snapshots. A Client that has the session open keeps using the session's own `session/update` stream, which is authoritative.
+All values are best-effort snapshots. A field that is missing from a refreshed row means "unknown now": in particular a missing `state` clears a previously reported one. A Client that has the session open keeps using the session's own `session/update` stream, which is authoritative.
 
 ### `session/list_changed` notification
 
@@ -136,9 +138,10 @@ All values are best-effort snapshots. A Client that has the session open keeps u
 }
 ```
 
-- Sent from Agent to Client when a session in a list the Client read for `cwd` (with the same `includeWorktrees` scope) was created, updated, renamed, archived or deleted, including by another process.
-- Scope: an Agent SHOULD watch every `cwd` the Client listed on this connection during the last 10 minutes and MAY cap how many it watches. A `session/list` call for a `cwd` renews its watch. Lists without `cwd` are not watched.
-- It is an opportunistic hint: it carries no rows, Agents coalesce bursts, and it can be lost or never sent (watch expired, Agent restarted). On receipt the Client re-reads the first page and replaces it.
+- Sent from Agent to Client when a session in a list the Client read for `cwd` was created, updated, renamed, archived or deleted, including by another process.
+- Scope: an Agent SHOULD watch every `cwd` (together with its `includeWorktrees` value) whose first page the Client requested on this connection during the last 10 minutes, and MAY cap how many it watches. Each first-page request renews the watch. Lists without `cwd` are not watched.
+- The notification names only `cwd`. It invalidates every list the Client holds for that `cwd`, whatever its `includeWorktrees` and `archived` values.
+- It is an opportunistic hint: it carries no rows, Agents coalesce bursts, and it can be lost or never sent (watch expired, Agent restarted). On receipt the Client re-reads the first page and replaces it, and discards any later pages and cursors it holds for that list; they are re-read on demand.
 - Clients MUST NOT rely on hints alone for freshness: while a list is on screen they SHOULD also re-read its first page periodically (for example every 30–60 seconds) and after reconnecting.
 
 ## Shiny future
@@ -178,7 +181,7 @@ A subscription needs sequence numbers, gap detection and resynchronization after
 
 ### Why is `state` optional instead of always present?
 
-An Agent often cannot see sessions driven by another process. For example, a `codex app-server` only knows the status of threads it loaded itself, and none of the native Codex clients show the status of other processes' threads either. Sending `unknown` would add a value the v2 `state_update` does not have, so the field is omitted instead.
+An Agent often cannot see sessions driven by another process. For example, a `codex app-server` only knows the status of threads it loaded itself, and none of the native Codex clients show the status of other processes' threads either. The unstable v2 schema has an `unknown` state for open sessions, but in a list most rows would carry it, so the field is omitted instead: absence means "unknown" and keeps the three listed values meaningful.
 
 ### How does this relate to `session/status` ([#986](https://github.com/agentclientprotocol/agent-client-protocol/pull/986))?
 
@@ -202,3 +205,4 @@ Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex
 
 - 2026-10-07: Initial draft.
 - 2026-10-07: Reframed as an extension of the completed Session List RFD; composed with #2161; added `createdAt`, `lastPromptAt`, `model` and `forkedFrom`.
+- 2026-10-07: Defined worktree expansion as the corresponding subdirectory, `null` handling, cursor scope, hint scope and page invalidation; corrected the `unknown` state rationale.
