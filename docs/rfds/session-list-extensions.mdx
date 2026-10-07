@@ -88,7 +88,7 @@ The new row fields need no capability: they are optional and Clients ignore what
 - `includeWorktrees` (optional, boolean; omitted or `null` means `false`): also return sessions whose `cwd` is the directory corresponding to `cwd` in each linked Git worktree of the repository, that is, the same path relative to the worktree root. For a repository root this is each worktree root; for `/repo/packages/a` it is `<worktree>/packages/a`. Only existing directories are included, so removed worktrees are not. Without it, `cwd` keeps its current exact-match meaning. Each row reports its own real `cwd`.
 - Any other type for `limit` or `includeWorktrees` is an invalid request (`-32602`).
 - Filtering (`cwd`, `includeWorktrees`, and `archived` from #2161) and the order below apply before pagination. A cursor is valid only with the same `cwd`, `includeWorktrees` and `archived` values that produced it; otherwise the Agent returns `-32602`. `limit` MAY change between pages.
-- When `limit` is supported, sessions are ordered by `updatedAt` descending, ties broken by an agent-defined stable key. Agents advertising `limit` SHOULD send `updatedAt` on every row; rows without it sort after all rows that have it. `updatedAt` is the time of the last activity in the session, not of agent-side metadata writes, so a rename does not move a session to the top.
+- When `limit` is supported, sessions are ordered by last user activity, descending: `lastPromptAt`, or `updatedAt` for rows without it. Ties are broken by an agent-defined stable key. This is the order history views already use (the user's most recent conversations first), and it does not change when an Agent writes metadata or keeps working on its own. Agents advertising `limit` SHOULD send `lastPromptAt` or `updatedAt` on every row; rows with neither sort last. `updatedAt` keeps its meaning of last activity of any kind.
 - A page that carries a `nextCursor` MUST NOT be empty.
 - Sub-agent and side-chain sessions are not listed.
 
@@ -116,7 +116,7 @@ New optional fields on `SessionInfo`:
 | Field             | Meaning                                                                                                                                                                                    |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `createdAt`       | When the session was created.                                                                                                                                                              |
-| `lastPromptAt`    | When the user last sent a prompt. History views commonly order by it; unlike `updatedAt` it does not move when the Agent works on its own.                                                 |
+| `lastPromptAt`    | When the user last sent a prompt. It is the primary sort key of the list; unlike `updatedAt` it does not move when the Agent works on its own.                                             |
 | `gitBranch`       | The Git branch the session ran on.                                                                                                                                                         |
 | `model`           | The model of the most recent turn, as the Agent names it.                                                                                                                                  |
 | `forkedFrom`      | The `sessionId` this session was forked from, when the Agent knows it.                                                                                                                     |
@@ -206,3 +206,4 @@ Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex
 - 2026-10-07: Initial draft.
 - 2026-10-07: Reframed as an extension of the completed Session List RFD; composed with #2161; added `createdAt`, `lastPromptAt`, `model` and `forkedFrom`.
 - 2026-10-07: Defined worktree expansion as the corresponding subdirectory, `null` handling, cursor scope, hint scope and page invalidation; corrected the `unknown` state rationale.
+- 2026-10-07: Ordered by last user activity (`lastPromptAt`, falling back to `updatedAt`) to match history views and native clients.
