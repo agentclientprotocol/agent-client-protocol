@@ -1,5 +1,5 @@
 ---
-title: "Session list for history views: limit, order, row state and change hints"
+title: "Session list extensions: limit, order, row metadata and change hints"
 ---
 
 Author(s): [nikita-ashihmin](https://github.com/nikita-ashihmin)
@@ -8,19 +8,19 @@ Author(s): [nikita-ashihmin](https://github.com/nikita-ashihmin)
 
 > What are you proposing to change?
 
-Make `session/list` good enough to drive a "recent sessions" view without falling back to reading agent files from disk:
+This RFD extends the completed [Session List RFD](/rfds/session-list) so that `session/list` can drive a "recent sessions" view without the Client reading agent files from disk. It only adds optional parameters, optional `SessionInfo` fields and one notification on top of the existing method; nothing in the original contract changes for Clients and Agents that do not opt in.
 
 - **`limit`** on the request and a **defined order** (most recently active first), so a Client can ask for "the last 50 sessions of this project" in one round trip.
-- **Optional row fields** that such a view shows: the session's **activity state** (`running`, `idle`, `requires_action`), when its **last turn ended**, the **Git branch** it ran on, and its **cost** when the Agent already knows it.
+- **Optional row fields** that such a view shows: the session's **activity state** (`running`, `idle`, `requires_action`), when it was **created**, when the user last **prompted** it and when its **last turn ended**, the **Git branch** and **model** it ran with, the session it was **forked from**, and its **cost** when the Agent already knows it.
 - A **`session/list_changed`** notification: a lossy hint, without rows, that tells a Client to re-read the first page.
 
-Archiving ([#2161](https://github.com/agentclientprotocol/agent-client-protocol/pull/2161)), client-set titles ([#1987](https://github.com/agentclientprotocol/agent-client-protocol/pull/1987)) and liveness probes ([#986](https://github.com/agentclientprotocol/agent-client-protocol/pull/986)) are covered by other RFDs and are out of scope here. This RFD is designed to compose with them.
+Archiving ([#2161](https://github.com/agentclientprotocol/agent-client-protocol/pull/2161)), client-set titles ([#1987](https://github.com/agentclientprotocol/agent-client-protocol/pull/1987)) and liveness probes ([#986](https://github.com/agentclientprotocol/agent-client-protocol/pull/986)) are covered by other RFDs and are out of scope here. This RFD composes with them: the `archived` request parameter and row field from #2161 combine with `limit`, the ordering and `includeWorktrees` defined here, and `session/list_changed` is how other Clients learn about archive and rename changes.
 
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-[`session/list`](/protocol/v1/session-list) takes `cwd` and `cursor` and returns `sessionId`, `cwd`, `title` and `updatedAt`. Page size and order are left to the Agent; the `limit` and sort parameters were removed from the original RFD before it was completed.
+[`session/list`](/protocol/v1/session-list), as specified by the [Session List RFD](/rfds/session-list), takes `cwd` and `cursor` and returns `sessionId`, `cwd`, `title` and `updatedAt`. Page size and order are left to the Agent; the `limit` and sort parameters were removed from that RFD before it was completed, and its discussion left richer row metadata to later extensions.
 
 IDE clients that show a per-project session history therefore cannot rely on ACP for it, and read each agent's files from disk instead (`~/.claude/projects/*.jsonl`, Codex rollouts, a private `codex app-server`, ...). That means per-agent parsers, file watchers and cost scanners in every client, and they break whenever an agent changes its storage.
 
@@ -28,7 +28,7 @@ Measured against today's adapters on a developer machine:
 
 - **No `limit`, no order.** One adapter returns pages of 1000 rows sorted by file mtime and re-reads every skipped row on later pages (page 5 of 5,000 sessions took 3.5 s). Another returns pages of 25 rows sorted by **creation** time and filters by `cwd` after paging, so the first page for a project is often empty but has a `nextCursor`. A client that wants "the latest 50" has to walk every page.
 - **No state.** A list row cannot say that a session is running or waiting for the user. Clients that want a "needs attention" badge parse transcripts themselves.
-- **No cost, no branch.** Both are shown in history views and both are known to many agents, but they can only be reached through `usage_update`/`session_info_update` for sessions that are open on the current connection.
+- **No cost, branch, model, creation time or fork origin.** History views show them and many agents know them, but they are either missing or only reachable through `usage_update`/`session_info_update` for sessions that are open on the current connection.
 - **No change signal.** `session_info_update` only reaches connections that have the session loaded. A history view does not know that a session was created, renamed or finished by another process, and either polls the whole list or goes stale.
 
 ## What we propose to do about it
@@ -100,7 +100,11 @@ New optional fields on `SessionInfo`:
   "cwd": "/home/user/project",
   "title": "Fix the OAuth timeout",
   "updatedAt": "2026-10-06T10:00:00Z",
+  "createdAt": "2026-10-05T18:12:00Z",
+  "lastPromptAt": "2026-10-06T09:57:40Z",
   "gitBranch": "fix/oauth-timeout",
+  "model": "gpt-5.5",
+  "forkedFrom": "sess_parent42",
   "state": "requires_action",
   "lastTurnEndedAt": "2026-10-06T09:58:10Z",
   "cost": { "amount": 1.23, "currency": "USD" }
@@ -109,7 +113,11 @@ New optional fields on `SessionInfo`:
 
 | Field             | Meaning                                                                                                                                                                                    |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `createdAt`       | When the session was created.                                                                                                                                                              |
+| `lastPromptAt`    | When the user last sent a prompt. History views commonly order by it; unlike `updatedAt` it does not move when the Agent works on its own.                                                 |
 | `gitBranch`       | The Git branch the session ran on.                                                                                                                                                         |
+| `model`           | The model of the most recent turn, as the Agent names it.                                                                                                                                  |
+| `forkedFrom`      | The `sessionId` this session was forked from, when the Agent knows it.                                                                                                                     |
 | `state`           | `running`, `idle` or `requires_action`, the same values as the v2 `state_update`. Omitted when the Agent does not know, for example for a session driven by another process it cannot see. |
 | `lastTurnEndedAt` | When the last turn ended. Clients use it to decide whether there is unseen output; `updatedAt` cannot be used for that, because it also moves when the user types a prompt elsewhere.      |
 | `cost`            | The existing `Cost` type from `usage_update`. Only sent when the Agent already has the value; Agents are not expected to compute it.                                                       |
@@ -148,7 +156,7 @@ Prior art: the same design is implemented as a JetBrains `_meta` extension (`_me
 - `claude-agent-acp` ([agentclientprotocol/claude-agent-acp#1268](https://github.com/agentclientprotocol/claude-agent-acp/pull/1268)) keeps an in-memory index over the transcript files. On a real history of 233 sessions, the last 50 sessions of a project take about 80 ms on a cold process and 1.3–4 ms afterwards, against 140–240 ms for today's `session/list`. `state` comes from the SDK for sessions of the process and from Claude Code's live-session registry for others.
 - `codex-acp` ([agentclientprotocol/codex-acp#590](https://github.com/agentclientprotocol/codex-acp/pull/590)) passes `cwd`, `limit` and `sortKey: "recency_at"` to `thread/list`. The last 50 sessions of a project take 2–4 ms warm, against an empty first page today. `state` is only reported for threads loaded in the same process.
 
-Both implementations include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), and report each row's real `cwd`. In the extension this is always on; this RFD makes it an explicit request option so that plain `cwd` keeps its exact-match meaning. Both also expire watches after 10 minutes and expect clients to poll as a fallback, which is what the hint rules above describe.
+Both implementations can include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), behind the same opt-in `includeWorktrees` flag, and report each row's real `cwd`. Both expire watches after 10 minutes and expect clients to poll as a fallback, which is what the hint rules above describe. Their archive and unarchive follow the semantics of #2161 (boolean `archived` filter and row field, no implicit close).
 
 Plan:
 
@@ -193,3 +201,4 @@ Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex
 ## Revision history
 
 - 2026-10-07: Initial draft.
+- 2026-10-07: Reframed as an extension of the completed Session List RFD; composed with #2161; added `createdAt`, `lastPromptAt`, `model` and `forkedFrom`.

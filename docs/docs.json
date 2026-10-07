@@ -196,7 +196,7 @@
               "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
               "rfds/subagents",
-              "rfds/session-list-for-history-views"
+              "rfds/session-list-extensions"
             ]
           },
           {
