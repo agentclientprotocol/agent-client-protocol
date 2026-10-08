@@ -201,7 +201,7 @@ Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex
 ## Revision history
 
 - 2026-10-07: Initial draft.
-- 2026-10-07: Reframed as an extension of the completed Session List RFD; composed with #2161; added `createdAt`, `lastPromptAt`, `model` and `forkedFrom`.
+- 2026-10-07: Reframed as an extension of the completed Session List RFD; composed with #2161; added `lastPromptAt`, `model` and `forkedFrom`.
 - 2026-10-07: Defined worktree expansion as the corresponding subdirectory, `null` handling, cursor scope, hint scope and page invalidation; corrected the `unknown` state rationale.
 - 2026-10-07: Ordered by last user activity (`lastPromptAt`, falling back to `updatedAt`) to match history views and native clients.
-- 2026-10-08: Made the `archived` filter three-valued (`unarchived`, `archived`, `all`); removed `createdAt` and `gitBranch`.
+- 2026-10-08: Made the `archived` filter three-valued (`unarchived`, `archived`, `all`).
