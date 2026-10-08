@@ -1,5 +1,5 @@
 ---
-title: "Session list extensions: limit, order, row metadata and change hints"
+title: "Session list extensions: limit, order, row metadata and a list subscription"
 ---
 
 Author(s): [nikita-ashihmin](https://github.com/nikita-ashihmin)
@@ -13,9 +13,8 @@ This RFD extends the completed [Session List RFD](/rfds/session-list) so that `s
 - **`limit`** on the request and a **defined order** (most recently active first), so a Client can ask for "the last 50 sessions of this project" in one round trip.
 - **Optional row fields** that such a view shows: the session's **activity state** (`running`, `idle`, `requires_action`), when the user last **prompted** it and when its **last turn ended**, the **model** it ran with, the session it was **forked from**, and its **cost** when the Agent already knows it.
 - A **list subscription** (`session/list/subscribe`, `session/list/changes`, `session/list/unsubscribe`): the Agent pushes the full current row of every session that is created or changes, and the id of every session that is deleted.
-- A **`session/list_changed`** notification for simpler Clients: a lossy hint, without rows, that tells a Client to re-read the first page.
 
-Archiving ([#2161](https://github.com/agentclientprotocol/agent-client-protocol/pull/2161)), client-set titles ([#1987](https://github.com/agentclientprotocol/agent-client-protocol/pull/1987)) and liveness probes ([#986](https://github.com/agentclientprotocol/agent-client-protocol/pull/986)) are covered by other RFDs and are out of scope here. This RFD composes with them: the `archived` request parameter and row field from #2161 combine with `limit`, the ordering and `includeWorktrees` defined here (this RFD proposes a three-value `archived` filter, see below), and `session/list_changed` is how other Clients learn about archive and rename changes.
+Archiving ([#2161](https://github.com/agentclientprotocol/agent-client-protocol/pull/2161)), client-set titles ([#1987](https://github.com/agentclientprotocol/agent-client-protocol/pull/1987)) and liveness probes ([#986](https://github.com/agentclientprotocol/agent-client-protocol/pull/986)) are covered by other RFDs and are out of scope here. This RFD composes with them: the `archived` request parameter and row field from #2161 combine with `limit`, the ordering and `includeWorktrees` defined here (this RFD proposes a three-value `archived` filter, see below), and a list subscription is how other Clients learn about archive and rename changes.
 
 ## Status quo
 
@@ -41,7 +40,6 @@ Measured against today's adapters on a developer machine:
 Agents advertise the new behavior with optional markers. Omission or `null` means unsupported, `{}` means supported:
 
 - `limit`: the Agent honors `limit` and `includeWorktrees` on `session/list` and guarantees the order below.
-- `changes`: the Agent can send `session/list_changed`.
 - `subscribe`: the Agent supports `session/list/subscribe`, `session/list/changes`, `session/list/resync` and `session/list/unsubscribe`.
 
 In v1 they extend the existing `SessionListCapabilities`:
@@ -50,7 +48,7 @@ In v1 they extend the existing `SessionListCapabilities`:
 {
   "agentCapabilities": {
     "sessionCapabilities": {
-      "list": { "limit": {}, "changes": {}, "subscribe": {} }
+      "list": { "limit": {}, "subscribe": {} }
     }
   }
 }
@@ -62,13 +60,11 @@ In v2, `session/list` is part of the baseline session surface, so the markers go
 {
   "capabilities": {
     "session": {
-      "list": { "limit": {}, "changes": {}, "subscribe": {} }
+      "list": { "limit": {}, "subscribe": {} }
     }
   }
 }
 ```
-
-Clients opt in to `session/list_changed` with a new `listChanged` marker: in v1 on the existing `ClientSessionCapabilities` (`clientCapabilities.session.listChanged: {}`), in v2 on a new `session` object in the Client's capabilities (`capabilities.session.listChanged: {}`). Agents MUST NOT send the notification to a Client that did not declare it.
 
 The new row fields need no capability: they are optional and Clients ignore what is missing.
 
@@ -163,25 +159,6 @@ A Client that keeps a list on screen subscribes to it and receives the new state
 - Agents coalesce: at most one change per session per second, and the changes of one moment in one notification.
 - `session/list/resync { subscriptionId }`: the Agent could not report every change (for example it lost file events or restarted a backend). The Client reads the list again; the subscription stays.
 - `session/list/unsubscribe { subscriptionId }` ends it and returns `{}`. A subscription also ends with the connection. There is no expiry. Agents MAY cap the number of subscriptions per connection and reject more with `-32602`.
-- While a subscription covers a `cwd`, the Agent does not send `session/list_changed` for it to that Client.
-
-### `session/list_changed` notification
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "session/list_changed",
-  "params": {
-    "cwd": "/home/user/project"
-  }
-}
-```
-
-- Sent from Agent to Client when a session in a list the Client read for `cwd` was created, updated, renamed, archived or deleted, including by another process.
-- Scope: an Agent SHOULD watch every `cwd` (together with its `includeWorktrees` value) whose first page the Client requested on this connection during the last 10 minutes, and MAY cap how many it watches. Each first-page request renews the watch. Lists without `cwd` are not watched.
-- The notification names only `cwd`. It invalidates every list the Client holds for that `cwd`, whatever its `includeWorktrees` and `archived` values.
-- It is an opportunistic hint: it carries no rows, Agents coalesce bursts, and it can be lost or never sent (watch expired, Agent restarted). On receipt the Client re-reads the first page and replaces it, and discards any later pages and cursors it holds for that list; they are re-read on demand.
-- Clients MUST NOT rely on hints alone for freshness: while a list is on screen they SHOULD also re-read its first page periodically (for example every 30–60 seconds) and after reconnecting.
 
 ## Shiny future
 
@@ -198,11 +175,11 @@ Prior art: the same design is implemented as a JetBrains `_meta` extension (`_me
 - `claude-agent-acp` ([agentclientprotocol/claude-agent-acp#1268](https://github.com/agentclientprotocol/claude-agent-acp/pull/1268)) keeps an in-memory index over the transcript files. On a real history of 233 sessions, the last 50 sessions of a project take about 80 ms on a cold process and 1.3–4 ms afterwards, against 140–240 ms for today's `session/list`. `state` comes from the SDK for sessions of the process and from Claude Code's live-session registry for others.
 - `codex-acp` ([agentclientprotocol/codex-acp#590](https://github.com/agentclientprotocol/codex-acp/pull/590)) passes `cwd`, `limit` and `sortKey: "recency_at"` to `thread/list`. The last 50 sessions of a project take 2–4 ms warm, against an empty first page today. `state` is only reported for threads loaded in the same process.
 
-Both implementations can include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), behind the same opt-in `includeWorktrees` flag, and report each row's real `cwd`. Both expire watches after 10 minutes and expect clients to poll as a fallback, which is what the hint rules above describe. Their archive and unarchive follow the semantics of #2161 (boolean `archived` row field, no implicit close), with the three-value `archived` filter described above.
+Both implementations can include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), behind the same opt-in `includeWorktrees` flag, and report each row's real `cwd`. Their archive and unarchive follow the semantics of #2161 (boolean `archived` row field, no implicit close), with the three-value `archived` filter described above.
 
 Plan:
 
-1. Land this RFD as a draft and collect feedback, especially on the capability spelling and on `session/list_changed`.
+1. Land this RFD as a draft and collect feedback, especially on the capability spelling and on the subscription.
 2. Add the fields and the notification to the schema behind the `unstable` feature, and to the v2 draft.
 3. Move the two adapters from the `_meta` extension to the protocol fields.
 
@@ -214,9 +191,9 @@ Plan:
 
 Without it, "the latest N sessions" requires walking every page, and agents had to pick page sizes blindly (1000 rows in one adapter, 25 in another). A client-provided upper bound plus a defined order makes the first page useful on its own. Agents can still clamp it.
 
-### Why both a subscription and a hint?
+### Why a subscription with full rows?
 
-Session state changes several times per turn. With only a hint, every change costs the Client a full page read and a diff, and the Agent rebuilds the page it has just inspected. A subscription sends the one changed row. It needs no sequence numbers: JSON-RPC on one connection is ordered and reliable, so the only gap is one the Agent itself knows about, and it says so with `resync`. Rows are full state, so a repeated or late row cannot corrupt the Client's list. The hint stays for Clients and Agents that want the simplest possible support.
+Session state changes several times per turn. A rowless "list changed" hint would make every change cost the Client a full page read and a diff, and make the Agent rebuild the page it has just inspected. A subscription sends the one changed row. It needs no sequence numbers: JSON-RPC on one connection is ordered and reliable, so the only gap is one the Agent itself knows about, and it says so with `resync`. Rows are full state, so a repeated or late row cannot corrupt the Client's list.
 
 ### Why is `state` optional instead of always present?
 
@@ -228,7 +205,7 @@ An Agent often cannot see sessions driven by another process. For example, a `co
 
 ### How does this relate to session archiving ([#2161](https://github.com/agentclientprotocol/agent-client-protocol/pull/2161)) and client-set titles ([#1987](https://github.com/agentclientprotocol/agent-client-protocol/pull/1987))?
 
-They are complementary. The JetBrains extension also implements archive/unarchive and rename, which validated those RFDs' shapes; this RFD intentionally leaves them to their own proposals. `session/list_changed` is how other Clients learn that a session was archived or renamed.
+They are complementary. The JetBrains extension also implements archive/unarchive and rename, which validated those RFDs' shapes; this RFD intentionally leaves them to their own proposals. A list subscription is how other Clients learn that a session was archived or renamed.
 
 ### Why not compute cost for every session?
 
@@ -247,4 +224,4 @@ Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex
 - 2026-10-07: Defined worktree expansion as the corresponding subdirectory, `null` handling, cursor scope, hint scope and page invalidation; corrected the `unknown` state rationale.
 - 2026-10-07: Ordered by last user activity (`lastPromptAt`, falling back to `updatedAt`) to match history views and native clients.
 - 2026-10-08: Made the `archived` filter three-valued (`unarchived`, `archived`, `all`).
-- 2026-10-08: Added the list subscription; `session/list_changed` stays for simpler Clients.
+- 2026-10-08: Replaced the change hint with a list subscription.
