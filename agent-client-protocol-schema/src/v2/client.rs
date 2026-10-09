@@ -2130,7 +2130,11 @@ impl AgentThought {
     }
 }
 
-/// Unique identifier for a message within a session.
+/// Identifier for a message, unique among messages of the same type within a session.
+///
+/// Each message type, such as user messages, agent messages, and agent thoughts,
+/// has its own ID space: messages of different types may share an ID and remain
+/// distinct messages.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]

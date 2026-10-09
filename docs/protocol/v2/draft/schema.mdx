@@ -5338,7 +5338,11 @@ An Internet media type identifying the format of protocol content.
 
 ## <span class="font-mono">MessageId</span>
 
-Unique identifier for a message within a session.
+Identifier for a message, unique among messages of the same type within a session.
+
+Each message type, such as user messages, agent messages, and agent thoughts,
+has its own ID space: messages of different types may share an ID and remain
+distinct messages.
 
 **Type:** `string`
 

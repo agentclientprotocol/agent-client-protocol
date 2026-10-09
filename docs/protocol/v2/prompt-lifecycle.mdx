@@ -38,6 +38,23 @@ The protocol also supports [custom and future variants](/protocol/v2/extensibili
 
 Session updates are not limited to prompt-driven foreground work. For example, Agents may advertise commands after creating a session, and background activity may emit updates while the Agent is [idle](#session-states).
 
+### Entity IDs
+
+Messages, tool calls, terminals, and plans are entities that the Agent creates and then updates by ID across multiple session updates. An entity is identified by its type together with its ID, not by its ID alone:
+
+| Entity type   | Session updates                               | ID field     |
+| ------------- | --------------------------------------------- | ------------ |
+| User message  | `user_message`, `user_message_chunk`          | `messageId`  |
+| Agent message | `agent_message`, `agent_message_chunk`        | `messageId`  |
+| Agent thought | `agent_thought`, `agent_thought_chunk`        | `messageId`  |
+| Tool call     | `tool_call_update`, `tool_call_content_chunk` | `toolCallId` |
+| Terminal      | `terminal_update`, `terminal_output_chunk`    | `terminalId` |
+| Plan          | `plan_update`                                 | `planId`     |
+
+An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, and Agent thoughts are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`; they remain two distinct entities.
+
+The Agent **MUST NOT** reuse an ID for a different entity of the same type within a session. Clients **MUST** key entities by both type and ID. An update applies only to the entity of its own type: an `agent_thought` whose `messageId` matches an existing Agent message creates or updates a thought and leaves the message unchanged. Likewise, a field that references an entity identifies an entity of one specific type; for example, the `messageId` returned by `session/prompt` identifies a user message.
+
 ## Prompt Lifecycle
 
 A typical prompt-driven flow enables rich interactions between the user, Agent, and any connected tools.

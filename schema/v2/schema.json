@@ -4234,7 +4234,7 @@
       "x-method": "session/prompt"
     },
     "MessageId": {
-      "description": "Unique identifier for a message within a session.",
+      "description": "Identifier for a message, unique among messages of the same type within a session.\n\nEach message type, such as user messages, agent messages, and agent thoughts,\nhas its own ID space: messages of different types may share an ID and remain\ndistinct messages.",
       "type": "string"
     },
     "ExtResponse": {
