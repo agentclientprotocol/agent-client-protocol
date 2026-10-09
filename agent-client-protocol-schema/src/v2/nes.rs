@@ -10,7 +10,7 @@ use derive_more::{Display, From};
 #[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
-use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
+use serde_with::{DefaultOnError, DefaultOnNull, serde_as, skip_serializing_none};
 
 use super::{Meta, SessionId};
 use crate::IntoOption;
@@ -1123,8 +1123,7 @@ pub struct DidChangeDocumentNotification {
     /// The new version number of the document.
     pub version: i64,
     /// The content changes.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     pub content_changes: Vec<TextDocumentContentChangeEvent>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3568,5 +3567,40 @@ mod tests {
         assert_eq!(json["suggestions"].as_array().unwrap().len(), 2);
         assert_eq!(json["suggestions"][0]["kind"], "edit");
         assert_eq!(json["suggestions"][1]["kind"], "jump");
+    }
+
+    #[test]
+    fn did_change_document_rejects_malformed_content_changes() {
+        let notification = |content_changes: serde_json::Value| {
+            serde_json::from_value::<DidChangeDocumentNotification>(json!({
+                "sessionId": "session_123",
+                "uri": "file:///path/to/file.rs",
+                "version": 7,
+                "contentChanges": content_changes
+            }))
+        };
+
+        // Applying only the valid incremental edit would silently desync the
+        // document at version 7; rejecting it leaves a detectable version gap.
+        assert!(
+            notification(json!([
+                {
+                    "range": {"start": {"line": 3, "character": 0}, "end": {"line": 3, "character": "4"}},
+                    "text": "let"
+                },
+                {
+                    "range": {"start": {"line": 9, "character": 2}, "end": {"line": 9, "character": 2}},
+                    "text": "x"
+                }
+            ]))
+            .is_err()
+        );
+        assert!(notification(json!("not-an-array")).is_err());
+        assert_eq!(
+            notification(serde_json::Value::Null)
+                .unwrap()
+                .content_changes,
+            vec![]
+        );
     }
 }

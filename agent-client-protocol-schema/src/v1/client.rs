@@ -9,7 +9,7 @@ use derive_more::{Display, From};
 #[cfg(all(feature = "schemars", feature = "unstable_subagents"))]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
-use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
+use serde_with::{DefaultOnError, DefaultOnNull, VecSkipError, serde_as, skip_serializing_none};
 #[cfg(feature = "unstable_subagents")]
 use std::collections::BTreeMap;
 
@@ -2556,13 +2556,9 @@ pub struct ReadTextFileRequest {
     /// Absolute path to the file to read.
     pub path: PathBuf,
     /// Line number to start reading from (1-based).
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub line: Option<u32>,
     /// Maximum number of lines to read.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub limit: Option<u32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2693,18 +2689,14 @@ pub struct CreateTerminalRequest {
     /// The command to execute.
     pub command: String,
     /// Array of command arguments.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Environment variables for the command.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// Working directory for the command. Must be an absolute path.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cwd: Option<PathBuf>,
     /// Maximum number of output bytes to retain.
@@ -2715,8 +2707,6 @@ pub struct CreateTerminalRequest {
     /// The Client MUST ensure truncation happens at a character boundary to maintain valid
     /// string output, even if this means the retained output is slightly less than the
     /// specified limit.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub output_byte_limit: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -5543,5 +5533,58 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[test]
+    fn create_terminal_request_rejects_malformed_fields() {
+        use serde_json::json;
+
+        let request = |field: &str, value: serde_json::Value| {
+            let mut request = json!({"sessionId": "sess-1", "command": "npx"});
+            request[field] = value;
+            serde_json::from_value::<CreateTerminalRequest>(request)
+        };
+
+        // Defaulting any of these would run a different command than requested.
+        for (field, value) in [
+            ("args", json!(["serve", "--port", 3000])),
+            ("args", json!("serve --port 3000")),
+            ("env", json!([{"name": "PORT", "value": 3000}])),
+            ("env", json!({"PORT": "3000"})),
+            ("cwd", json!({"path": "/repo"})),
+            ("outputByteLimit", json!("1048576")),
+        ] {
+            assert!(request(field, value.clone()).is_err(), "{field}: {value}");
+        }
+
+        for field in ["args", "env", "cwd", "outputByteLimit"] {
+            assert_eq!(
+                request(field, serde_json::Value::Null).unwrap(),
+                CreateTerminalRequest::new("sess-1", "npx"),
+                "{field}"
+            );
+        }
+    }
+
+    #[test]
+    fn read_text_file_request_rejects_malformed_range() {
+        use serde_json::json;
+
+        let request = |field: &str, value: serde_json::Value| {
+            let mut request = json!({"sessionId": "sess-1", "path": "/repo/src/main.rs"});
+            request[field] = value;
+            serde_json::from_value::<ReadTextFileRequest>(request)
+        };
+
+        // Defaulting either bound would return a different part of the file.
+        for field in ["line", "limit"] {
+            assert!(request(field, json!("120")).is_err(), "{field}");
+            assert!(request(field, json!(-1)).is_err(), "{field}");
+            assert_eq!(
+                request(field, serde_json::Value::Null).unwrap(),
+                ReadTextFileRequest::new("sess-1", "/repo/src/main.rs"),
+                "{field}"
+            );
+        }
     }
 }

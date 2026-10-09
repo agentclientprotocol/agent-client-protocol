@@ -27,6 +27,8 @@ All paths in the protocol should be absolute
 ## Schema rules
 
 - For any nullable field, explicitly define whether it is required or optional and whether `null` is equivalent to an omitted key before running schema generation.
+- Use `DefaultOnError`/`VecSkipError` only when the fallback means less (no metadata, an unsupported capability, a missing display item). If the receiver acts on the value (runs, reads, connects, or applies something), keep it strict so a request fails with `-32602` instead of silently doing something else; use `DefaultOnNull` on such lists so `null` still means empty.
+- A malformed value for a known discriminator must not fall through to an untagged fallback variant.
 
 ## Updating existing methods, their params, or output
 
