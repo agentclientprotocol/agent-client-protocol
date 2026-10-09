@@ -5123,7 +5123,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA context compaction has been created or updated.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+          "description": "A context compaction has been created or updated.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5139,7 +5139,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content block appended to a context compaction's retained summary.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+          "description": "A content block appended to a context compaction's retained summary.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5862,11 +5862,11 @@
       "required": ["severity", "title"]
     },
     "CompactionId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a context compaction within a session.",
+      "description": "Unique identifier for a context compaction within a session.",
       "type": "string"
     },
     "CompactionStatus": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLifecycle state of a context compaction.",
+      "description": "Lifecycle state of a context compaction.",
       "anyOf": [
         {
           "description": "Compaction has started and has not finished.",
@@ -5896,7 +5896,7 @@
       ]
     },
     "CompactionUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA context compaction upsert. The first update fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the retained summary. A non-empty summary is only\nvalid with `completed`; `error` is only valid with `failed`.",
+      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary.",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -5916,7 +5916,7 @@
           ]
         },
         "summary": {
-          "description": "Complete replacement user-displayable summary retained by the compaction.",
+          "description": "Complete replacement user-displayable summary content for the compaction.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -5925,7 +5925,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "error": {
-          "description": "Human-readable description of why the compaction failed.",
+          "description": "Human-readable error details for the compaction.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -5939,7 +5939,7 @@
       "required": ["compactionId", "status"]
     },
     "CompactionSummaryChunk": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content block appended to the retained summary of an in-progress\ncompaction. Agents send chunks only after an `in_progress` update and before\nthe terminal update for the same ID. Agents MUST only send this update when\nthe Client advertised [`ClientSessionCapabilities::compaction`].",
+      "description": "A content block appended to a compaction's summary. A first-seen ID creates\nan in-progress compaction. Chunks append in receive order.\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -6968,7 +6968,7 @@
       "type": "object",
       "properties": {
         "compaction": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSupport for ID-addressed context compaction updates. Omitted or `null`\nmeans unsupported; `{}` advertises the complete compaction contract.",
+          "description": "Support for ID-addressed context compaction updates. Omitted or `null`\nmeans unsupported; `{}` advertises the complete compaction contract.",
           "anyOf": [
             {
               "$ref": "#/$defs/CompactionCapabilities"
@@ -7012,7 +7012,7 @@
       }
     },
     "CompactionCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient support for ID-addressed context compaction updates.",
+      "description": "Client support for ID-addressed context compaction updates.",
       "type": "object"
     },
     "SessionConfigOptionsCapabilities": {

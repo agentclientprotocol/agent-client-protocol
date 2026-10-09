@@ -2877,19 +2877,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 ## <span class="font-mono">CompactionId</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Unique identifier for a context compaction within a session.
 
 **Type:** `string`
 
 ## <span class="font-mono">CompactionStatus</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Lifecycle state of a context compaction.
 
@@ -2921,13 +2913,8 @@ extensions. Other unknown values are reserved for future ACP statuses.
 
 ## <span class="font-mono">CompactionSummaryChunk</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A content block appended to the retained summary of an in-progress
-compaction. Agents send chunks only after an `in_progress` update and before
-the terminal update for the same ID.
+A content block appended to a compaction's summary. A first-seen ID creates
+an in-progress compaction. Chunks append in receive order.
 
 **Type:** Object
 
@@ -2953,17 +2940,12 @@ the terminal update for the same ID.
 
 ## <span class="font-mono">CompactionUpdate</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A context compaction upsert. The first update fixes the compaction's
+A context compaction upsert. The first notification fixes the compaction's
 timeline position. Later updates with the same ID patch that entity in place.
 
 `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 stored value unchanged, `null` clears it, and a concrete value replaces it.
-`summary: []` also clears the retained summary. A non-empty summary is only
-valid with `completed`; `error` is only valid with `failed`.
+`summary: []` also clears the summary.
 
 **Type:** Object
 
@@ -2980,7 +2962,7 @@ valid with `completed`; `error` is only valid with `failed`.
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
 <ResponseField name="error" type={"string | null"}>
-  Human-readable description of why the compaction failed.
+  Human-readable error details for the compaction.
 </ResponseField>
 <ResponseField
   name="status"
@@ -3000,7 +2982,7 @@ valid with `completed`; `error` is only valid with `failed`.
     </>
   }
 >
-  Complete replacement user-displayable summary retained by the compaction.
+  Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -9124,10 +9106,6 @@ Omitted and `null` are equivalent and mean no description was supplied.
 </ResponseField>
 
 <ResponseField name="compaction_update" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A context compaction has been created or updated.
 
 <Expandable title="Properties">
@@ -9143,7 +9121,7 @@ A context compaction has been created or updated.
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
 <ResponseField name="error" type={"string | null"}>
-  Human-readable description of why the compaction failed.
+  Human-readable error details for the compaction.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"compaction_update"`.
@@ -9166,17 +9144,13 @@ A context compaction has been created or updated.
     </>
   }
 >
-  Complete replacement user-displayable summary retained by the compaction.
+  Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
 </Expandable>
 </ResponseField>
 
 <ResponseField name="compaction_summary_chunk" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A content block appended to a context compaction's retained summary.
 
 <Expandable title="Properties">

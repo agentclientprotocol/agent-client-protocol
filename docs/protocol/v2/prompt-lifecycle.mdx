@@ -31,6 +31,8 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `config_option_update`      | The session's [configuration options](/protocol/v2/session-config-options#from-the-agent) have changed.                      |
 | `session_info_update`       | [Session metadata](/protocol/v2/session-list#updating-session-metadata), such as the title or last update time, has changed. |
 | `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                            |
+| `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                              |
+| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                   |
 
 This is the complete set of standard variants defined in the current [`SessionUpdate` schema](/protocol/v2/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
 
@@ -368,6 +370,147 @@ If the model requested tool calls, these are also reported immediately:
   }
 }
 ```
+
+#### Session Compaction
+
+No Client capability is required in v2.
+
+The Agent **MAY** report context compaction as one persistent, ID-addressed
+timeline entity. A single `compaction_update` with `status: "completed"` is
+sufficient; reporting progress is optional. Summary content is also optional.
+It may be sent all at once in the `summary` field or streamed using
+`compaction_summary_chunk` for the same `compactionId`.
+
+For example, an Agent can report that compaction has started:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "compaction_update",
+      "compactionId": "cmp_001",
+      "status": "in_progress"
+    }
+  }
+}
+```
+
+`compactionId` and `status` are required and non-null on every
+`compaction_update`. The ID is an opaque, Agent-owned string, unique within the
+session, and **MUST NOT** be reused for another compaction.
+
+Clients initialize a first-seen compaction ID with status `in_progress` and unset
+optional fields, then apply the notification.
+
+The first notification fixes the entity's timeline position in receive
+order: it follows previously received timeline content and precedes content
+first received later. Later updates and chunks for an ID-addressed entity patch
+it in place; they do not move or split it around the compaction.
+
+| `status`      | Meaning                                      |
+| ------------- | -------------------------------------------- |
+| `in_progress` | Compaction has started and has not finished. |
+| `completed`   | Compaction finished successfully.            |
+| `failed`      | Compaction finished unsuccessfully.          |
+| `cancelled`   | Compaction was cancelled before it finished. |
+
+The Agent **MUST** report a terminal status when a reported compaction ends.
+
+`status` is an open string enum. Values beginning with `_` are reserved for
+implementation-specific extensions; other unknown values are reserved for
+future ACP statuses. Clients preserve unknown strings and present a generic
+state without inferring lifecycle or control behavior.
+
+If the retained summary is available incrementally, the Agent may append one
+[content block](/protocol/v2/content) at a time:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "compaction_summary_chunk",
+      "compactionId": "cmp_001",
+      "content": {
+        "type": "text",
+        "text": "## Retained context\n\n"
+      }
+    }
+  }
+}
+```
+
+`compactionId` and `content` are required and non-null on each chunk.
+Chunk `_meta` is optional and nullable, is scoped to that chunk, and has no
+patch semantics: omission and `null` both mean no chunk metadata.
+
+An update may omit `summary` to retain the streamed content. A
+non-streaming Agent can instead supply the complete summary, and a streaming
+Agent can use the same field as an authoritative replacement of content received
+so far:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "compaction_update",
+      "compactionId": "cmp_001",
+      "status": "completed",
+      "summary": [
+        {
+          "type": "text",
+          "text": "## Retained context\n\nThe user is updating the ACP schema."
+        }
+      ]
+    }
+  }
+}
+```
+
+The following `compaction_update` fields are optional, nullable patches:
+
+| Field     | Type             | Meaning                                                                               |
+| --------- | ---------------- | ------------------------------------------------------------------------------------- |
+| `summary` | `ContentBlock[]` | The unencrypted, user-displayable summary content produced or retained by compaction. |
+| `error`   | `string`         | A human-readable error description.                                                   |
+| `_meta`   | `object`         | Extensible metadata for the compaction entity.                                        |
+
+For each patch field, omission leaves the stored value unchanged, `null` clears
+it, and a concrete value replaces it. On a first-seen ID, omission and `null`
+both start with no value. `summary: []` also clears the summary.
+
+Clients apply updates and chunks in receive order for each ID. Chunks append
+to the current summary; a concrete `summary` replaces all previously
+accumulated content, and any subsequent chunks append to that replacement.
+`summary: null` or `summary: []` clears accumulated content, including partial
+output before failure or cancellation.
+
+The summary is not the Agent's complete replacement history or generic status
+text such as "Compaction completed". It should faithfully represent the
+retained, user-displayable summary without internal prompt framing or hidden
+instructions. Text blocks may contain Markdown. Agents should omit it when no
+unencrypted summary is available or when disclosure would reveal context that
+was not otherwise user-visible.
+
+During [history replay](/protocol/v2/session-setup#resuming-sessions),
+compaction updates and summary chunks follow the same semantics as live delivery.
+
+Replay does not implicitly reset omitted patch fields. Agents use replacement
+or clearing summary patches as needed to avoid duplicating content the Client
+already holds.
+
+Compaction does not instruct the Client to discard earlier conversation
+history; collapsing it is a local presentation choice. It also does not replace
+[`usage_update`](#session-usage-updates), which reports current context-window
+utilization and cost rather than a compaction boundary.
 
 #### Session Usage Updates
 

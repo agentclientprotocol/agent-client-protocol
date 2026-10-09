@@ -184,6 +184,10 @@ any minimum period. Live-only messages, including locally handled commands, may
 be absent from replay. A successful prompt response confirms insertion, not
 future availability in history; absence from replay does not contradict it.
 
+[Session compactions](/protocol/v2/prompt-lifecycle#session-compaction)
+are replayed using the same update, chunk, and patch semantics as live delivery.
+No Client capability is required.
+
 For example, a user message from the conversation history:
 
 ```json

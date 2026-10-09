@@ -327,6 +327,203 @@ mod schema_annotation_tests {
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
 
     #[test]
+    fn generated_compaction_schema_is_available_without_unstable_features() {
+        let schema = root_schema_value();
+        assert_eq!(def_schema(&schema, "CompactionId")["type"], "string");
+        for (definition, required, referenced_fields) in [
+            (
+                "CompactionUpdate",
+                serde_json::json!(["compactionId", "status"]),
+                [
+                    ("compactionId", "CompactionId"),
+                    ("status", "CompactionStatus"),
+                ],
+            ),
+            (
+                "CompactionSummaryChunk",
+                serde_json::json!(["compactionId", "content"]),
+                [
+                    ("compactionId", "CompactionId"),
+                    ("content", "ContentBlock"),
+                ],
+            ),
+        ] {
+            let def = def_schema(&schema, definition);
+            assert_eq!(def["required"], required);
+            assert!(!def["description"].as_str().unwrap().contains("UNSTABLE"));
+            for (field, target) in referenced_fields {
+                let property = property_schema(&schema, definition, field);
+                // Required fields reference the non-null type directly, not a
+                // nullable alternative, and have no deserialization default.
+                assert_eq!(
+                    property["allOf"],
+                    serde_json::json!([{"$ref": format!("#/$defs/{target}")}])
+                );
+                assert!(property.get("anyOf").is_none());
+                assert!(property.get("type").is_none());
+                assert_no_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+            }
+        }
+        for (definition, field, types) in [
+            (
+                "CompactionUpdate",
+                "summary",
+                serde_json::json!(["array", "null"]),
+            ),
+            (
+                "CompactionUpdate",
+                "error",
+                serde_json::json!(["string", "null"]),
+            ),
+            (
+                "CompactionUpdate",
+                "_meta",
+                serde_json::json!(["object", "null"]),
+            ),
+            (
+                "CompactionSummaryChunk",
+                "_meta",
+                serde_json::json!(["object", "null"]),
+            ),
+        ] {
+            let property = property_schema(&schema, definition, field);
+            assert_eq!(property["type"], types);
+            assert!(
+                !def_schema(&schema, definition)["required"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|required| required == field),
+                "{definition}.{field} must remain optional"
+            );
+            assert_bool_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+        }
+        let summary = property_schema(&schema, "CompactionUpdate", "summary");
+        assert!(schema_contains_ref(summary, "#/$defs/ContentBlock"));
+        assert_bool_extension(summary, SKIP_INVALID_ITEMS_EXTENSION);
+
+        let updates = def_schema(&schema, "SessionUpdate");
+        let variants = updates
+            .get("oneOf")
+            .or_else(|| updates.get("anyOf"))
+            .and_then(Value::as_array)
+            .unwrap();
+        for (discriminator, definition) in [
+            ("compaction_update", "CompactionUpdate"),
+            ("compaction_summary_chunk", "CompactionSummaryChunk"),
+        ] {
+            let variant = variants
+                .iter()
+                .find(|variant| {
+                    variant.pointer("/properties/sessionUpdate/const")
+                        == Some(&Value::from(discriminator))
+                })
+                .unwrap_or_else(|| panic!("missing {discriminator} variant"));
+            assert!(schema_contains_ref(
+                variant,
+                &format!("#/$defs/{definition}")
+            ));
+            assert_eq!(variant["required"], serde_json::json!(["sessionUpdate"]));
+            assert!(
+                !variant["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE")
+            );
+        }
+    }
+
+    #[test]
+    fn generated_compaction_status_is_an_open_non_null_string() {
+        let schema = root_schema_value();
+        let variants = def_schema(&schema, "CompactionStatus")["anyOf"]
+            .as_array()
+            .unwrap();
+        for status in ["in_progress", "completed", "failed", "cancelled"] {
+            assert!(
+                variants
+                    .iter()
+                    .any(|variant| { variant["type"] == "string" && variant["const"] == status }),
+                "missing known compaction status {status}"
+            );
+        }
+        let other = variants
+            .iter()
+            .find(|variant| variant["title"] == "other")
+            .unwrap();
+        assert_eq!(other["type"], "string");
+        for constraint in ["const", "enum", "pattern", "not"] {
+            assert!(
+                other.get(constraint).is_none(),
+                "status must accept future and extension strings"
+            );
+        }
+        assert!(variants.iter().all(|variant| variant["type"] == "string"));
+    }
+
+    #[cfg(not(feature = "unstable_protocol_v2"))]
+    #[test]
+    fn generated_v1_compaction_capability_is_optional_nullable_and_stable() {
+        let schema = root_schema_value();
+        assert_eq!(
+            def_schema(&schema, "CompactionCapabilities")["type"],
+            "object"
+        );
+        for (definition, field, target) in [
+            ("ClientCapabilities", "session", "ClientSessionCapabilities"),
+            (
+                "ClientSessionCapabilities",
+                "compaction",
+                "CompactionCapabilities",
+            ),
+        ] {
+            let property = property_schema(&schema, definition, field);
+            assert!(schema_contains_ref(property, &format!("#/$defs/{target}")));
+            assert!(
+                property["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| variant["type"] == "null")
+            );
+            assert!(
+                !def_schema(&schema, definition)["required"]
+                    .as_array()
+                    .is_some_and(|fields| fields.iter().any(|required| required == field))
+            );
+            assert!(
+                !property["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE")
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_fallback_schema_rejects_compaction_discriminators() {
+        let schema = root_schema_value();
+        let fallback = def_schema(&schema, "SessionUpdate")["anyOf"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|variant| variant["title"] == "other")
+            .unwrap();
+        let exclusions = fallback["not"]["anyOf"].as_array().unwrap();
+        for discriminator in ["compaction_update", "compaction_summary_chunk"] {
+            assert!(
+                exclusions.contains(&serde_json::json!({
+                    "type": "object",
+                    "properties": {"sessionUpdate": {"type": "string", "const": discriminator}},
+                    "required": ["sessionUpdate"]
+                })),
+                "the fallback must reject {discriminator} regardless of payload fields"
+            );
+        }
+    }
+
+    #[test]
     fn generated_prompt_response_matches_protocol_version() {
         let schema = root_schema_value();
         let response = def_schema(&schema, "PromptResponse");
@@ -829,7 +1026,6 @@ mod schema_annotation_tests {
         );
     }
 
-    #[cfg(any(feature = "unstable_protocol_v2", feature = "unstable"))]
     fn schema_contains_ref(schema: &Value, ref_path: &str) -> bool {
         match schema {
             Value::Object(object) => object.iter().any(|(key, value)| {

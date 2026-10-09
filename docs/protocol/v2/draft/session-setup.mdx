@@ -189,9 +189,8 @@ be absent from replay. A successful prompt response confirms insertion, not
 future availability in history; absence from replay does not contradict it.
 
 [Session compactions](/protocol/v2/draft/prompt-lifecycle#session-compaction)
-are replayed as materialized `compaction_update` entries with the original IDs,
-timeline positions, and full retained summaries when available, not as the
-transient start/chunk/finish sequence. No Client capability is required.
+are replayed using the same update, chunk, and patch semantics as live delivery.
+No Client capability is required.
 
 Live-only [notices](/protocol/v2/draft/prompt-lifecycle#session-notices) are not
 conversation history and **SHOULD NOT** be replayed. If the underlying condition

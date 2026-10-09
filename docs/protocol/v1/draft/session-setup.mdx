@@ -137,10 +137,9 @@ The Agent **MUST** replay the entire conversation to the Client in the form of
 `session/update` notifications (like `session/prompt`).
 
 - [Session compactions](/protocol/v1/draft/prompt-turn#session-compaction) are
-  replayed as materialized `compaction_update` entries with the original IDs,
-  timeline positions, and full retained summaries when available, not as the
-  transient start/chunk/finish sequence. The Client's `session.compaction`
-  capability is required for replay as well as live delivery.
+  replayed using the same update, chunk, and patch semantics as live delivery.
+  The Client's `session.compaction` capability is required for replay as well as
+  live delivery.
 - Live-only [notices](/protocol/v1/draft/prompt-turn#session-notices) are not
   conversation history and **SHOULD NOT** be replayed. If the underlying
   condition is still relevant after loading finishes, the Agent may emit a new
