@@ -2,7 +2,8 @@
 title: "Client-Provided System Prompt"
 ---
 
-Author(s): [@wpfleger96](https://github.com/wpfleger96) (Block — contributor to [Buzz](https://github.com/block/buzz) and [Goose](https://github.com/aaif-goose/goose))
+- Author(s): [@wpfleger96](https://github.com/wpfleger96)
+- Champion: [@benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
@@ -27,6 +28,7 @@ Aside from the extensibility `_meta` field present on every request, ACP's `sess
 This creates several problems for clients that need to provide behavioral instructions to agents:
 
 **Workarounds are fragmented and non-standard.** Every implementation works around the gap differently:
+
 - [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) added a `_meta.systemPrompt` extension ([issue #90](https://github.com/agentclientprotocol/claude-agent-acp/issues/90), [PR #91](https://github.com/agentclientprotocol/claude-agent-acp/pull/91)) — but the spec states implementations "MUST NOT make assumptions about values at these keys," making `_meta` unsuitable for instruction delivery that agents are expected to act on. The implementation silently dropped `excludeDynamicSections` for months ([issue #581](https://github.com/agentclientprotocol/claude-agent-acp/issues/581)), demonstrating the fragility of non-standard extensions.
 - [Buzz](https://github.com/block/buzz) is a Nostr-based team collaboration and messaging platform where AI agents are first-class workspace members. Each managed agent has a persona (behavioral instructions, role definition, platform context) that the ACP harness needs to deliver as system-level instructions. Today, Buzz injects this as `[System]\n{content}` prepended to the user message on every turn — content that never reaches the LLM's system slot. Buzz's own [Persona Pack Spec](https://github.com/block/buzz/blob/main/crates/buzz-persona/PERSONA_PACK_SPEC.md) lists "true system prompt injection via ACP" as a planned feature, explicitly acknowledging the current approach is a workaround.
 - [Goose](https://github.com/aaif-goose/goose) builds its system prompt internally via `PromptManager` from config files. ACP clients cannot inject or override it through the protocol. Goose has [an open issue](https://github.com/aaif-goose/goose/issues/7596) documenting the same gap in terms of its "recipe" system — recipes are Goose's mechanism for injecting behavioral instructions into a session, and the issue notes "there is no recipe field on `NewSessionRequest` and no logic to load/apply a recipe to the new session's agent." Goose's `_goose/session/update_project` method works around this by sending a project ID that the agent resolves to a file on disk — a Goose-specific indirection, not a protocol-level solution.
@@ -36,12 +38,12 @@ This creates several problems for clients that need to provide behavioral instru
 
 **ACP is an outlier.** Every comparable protocol provides system prompt support:
 
-| Protocol | Field | Type | Placement |
-|----------|-------|------|-----------|
-| MCP `sampling/createMessage` | `systemPrompt` | `string` | Per-request |
-| OpenAI Assistants API | `instructions` | `string` | Creation + per-run override |
-| OpenAI Responses API | `instructions` | `string` | Per-request |
-| Anthropic Messages API | `system` | `string \| ContentBlock[]` | Per-request |
+| Protocol                     | Field          | Type                       | Placement                   |
+| ---------------------------- | -------------- | -------------------------- | --------------------------- |
+| MCP `sampling/createMessage` | `systemPrompt` | `string`                   | Per-request                 |
+| OpenAI Assistants API        | `instructions` | `string`                   | Creation + per-run override |
+| OpenAI Responses API         | `instructions` | `string`                   | Per-request                 |
+| Anthropic Messages API       | `system`       | `string \| ContentBlock[]` | Per-request                 |
 
 Agent frameworks follow the same pattern: AutoGen has `system_message`, CrewAI has `role`/`goal`/`backstory`, LangGraph has `prompt`. Only Google's A2A protocol is similarly silent — but A2A is agent-to-agent transport, a fundamentally different abstraction layer than ACP's client-to-agent communication.
 
@@ -157,11 +159,11 @@ Add `systemPrompt` to `SessionCapabilities` (advertised in the `initialize` resp
 ```typescript
 interface SessionCapabilities {
   // ...existing capabilities
-  systemPrompt?: SystemPromptCapabilities | null;  // NEW — omitted/null = unsupported, {} = supported
+  systemPrompt?: SystemPromptCapabilities | null; // NEW — omitted/null = unsupported, {} = supported
 }
 
 interface SystemPromptCapabilities {
-  override?: {} | null;  // omitted/null = append only, {} = override mode also supported
+  override?: {} | null; // omitted/null = append only, {} = override mode also supported
 }
 ```
 
@@ -170,8 +172,8 @@ Add `systemPrompt` and `systemPromptMode` to `NewSessionRequest`:
 ```typescript
 interface NewSessionRequest {
   // ...existing fields
-  systemPrompt?: ContentBlock[];                 // NEW — at least one block when present
-  systemPromptMode?: "append" | "override";      // NEW — default "append"; only valid alongside systemPrompt
+  systemPrompt?: ContentBlock[]; // NEW — at least one block when present
+  systemPromptMode?: "append" | "override"; // NEW — default "append"; only valid alongside systemPrompt
 }
 ```
 
@@ -243,7 +245,7 @@ Yes. An earlier draft answered "no," reasoning that a successful `session/new` r
 
 ### Why both append and override modes in v1?
 
-Append alone looked sufficient until we accounted for existing harness behavior: Claude Code ships both `--system-prompt` (replace) and `--append-system-prompt` (append), so an ACP adapter over it could expose override on day one — deferring override wouldn't buy simplicity, just a guaranteed second design round. The two modes have different safety postures, which the design reflects: append is the default and universal baseline (agents keep their guardrails), while override requires the agent to advertise the `override` sub-capability *and* the client to explicitly request the mode. An agent that never wants to give up its base prompt simply advertises `systemPrompt: {}` and never sees an override request.
+Append alone looked sufficient until we accounted for existing harness behavior: Claude Code ships both `--system-prompt` (replace) and `--append-system-prompt` (append), so an ACP adapter over it could expose override on day one — deferring override wouldn't buy simplicity, just a guaranteed second design round. The two modes have different safety postures, which the design reflects: append is the default and universal baseline (agents keep their guardrails), while override requires the agent to advertise the `override` sub-capability _and_ the client to explicitly request the mode. An agent that never wants to give up its base prompt simply advertises `systemPrompt: {}` and never sees an override request.
 
 We considered an envelope object (`{ "mode": "append", "content": [...] }`) and rejected it: it taxes the common case with ceremony, and the sub-capability — not the request shape — is what actually prevents silent mode mismatches.
 
