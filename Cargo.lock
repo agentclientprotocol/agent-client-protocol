@@ -4,15 +4,15 @@ version = 4
 
 [[package]]
 name = "agent-client-protocol-json-schema-v1"
-version = "1.24.1"
+version = "1.25.0"
 
 [[package]]
 name = "agent-client-protocol-json-schema-v2"
-version = "2.0.0-alpha.7"
+version = "2.0.0-alpha.8"
 
 [[package]]
 name = "agent-client-protocol-schema"
-version = "1.10.2"
+version = "1.11.0"
 dependencies = [
  "anyhow",
  "derive_more",

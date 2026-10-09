@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [1.11.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.2...v1.11.0) - 2026-10-09
+
+### Added
+
+- *(schema)* stabilize session notices ([#2336](https://github.com/agentclientprotocol/agent-client-protocol/pull/2336))
+- *(schema)* stabilize session compaction ([#2334](https://github.com/agentclientprotocol/agent-client-protocol/pull/2334))
+- *(unstable)* report failures after prompt insertion with an error stop reason ([#2281](https://github.com/agentclientprotocol/agent-client-protocol/pull/2281))
+
+### Fixed
+
+- *(schema)* reject malformed values receivers act on ([#2333](https://github.com/agentclientprotocol/agent-client-protocol/pull/2333))
+
+### Other
+
+- *(schema)* clarify v2 entity IDs are unique per entity type ([#2332](https://github.com/agentclientprotocol/agent-client-protocol/pull/2332))
+- *(rust)* compare empty collections with assert_eq! ([#2279](https://github.com/agentclientprotocol/agent-client-protocol/pull/2279))
+
 ## [1.10.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.1...v1.10.2) - 2026-10-01
 
 ### Fixed

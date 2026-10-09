@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.24.1...schema-v1.25.0) - 2026-10-09
+
+### Added
+
+- *(schema)* stabilize session notices ([#2336](https://github.com/agentclientprotocol/agent-client-protocol/pull/2336))
+- *(schema)* stabilize session compaction ([#2334](https://github.com/agentclientprotocol/agent-client-protocol/pull/2334))
+- *(unstable)* report failures after prompt insertion with an error stop reason ([#2281](https://github.com/agentclientprotocol/agent-client-protocol/pull/2281))
+
+### Fixed
+
+- *(schema)* reject malformed values receivers act on ([#2333](https://github.com/agentclientprotocol/agent-client-protocol/pull/2333))
+
 ## [1.24.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.24.0...schema-v1.24.1) - 2026-09-30
 
 ### Fixed
