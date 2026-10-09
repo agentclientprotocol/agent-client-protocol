@@ -35,7 +35,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `config_option_update`      | The session's [configuration options](/protocol/v2/draft/session-config-options#from-the-agent) have changed.                      |
 | `session_info_update`       | [Session metadata](/protocol/v2/draft/session-list#updating-session-metadata), such as the title or last update time, has changed. |
 | `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                  |
-| `notice`                    | **Draft only.** A live [advisory notice](#session-notices) that is not part of session history.                                    |
+| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                 |
 | `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                    |
 | `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                         |
 
@@ -43,10 +43,8 @@ This is the complete set of standard variants defined in the current draft [`Ses
 
 The protocol also supports [custom and future variants](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update should preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
 
-Preserving a payload does not make it durable session history. In particular,
-live-only [notices](#session-notices) **SHOULD NOT** be replayed, even when a
-Client carries them through the unknown-update fallback. They may be forwarded
-live or retained for local diagnostics instead.
+Live-only [notices](#session-notices) **SHOULD NOT** be replayed, even when
+preserved as unknown updates.
 
 Session updates are not limited to prompt-driven foreground work. For example, Agents may advertise commands after creating a session, and background activity may emit updates while the Agent is [idle](#session-states).
 
@@ -427,19 +425,13 @@ If the model requested tool calls, these are also reported immediately:
 
 #### Session Notices
 
-<Note>
-  Session notices are a Preview feature and are available only in the draft
-  schema. Their wire contract may change before stabilization. See the [Session
-  Notices RFD](/rfds/session-notices).
-</Note>
-
 No Client capability is required in v2. Clients that do not implement `notice`
 may preserve it through the [unknown-update
 fallback](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants) and
 ignore it or present it generically; this does not give it replay semantics.
 
 At any point while a session exists, including outside prompt processing, the
-Agent **MAY** send a live advisory notice:
+Agent **MAY** send a live user-facing notice:
 
 ```json
 {

@@ -2331,6 +2331,13 @@ Omitted or `null` both mean the client does not advertise support for any
 config option extensions.
 
 </ResponseField>
+<ResponseField name="notices" type={<><span><a href="#noticecapabilities">NoticeCapabilities</a></span><span> | null</span></>} >
+  Support for live user-facing `notice` session updates.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means the client can present notices to the user.
+
+</ResponseField>
 
 ## <span class="font-mono">CompactionCapabilities</span>
 
@@ -4195,6 +4202,76 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
 
+## <span class="font-mono">Notice</span>
+
+Fire-and-forget information for the user.
+
+Notices are live events rather than session history. Agents must not rely on
+a notice being received, displayed, or seen by the user.
+Agents MUST only send notices when the Client advertised
+`ClientSessionCapabilities::notices`. Otherwise, Agents may use an agent
+message when the information should still be surfaced to the user.
+
+See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata scoped to this notice.
+
+Omitted and `null` are equivalent and mean no metadata was supplied.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
+
+Omitted and `null` are equivalent and mean no description was supplied.
+
+</ResponseField>
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
+
+</ResponseField>
+
+## <span class="font-mono">NoticeCapabilities</span>
+
+Client support for presenting live notices to the user.
+
+**Type:** `object`
+
+## <span class="font-mono">NoticeSeverity</span>
+
+Severity hint for a session notice.
+
+**Type:** Union
+
+<ResponseField name="info" type="string">
+  Informational notice.
+</ResponseField>
+
+<ResponseField name="warning" type="string">
+  Warning notice.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error notice.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future notice severity.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP severities.
+
+</ResponseField>
+
 ## <span class="font-mono">NumberPropertySchema</span>
 
 Schema for number (floating-point) properties in an elicitation form.
@@ -5515,6 +5592,42 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   Tokens currently in context.
 
     - Minimum: `0`
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="notice" type="object">
+Information for the user that is not part of session history.
+
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::notices`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata scoped to this notice.
+
+Omitted and `null` are equivalent and mean no metadata was supplied.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
+
+Omitted and `null` are equivalent and mean no description was supplied.
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"notice"`.
+</ResponseField>
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
 
 </ResponseField>
 

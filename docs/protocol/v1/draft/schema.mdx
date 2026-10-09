@@ -3253,11 +3253,7 @@ config option extensions.
 
 </ResponseField>
 <ResponseField name="notices" type={<><span><a href="#noticecapabilities">NoticeCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Support for live advisory `notice` session updates.
+  Support for live user-facing `notice` session updates.
 
 Optional. Omitted or `null` both mean the client does not advertise support.
 Supplying `\{\}` means the client can present notices to the user.
@@ -6423,11 +6419,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">Notice</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Fire-and-forget advisory information for the user.
+Fire-and-forget information for the user.
 
 Notices are live events rather than session history. Agents must not rely on
 a notice being received, displayed, or seen by the user.
@@ -6465,19 +6457,11 @@ Omitted and `null` are equivalent and mean no description was supplied.
 
 ## <span class="font-mono">NoticeCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Client support for presenting live advisory notices to the user.
+Client support for presenting live notices to the user.
 
 **Type:** `object`
 
 ## <span class="font-mono">NoticeSeverity</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Severity hint for a session notice.
 
@@ -8457,11 +8441,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 
 <ResponseField name="notice" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Advisory information for the user that is not part of session history.
+Information for the user that is not part of session history.
 
 Agents MUST only send this update when the Client advertised
 `ClientSessionCapabilities::notices`.

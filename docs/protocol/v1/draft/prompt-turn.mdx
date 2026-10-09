@@ -29,7 +29,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `config_option_update`      | The session's [configuration options](/protocol/v1/draft/session-config-options#from-the-agent) have changed.                                                   |
 | `session_info_update`       | [Session metadata](/protocol/v1/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.                              |
 | `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                                               |
-| `notice`                    | **Draft only.** A live [advisory notice](#session-notices) that is not part of session history. Requires the Client's `session.notices` capability.             |
+| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history. Requires the Client's `session.notices` capability.                          |
 | `compaction_update`         | Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.                                          |
 | `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.                               |
 
@@ -263,12 +263,6 @@ If the model requested tool calls, these are also reported immediately:
 
 #### Session Notices
 
-<Note>
-  Session notices are a Preview feature and are available only in the draft
-  schema. Their wire contract may change before stabilization. See the [Session
-  Notices RFD](/rfds/session-notices).
-</Note>
-
 The Agent **MUST NOT** send `notice` updates unless the Client advertised support
 by supplying `clientCapabilities.session.notices: {}` in its `initialize`
 request. Omitting `session` or `notices`, or setting either field to `null`,
@@ -278,7 +272,7 @@ When the capability is absent, the Agent may use an ordinary agent message
 instead if the information should still be surfaced to the user. That fallback
 is conversation content and follows normal message-history semantics.
 
-When the Client advertises support, the Agent **MAY** send a live advisory
+When the Client advertises support, the Agent **MAY** send a live user-facing
 notice at any point while a session exists, including outside prompt processing:
 
 ```json

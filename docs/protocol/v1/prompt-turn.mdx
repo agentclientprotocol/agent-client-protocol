@@ -11,21 +11,22 @@ Before sending prompts, Clients **MUST** first complete the [initialization](/pr
 
 Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
 
-| `sessionUpdate` value       | Description                                                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `user_message_chunk`        | A streamed chunk of a user message.                                                                                               |
-| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                         |
-| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                        |
-| `tool_call`                 | A new [tool call](/protocol/v1/tool-calls#creating).                                                                              |
-| `tool_call_update`          | A change to a [tool call's status or results](/protocol/v1/tool-calls#updating).                                                  |
-| `plan`                      | The Agent's [execution plan](/protocol/v1/agent-plan).                                                                            |
-| `available_commands_update` | The set of [available slash commands](/protocol/v1/slash-commands) is ready or has changed.                                       |
-| `current_mode_update`       | The current [session mode](/protocol/v1/session-modes#from-the-agent) has changed.                                                |
-| `config_option_update`      | The session's [configuration options](/protocol/v1/session-config-options#from-the-agent) have changed.                           |
-| `session_info_update`       | [Session metadata](/protocol/v1/session-list#updating-session-metadata), such as the title or last update time, has changed.      |
-| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                 |
-| `compaction_update`         | Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.            |
-| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability. |
+| `sessionUpdate` value       | Description                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                    |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                              |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                             |
+| `tool_call`                 | A new [tool call](/protocol/v1/tool-calls#creating).                                                                                   |
+| `tool_call_update`          | A change to a [tool call's status or results](/protocol/v1/tool-calls#updating).                                                       |
+| `plan`                      | The Agent's [execution plan](/protocol/v1/agent-plan).                                                                                 |
+| `available_commands_update` | The set of [available slash commands](/protocol/v1/slash-commands) is ready or has changed.                                            |
+| `current_mode_update`       | The current [session mode](/protocol/v1/session-modes#from-the-agent) has changed.                                                     |
+| `config_option_update`      | The session's [configuration options](/protocol/v1/session-config-options#from-the-agent) have changed.                                |
+| `session_info_update`       | [Session metadata](/protocol/v1/session-list#updating-session-metadata), such as the title or last update time, has changed.           |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                      |
+| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history. Requires the Client's `session.notices` capability. |
+| `compaction_update`         | Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.                 |
+| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.      |
 
 This is the complete set of variants defined in the current [`SessionUpdate` schema](/protocol/v1/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
 
@@ -210,6 +211,68 @@ If the model requested tool calls, these are also reported immediately:
   }
 }
 ```
+
+#### Session Notices
+
+The Agent **MUST NOT** send `notice` updates unless the Client advertised support
+by supplying `clientCapabilities.session.notices: {}` in its `initialize`
+request. Omitting `session` or `notices`, or setting either field to `null`,
+means the Client does not advertise support.
+
+When the capability is absent, the Agent may use an ordinary agent message
+instead if the information should still be surfaced to the user. That fallback
+is conversation content and follows normal message-history semantics.
+
+When the Client advertises support, the Agent **MAY** send a live user-facing
+notice at any point while a session exists, including outside prompt processing:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "notice",
+      "severity": "warning",
+      "title": "MCP server unavailable",
+      "description": "Continuing without it."
+    }
+  }
+}
+```
+
+`severity` is required and non-null and initially supports `info`, `warning`,
+and `error`.
+It is an open string enum: values beginning with `_` are reserved for
+implementation-specific extensions, while other unknown values are reserved
+for future ACP severities. Clients preserve unknown values and use a generic
+notice presentation without inferring additional behavior from them.
+
+`title` is required, non-null, non-empty plain text suitable for a compact
+presentation. `description` is optional, nullable plain text with supporting
+detail; omission and `null` both mean no description. `_meta` is an optional,
+nullable object scoped to this event; omission and `null` both mean no event
+metadata. Unlike compaction patch fields, these fields do not update or clear
+an earlier notice.
+
+Advertising support does not acknowledge delivery or guarantee display of an
+individual notice. Agents must still behave as though a notice may not have
+been received, displayed, or seen. A notice must not carry information required
+for protocol correctness, authorization, user action, task completion, or
+fatal-error reporting.
+
+Clients own presentation and dismissal. They may use a toast, banner, inline
+status region, notification center, or another accessible surface, and may
+coalesce repeated notices. Severity is only a presentation hint; even `error`
+does not fail a request, stop foreground work, change session state, or imply a
+prompt stop reason. Dismissal is local and produces no acknowledgement or
+removal event.
+
+Notices have no ID or Agent-managed lifecycle. Each occurrence is an
+independent live event, not conversation history, and **SHOULD NOT** be included
+in session replay. If a condition remains relevant after reconnecting, the
+Agent may emit a new notice.
 
 #### Session Compaction
 

@@ -224,7 +224,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/session-notices"]
+            "pages": []
           },
           {
             "group": "To be removed",
@@ -253,7 +253,8 @@
               "rfds/elicitation",
               "rfds/auth-methods",
               "rfds/tool-call-name",
-              "rfds/session-compaction"
+              "rfds/session-compaction",
+              "rfds/session-notices"
             ]
           }
         ]

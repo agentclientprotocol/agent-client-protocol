@@ -408,7 +408,7 @@ An `error` update followed by `idle` gives clients two signals that must agree. 
 
 #### Report failures after insertion with an error-severity notice
 
-Notices are advisory. Clients may ignore them, and they must not report fatal errors or change session state. That contract fits failures the agent recovers from, not one that ends the work.
+Notices are for user-facing information. Clients may ignore them, and they must not report fatal errors or change session state. That contract fits failures the agent recovers from, not one that ends the work.
 
 #### Put `error` beside the stop reason with a cross-field rule
 

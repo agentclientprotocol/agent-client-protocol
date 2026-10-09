@@ -6528,11 +6528,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 ## <span class="font-mono">Notice</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Fire-and-forget advisory information for the user.
+Fire-and-forget information for the user.
 
 Notices are live events rather than session history. Agents must not rely on
 a notice being received, displayed, or seen by the user.
@@ -6567,10 +6563,6 @@ Omitted and `null` are equivalent and mean no description was supplied.
 </ResponseField>
 
 ## <span class="font-mono">NoticeSeverity</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Severity hint for a session notice.
 
@@ -9066,11 +9058,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="notice" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Advisory information for the user that is not part of session history.
+Information for the user that is not part of session history.
 
 No Client capability is required. Clients that do not understand or
 present notices may ignore them.

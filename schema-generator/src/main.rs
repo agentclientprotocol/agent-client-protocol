@@ -327,6 +327,105 @@ mod schema_annotation_tests {
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
 
     #[test]
+    fn generated_notice_schema_is_available_without_unstable_features() {
+        let schema = root_schema_value();
+        let notice = def_schema(&schema, "Notice");
+        assert_eq!(notice["required"], serde_json::json!(["severity", "title"]));
+        assert!(!notice["description"].as_str().unwrap().contains("UNSTABLE"));
+        let title = property_schema(&schema, "Notice", "title");
+        assert_eq!(title["type"], "string");
+        assert_eq!(title["minLength"], 1);
+        assert_no_extension(title, DEFAULT_ON_ERROR_EXTENSION);
+        for (field, types) in [
+            ("description", serde_json::json!(["string", "null"])),
+            ("_meta", serde_json::json!(["object", "null"])),
+        ] {
+            let property = property_schema(&schema, "Notice", field);
+            assert_eq!(property["type"], types);
+            assert_bool_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+        }
+
+        let severities = def_schema(&schema, "NoticeSeverity")["anyOf"]
+            .as_array()
+            .unwrap();
+        for severity in ["info", "warning", "error"] {
+            assert!(
+                severities
+                    .iter()
+                    .any(|variant| variant["const"] == severity)
+            );
+        }
+        let other = severities
+            .iter()
+            .find(|variant| variant["title"] == "other")
+            .unwrap();
+        assert_eq!(other["type"], "string");
+        for constraint in ["const", "enum", "pattern", "not"] {
+            assert!(other.get(constraint).is_none());
+        }
+        assert!(severities.iter().all(|variant| variant["type"] == "string"));
+
+        let updates = def_schema(&schema, "SessionUpdate");
+        let variants = updates
+            .get("oneOf")
+            .or_else(|| updates.get("anyOf"))
+            .and_then(Value::as_array)
+            .unwrap();
+        let variant = variants
+            .iter()
+            .find(|variant| {
+                variant.pointer("/properties/sessionUpdate/const") == Some(&Value::from("notice"))
+            })
+            .expect("notice must be a standard session update");
+        assert!(schema_contains_ref(variant, "#/$defs/Notice"));
+        assert!(
+            !variant["description"]
+                .as_str()
+                .unwrap()
+                .contains("UNSTABLE")
+        );
+
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            let capability = property_schema(&schema, "ClientSessionCapabilities", "notices");
+            assert!(schema_contains_ref(
+                capability,
+                "#/$defs/NoticeCapabilities"
+            ));
+            assert!(
+                capability["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| variant["type"] == "null")
+            );
+            assert!(
+                !def_schema(&schema, "ClientSessionCapabilities")["required"]
+                    .as_array()
+                    .is_some_and(|fields| fields.contains(&Value::from("notices")))
+            );
+        }
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            assert!(schema["$defs"].get("NoticeCapabilities").is_none());
+            let fallback = variants
+                .iter()
+                .find(|variant| variant["title"] == "other")
+                .unwrap();
+            assert!(
+                fallback["not"]["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| {
+                        variant.pointer("/properties/sessionUpdate/const")
+                            == Some(&Value::from("notice"))
+                    })
+            );
+        }
+    }
+
+    #[test]
     fn generated_compaction_schema_is_available_without_unstable_features() {
         let schema = root_schema_value();
         assert_eq!(def_schema(&schema, "CompactionId")["type"], "string");
