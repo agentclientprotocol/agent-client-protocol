@@ -1,0 +1,796 @@
+---
+title: "Quotas and Limits"
+---
+
+Author(s): [@EugeneTheDev](https://github.com/EugeneTheDev)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a standard way for Agents to report account quota and limits state to Clients:
+
+- A `quota_update` session update that pushes a full snapshot of the quota pools that apply to the session.
+- A `quota/read` request that returns the same snapshot on demand, with or without a session.
+- A structured `quotaExceeded` error, so that a request rejected by a limit tells the Client which limit was hit and when
+  it resets.
+
+The shape is deliberately generic. A snapshot is an ordered list of **pools** (a plan allowance, a per-model allowance, a
+credit balance, an overage budget). Each pool holds **meters** (a 5-hour window, a weekly window, a balance, a spend cap).
+Every value is optional, so that each Agent reports exactly what its provider exposes and nothing is synthesized.
+
+Quota is kept strictly separate from context-window occupancy (`usage_update`) and from token usage
+(`PromptResponse.usage`).
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP has no concept of account quota. Agents that know about it either drop the information or squeeze it into
+places that were designed for something else.
+
+### What popular agents know natively
+
+We surveyed how eleven coding agents report quota natively, and what reaches an ACP Client today.
+
+| Agent | What it knows | How it gets it | Over ACP today |
+| --- | --- | --- | --- |
+| Claude Code | Subscription windows (5-hour, 7-day, per-model weekly) as utilization and reset time; an overage ("extra usage") pool with state, disabled reason and a monthly spend cap | Pushed from response headers on every API response; polled via a usage endpoint | Raw SDK object in a vendor `_meta` key attached to `usage_update`, dropped when no context reading exists yet; windows otherwise only as Markdown from a slash command |
+| Codex | One snapshot per metered bucket (`codex`, per-model buckets), each with a primary and a secondary window as percent used, window length and reset time; credits balance; per-user spend cap; plan type; a "limit reached" reason | Pushed with token-count events; polled every 60 s (5 s near exhaustion) | Not forwarded; only Markdown from `/status` |
+| Gemini CLI | Per-model daily buckets with remaining fraction and reset time; an AI-credits balance | Polled at startup, on `/stats`, and after responses when the cache is older than 30 s; credits pushed per response | Nothing; quota errors become a JSON-RPC `429` with text, retry delay dropped |
+| Copilot CLI | Monthly entitlement per category (`chat`, `completions`, `premium_interactions`): entitlement, used, remaining percent, overage count, reset date | Polled via an SDK method; rate-limit and quota errors pushed as events | Nothing |
+| Kimi CLI | Rows with used, limit, remaining, window length and reset time (5-hour, weekly) | Polled by a slash command | Nothing |
+| Cursor | Two monthly pools plus on-demand usage with a spend limit | Undocumented dashboard endpoint | Nothing |
+| Cline | Credit balance; a daily or monthly spend limit | Balance polled; limit seen only in the error returned when it trips | Nothing; errors are plain text |
+| OpenCode, Amp, Goose, Qwen Code | No structured quota | Provider errors only | Errors as plain text (Goose: a structured "credits exhausted" error) |
+
+The common ground is narrow but clear:
+
+1. **Share plus reset time is the lowest common denominator.** Every agent with structured data reports a share (used
+   or remaining) and usually a reset time. Absolute amounts are the exception, and their units differ: requests,
+   currency (major units, minor units, micro-dollars), credits as decimal strings, opaque server units.
+2. **Several limits apply at once**: a short rolling window plus a weekly window, per-model windows, monthly
+   allowances, and an overage or credit pool.
+3. **Every field except an identifier is missing in at least one agent.** Reset time, window length, label, absolute
+   amounts, plan and status each disappear somewhere. API-key users usually get no quota data at all.
+4. **Quota is account-level.** It is shared across sessions and unaffected by compaction.
+5. **Both push and poll exist natively.** Push is per API response or on change; poll is on demand or periodic.
+6. **Limit-hit errors are the most common signal and the most lossy.** Over ACP they lose the reset time, the retry
+   delay, the window and the reason in every agent we looked at.
+
+### Problems this causes
+
+- **Users hit limits without warning.** The data exists inside the Agent, but the Client has no structured way to
+  receive it, so it cannot show "5-hour limit: 42% used, resets at 18:00" or warn at 90%.
+- **Quota gets conflated with other counters.** Adapters attach quota to `usage_update`, whose `used` field is context
+  occupancy. A `_meta.quota` key in two adapters holds token counts, not quota. Clients that read these values can end
+  up showing a "session tokens" number that drops after compaction, or a quota indicator that is really the context
+  window.
+- **Errors are opaque.** When a request is rejected, the Client gets a generic error, so it cannot say which limit was
+  hit or when to retry.
+- **Every Client would need per-Agent parsing.** Without a shared shape, each Client has to learn each Agent's vendor
+  `_meta` keys, units and window names.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Concepts
+
+- **Pool**: something that usage can be charged against. Examples: "Plan usage", "Opus weekly", "Extra usage", "AI
+  credits", "Premium requests". A pool has a stable `id`, an optional `label`, an optional `state`, and a list of meters.
+- **Meter**: one measurement of a pool. Examples: a 5-hour window, a weekly window, a balance, a monthly spend cap. A
+  meter has a stable `id`, an optional `label`, and optional values: `usedPercent`, `used`, `limit`, `remaining`,
+  `window`, `resetsAt`, `status`.
+- **Snapshot**: the complete ordered list of pools known to the Agent at one point in time, plus an `updatedAt` that
+  tells which of two snapshots is newer.
+
+To a Client, every pool is just a limit on current usage. ACP does not distinguish "plan" pools from "overage" pools.
+Labels carry the meaning, and the Agent controls display order.
+
+### Delivery
+
+- **Push.** When the Client and the Agent both support quota, the Agent sends a `quota_update` session update with a
+  full snapshot whenever its quota knowledge changes. Each update replaces the previous snapshot for that session.
+- **Pull.** The Client sends `quota/read` to get a snapshot on demand, for example when a quota panel opens. The
+  `sessionId` is optional, so a Client can show quota before creating a session.
+- **Errors.** When a request fails because a limit was reached, the Agent returns a `quotaExceeded` error that points
+  at the pool and meter that blocked it, and when possible also pushes a `quota_update` showing that meter as
+  `exceeded`.
+
+### Capabilities
+
+Quota is opt-in:
+
+- The Agent advertises `quota: {}` in its capabilities. Without it, the Client MUST NOT call `quota/read`, and the Agent
+  MUST NOT send `quota_update`.
+- In v1, the Client advertises `session.quota: {}` in its capabilities, meaning it can receive quota updates. Without
+  it, the Agent MUST NOT send `quota_update`. v1 needs this because its `SessionUpdate` union is closed, so older
+  Clients would fail to parse an unknown update. v2 has no Client capability, since v2 Clients ignore session updates
+  they don't understand.
+- `quota/read` only needs the Agent capability.
+
+Agents that cannot obtain quota for the current account (for example API-key users of most agents) SHOULD NOT advertise
+the capability, or SHOULD return an empty `pools` list.
+
+### Example
+
+A subscription user is on overage: the 5-hour window is exhausted, the weekly window is fine, and extra usage is being
+billed against a monthly cap.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123",
+    "update": {
+      "sessionUpdate": "quota_update",
+      "updatedAt": "2026-10-06T13:10:00Z",
+      "pools": [
+        {
+          "id": "plan",
+          "label": "Plan usage",
+          "state": "exhausted",
+          "meters": [
+            {
+              "id": "five_hour",
+              "label": "5-hour limit",
+              "usedPercent": 100,
+              "window": "PT5H",
+              "resetsAt": "2026-10-06T18:00:00Z",
+              "status": "exceeded"
+            },
+            {
+              "id": "seven_day",
+              "label": "Weekly limit",
+              "usedPercent": 64,
+              "window": "P7D",
+              "resetsAt": "2026-10-09T09:00:00Z",
+              "status": "ok"
+            }
+          ]
+        },
+        {
+          "id": "extra_usage",
+          "label": "Extra usage",
+          "state": "available",
+          "meters": [
+            {
+              "id": "monthly_cap",
+              "label": "Monthly spend limit",
+              "used": { "value": "12.40", "unit": "USD" },
+              "limit": { "value": "50.00", "unit": "USD" },
+              "usedPercent": 24.8,
+              "resetsAt": "2026-11-01T00:00:00Z",
+              "status": "ok"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A Client shows three independent elements that never add up into one number:
+
+1. A **context indicator** next to the composer ("31k / 200k", plus cost) from `usage_update`. It is the only one that
+   drops after compaction.
+2. A **session token counter** (input, output, cached, reasoning), accumulated from `PromptResponse.usage`. It only
+   grows.
+3. An **account quota block** from `quota_update` and `quota/read`: "5-hour limit: 42% used, resets at 18:00",
+   "Weekly limit: 64% used", "Extra usage: \$12.40 of \$50.00".
+
+The quota block lists every known pool and meter in the Agent's order. It renders a percentage and reset time when
+that is all the Agent knows, and absolute amounts when they exist. It never shows zeros for values the Agent did not
+report. It warns when a meter turns `warning`, and shows which limit blocked a request and when it resets. After a
+session is reloaded, it shows the last known snapshot "as of" its `updatedAt` until fresh data arrives. If the Agent
+or the Client does not support quota, the block is absent entirely.
+
+Agent authors map their native data once (Codex buckets become pools, Claude windows become meters, Gemini per-model
+buckets become pools) and every ACP Client can show it.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Capabilities
+
+Agent capability, a presence marker in line with `sessionCapabilities.list` and `providers`:
+
+```json
+// v1: InitializeResponse.agentCapabilities
+{ "quota": {} }
+
+// v2: InitializeResponse.capabilities
+{ "quota": {} }
+```
+
+Client capability, v1 only, in line with `session.notices`:
+
+```json
+// v1: InitializeRequest.clientCapabilities
+{ "session": { "quota": {} } }
+```
+
+v2 defines no Client capability for quota, like notices and compaction. v2 `SessionUpdate` has an `Other` fallback, so
+a v2 Client that does not support quota ignores `quota_update`.
+
+For each marker, omitted and `null` are equivalent and mean "not supported"; `{}` means supported. Each marker holds
+only `_meta`.
+
+The Agent capability is top-level rather than under `sessionCapabilities`, because `quota/read` is not tied to a
+session, like `session/list` and `providers/*`.
+
+### `quota_update` session update
+
+A new `SessionUpdate` variant. Its payload is a `QuotaSnapshot`:
+
+```json
+{
+  "sessionUpdate": "quota_update",
+  "updatedAt": "2026-10-06T13:10:00Z",
+  "pools": [ ... ]
+}
+```
+
+Rules:
+
+- The Agent MUST send `quota_update` only when it advertised `quota` and, in v1, the Client advertised
+  `session.quota`.
+- Each `quota_update` is a **full snapshot**. It replaces the previous snapshot for that session entirely. A pool or
+  meter that is missing from the new snapshot no longer applies. There is no patch or delta form.
+- The Agent SHOULD send `quota_update` when its quota knowledge changes (for example after an API response that carried
+  new rate-limit data, or after a poll), and MAY send it at session start if it already has data. It SHOULD NOT send
+  identical consecutive snapshots.
+- Quota is account-level, so the same data may appear on several sessions. The snapshot on a session MUST describe the
+  pools that apply to that session (its account, project or auth).
+- `quota_update` is live state. Agents SHOULD NOT include it in session replay on `session/load` or `session/resume`.
+  Clients that need quota after loading a session call `quota/read`.
+- `updatedAt`, not message order, decides which snapshot is newer. See [Freshness](#freshness).
+
+### `quota/read` request
+
+A Client-to-Agent request. Following the naming rules, the method is `quota/read`, the trait method is `read_quota`,
+and the types are `ReadQuotaRequest` / `ReadQuotaResponse`.
+
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "quota/read",
+  "params": { "sessionId": "sess_abc123" }
+}
+
+// Response
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "updatedAt": "2026-10-06T13:10:00Z",
+    "pools": [ ... ]
+  }
+}
+```
+
+- The Client MUST NOT call `quota/read` unless the Agent advertised `quota`.
+- `sessionId` is optional. With it, the Agent returns the snapshot that applies to that session, the same one it would
+  push as `quota_update` on that session. Without it, the Agent returns the snapshot for the account it would use for a
+  new session.
+- The Agent MAY serve the read from cached data, or MAY refresh from its provider first. If its cache is older than a
+  snapshot it has already pushed for that session, it SHOULD return the newer snapshot instead.
+- If the Agent cannot answer without a session (for example the account depends on the session), it returns an
+  `invalid_params` error.
+- If the Agent advertised `quota` but has no quota data for this account, it returns `{ "pools": [] }`.
+- If fetching quota fails, the Agent returns an error. A Client SHOULD treat that as "quota unknown" for the quota block
+  only, and leave the context indicator and the session token counter untouched.
+
+### Freshness
+
+A pushed `quota_update` and a `quota/read` result can race. A read may be served from data that is older than a push
+written while the read was in progress, and transports with several streams don't order a response against a session
+update. Message order therefore can't tell which snapshot is newer, so `updatedAt` does.
+
+Agent rules:
+
+- `updatedAt` is the time the Agent last obtained the data in this snapshot from its provider (an API response, a
+  rate-limit event, a poll). It is not the time the message is sent. An Agent that resends cached data keeps the
+  original `updatedAt`. Agents SHOULD use UTC with millisecond precision.
+- Within one Agent process, `updatedAt` MUST NOT decrease across the snapshots it sends, pushed or read. If the system
+  clock moves backwards, the Agent reuses the last value it sent.
+- Two snapshots of the same scope with equal `updatedAt` MUST have identical `pools`. An Agent whose data changes
+  within the same millisecond advances `updatedAt` by at least 1 ms.
+- An Agent whose provider only reports changes (not every confirmation) stamps the time it learned of the change. This
+  is safe for ordering, though "as of" displays may then look older than the data really is.
+
+Client rules:
+
+- A Client keeps, per scope, the snapshot with the greatest `updatedAt`, and ignores a snapshot with a smaller one. On
+  a tie, either may be kept, since they are identical.
+- The scope of a `quota_update` or of a `quota/read` with a `sessionId` is that session. A `quota/read` without a
+  `sessionId` stands alone: it is not compared with any session's snapshot and never replaces one.
+- On a new connection, the Client accepts the first snapshot for each scope regardless of `updatedAt`, so that a clock
+  step across an Agent restart can't hide fresh data.
+- A Client MUST NOT compare `updatedAt` with its own clock to decide ordering. It MAY use it to show "as of" times.
+
+
+### Types
+
+#### `QuotaSnapshot`
+
+Carried by `quota_update` and returned by `quota/read`.
+
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `pools` | `QuotaPool[]` | yes | Every pool that applies, in display order. May be empty. |
+| `updatedAt` | string (RFC 3339) | yes | When the Agent last obtained this data from its provider. Decides which snapshot is newer; see [Freshness](#freshness). |
+| `_meta` | object | no | Extension metadata. |
+
+#### `QuotaPool`
+
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `id` | string | yes | Stable identifier, unique within the snapshot. Agents choose it (for example `plan`, `codex`, `gemini-2.5-pro`, `credits`) and SHOULD keep it stable across snapshots and sessions. Opaque to Clients. |
+| `label` | string | no | Human-readable name. |
+| `state` | `QuotaPoolState` | no | Whether usage can be charged to this pool now. Absent means the Agent does not know. |
+| `meters` | `QuotaMeter[]` | yes | Measurements of this pool, in display order. May be empty (for example an overage pool that is not enabled). |
+| `_meta` | object | no | Extension metadata. |
+
+#### `QuotaPoolState`
+
+An open string enum.
+
+| Value | Meaning |
+| --- | --- |
+| `available` | Usage can be charged to this pool. |
+| `exhausted` | A limit of this pool has been reached, or its funds are used up. |
+| `not_enabled` | The pool exists but is not turned on (for example overage not opted in or not set up). |
+| `not_permitted` | Policy forbids using the pool (organization, seat or plan settings). |
+| `not_eligible` | The pool does not apply to the current model or feature. |
+
+Values starting with `_` are reserved for implementation-specific extensions. Other unknown values are reserved for
+future ACP states.
+
+**Only `available` means the pool is usable.** A Client MUST NOT infer that a pool is usable from any other value,
+including unknown and `_`-prefixed values. It SHOULD render unknown values generically as "unavailable". Unknown values
+do not imply that a limit was reached. If `state` is absent, the Client MUST NOT make any claim about availability.
+
+Future ACP values that mean "usable" would require a new capability or a new field.
+
+#### `QuotaMeter`
+
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `id` | string | yes | Stable identifier, unique within its pool (for example `five_hour`, `seven_day`, `primary`, `balance`, `monthly_cap`). |
+| `label` | string | no | Human-readable name, such as "5-hour limit". |
+| `usedPercent` | number | no | Share of the limit used, from 0 to 100. MAY exceed 100 when the provider reports usage above the limit. |
+| `used` | `Quantity` | no | Amount used in the current window or period. |
+| `limit` | `Quantity` | no | Size of the limit. Absent means the Agent did not report a limit. |
+| `remaining` | `Quantity` | no | Amount left, for example a balance. |
+| `window` | string (ISO 8601 duration) | no | Length of the window or period, such as `PT5H`, `P7D`, `P1M`. |
+| `resetsAt` | string (RFC 3339) | no | When the window or period resets. |
+| `status` | `QuotaMeterStatus` | no | Severity graded by the Agent or its provider. |
+| `_meta` | object | no | Extension metadata. |
+
+A meter MUST carry at least one of `usedPercent`, `used`, `remaining` or `status`.
+
+Agents report only what their provider gave them:
+
+- They SHOULD send `usedPercent` when the provider reports a share, including when it reports a remaining share that
+  converts losslessly (for example `remainingFraction: 0.3` becomes `usedPercent: 70`).
+- They MUST NOT synthesize values that the provider did not report. For example, they must not compute a `limit` from a
+  remaining amount and a fraction, or show `0` for an unknown amount.
+
+`usedPercent`, `used`, `limit` and `remaining` are all relative to this meter's own window. Two windows of the same
+pool are always two meters, so "42%" is never ambiguous between a daily and a weekly figure.
+
+#### `QuotaMeterStatus`
+
+An open string enum.
+
+| Value | Meaning |
+| --- | --- |
+| `ok` | Within the limit. |
+| `warning` | Approaching the limit. |
+| `exceeded` | The limit has been reached. |
+
+Values starting with `_` are reserved for implementation-specific extensions. Other unknown values are reserved for
+future ACP statuses. Clients SHOULD render unknown values generically. When `status` is absent, Clients MAY derive
+their own warning from `usedPercent`.
+
+A pool's `state` and its meters' `status` answer different questions. `status` says how close one meter is to its limit.
+`state` says whether usage can go to the pool at all, which can depend on things no meter measures (overage not enabled,
+model not eligible).
+
+#### `Quantity`
+
+A new generic amount type.
+
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `value` | string (decimal) | yes | Decimal number as a string, such as `"12.50"` or `"420"`. Exact; no float rounding. |
+| `unit` | string | no | An ISO 4217 currency code (three uppercase letters, such as `USD`), or a lowercase unit, e.g., `requests`, `tokens`, `credits`. Absent means the provider did not report a unit. |
+| `_meta` | object | no | Extension metadata. |
+
+- Currency amounts are in major units (`"12.50"` USD, not `1250` cents). Agents convert minor units and micro-units
+  before sending.
+- Non-currency units are an open set.
+- Clients render currency units as money, other units as a count with a label, and amounts without a unit as a bare
+  number.
+- Agents MUST NOT guess a unit the provider did not report.
+
+`Cost` in `usage_update` stays unchanged. `Cost` is cumulative session spend; `Quantity` is a measurement against a
+limit.
+
+### `quotaExceeded` error
+
+A new ACP error code (exact number to be assigned in the ACP-reserved range) for requests rejected because a quota limit
+was reached. Its `data` is optional, and so is each field in it:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `poolId` | string | The pool that blocked the request, as in the snapshot. |
+| `meterId` | string | The meter that blocked the request. |
+| `resetsAt` | string (RFC 3339) | When the request can succeed again, if known. Repeated from the meter so the error stands alone. |
+| `retryAfter` | string (ISO 8601 duration) | How long to wait, for providers that only report a relative delay. |
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32003,
+    "message": "5-hour limit reached",
+    "data": {
+      "poolId": "plan",
+      "meterId": "five_hour",
+      "resetsAt": "2026-10-06T18:00:00Z"
+    }
+  }
+}
+```
+
+(`-32003` is a placeholder until a code is assigned.)
+
+When it can, the Agent SHOULD also push a `quota_update` in which that meter has `status: "exceeded"` and its pool the
+corresponding `state`. An Agent MAY return `quotaExceeded` even without the quota capability. In that case `poolId`
+and `meterId` have no snapshot to refer to and SHOULD be omitted.
+
+### Nullable fields
+
+The update is a full snapshot, so there are no patch semantics. For every optional field in `QuotaSnapshot`,
+`QuotaPool`, `QuotaMeter`, `Quantity`, `ReadQuotaRequest` and the `quotaExceeded` data, omitted and `null` are
+equivalent. Both mean "not reported". They never mean zero, unlimited or "clear".
+
+Lists (`pools`, `meters`) are required on their parent object, but may be empty. Clients SHOULD skip individual invalid
+entries rather than reject the whole snapshot.
+
+### Mapping native data
+
+Agents choose how to group meters into pools. The mappings below are illustrative. For each agent, every pool is
+listed with the meters it holds, and each meter with the native fields it is built from. Pool and meter ids are
+examples, not part of the protocol.
+
+General conversions:
+
+- Fractions from 0 to 1 become `usedPercent` from 0 to 100. A remaining share `r` becomes `usedPercent: 100 - r`.
+- Epoch seconds and other timestamp formats become RFC 3339 strings.
+- Window lengths become ISO 8601 durations (`300` minutes becomes `PT5H`).
+- Currency minor units become major units (`1240` cents becomes `"12.40"` USD).
+- Values the provider does not report stay absent.
+
+Below are a few examples with real agents.
+
+#### Claude Code
+
+Data comes from rate-limit events (pushed on every API response) and from the usage endpoint (polled).
+
+##### Pool `plan` ("Plan usage")
+
+- `state`: `exhausted` while a plan window is rejected, `available` otherwise.
+- Meter `five_hour` ("5-hour limit"): from the `five_hour` window. `utilization` becomes `usedPercent`, `resetsAt`
+  becomes `resetsAt`, and `window` is `PT5H`. Push status `allowed`, `allowed_warning` and `rejected` map to `ok`,
+  `warning` and `exceeded`.
+- Meter `seven_day` ("Weekly limit"): from the `seven_day` window, the same way, with `window: "P7D"`.
+
+##### Pool per model-scoped weekly window (for example `seven_day_opus`, "Opus weekly")
+
+- Meter `seven_day`: from the model-scoped window, as above. The model name goes into the pool `label`.
+
+##### Pool `extra_usage` ("Extra usage")
+
+- `state`: from the overage status and its disabled reason. Out of credits becomes `exhausted`, disabled by the
+  organization becomes `not_permitted`, and not set up becomes `not_enabled`.
+- Meter `monthly_cap` ("Monthly spend limit"): `used_credits` and `monthly_limit` (minor units) become `used` and
+  `limit` in the account currency; `overageResetsAt` becomes `resetsAt`. When `monthly_limit` is absent (no cap), the
+  meter has `used` only.
+
+The [example](#example) above shows this mapping.
+
+#### Codex
+
+Data comes from the rate-limit snapshots attached to token-count events (pushed) and from the rate-limits read
+(polled). The Agent merges sparse per-bucket updates into one full snapshot before sending.
+
+##### One pool per `limitId` (for example `codex`)
+
+- `label`: from `limitName`, when present.
+- `state`: `exhausted` when the limit-reached reason names this bucket.
+- Meter `primary`: from the primary window. `usedPercent` is copied, `windowDurationMins` becomes `window`, and
+  `resetsAt` (Unix seconds) becomes `resetsAt`.
+- Meter `secondary`: from the secondary window, the same way.
+
+##### Pool `credits` ("Credits")
+
+- `state`: `available` when `hasCredits` or `unlimited` is true, `exhausted` when the balance is used up or the spend
+  cap is reached.
+- Meter `balance`: `balance` (decimal string) becomes `remaining` in `credits`. Omitted when `unlimited` is true, since
+  there is no balance to show.
+- Meter `spend_cap` ("Monthly spend limit"): the per-user spend control. `used` and `limit` in `credits`, with
+  `window: "P1M"`.
+
+```json
+{
+  "updatedAt": "2026-10-06T13:10:00.000Z",
+  "pools": [
+    {
+      "id": "codex",
+      "state": "available",
+      "meters": [
+        {
+          "id": "primary",
+          "usedPercent": 42,
+          "window": "PT5H",
+          "resetsAt": "2026-10-06T18:00:00Z"
+        },
+        {
+          "id": "secondary",
+          "usedPercent": 17,
+          "window": "P7D",
+          "resetsAt": "2026-10-11T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "credits",
+      "label": "Credits",
+      "state": "available",
+      "meters": [
+        {
+          "id": "balance",
+          "remaining": { "value": "118.5", "unit": "credits" }
+        },
+        {
+          "id": "spend_cap",
+          "label": "Monthly spend limit",
+          "used": { "value": "31.5", "unit": "credits" },
+          "limit": { "value": "150", "unit": "credits" },
+          "window": "P1M"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Gemini CLI
+
+Data comes from the user-quota call (polled at startup, on demand, and after responses when the cache is stale) and from
+the credits balance on each response (pushed).
+
+##### One pool per model bucket (for example `gemini-2.5-pro`)
+
+- `label`: the model name.
+- Meter `quota`: `remainingFraction` becomes `usedPercent`, and `resetTime` becomes `resetsAt`. `window` is omitted,
+  because the provider does not report it. `remainingAmount` is omitted, because its unit is not reported.
+
+##### Pool `ai_credits` ("AI credits")
+
+- `state`: `available` when credits can be used for the current model, `not_enabled` when the user turned them off, and
+  `not_eligible` when the current model can't use them.
+- Meter `balance`: `remainingCredits` (integer string) becomes `remaining` in `credits`.
+
+```json
+{
+  "updatedAt": "2026-10-06T13:10:00.000Z",
+  "pools": [
+    {
+      "id": "gemini-2.5-pro",
+      "label": "Gemini 2.5 Pro",
+      "meters": [
+        { "id": "quota", "usedPercent": 70, "resetsAt": "2026-10-07T07:00:00Z" }
+      ]
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "label": "Gemini 2.5 Flash",
+      "meters": [
+        { "id": "quota", "usedPercent": 12, "resetsAt": "2026-10-07T07:00:00Z" }
+      ]
+    },
+    {
+      "id": "ai_credits",
+      "label": "AI credits",
+      "state": "available",
+      "meters": [
+        { "id": "balance", "remaining": { "value": "950", "unit": "credits" } }
+      ]
+    }
+  ]
+}
+```
+
+#### Copilot CLI
+
+Data comes from the account quota call (polled).
+
+##### One pool per category (`chat`, `completions`, `premium_interactions`)
+
+- `state`: `exhausted` when the category has no quota left and is not unlimited, `available` otherwise.
+- Meter `monthly`: `usedRequests` and `entitlementRequests` become `used` and `limit` in `requests`.
+  `remainingPercentage` becomes `usedPercent`, `resetDate` becomes `resetsAt`, and `window` is `P1M`. For an unlimited
+  entitlement (`-1`), `limit` and `usedPercent` are omitted and only `used` is sent.
+
+##### Pool `premium_overage` ("Additional premium requests")
+
+- `state`: `available` when `overageAllowedWithExhaustedQuota` is true. When it is false, the provider doesn't say why,
+  so `state` is omitted.
+- Meter `overage`: `overage` becomes `used` in `requests`, with no `limit`.
+
+```json
+{
+  "updatedAt": "2026-10-06T13:10:00.000Z",
+  "pools": [
+    {
+      "id": "premium_interactions",
+      "label": "Premium requests",
+      "state": "exhausted",
+      "meters": [
+        {
+          "id": "monthly",
+          "used": { "value": "300", "unit": "requests" },
+          "limit": { "value": "300", "unit": "requests" },
+          "usedPercent": 100,
+          "window": "P1M",
+          "resetsAt": "2026-11-01T00:00:00Z",
+          "status": "exceeded"
+        }
+      ]
+    },
+    {
+      "id": "premium_overage",
+      "label": "Additional premium requests",
+      "state": "available",
+      "meters": [
+        { "id": "overage", "used": { "value": "12", "unit": "requests" } }
+      ]
+    }
+  ]
+}
+```
+
+#### Kimi CLI
+
+Data comes from the usage endpoint (polled by a slash command).
+
+##### Pool `plan`
+
+- Meter per row, for example `weekly` (the summary row) and `five_hour` (a window row). `name` or `title` becomes
+  `label`, `duration` and `timeUnit` become `window`, and the reset time becomes `resetsAt`. `used`, `limit` and
+  `remaining` are integers whose unit the provider does not report, so they are sent as `Quantity` values without a
+  `unit`.
+
+```json
+{
+  "updatedAt": "2026-10-06T13:10:00.000Z",
+  "pools": [
+    {
+      "id": "plan",
+      "meters": [
+        {
+          "id": "weekly",
+          "label": "Weekly limit",
+          "used": { "value": "350" },
+          "limit": { "value": "1000" },
+          "remaining": { "value": "650" },
+          "window": "P7D",
+          "resetsAt": "2026-10-10T00:00:00Z"
+        },
+        {
+          "id": "five_hour",
+          "label": "5h limit",
+          "used": { "value": "80" },
+          "limit": { "value": "100" },
+          "remaining": { "value": "20" },
+          "window": "PT5H",
+          "resetsAt": "2026-10-06T16:30:00Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Relation to token usage and context
+
+| Concept | Where | Scope | Drops after compaction? |
+| --- | --- | --- | --- |
+| Context occupancy and cost | `usage_update` | session | occupancy yes |
+| Token usage | `PromptResponse.usage` | prompt turn | no |
+| Account quota | `quota_update`, `quota/read` | account, as seen by a session | no |
+
+Agents MUST NOT put quota data in `usage_update` or `PromptResponse.usage`, and MUST NOT put context occupancy or token
+counts in a quota snapshot.
+
+### Plan
+
+1. Add the types and the `quota_update` variant to the v1 schema as unstable, behind a new `unstable_quota` Cargo
+   feature of the Rust schema crate (included in the `unstable` umbrella feature), and to the v2 schema.
+2. Add the `quota/read` method, the capabilities and the `quotaExceeded` error code.
+3. Update the example Agents and Clients in the SDKs.
+4. Adapters for Claude Code, Codex and Gemini CLI map their native data. For one compatibility cycle, they keep their
+   existing vendor `_meta` keys alongside the standard update.
+5. Stabilize after at least two Agents and one Client have shipped it.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Extending `usage_update`.** Rejected. `usage_update` is session occupancy and cost. Quota is account-level, has
+  multiple windows, and must not drop after compaction. Mixing them is exactly what causes today's confusion.
+- **Push only, or poll only.** Some agents only push (per API response), and others only poll. Push keeps warnings
+  timely. Poll lets a Client show quota before a session exists and refresh when a panel opens. Both are needed.
+- **A connection-level notification instead of a session update.** It would match "quota is account-level" better, but
+  the account (and so the quota) can depend on the session's auth or workspace. A session update fits ACP's existing
+  delivery path.
+- **Per-entry patches (upserts).** We considered keyed patches with `omitted = unchanged` and `null = clear`. We chose
+  full snapshots because snapshots are small, removal needs no extra mechanism, `null` can't be misread as "unlimited",
+  and the push and the read share one shape. Agents with sparse native updates (Codex) merge before sending.
+- **A `kind` field (plan vs overage).** Dropped. To a Client every pool is a limit on usage. The boundary between kinds is
+  fuzzy in practice (a spend cap on credits, a weekly window that includes overage, a spend limit with no fallback), so
+  agents would label them inconsistently. Display order and labels do the job.
+- **Required `usedPercent`.** Rejected. Some events carry only a status, some meters have no denominator (an overage
+  count, a balance), and some limits are unlimited. Requiring a percent would force agents to drop data or invent it.
+- **Reusing `Cost` for amounts.** `Cost` can't express credits or requests, and its `amount` is a float. Replacing it would
+  break stable v1. `Quantity` is a new, exact, unit-agnostic type that leaves `Cost` alone.
+
+### Why is there no "active pool" marker?
+
+We researched whether Agents can tell which pool the current usage is charged to. For included allowances it is a
+heuristic in most agents. Several pools are often charged at once (a 5-hour and a weekly window together, a helper
+model's bucket), and the signals that exist describe the last completed response rather than the next one. Only some
+agents report overage use directly. A marker that is usually guessed would mislead users, so it is left out. A pool
+with `state: "exhausted"` next to one that is `available` already tells most of the story.
+
+### What about API-key users who only get rate-limit headers?
+
+Agents MAY map standard rate-limit headers (requests or tokens per minute) to meters with `window: "PT1M"`. Most agents
+don't surface these today, and the RFD does not require it.
+
+### Does this cover asking the user before spending credits?
+
+No. Consent to spend money (for example "Use AI credits?") is an interaction, not quota state. Only one surveyed agent
+asks per use. It could be addressed later, for example through elicitation. Purchase and upgrade prompts are out of
+scope for the same reason.
+
+### Why is `window` an ISO 8601 duration and not seconds?
+
+Calendar periods such as months have no fixed length in seconds. `P1M` is exact; `2592000` is not. ISO 8601 durations
+also match ACP's use of ISO 8601 / RFC 3339 for timestamps.
+
+### Why are amounts strings?
+
+Money and decimal credit balances should round-trip exactly. Providers report them as decimal strings, integer minor
+units or micro-units, and a JSON float can't carry all of them exactly.
+
+## Revision history
+
+- 2026-10-06: Initial draft.
