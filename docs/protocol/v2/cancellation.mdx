@@ -48,7 +48,8 @@ sequenceDiagram
 
     Note over Client,Agent: 1. Session prompt in progress
     Client->>Agent: session/prompt (id=1, "Analyze file X")
-    Agent-->>Client: response to id=1 ({})
+    Agent-->>Client: response to id=1 (messageId)
+    Agent->>Client: session/update (user_message)
     Agent->>Client: session/update (state_update: running)
 
     Note over Client,Agent: 2. Agent makes concurrent permission requests
