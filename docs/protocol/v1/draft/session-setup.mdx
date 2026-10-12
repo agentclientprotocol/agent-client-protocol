@@ -408,11 +408,13 @@ and, when the Agent supports it, `session/fork`.
 
 `systemPrompt` has the following behavior:
 
-- `mode` is required. `append` adds `content` to the Agent's own instructions; where it is placed and how it is formatted is up to the Agent. `override` replaces the Agent's built-in default instructions, but does not change tool availability, MCP servers, permissions, or session configuration
-- Agents **MUST** accept `text` content blocks. Other content block types are not supported yet
+- `mode` is required and selects how the Agent combines `content` with its own instructions
+- `append` adds `content` to the Agent's own instructions rather than replacing them. The Agent **SHOULD** give it system-level precedence, for example in the model's system prompt or developer instructions rather than in user-turn content; where it is placed and how it is formatted is up to the Agent
+- `override` replaces the Agent's built-in default instructions. It does not change tool availability, MCP servers, permissions, or session configuration. Context the Agent supplies from the workspace or environment, such as `AGENTS.md` files or skill listings, **MAY** still be included, and Agents **SHOULD** document what they keep. Clients that use `override` take responsibility for any tool guidance or safety instructions the Agent's default instructions provided
+- only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them
 - omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
-- on `session/load`, `session/resume`, and `session/fork`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it and **MAY** defer the change until it next rebuilds its prompt, for example after compaction
-- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unsupported mode or content block type, it **MUST** return an error such as `invalid_params` and **MUST NOT** create, load, resume, or fork the session
+- on `session/load`, `session/resume`, and `session/fork`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
+- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unadvertised mode, an unsupported content block type, or content that exceeds its limits, it **MUST** return an error and **MUST NOT** create, load, resume, or fork the session. `invalid_params` is the **RECOMMENDED** error for malformed or unsupported values
 
 Clients **MUST** only send `systemPrompt` when the Agent advertises `sessionCapabilities.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `sessionCapabilities.systemPrompt.mode.override`:
 
@@ -432,6 +434,8 @@ Clients **MUST** only send `systemPrompt` when the Agent advertises `sessionCapa
   }
 }
 ```
+
+Content delivered at system level carries more weight with the model than user turns or tool output. Clients **SHOULD** only send content they trust at that level.
 
 ## Session ID
 

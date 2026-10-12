@@ -828,7 +828,9 @@ pub struct SystemPrompt {
     /// The system prompt content.
     ///
     /// Agents advertising the capability MUST accept [`ContentBlock::Text`].
-    /// Other content block types are not part of the baseline.
+    /// Clients MUST NOT send other content block types until a future
+    /// capability allows them, and Agents MUST return an error for content
+    /// blocks they do not support.
     pub content: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -883,12 +885,17 @@ pub enum SystemPromptMode {
     /// Add the content to the Agent's own instructions rather than replacing them.
     ///
     /// Every Agent that advertises `sessionCapabilities.systemPrompt` supports this mode.
-    /// Where the content is placed and how it is formatted is implementation-defined.
+    /// Agents SHOULD give the content system-level precedence, for example in the
+    /// model's system prompt or developer instructions rather than in user-turn
+    /// content. Where it is placed and how it is formatted is implementation-defined.
     Append,
     /// Replace the Agent's built-in default instructions with the content.
     ///
     /// This does not change tool availability, MCP servers, permissions, or session
-    /// configuration. Clients MUST only use this mode when the Agent advertises
+    /// configuration. Context the Agent supplies from the workspace or environment
+    /// MAY still be included. Clients that use this mode take responsibility for any
+    /// tool guidance or safety instructions the Agent's default instructions
+    /// provided, and MUST only use it when the Agent advertises
     /// `sessionCapabilities.systemPrompt.mode.override`.
     Override,
 }
@@ -6241,6 +6248,14 @@ mod test_serialization {
                     .mode(SessionSystemPromptModeCapabilities::new())
             )
         );
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(
+                json!({ "systemPrompt": { "mode": "override" } })
+            )
+            .unwrap()
+            .system_prompt,
+            Some(SessionSystemPromptCapabilities::new())
+        );
     }
 
     #[cfg(feature = "unstable_client_system_prompt")]
@@ -6294,13 +6309,19 @@ mod test_serialization {
             system_prompt_json
         );
 
+        let override_prompt =
+            SystemPrompt::new(SystemPromptMode::Override, vec![ContentBlock::from("...")]);
+        let override_json = json!({
+            "mode": "override",
+            "content": [{ "type": "text", "text": "..." }]
+        });
         assert_eq!(
-            serde_json::to_value(SystemPrompt::new(
-                SystemPromptMode::Override,
-                vec![ContentBlock::from("...")]
-            ))
-            .unwrap()["mode"],
-            json!("override")
+            serde_json::to_value(&override_prompt).unwrap(),
+            override_json
+        );
+        assert_eq!(
+            serde_json::from_value::<SystemPrompt>(override_json).unwrap(),
+            override_prompt
         );
     }
 
@@ -6357,6 +6378,28 @@ mod test_serialization {
                 serde_json::from_value::<ResumeSessionRequest>(resume_session.clone()).is_err(),
                 "{resume_session}"
             );
+            let load_session = json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "mcpServers": [],
+                "systemPrompt": system_prompt
+            });
+            assert!(
+                serde_json::from_value::<LoadSessionRequest>(load_session.clone()).is_err(),
+                "{load_session}"
+            );
+            #[cfg(feature = "unstable_session_fork")]
+            {
+                let fork_session = json!({
+                    "sessionId": "sess_abc123",
+                    "cwd": "/home/user/project",
+                    "systemPrompt": system_prompt
+                });
+                assert!(
+                    serde_json::from_value::<ForkSessionRequest>(fork_session.clone()).is_err(),
+                    "{fork_session}"
+                );
+            }
         }
     }
 

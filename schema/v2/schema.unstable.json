@@ -8835,7 +8835,7 @@
           ]
         },
         "content": {
-          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept [`ContentBlock::Text`].\nOther content block types are not part of the baseline. Agents MUST\nreturn an error for content blocks they do not support, including\nunknown types preserved as [`ContentBlock::Other`].",
+          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept [`ContentBlock::Text`].\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types preserved as\n[`ContentBlock::Other`].",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -8854,12 +8854,12 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nThis enum is closed: the mode decides how the Agent fulfills the request, so\nunknown values are rejected rather than preserved as a fallback variant.",
       "oneOf": [
         {
-          "description": "Add the content to the Agent's own instructions rather than replacing them.\n\nEvery Agent that advertises `session.systemPrompt` supports this mode.\nWhere the content is placed and how it is formatted is implementation-defined.",
+          "description": "Add the content to the Agent's own instructions rather than replacing them.\n\nEvery Agent that advertises `session.systemPrompt` supports this mode.\nAgents SHOULD give the content system-level precedence, for example in the\nmodel's system prompt or developer instructions rather than in user-turn\ncontent. Where it is placed and how it is formatted is implementation-defined.",
           "type": "string",
           "const": "append"
         },
         {
-          "description": "Replace the Agent's built-in default instructions with the content.\n\nThis does not change tool availability, MCP servers, permissions, or session\nconfiguration. Clients MUST only use this mode when the Agent advertises\n`session.systemPrompt.mode.override`.",
+          "description": "Replace the Agent's built-in default instructions with the content.\n\nThis does not change tool availability, MCP servers, permissions, or session\nconfiguration. Context the Agent supplies from the workspace or environment\nMAY still be included. Clients that use this mode take responsibility for any\ntool guidance or safety instructions the Agent's default instructions\nprovided, and MUST only use it when the Agent advertises\n`session.systemPrompt.mode.override`.",
           "type": "string",
           "const": "override"
         }

@@ -9980,9 +9980,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The system prompt content.
 
 Agents advertising the capability MUST accept `ContentBlock::Text`.
-Other content block types are not part of the baseline. Agents MUST
-return an error for content blocks they do not support, including
-unknown types preserved as `ContentBlock::Other`.
+Clients MUST NOT send other content block types until a future
+capability allows them, and Agents MUST return an error for content
+blocks they do not support, including unknown types preserved as
+`ContentBlock::Other`.
 
 </ResponseField>
 <ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
@@ -10006,7 +10007,9 @@ unknown values are rejected rather than preserved as a fallback variant.
 Add the content to the Agent's own instructions rather than replacing them.
 
 Every Agent that advertises `session.systemPrompt` supports this mode.
-Where the content is placed and how it is formatted is implementation-defined.
+Agents SHOULD give the content system-level precedence, for example in the
+model's system prompt or developer instructions rather than in user-turn
+content. Where it is placed and how it is formatted is implementation-defined.
 
 </ResponseField>
 
@@ -10014,7 +10017,10 @@ Where the content is placed and how it is formatted is implementation-defined.
 Replace the Agent's built-in default instructions with the content.
 
 This does not change tool availability, MCP servers, permissions, or session
-configuration. Clients MUST only use this mode when the Agent advertises
+configuration. Context the Agent supplies from the workspace or environment
+MAY still be included. Clients that use this mode take responsibility for any
+tool guidance or safety instructions the Agent's default instructions
+provided, and MUST only use it when the Agent advertises
 `session.systemPrompt.mode.override`.
 
 </ResponseField>
