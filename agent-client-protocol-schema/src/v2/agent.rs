@@ -895,7 +895,9 @@ pub struct SystemPrompt {
     /// How the Agent combines `content` with its own instructions.
     ///
     /// Optional. Omitted and `null` are equivalent and mean
-    /// [`SystemPromptMode::Append`]. Unknown values are rejected.
+    /// [`SystemPromptMode::Append`]. Unknown values parse as
+    /// [`SystemPromptMode::Other`]; Agents MUST return an error for modes they
+    /// do not support.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default)]
     pub mode: SystemPromptMode,
@@ -958,11 +960,12 @@ impl SystemPrompt {
 ///
 /// How the Agent combines a client-provided system prompt with its own instructions.
 ///
-/// This enum is closed: the mode decides how the Agent fulfills the request, so
-/// unknown values are rejected rather than preserved as a fallback variant.
+/// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+/// proxied, or forwarded. An Agent MUST return an error for a mode it does not
+/// support rather than treating it as `append` or `override`.
 #[cfg(feature = "unstable_session_system_prompt")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SystemPromptMode {
@@ -983,6 +986,17 @@ pub enum SystemPromptMode {
     /// provided, and MUST only use it when the Agent advertises
     /// `session.systemPrompt.mode.override`.
     Override,
+    /// Custom or future system prompt mode.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients MUST only use a mode the Agent advertised. Agents MUST return an
+    /// error for a mode they do not support rather than treating it as `append`
+    /// or `override`.
+    #[serde(untagged)]
+    Other(String),
 }
 
 // New session
@@ -7108,16 +7122,36 @@ mod test_serialization {
         }
     }
 
+    /// Unknown modes follow the v2 enum extension rule: they parse as
+    /// `SystemPromptMode::Other` so they are not dropped, and an agent that does
+    /// not support them must reject the request.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_system_prompt_preserves_unknown_modes() {
+        for mode in ["_vendor_mode", "prepend"] {
+            let system_prompt_json =
+                json!({ "mode": mode, "content": [{ "type": "text", "text": "..." }] });
+            let system_prompt: SystemPrompt =
+                serde_json::from_value(system_prompt_json.clone()).unwrap();
+            assert_eq!(
+                system_prompt.mode,
+                SystemPromptMode::Other(mode.to_string())
+            );
+            assert_eq!(
+                serde_json::to_value(&system_prompt).unwrap(),
+                system_prompt_json
+            );
+        }
+    }
+
     /// The receiver acts on `systemPrompt`, so malformed values fail the request
     /// (`-32602`) instead of silently creating a session without the prompt.
-    /// `mode` is closed in v2: there is no fallback variant for unknown modes.
     #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_rejects_malformed_values() {
         for system_prompt in [
             json!("You are a code review specialist."),
-            json!({ "mode": "replace", "content": [{ "type": "text", "text": "..." }] }),
-            json!({ "mode": "_vendor_mode", "content": [{ "type": "text", "text": "..." }] }),
+            json!({ "mode": 1, "content": [{ "type": "text", "text": "..." }] }),
             json!({ "mode": "append" }),
             json!({ "mode": "append", "content": "..." }),
             json!({ "mode": "append", "content": [{ "type": "text" }] }),

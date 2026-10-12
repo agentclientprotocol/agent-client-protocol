@@ -9990,7 +9990,9 @@ blocks they do not support, including unknown types preserved as
   How the Agent combines `content` with its own instructions.
 
 Optional. Omitted and `null` are equivalent and mean
-`SystemPromptMode::Append`. Unknown values are rejected.
+`SystemPromptMode::Append`. Unknown values parse as
+`SystemPromptMode::Other`; Agents MUST return an error for modes they
+do not support.
 
     - Default: `"append"`
 
@@ -10004,8 +10006,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 How the Agent combines a client-provided system prompt with its own instructions.
 
-This enum is closed: the mode decides how the Agent fulfills the request, so
-unknown values are rejected rather than preserved as a fallback variant.
+Unknown modes parse as `SystemPromptMode::Other` so they can be stored,
+proxied, or forwarded. An Agent MUST return an error for a mode it does not
+support rather than treating it as `append` or `override`.
 
 **Type:** Union
 
@@ -10028,6 +10031,19 @@ MAY still be included. Clients that use this mode take responsibility for any
 tool guidance or safety instructions the Agent's default instructions
 provided, and MUST only use it when the Agent advertises
 `session.systemPrompt.mode.override`.
+
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future system prompt mode.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients MUST only use a mode the Agent advertised. Agents MUST return an
+error for a mode they do not support rather than treating it as `append`
+or `override`.
 
 </ResponseField>
 
