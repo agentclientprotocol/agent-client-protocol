@@ -5360,6 +5360,10 @@ pub enum ClientRequest {
     /// The agent should create a new session with the same conversation context as the
     /// original, allowing operations like generating summaries without affecting the
     /// original session's history.
+    ///
+    /// As with `session/new`, the forked session is active once the agent responds,
+    /// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
+    /// The client can prompt it without calling `session/resume` first.
     ForkSessionRequest(Box<ForkSessionRequest>),
     /// Resumes an existing session.
     ///

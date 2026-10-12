@@ -8003,7 +8003,7 @@
                 },
                 {
                   "title": "ForkSessionRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForks an existing session to create a new independent session.\n\nThis method is only available if the agent advertises the `session.fork` capability.\n\nThe agent should create a new session with the same conversation context as the\noriginal, allowing operations like generating summaries without affecting the\noriginal session's history.",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForks an existing session to create a new independent session.\n\nThis method is only available if the agent advertises the `session.fork` capability.\n\nThe agent should create a new session with the same conversation context as the\noriginal, allowing operations like generating summaries without affecting the\noriginal session's history.\n\nAs with `session/new`, the forked session is active once the agent responds,\nset up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.\nThe client can prompt it without calling `session/resume` first.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ForkSessionRequest"
