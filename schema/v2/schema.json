@@ -1835,7 +1835,7 @@
       "description": "Text patch format used by [`DiffPatch`].",
       "anyOf": [
         {
-          "description": "One or more `diff --git` sections in Git's `--patch` (`-p`) text format.\n\nPaths MUST be absolute. Surrounding commit metadata and email envelopes\nMUST NOT be included.",
+          "description": "One or more `diff --git` sections in Git's `--patch` (`-p`) text format.\n\nUnlike Git, which writes paths relative to the repository root, every\npath MUST be absolute, including in `rename from`, `rename to`,\n`copy from`, and `copy to` lines, and MUST NOT have a prefix such as\nGit's default `a/` and `b/`. Otherwise paths follow Git: `/dev/null`\nnames the missing side of an added or deleted file in the `---` and\n`+++` lines, and paths with unusual characters are quoted as Git quotes\nthem. Surrounding commit metadata and email envelopes MUST NOT be\nincluded.",
           "type": "string",
           "const": "git_patch"
         },

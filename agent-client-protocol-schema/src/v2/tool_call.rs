@@ -636,8 +636,14 @@ impl DiffPatch {
 pub enum DiffPatchFormat {
     /// One or more `diff --git` sections in Git's `--patch` (`-p`) text format.
     ///
-    /// Paths MUST be absolute. Surrounding commit metadata and email envelopes
-    /// MUST NOT be included.
+    /// Unlike Git, which writes paths relative to the repository root, every
+    /// path MUST be absolute, including in `rename from`, `rename to`,
+    /// `copy from`, and `copy to` lines, and MUST NOT have a prefix such as
+    /// Git's default `a/` and `b/`. Otherwise paths follow Git: `/dev/null`
+    /// names the missing side of an added or deleted file in the `---` and
+    /// `+++` lines, and paths with unusual characters are quoted as Git quotes
+    /// them. Surrounding commit metadata and email envelopes MUST NOT be
+    /// included.
     GitPatch,
     /// Custom or future patch format.
     ///

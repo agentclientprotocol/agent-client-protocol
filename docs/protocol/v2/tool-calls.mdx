@@ -516,8 +516,21 @@ Clients MUST handle diffs where `patch` is omitted or `null`.
 
 <ParamField path="patch.format" type="string" required>
   Patch format. `git_patch`, the only ACP-defined value, is one or more `diff
-  --git` sections in Git's `--patch` (`-p`) text format. Paths MUST be absolute.
+  --git` sections in Git's `--patch` (`-p`) text format. Unlike Git, which
+  writes paths relative to the repository root, every path MUST be absolute,
+  including in `rename from`, `rename to`, `copy from`, and `copy to` lines, and
+  MUST NOT have a prefix such as Git's default `a/` and `b/`. Otherwise paths
+  follow Git: `/dev/null` names the missing side of an added or deleted file in
+  the `---` and `+++` lines, and paths with unusual characters are [quoted as Git
+  quotes them](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath).
   Surrounding commit metadata and email envelopes MUST NOT be included.
+
+Git can produce most of this. With `$ROOT` set to the repository root,
+`git diff --src-prefix="$ROOT/" --dst-prefix="$ROOT/"` writes absolute
+`diff --git`, `---`, and `+++` lines. Git never prefixes `rename from`,
+`rename to`, `copy from`, or `copy to` paths, so those still need the
+repository root prepended, with Git's quoting applied to the full path.
+
 </ParamField>
 
 <ParamField path="patch.text" type="string" required>
