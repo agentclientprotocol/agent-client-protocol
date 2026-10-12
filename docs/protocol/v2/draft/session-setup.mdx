@@ -353,6 +353,64 @@ When present, `additionalDirectories` has the following behavior:
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
 
+## System Prompt (unstable)
+
+Agents that advertise `session.systemPrompt` allow Clients to include
+system-level instructions on `session/new`, `session/resume`, and, when the
+Agent supports it, `session/fork`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "systemPrompt": {
+      "mode": "append",
+      "content": [
+        {
+          "type": "text",
+          "text": "You are a code review specialist. Focus on security issues."
+        }
+      ]
+    }
+  }
+}
+```
+
+`systemPrompt` has the following behavior:
+
+- `mode` is required and closed: unknown values are rejected rather than treated as an extension. `append` adds `content` to the Agent's own instructions; where it is placed and how it is formatted is up to the Agent. `override` replaces the Agent's built-in default instructions, but does not change tool availability, MCP servers, permissions, or session configuration
+- Agents **MUST** accept `text` content blocks. Other content block types, including unknown types, are not supported yet
+- omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
+- on `session/resume` and `session/fork`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it and **MAY** defer the change until it next rebuilds its prompt, for example after compaction
+- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unsupported mode or content block type, it **MUST** return an error such as `invalid_params` and **MUST NOT** create, resume, or fork the session
+
+Clients **MUST** only send `systemPrompt` when the Agent advertises `session.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `session.systemPrompt.mode.override`:
+
+```json highlight={8-10}
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 2,
+    "capabilities": {
+      "session": {
+        "systemPrompt": {
+          "mode": { "override": {} }
+        }
+      }
+    },
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
 ## Session ID
 
 The session ID returned by `session/new` is a unique identifier for the conversation context.

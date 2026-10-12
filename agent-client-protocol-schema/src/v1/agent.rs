@@ -802,6 +802,97 @@ impl AuthMethodTerminal {
     }
 }
 
+// System prompt
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Client-provided system-level instructions for a session.
+///
+/// Clients MUST only send this when the Agent advertises
+/// `sessionCapabilities.systemPrompt`. Agents that cannot apply it, for example
+/// because of an unadvertised mode or an unsupported content block type, MUST
+/// return an error instead of creating, loading, resuming, or forking the
+/// session.
+#[cfg(feature = "unstable_client_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SystemPrompt {
+    /// How the Agent combines `content` with its own instructions.
+    pub mode: SystemPromptMode,
+    /// The system prompt content.
+    ///
+    /// Agents advertising the capability MUST accept [`ContentBlock::Text`].
+    /// Other content block types are not part of the baseline.
+    pub content: Vec<ContentBlock>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_client_system_prompt")]
+impl SystemPrompt {
+    /// Builds [`SystemPrompt`] with the required fields set; optional fields start unset.
+    #[must_use]
+    pub fn new(mode: SystemPromptMode, content: Vec<ContentBlock>) -> Self {
+        Self {
+            mode,
+            content,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// How the Agent combines a client-provided system prompt with its own instructions.
+///
+/// Unknown values are rejected: the mode decides how the Agent fulfills the
+/// request, so there is no safe fallback.
+#[cfg(feature = "unstable_client_system_prompt")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SystemPromptMode {
+    /// Add the content to the Agent's own instructions rather than replacing them.
+    ///
+    /// Every Agent that advertises `sessionCapabilities.systemPrompt` supports this mode.
+    /// Where the content is placed and how it is formatted is implementation-defined.
+    Append,
+    /// Replace the Agent's built-in default instructions with the content.
+    ///
+    /// This does not change tool availability, MCP servers, permissions, or session
+    /// configuration. Clients MUST only use this mode when the Agent advertises
+    /// `sessionCapabilities.systemPrompt.mode.override`.
+    Override,
+}
+
 // New session
 
 /// Request parameters for creating a new session.
@@ -828,6 +919,18 @@ pub struct NewSessionRequest {
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     pub mcp_servers: Vec<McpServer>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the new session.
+    ///
+    /// Clients MUST only send this when the Agent advertises
+    /// `sessionCapabilities.systemPrompt`. Omitted and `null` are equivalent and
+    /// mean the Agent uses its own default instructions.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[serde(default)]
+    pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -848,8 +951,22 @@ impl NewSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
+            #[cfg(feature = "unstable_client_system_prompt")]
+            system_prompt: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the new session.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
+        self.system_prompt = system_prompt.into_option();
+        self
     }
 
     /// Additional workspace roots for this session. Each path must be absolute.
@@ -991,6 +1108,20 @@ pub struct LoadSessionRequest {
     pub additional_directories: Vec<PathBuf>,
     /// The ID of the session to load.
     pub session_id: SessionId,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the loaded session.
+    ///
+    /// Clients MUST only send this when the Agent advertises
+    /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they
+    /// used when the session was created. Omitted and `null` are equivalent; the
+    /// Agent may then keep a system prompt it stored with the session or use its
+    /// default instructions.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[serde(default)]
+    pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1012,8 +1143,22 @@ impl LoadSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             session_id: session_id.into(),
+            #[cfg(feature = "unstable_client_system_prompt")]
+            system_prompt: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the loaded session.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
+        self.system_prompt = system_prompt.into_option();
+        self
     }
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -1152,6 +1297,20 @@ pub struct ForkSessionRequest {
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the forked session.
+    ///
+    /// Clients MUST only send this when the Agent advertises
+    /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they
+    /// used for the source session. Omitted and `null` are equivalent; the Agent
+    /// may then keep a system prompt it stored with the source session or use
+    /// its default instructions.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[serde(default)]
+    pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1174,8 +1333,22 @@ impl ForkSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
+            #[cfg(feature = "unstable_client_system_prompt")]
+            system_prompt: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the forked session.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
+        self.system_prompt = system_prompt.into_option();
+        self
     }
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -1321,6 +1494,20 @@ pub struct ResumeSessionRequest {
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the resumed session.
+    ///
+    /// Clients MUST only send this when the Agent advertises
+    /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they
+    /// used when the session was created. Omitted and `null` are equivalent; the
+    /// Agent may then keep a system prompt it stored with the session or use its
+    /// default instructions.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[serde(default)]
+    pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1342,8 +1529,22 @@ impl ResumeSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
+            #[cfg(feature = "unstable_client_system_prompt")]
+            system_prompt: None,
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the resumed session.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
+        self.system_prompt = system_prompt.into_option();
+        self
     }
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -4080,6 +4281,19 @@ pub struct SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Whether the agent supports `systemPrompt` on session lifecycle requests.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub system_prompt: Option<SessionSystemPromptCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Whether the agent supports `session/fork`.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -4159,6 +4373,24 @@ impl SessionCapabilities {
         additional_directories: impl IntoOption<SessionAdditionalDirectoriesCapabilities>,
     ) -> Self {
         self.additional_directories = additional_directories.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `systemPrompt` on session lifecycle requests.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(
+        mut self,
+        system_prompt: impl IntoOption<SessionSystemPromptCapabilities>,
+    ) -> Self {
+        self.system_prompt = system_prompt.into_option();
         self
     }
 
@@ -4311,6 +4543,188 @@ pub struct SessionAdditionalDirectoriesCapabilities {
 
 impl SessionAdditionalDirectoriesCapabilities {
     /// Builds an empty [`SessionAdditionalDirectoriesCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for client-provided system prompts.
+///
+/// Supplying `{}` means the agent supports `systemPrompt` on session lifecycle
+/// requests in `append` mode.
+#[cfg(feature = "unstable_client_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionSystemPromptCapabilities {
+    /// Delivery modes the agent supports in addition to `append`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent supports only `append`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub mode: Option<SessionSystemPromptModeCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_client_system_prompt")]
+impl SessionSystemPromptCapabilities {
+    /// Builds an empty [`SessionSystemPromptCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Delivery modes the agent supports in addition to `append`.
+    ///
+    /// Omitted or `null` both mean the agent supports only `append`.
+    #[must_use]
+    pub fn mode(mut self, mode: impl IntoOption<SessionSystemPromptModeCapabilities>) -> Self {
+        self.mode = mode.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// System prompt delivery modes the agent supports in addition to `append`.
+///
+/// `append` has no entry because every agent advertising
+/// `sessionCapabilities.systemPrompt` supports it.
+#[cfg(feature = "unstable_client_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionSystemPromptModeCapabilities {
+    /// Whether the agent supports `override` mode.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports replacing its built-in default
+    /// instructions with the client-provided system prompt.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "override")]
+    pub override_: Option<SessionSystemPromptOverrideCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_client_system_prompt")]
+impl SessionSystemPromptModeCapabilities {
+    /// Builds an empty [`SessionSystemPromptModeCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the agent supports `override` mode.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports replacing its built-in default
+    /// instructions with the client-provided system prompt.
+    #[must_use]
+    pub fn override_(
+        mut self,
+        override_: impl IntoOption<SessionSystemPromptOverrideCapabilities>,
+    ) -> Self {
+        self.override_ = override_.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `override` system prompt mode.
+///
+/// Supplying `{}` means the agent supports replacing its built-in default
+/// instructions with the client-provided system prompt.
+#[cfg(feature = "unstable_client_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionSystemPromptOverrideCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_client_system_prompt")]
+impl SessionSystemPromptOverrideCapabilities {
+    /// Builds an empty [`SessionSystemPromptOverrideCapabilities`].
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5774,6 +6188,176 @@ mod test_serialization {
                 "additionalDirectories": {}
             })
         );
+    }
+
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[test]
+    fn test_session_system_prompt_capabilities_serialization() {
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().system_prompt(SessionSystemPromptCapabilities::new())
+            )
+            .unwrap(),
+            json!({ "systemPrompt": {} })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().system_prompt(
+                    SessionSystemPromptCapabilities::new().mode(
+                        SessionSystemPromptModeCapabilities::new()
+                            .override_(SessionSystemPromptOverrideCapabilities::new())
+                    )
+                )
+            )
+            .unwrap(),
+            json!({ "systemPrompt": { "mode": { "override": {} } } })
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(
+                json!({ "systemPrompt": { "mode": { "override": {} } } })
+            )
+            .unwrap()
+            .system_prompt
+            .and_then(|capabilities| capabilities.mode)
+            .and_then(|mode| mode.override_),
+            Some(SessionSystemPromptOverrideCapabilities::new())
+        );
+
+        // Capabilities fall back to "not advertised" when malformed.
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(json!({ "systemPrompt": "yes" }))
+                .unwrap()
+                .system_prompt,
+            None
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(
+                json!({ "systemPrompt": { "mode": { "override": true } } })
+            )
+            .unwrap()
+            .system_prompt,
+            Some(
+                SessionSystemPromptCapabilities::new()
+                    .mode(SessionSystemPromptModeCapabilities::new())
+            )
+        );
+    }
+
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[test]
+    fn test_system_prompt_lifecycle_request_serialization() {
+        let system_prompt = SystemPrompt::new(
+            SystemPromptMode::Append,
+            vec![ContentBlock::from("You are a code review specialist.")],
+        );
+        let system_prompt_json = json!({
+            "mode": "append",
+            "content": [{ "type": "text", "text": "You are a code review specialist." }]
+        });
+
+        let request =
+            NewSessionRequest::new("/home/user/project").system_prompt(system_prompt.clone());
+        let request_json = json!({
+            "cwd": "/home/user/project",
+            "mcpServers": [],
+            "systemPrompt": system_prompt_json
+        });
+        assert_eq!(serde_json::to_value(&request).unwrap(), request_json);
+        assert_eq!(
+            serde_json::from_value::<NewSessionRequest>(request_json).unwrap(),
+            request
+        );
+
+        assert_eq!(
+            serde_json::to_value(
+                LoadSessionRequest::new("sess_abc123", "/home/user/project")
+                    .system_prompt(system_prompt.clone())
+            )
+            .unwrap()["systemPrompt"],
+            system_prompt_json
+        );
+        assert_eq!(
+            serde_json::to_value(
+                ResumeSessionRequest::new("sess_abc123", "/home/user/project")
+                    .system_prompt(system_prompt.clone())
+            )
+            .unwrap()["systemPrompt"],
+            system_prompt_json
+        );
+        #[cfg(feature = "unstable_session_fork")]
+        assert_eq!(
+            serde_json::to_value(
+                ForkSessionRequest::new("sess_abc123", "/home/user/project")
+                    .system_prompt(system_prompt.clone())
+            )
+            .unwrap()["systemPrompt"],
+            system_prompt_json
+        );
+
+        assert_eq!(
+            serde_json::to_value(SystemPrompt::new(
+                SystemPromptMode::Override,
+                vec![ContentBlock::from("...")]
+            ))
+            .unwrap()["mode"],
+            json!("override")
+        );
+    }
+
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[test]
+    fn test_system_prompt_null_is_equivalent_to_omitted() {
+        let request = NewSessionRequest::new("/home/user/project");
+        assert!(
+            serde_json::to_value(&request)
+                .unwrap()
+                .get("systemPrompt")
+                .is_none()
+        );
+        for params in [
+            json!({ "cwd": "/home/user/project", "mcpServers": [] }),
+            json!({ "cwd": "/home/user/project", "mcpServers": [], "systemPrompt": null }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<NewSessionRequest>(params).unwrap(),
+                request
+            );
+        }
+    }
+
+    /// The receiver acts on `systemPrompt`, so malformed values fail the request
+    /// (`-32602`) instead of silently creating a session without the prompt.
+    #[cfg(feature = "unstable_client_system_prompt")]
+    #[test]
+    fn test_system_prompt_rejects_malformed_values() {
+        for system_prompt in [
+            json!("You are a code review specialist."),
+            json!({ "content": [{ "type": "text", "text": "..." }] }),
+            json!({ "mode": "replace", "content": [{ "type": "text", "text": "..." }] }),
+            json!({ "mode": "append" }),
+            json!({ "mode": "append", "content": "..." }),
+            json!({ "mode": "append", "content": [{ "type": "text" }] }),
+            json!({ "mode": "append", "content": [{ "type": "video", "uri": "..." }] }),
+        ] {
+            let new_session = json!({
+                "cwd": "/home/user/project",
+                "mcpServers": [],
+                "systemPrompt": system_prompt
+            });
+            assert!(
+                serde_json::from_value::<NewSessionRequest>(new_session.clone()).is_err(),
+                "{new_session}"
+            );
+            let resume_session = json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "systemPrompt": system_prompt
+            });
+            assert!(
+                serde_json::from_value::<ResumeSessionRequest>(resume_session.clone()).is_err(),
+                "{resume_session}"
+            );
+        }
     }
 
     #[test]

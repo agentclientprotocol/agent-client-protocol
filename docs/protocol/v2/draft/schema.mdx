@@ -1069,6 +1069,20 @@ session.
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to fork.
 </ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the forked session.
+
+Clients MUST only send this when the Agent advertises
+`session.systemPrompt`, and SHOULD send the same value they used for the
+source session. Omitted and `null` are equivalent; the Agent may then keep
+a system prompt it stored with the source session or use its default
+instructions.
+
+</ResponseField>
 
 #### <span class="font-mono">ForkSessionResponse</span>
 
@@ -1207,6 +1221,18 @@ additional roots are activated for the new session.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP (Model Context Protocol) servers the agent should connect to.
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the new session.
+
+Clients MUST only send this when the Agent advertises
+`session.systemPrompt`. Omitted and `null` are equivalent and mean the
+Agent uses its own default instructions.
+
 </ResponseField>
 
 #### <span class="font-mono">NewSessionResponse</span>
@@ -1393,6 +1419,20 @@ conversation history before responding.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to resume.
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the resumed session.
+
+Clients MUST only send this when the Agent advertises
+`session.systemPrompt`, and SHOULD send the same value they used when the
+session was created. Omitted and `null` are equivalent; the Agent may then
+keep a system prompt it stored with the session or use its default
+instructions.
+
 </ResponseField>
 
 #### <span class="font-mono">ResumeSessionResponse</span>
@@ -7850,6 +7890,17 @@ prompt extensions beyond the baseline text and resource-link content
 required by `session/prompt`.
 
 </ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#sessionsystempromptcapabilities">SessionSystemPromptCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `systemPrompt` on session lifecycle requests.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports `systemPrompt` in `append` mode.
+
+</ResponseField>
 
 ## <span class="font-mono">SessionConfigBoolean</span>
 
@@ -8298,6 +8349,92 @@ Implementations MUST NOT make assumptions about values in `_meta`.
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional sending session identity; omission or `null` retains a known value.
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for client-provided system prompts.
+
+Supplying `\{\}` means the agent supports `systemPrompt` on session lifecycle
+requests in `append` mode.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="mode" type={<><span><a href="#sessionsystempromptmodecapabilities">SessionSystemPromptModeCapabilities</a></span><span> | null</span></>} >
+  Delivery modes the agent supports in addition to `append`.
+
+Optional. Omitted or `null` both mean the agent supports only `append`.
+
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptModeCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System prompt delivery modes the agent supports in addition to `append`.
+
+`append` has no entry because every agent advertising `session.systemPrompt`
+supports it.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="override" type={<><span><a href="#sessionsystempromptoverridecapabilities">SessionSystemPromptOverrideCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `override` mode.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports replacing its built-in default
+instructions with the client-provided system prompt.
+
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptOverrideCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for the `override` system prompt mode.
+
+Supplying `\{\}` means the agent supports replacing its built-in default
+instructions with the client-provided system prompt.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
 </ResponseField>
 
 ## <span class="font-mono">SessionUpdate</span>
@@ -9811,6 +9948,74 @@ A concrete `StateUpdate` replaces the entire previous snapshot.
 
 Optional and nullable. Omitted means unchanged; `null` clears it. If no
 title is set, the Client chooses a fallback presentation.
+
+</ResponseField>
+
+## <span class="font-mono">SystemPrompt</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client-provided system-level instructions for a session.
+
+Clients MUST only send this when the Agent advertises
+`session.systemPrompt`. Agents that cannot apply it, for example because of
+an unadvertised mode or an unsupported content block type, MUST return an
+error instead of creating, resuming, or forking the session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<a href="#contentblock">ContentBlock[]</a>} required>
+  The system prompt content.
+
+Agents advertising the capability MUST accept `ContentBlock::Text`.
+Other content block types are not part of the baseline. Agents MUST
+return an error for content blocks they do not support, including
+unknown types preserved as `ContentBlock::Other`.
+
+</ResponseField>
+<ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
+  How the Agent combines `content` with its own instructions.
+</ResponseField>
+
+## <span class="font-mono">SystemPromptMode</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+How the Agent combines a client-provided system prompt with its own instructions.
+
+This enum is closed: the mode decides how the Agent fulfills the request, so
+unknown values are rejected rather than preserved as a fallback variant.
+
+**Type:** Union
+
+<ResponseField name="append" type="string">
+Add the content to the Agent's own instructions rather than replacing them.
+
+Every Agent that advertises `session.systemPrompt` supports this mode.
+Where the content is placed and how it is formatted is implementation-defined.
+
+</ResponseField>
+
+<ResponseField name="override" type="string">
+Replace the Agent's built-in default instructions with the content.
+
+This does not change tool availability, MCP servers, permissions, or session
+configuration. Clients MUST only use this mode when the Agent advertises
+`session.systemPrompt.mode.override`.
 
 </ResponseField>
 
