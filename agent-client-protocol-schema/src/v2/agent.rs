@@ -7087,7 +7087,7 @@ mod test_serialization {
         );
     }
 
-    /// Unknown modes follow the v2 enum extension rule: they parse as
+    /// Unknown modes follow the enum variant extension rule: they parse as
     /// `SystemPromptMode::Other` so they are not dropped, and an agent that does
     /// not support them must reject the request.
     #[cfg(feature = "unstable_session_system_prompt")]

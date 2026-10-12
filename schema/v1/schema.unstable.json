@@ -7666,7 +7666,7 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\n[`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown\nvalues are rejected.",
+          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\n[`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown\nvalues parse as [`SystemPromptMode::Other`]; Agents MUST return an error\nfor modes they do not support.",
           "allOf": [
             {
               "$ref": "#/$defs/SystemPromptMode"
@@ -7690,8 +7690,8 @@
       "required": ["mode", "content"]
     },
     "SystemPromptMode": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown values are rejected: the mode decides how the Agent fulfills the\nrequest, so there is no safe fallback.",
-      "oneOf": [
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown modes parse as [`SystemPromptMode::Other`] so they can be stored,\nproxied, or forwarded. An Agent MUST return an error for a mode it does not\nsupport rather than treating it as `append` or `override`.",
+      "anyOf": [
         {
           "description": "Add the content to the Agent's own instructions rather than replacing them.\n\nEvery Agent that advertises `sessionCapabilities.systemPrompt` supports this mode.\nAgents SHOULD give the content system-level precedence, for example in the\nmodel's system prompt or developer instructions rather than in user-turn\ncontent. Where it is placed and how it is formatted is implementation-defined.",
           "type": "string",
@@ -7701,6 +7701,11 @@
           "description": "Replace the Agent's built-in default instructions with the content.\n\nThis does not change tool availability, MCP servers, permissions, or session\nconfiguration. Context the Agent supplies from the workspace or environment\nMAY still be included. Clients that use this mode take responsibility for any\ntool guidance or safety instructions the Agent's default instructions\nprovided, and MUST only use it when the Agent advertises\n`sessionCapabilities.systemPrompt.mode.override`.",
           "type": "string",
           "const": "override"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future system prompt mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "string"
         }
       ]
     },

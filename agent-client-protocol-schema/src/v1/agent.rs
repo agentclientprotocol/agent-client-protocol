@@ -3180,7 +3180,8 @@ pub struct SystemPrompt {
     ///
     /// Required on the wire, so every request states its mode. In Rust,
     /// [`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown
-    /// values are rejected.
+    /// values parse as [`SystemPromptMode::Other`]; Agents MUST return an error
+    /// for modes they do not support.
     pub mode: SystemPromptMode,
     /// The system prompt content.
     ///
@@ -3241,11 +3242,12 @@ impl SystemPrompt {
 ///
 /// How the Agent combines a client-provided system prompt with its own instructions.
 ///
-/// Unknown values are rejected: the mode decides how the Agent fulfills the
-/// request, so there is no safe fallback.
+/// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+/// proxied, or forwarded. An Agent MUST return an error for a mode it does not
+/// support rather than treating it as `append` or `override`.
 #[cfg(feature = "unstable_session_system_prompt")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SystemPromptMode {
@@ -3266,6 +3268,13 @@ pub enum SystemPromptMode {
     /// provided, and MUST only use it when the Agent advertises
     /// `sessionCapabilities.systemPrompt.mode.override`.
     Override,
+    /// Custom or future system prompt mode.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 // Prompt
@@ -6352,6 +6361,28 @@ mod test_serialization {
         );
     }
 
+    /// Unknown modes follow the enum variant extension rule: they parse as
+    /// `SystemPromptMode::Other` so they are not dropped, and an agent that does
+    /// not support them must reject the request.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_system_prompt_preserves_unknown_modes() {
+        for mode in ["_vendor_mode", "prepend"] {
+            let system_prompt_json =
+                json!({ "mode": mode, "content": [{ "type": "text", "text": "..." }] });
+            let system_prompt: SystemPrompt =
+                serde_json::from_value(system_prompt_json.clone()).unwrap();
+            assert_eq!(
+                system_prompt.mode,
+                SystemPromptMode::Other(mode.to_string())
+            );
+            assert_eq!(
+                serde_json::to_value(&system_prompt).unwrap(),
+                system_prompt_json
+            );
+        }
+    }
+
     /// The receiver acts on `systemPrompt`, so malformed values fail the request
     /// (`-32602`) instead of creating a session without the prompt, and `null`
     /// is equivalent to omitting the field.
@@ -6371,7 +6402,6 @@ mod test_serialization {
             json!("You are a code review specialist."),
             json!({ "content": [{ "type": "text", "text": "..." }] }),
             json!({ "mode": null, "content": [{ "type": "text", "text": "..." }] }),
-            json!({ "mode": "replace", "content": [{ "type": "text", "text": "..." }] }),
             json!({ "mode": 1, "content": [{ "type": "text", "text": "..." }] }),
             json!({ "mode": "append" }),
             json!({ "mode": "append", "content": "..." }),

@@ -236,13 +236,13 @@ This is additive — no existing fields change, no breaking modifications.
 
 The feature has the same shape in both protocol versions:
 
-|                       | v1                                                              | v2                                                   |
-| --------------------- | --------------------------------------------------------------- | ---------------------------------------------------- |
-| Capability            | `agentCapabilities.sessionCapabilities.systemPrompt`            | `capabilities.session.systemPrompt`                  |
-| Requests carrying it  | `session/new`, `session/load`, `session/resume`, `session/fork` | `session/new`, `session/resume`, `session/fork`      |
-| Unknown `mode` values | Rejected when parsing                                           | Preserved as an extension or future mode (see below) |
+|                             | v1                                                              | v2                                                                         |
+| --------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Capability                  | `agentCapabilities.sessionCapabilities.systemPrompt`            | `capabilities.session.systemPrompt`                                        |
+| Requests carrying it        | `session/new`, `session/load`, `session/resume`, `session/fork` | `session/new`, `session/resume`, `session/fork`                            |
+| Unknown content block types | Rejected when parsing                                           | Preserved as `ContentBlock::Other`; agents reject types they don't support |
 
-In v2, `mode` follows the [enum variant extension](/rfds/v2/enum-variant-extension) rule, like other v2 values that receivers act on, such as MCP server transports. Values beginning with `_` are reserved for implementation-specific modes, and other unknown values for future ACP modes. Receivers parse unknown modes instead of failing, so proxies and older SDKs can store and forward them. Clients **MUST** only use a mode the agent advertised; custom modes are advertised however their extension defines, for example in `_meta`. An agent that receives a mode it does not support **MUST** return an error rather than treating it as `append` or `override`.
+In both versions, `mode` follows the [enum variant extension](/rfds/v2/enum-variant-extension) rule, like other values that receivers act on, such as v2 MCP server transports. Values beginning with `_` are reserved for implementation-specific modes, and other unknown values for future ACP modes. Receivers parse unknown modes instead of failing, so proxies and older SDKs can store and forward them. Clients **MUST** only use a mode the agent advertised; custom modes are advertised however their extension defines, for example in `_meta`. An agent that receives a mode it does not support **MUST** return an error rather than treating it as `append` or `override`.
 
 ### Agent behavior
 
@@ -346,4 +346,4 @@ Append alone looked sufficient until we accounted for existing harness behavior:
 - 2026-05-21: Replaced the response acknowledgment (`systemPromptStatus`) with a JSON-RPC error when the agent cannot apply the prompt
 - 2026-07-21: Capability-gated opt-in under `sessionCapabilities`, type changed to `ContentBlock[]` with text-only baseline, explicit append/override delivery modes with `override` sub-capability, invalid-combination and load/resume/fork semantics — per maintainer review
 - 2026-10-09: Moved to Draft. Replaced the bare array and `systemPromptMode` with a `systemPrompt` object, grouped the `override` capability under `mode`, accepted it on load/resume/fork with re-send semantics based on a survey of existing agents, covered ACP v1 and v2, defined what override replaces, and relaxed requirements that agents could not observe or implement
-- 2026-10-12: Added the unstable v1 and v2 schema behind `unstable_session_system_prompt`, with draft docs. Made v2 `mode` extensible under the enum variant extension rule
+- 2026-10-12: Added the unstable v1 and v2 schema behind `unstable_session_system_prompt`, with draft docs. Made `mode` extensible under the enum variant extension rule
