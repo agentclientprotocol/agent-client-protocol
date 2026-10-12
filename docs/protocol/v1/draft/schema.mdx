@@ -9379,8 +9379,14 @@ capability allows them, and Agents MUST return an error for content
 blocks they do not support.
 
 </ResponseField>
-<ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
+<ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} >
   How the Agent combines `content` with its own instructions.
+
+Optional. Omitted and `null` are equivalent and mean
+`SystemPromptMode::Append`. Unknown values are rejected.
+
+    - Default: `"append"`
+
 </ResponseField>
 
 ## <span class="font-mono">SystemPromptMode</span>

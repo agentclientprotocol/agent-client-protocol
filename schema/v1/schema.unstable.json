@@ -7666,7 +7666,8 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "How the Agent combines `content` with its own instructions.",
+          "description": "How the Agent combines `content` with its own instructions.\n\nOptional. Omitted and `null` are equivalent and mean\n[`SystemPromptMode::Append`]. Unknown values are rejected.",
+          "default": "append",
           "allOf": [
             {
               "$ref": "#/$defs/SystemPromptMode"
@@ -7687,7 +7688,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["mode", "content"]
+      "required": ["content"]
     },
     "SystemPromptMode": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown values are rejected: the mode decides how the Agent fulfills the\nrequest, so there is no safe fallback.",
