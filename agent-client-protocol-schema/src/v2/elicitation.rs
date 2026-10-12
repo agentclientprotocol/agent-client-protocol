@@ -138,7 +138,7 @@ impl EnumOption {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
@@ -1646,7 +1646,7 @@ pub enum ElicitationMode {
 /// object for clients that store, replay, proxy, or forward elicitation
 /// requests.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_mode_schema))]
 #[serde(rename_all = "camelCase")]
@@ -1901,7 +1901,7 @@ pub enum ElicitationAction {
 /// response object for agents that store, replay, proxy, or forward elicitation
 /// responses.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_action_schema))]
 #[serde(rename_all = "camelCase")]
