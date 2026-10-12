@@ -916,14 +916,24 @@ pub struct SystemPrompt {
 
 #[cfg(feature = "unstable_client_system_prompt")]
 impl SystemPrompt {
-    /// Builds [`SystemPrompt`] with the required fields set; optional fields start unset.
+    /// Builds [`SystemPrompt`] in the default [`SystemPromptMode::Append`] mode; optional fields start unset.
+    ///
+    /// Use [`SystemPrompt::mode`] to request another mode. `mode` is always
+    /// serialized, so the wire format still states it explicitly.
     #[must_use]
-    pub fn new(mode: SystemPromptMode, content: Vec<ContentBlock>) -> Self {
+    pub fn new(content: Vec<ContentBlock>) -> Self {
         Self {
-            mode,
+            mode: SystemPromptMode::default(),
             content,
             meta: None,
         }
+    }
+
+    /// How the Agent combines `content` with its own instructions.
+    #[must_use]
+    pub fn mode(mut self, mode: SystemPromptMode) -> Self {
+        self.mode = mode;
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -948,7 +958,7 @@ impl SystemPrompt {
 /// unknown values are rejected rather than preserved as a fallback variant.
 #[cfg(feature = "unstable_client_system_prompt")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SystemPromptMode {
@@ -958,6 +968,7 @@ pub enum SystemPromptMode {
     /// Agents SHOULD give the content system-level precedence, for example in the
     /// model's system prompt or developer instructions rather than in user-turn
     /// content. Where it is placed and how it is formatted is implementation-defined.
+    #[default]
     Append,
     /// Replace the Agent's built-in default instructions with the content.
     ///
@@ -6996,10 +7007,9 @@ mod test_serialization {
     #[cfg(feature = "unstable_client_system_prompt")]
     #[test]
     fn test_system_prompt_lifecycle_request_serialization() {
-        let system_prompt = SystemPrompt::new(
-            SystemPromptMode::Append,
-            vec![ContentBlock::from("You are a code review specialist.")],
-        );
+        let system_prompt = SystemPrompt::new(vec![ContentBlock::from(
+            "You are a code review specialist.",
+        )]);
         let system_prompt_json = json!({
             "mode": "append",
             "content": [{ "type": "text", "text": "You are a code review specialist." }]
@@ -7036,7 +7046,7 @@ mod test_serialization {
         );
 
         let override_prompt =
-            SystemPrompt::new(SystemPromptMode::Override, vec![ContentBlock::from("...")]);
+            SystemPrompt::new(vec![ContentBlock::from("...")]).mode(SystemPromptMode::Override);
         let override_json = json!({
             "mode": "override",
             "content": [{ "type": "text", "text": "..." }]
