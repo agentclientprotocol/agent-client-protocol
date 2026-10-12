@@ -405,6 +405,14 @@ lossy adapter may omit the clear. The remaining fields (`title`, `kind`,
 unchanged from v1. The `status` enum adds `cancelled`, and both enums are now
 extensible.
 
+Top-level `_meta` is now stored tool-call state, too. v1 gave no rule for
+keeping a `tool_call_update`'s `_meta`, so Agents could use it for data about
+one report. In v2, a concrete `_meta` replaces the tool call's whole stored
+`_meta` object, and Clients do not merge keys. An Agent that sends different
+keys on different reports loses the earlier keys at each later report. To keep
+them, resend every key on each report that includes `_meta`, or omit `_meta`
+from reports that don't change it.
+
 ### Streaming tool-call content
 
 v2 adds `tool_call_content_chunk`, which **appends** a single `ToolCallContent` item to a tool call instead of resending the whole array:

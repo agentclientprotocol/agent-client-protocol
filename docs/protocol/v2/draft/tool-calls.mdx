@@ -106,7 +106,9 @@ unchanged when omitted, explicitly clear or unset the value when `null`, and
 replace the previous value when concrete values are sent. For a new
 `toolCallId`, omitted fields use Client defaults. `content` and `locations` are
 replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
-the field to leave it unchanged or set it to `null` to clear it. Use
+the field to leave it unchanged, set it to `null` to clear it, or send an
+object to replace the whole stored object; Clients do not merge its keys with
+earlier ones. Use
 `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection. Display-only terminal bytes use `terminal_output_chunk` instead.
