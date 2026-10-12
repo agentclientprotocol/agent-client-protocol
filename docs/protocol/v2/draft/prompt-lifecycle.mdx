@@ -3,7 +3,7 @@ title: "Prompt Lifecycle"
 description: "How prompts, state updates, and completion fit together"
 ---
 
-A prompt starts or contributes to foreground work in a session. The [Agent](/protocol/v2/draft/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
+A prompt starts or contributes to foreground work in a session. Foreground work can also start without a prompt, such as when the Agent follows up on a background task that finished; it reports the same states either way. The [Agent](/protocol/v2/draft/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
 
 `session/prompt` lasts until the Agent inserts the user message into the ACP conversation. This is what acceptance means for a prompt. The response returns that message's `messageId`; the Agent reports its content and placement, foreground state, output, and completion through `session/update` notifications.
 
@@ -831,7 +831,7 @@ Clients detect a lost connection or an exited Agent process themselves; no updat
 
 ## Session States
 
-`state_update` reports foreground work.
+`state_update` reports foreground work, whether or not a prompt started it.
 
 For exposed subagents, Agents **SHOULD** also mirror the same snapshot in the
 immediate parent's `subagent_update.state`. This keeps the parent's roster and

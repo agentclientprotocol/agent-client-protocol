@@ -1406,6 +1406,9 @@ impl UsageUpdate {
 
 /// The state of the agent's foreground work has changed.
 ///
+/// Foreground work can start without a prompt, such as when the agent follows up
+/// on a background task that finished; it reports the same states either way.
+///
 /// Background activity can continue and emit other `session/update` notifications
 /// while `idle`. Those notifications do not change this state.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

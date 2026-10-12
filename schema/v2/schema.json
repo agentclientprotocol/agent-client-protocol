@@ -5264,7 +5264,7 @@
       }
     },
     "StateUpdate": {
-      "description": "The state of the agent's foreground work has changed.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications do not change this state.",
+      "description": "The state of the agent's foreground work has changed.\n\nForeground work can start without a prompt, such as when the agent follows up\non a background task that finished; it reports the same states either way.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications do not change this state.",
       "anyOf": [
         {
           "description": "Foreground work is in progress.",

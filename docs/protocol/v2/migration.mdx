@@ -334,7 +334,7 @@ User messages, including locally handled commands, must be reported live but nee
 
 ### Session states
 
-`state_update` is new in v2 and reports foreground work using one of three stable states (extensible like all v2 enums):
+`state_update` is new in v2 and reports foreground work, whether or not a prompt started it, using one of three stable states (extensible like all v2 enums):
 
 - `running`: Foreground work is in progress.
 - `idle`: The Agent is ready to process a new prompt. Carries a `stopReason` when the transition ends foreground work.
