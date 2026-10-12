@@ -101,7 +101,7 @@ Clients provide the system prompt on `session/new` as an object with a `mode` an
 
 `session/new` is the natural place for this — it already serves as the configuration point for `cwd` and `mcpServers`, and system prompts are fundamentally session-scoped (they define the agent's behavioral context for the entire interaction).
 
-`mode` is optional and defaults to `append`; omitted and `null` are equivalent. A request therefore only replaces the agent's default instructions when it asks for `override` explicitly. The object can also carry `_meta` for agent-specific options that only make sense alongside the prompt.
+`mode` is required, so every request states which behavior it asks for. The object can also carry `_meta` for agent-specific options that only make sense alongside the prompt.
 
 Text content blocks are the baseline: any agent advertising the capability **MUST** accept `ContentBlock::Text`. Other content block types are not part of the initial baseline and may be introduced later as sub-capabilities (see FAQ).
 
@@ -212,7 +212,7 @@ Add the `SystemPrompt` type and an optional `systemPrompt` field to the session 
 
 ```typescript
 interface SystemPrompt {
-  mode?: SystemPromptMode | null; // omitted and null are equivalent: "append"
+  mode: SystemPromptMode;
   content: ContentBlock[];
   _meta?: { [key: string]: unknown } | null;
 }
@@ -346,4 +346,4 @@ Append alone looked sufficient until we accounted for existing harness behavior:
 - 2026-05-21: Replaced the response acknowledgment (`systemPromptStatus`) with a JSON-RPC error when the agent cannot apply the prompt
 - 2026-07-21: Capability-gated opt-in under `sessionCapabilities`, type changed to `ContentBlock[]` with text-only baseline, explicit append/override delivery modes with `override` sub-capability, invalid-combination and load/resume/fork semantics — per maintainer review
 - 2026-10-09: Moved to Draft. Replaced the bare array and `systemPromptMode` with a `systemPrompt` object, grouped the `override` capability under `mode`, accepted it on load/resume/fork with re-send semantics based on a survey of existing agents, covered ACP v1 and v2, defined what override replaces, and relaxed requirements that agents could not observe or implement
-- 2026-10-12: Added the unstable v1 and v2 schema behind `unstable_session_system_prompt`, with draft docs. Made `mode` optional, defaulting to `append`, and made v2 `mode` extensible under the enum variant extension rule
+- 2026-10-12: Added the unstable v1 and v2 schema behind `unstable_session_system_prompt`, with draft docs. Made v2 `mode` extensible under the enum variant extension rule

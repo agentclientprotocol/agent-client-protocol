@@ -3178,10 +3178,9 @@ impl HttpHeader {
 pub struct SystemPrompt {
     /// How the Agent combines `content` with its own instructions.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean
-    /// [`SystemPromptMode::Append`]. Unknown values are rejected.
-    #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[serde(default)]
+    /// Required on the wire, so every request states its mode. In Rust,
+    /// [`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown
+    /// values are rejected.
     pub mode: SystemPromptMode,
     /// The system prompt content.
     ///
@@ -6340,26 +6339,17 @@ mod test_serialization {
         );
     }
 
-    /// `mode` is optional: omitted and `null` both mean `append`, the mode that
-    /// keeps the Agent's own instructions.
+    /// `SystemPrompt::new` defaults to `append` in Rust, but `mode` is required on
+    /// the wire, so it is always serialized.
     #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
-    fn test_system_prompt_mode_defaults_to_append() {
-        let expected = SystemPrompt::new(vec![ContentBlock::from("...")]);
-        assert_eq!(expected.mode, SystemPromptMode::Append);
+    fn test_system_prompt_new_defaults_to_append() {
+        let system_prompt = SystemPrompt::new(vec![ContentBlock::from("...")]);
+        assert_eq!(system_prompt.mode, SystemPromptMode::Append);
         assert_eq!(
-            serde_json::to_value(&expected).unwrap(),
+            serde_json::to_value(&system_prompt).unwrap(),
             json!({ "mode": "append", "content": [{ "type": "text", "text": "..." }] })
         );
-        for system_prompt in [
-            json!({ "content": [{ "type": "text", "text": "..." }] }),
-            json!({ "mode": null, "content": [{ "type": "text", "text": "..." }] }),
-        ] {
-            assert_eq!(
-                serde_json::from_value::<SystemPrompt>(system_prompt).unwrap(),
-                expected
-            );
-        }
     }
 
     /// The receiver acts on `systemPrompt`, so malformed values fail the request
@@ -6379,6 +6369,8 @@ mod test_serialization {
 
         for system_prompt in [
             json!("You are a code review specialist."),
+            json!({ "content": [{ "type": "text", "text": "..." }] }),
+            json!({ "mode": null, "content": [{ "type": "text", "text": "..." }] }),
             json!({ "mode": "replace", "content": [{ "type": "text", "text": "..." }] }),
             json!({ "mode": 1, "content": [{ "type": "text", "text": "..." }] }),
             json!({ "mode": "append" }),

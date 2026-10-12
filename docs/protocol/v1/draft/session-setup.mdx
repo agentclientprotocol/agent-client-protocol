@@ -408,7 +408,7 @@ and, when the Agent supports it, `session/fork`.
 
 `systemPrompt` has the following behavior:
 
-- `mode` selects how the Agent combines `content` with its own instructions. It is optional: omitting it or setting it to `null` means `append`, so a request only replaces the Agent's default instructions when it asks for `override` explicitly
+- `mode` is required and selects how the Agent combines `content` with its own instructions
 - `append` adds `content` to the Agent's own instructions rather than replacing them. The Agent **SHOULD** give it system-level precedence, for example in the model's system prompt or developer instructions rather than in user-turn content; where it is placed and how it is formatted is up to the Agent
 - `override` replaces the Agent's built-in default instructions. It does not change tool availability, MCP servers, permissions, or session configuration. Context the Agent supplies from the workspace or environment, such as `AGENTS.md` files or skill listings, **MAY** still be included, and Agents **SHOULD** document what they keep. Clients that use `override` take responsibility for any tool guidance or safety instructions the Agent's default instructions provided
 - only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them

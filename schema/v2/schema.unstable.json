@@ -8827,8 +8827,7 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "How the Agent combines `content` with its own instructions.\n\nOptional. Omitted and `null` are equivalent and mean\n[`SystemPromptMode::Append`]. Unknown values parse as\n[`SystemPromptMode::Other`]; Agents MUST return an error for modes they\ndo not support.",
-          "default": "append",
+          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\n[`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown\nvalues parse as [`SystemPromptMode::Other`]; Agents MUST return an error\nfor modes they do not support.",
           "allOf": [
             {
               "$ref": "#/$defs/SystemPromptMode"
@@ -8849,7 +8848,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["content"]
+      "required": ["mode", "content"]
     },
     "SystemPromptMode": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown modes parse as [`SystemPromptMode::Other`] so they can be stored,\nproxied, or forwarded. An Agent MUST return an error for a mode it does not\nsupport rather than treating it as `append` or `override`.",

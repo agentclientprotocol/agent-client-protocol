@@ -9986,15 +9986,13 @@ blocks they do not support, including unknown types preserved as
 `ContentBlock::Other`.
 
 </ResponseField>
-<ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} >
+<ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
   How the Agent combines `content` with its own instructions.
 
-Optional. Omitted and `null` are equivalent and mean
-`SystemPromptMode::Append`. Unknown values parse as
-`SystemPromptMode::Other`; Agents MUST return an error for modes they
-do not support.
-
-    - Default: `"append"`
+Required on the wire, so every request states its mode. In Rust,
+`SystemPrompt::new` starts it as `SystemPromptMode::Append`. Unknown
+values parse as `SystemPromptMode::Other`; Agents MUST return an error
+for modes they do not support.
 
 </ResponseField>
 
