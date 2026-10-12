@@ -8587,7 +8587,7 @@
           }
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the new session.\n\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`. Omitted and `null` are equivalent and mean the\nAgent uses its own default instructions.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the new session.\n\nOptional. Omitted and `null` are equivalent and mean the Agent uses its\nown default instructions. Clients MUST only send this when the Agent\nadvertises `session.systemPrompt`.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -8866,7 +8866,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future system prompt mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients MUST only use a mode the Agent advertised. Agents MUST return an\nerror for a mode they do not support rather than treating it as `append`\nor `override`.",
+          "description": "Custom or future system prompt mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
           "type": "string"
         }
       ]
@@ -8965,7 +8965,7 @@
           }
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used for the\nsource session. Omitted and `null` are equivalent; the Agent may then keep\na system prompt it stored with the source session or use its default\ninstructions.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used for the\nsource session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -9032,7 +9032,7 @@
           ]
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created. Omitted and `null` are equivalent; the Agent may then\nkeep a system prompt it stored with the session or use its default\ninstructions.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"

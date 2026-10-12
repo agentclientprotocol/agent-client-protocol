@@ -1041,11 +1041,11 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 System-level instructions for the forked session.
 
-Clients MUST only send this when the Agent advertises
-`sessionCapabilities.systemPrompt`, and SHOULD send the same value they
-used for the source session. Omitted and `null` are equivalent; the Agent
-may then keep a system prompt it stored with the source session or use
-its default instructions.
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the source session or use its default
+instructions. Clients MUST only send this when the Agent advertises
+`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
+for the source session.
 
 </ResponseField>
 
@@ -1200,11 +1200,11 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 System-level instructions for the loaded session.
 
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the session or use its default instructions.
 Clients MUST only send this when the Agent advertises
-`sessionCapabilities.systemPrompt`, and SHOULD send the same value they
-used when the session was created. Omitted and `null` are equivalent; the
-Agent may then keep a system prompt it stored with the session or use its
-default instructions.
+`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
+when the session was created.
 
 </ResponseField>
 
@@ -1290,9 +1290,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 System-level instructions for the new session.
 
-Clients MUST only send this when the Agent advertises
-`sessionCapabilities.systemPrompt`. Omitted and `null` are equivalent and
-mean the Agent uses its own default instructions.
+Optional. Omitted and `null` are equivalent and mean the Agent uses its
+own default instructions. Clients MUST only send this when the Agent
+advertises `sessionCapabilities.systemPrompt`.
 
 </ResponseField>
 
@@ -1472,11 +1472,11 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 System-level instructions for the resumed session.
 
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the session or use its default instructions.
 Clients MUST only send this when the Agent advertises
-`sessionCapabilities.systemPrompt`, and SHOULD send the same value they
-used when the session was created. Omitted and `null` are equivalent; the
-Agent may then keep a system prompt it stored with the session or use its
-default instructions.
+`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
+when the session was created.
 
 </ResponseField>
 

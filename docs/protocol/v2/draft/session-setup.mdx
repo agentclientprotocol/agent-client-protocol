@@ -388,7 +388,7 @@ Agent supports it, `session/fork`.
 - only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them. Agents **MUST** return an error for content blocks they do not support, including unknown types
 - omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
 - on `session/resume` and `session/fork`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
-- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unadvertised mode, an unsupported content block type, or content that exceeds its limits, it **MUST** return an error and **MUST NOT** create, resume, or fork the session. `invalid_params` is the **RECOMMENDED** error for malformed or unsupported values
+- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unadvertised mode, an unsupported content block type, or content that exceeds its limits, it **MUST** return an error and **MUST NOT** create, resume, or fork the session. JSON-RPC `-32602` (Invalid params) is the **RECOMMENDED** error for malformed or unsupported values
 
 Clients **MUST** only send `systemPrompt` when the Agent advertises `session.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `session.systemPrompt.mode.override`:
 

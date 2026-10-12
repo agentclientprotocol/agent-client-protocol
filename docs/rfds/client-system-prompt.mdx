@@ -169,6 +169,20 @@ Agents that don't support client system prompts continue working exactly as they
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
+### Implemented
+
+The unstable schema landed in
+[PR #2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361),
+behind the `unstable_session_system_prompt` Cargo feature:
+
+- Both protocol versions define `SystemPrompt`, `SystemPromptMode`, and the
+  `SessionSystemPrompt*Capabilities` types, and accept `systemPrompt` on their
+  session lifecycle requests.
+- The unstable JSON schemas and the draft initialization and session setup docs
+  for both versions describe the capability and the field.
+
+The feature stays unstable until the RFD reaches Preview.
+
 ### Schema changes
 
 Add a `systemPrompt` session capability (advertised in the `initialize` response):
@@ -229,8 +243,6 @@ The feature has the same shape in both protocol versions:
 | Unknown `mode` values | Rejected when parsing                                           | Preserved as an extension or future mode (see below) |
 
 In v2, `mode` follows the [enum variant extension](/rfds/v2/enum-variant-extension) rule, like other v2 values that receivers act on, such as MCP server transports. Values beginning with `_` are reserved for implementation-specific modes, and other unknown values for future ACP modes. Receivers parse unknown modes instead of failing, so proxies and older SDKs can store and forward them. Clients **MUST** only use a mode the agent advertised; custom modes are advertised however their extension defines, for example in `_meta`. An agent that receives a mode it does not support **MUST** return an error rather than treating it as `append` or `override`.
-
-The v1 and v2 schema types are implemented behind the `unstable_session_system_prompt` Rust feature and appear in the unstable JSON schemas. The draft initialization and session setup docs for both versions document the capability and the field. The feature stays unstable until the RFD reaches Preview.
 
 ### Agent behavior
 
