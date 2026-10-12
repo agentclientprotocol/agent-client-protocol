@@ -513,6 +513,17 @@ A deleted file is now simply:
 
 There is no mechanical mapping from v2 diffs back to `oldText`/`newText`. When migrating a v1 client, render `patch.text` according to `patch.format`, using `changes` for headers, file trees, and non-text cases.
 
+### Edits known only as a snippet
+
+Many v1 Agents filled `oldText` and `newText` with just the replaced snippet, such as an edit tool's `old_string` and `new_string`, without reading the file. v2 has no form for a snippet: a `git_patch` hunk needs line numbers, and each entry in `changes` needs an operation, which a snippet does not always tell. An edit with an empty `old_string`, for example, is an `add` or a `modify` depending on whether the file exists. A tool that writes a whole file has the same gap: its input has the new contents, but not the old ones or the operation.
+
+Such an Agent has two options:
+
+- Read the file before the tool runs, and compute `changes` and `patch` from its contents.
+- Send no diff until the change is done. Until then, `locations` can still point the Client at the file.
+
+Read the file somewhere the tool waits on, so it still holds its contents from before the change. Reading once the tool input is complete races an auto-approved edit, which may already have run, and the patch would then be computed against the edited file. A permission check is safe, but auto-approved edits skip it, so they need a hook that runs before the tool, such as Claude Code's `PreToolUse` hook.
+
 ## Permission requests
 
 `session/request_permission` no longer takes a bare `toolCall`. The prompt copy and the subject of the request are now separate concerns:
@@ -776,7 +787,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics.
 7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, snapshots, and exit state; send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.
-8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible.
+8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible. If a tool's input describes an edit only as a snippet, read the file somewhere the tool waits on, before it can run, or send no diff until the change is done (see [Edits known only as a snippet](#edits-known-only-as-a-snippet)).
 9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations.
 10. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
 11. **Modes.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`.
