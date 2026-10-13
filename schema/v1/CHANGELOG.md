@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.26.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.25.0...schema-v1.26.0) - 2026-10-13
+
+### Added
+
+- *(unstable)* add client system prompt schema ([#2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361))
+
+### Other
+
+- *(unstable)* clarify that a forked session is active ([#2359](https://github.com/agentclientprotocol/agent-client-protocol/pull/2359))
+
 ## [1.25.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.24.1...schema-v1.25.0) - 2026-10-09
 
 ### Added

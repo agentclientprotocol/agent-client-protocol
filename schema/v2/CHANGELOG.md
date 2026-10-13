@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.9](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.8...schema-v2.0.0-alpha.9) - 2026-10-13
+
+### Added
+
+- *(unstable)* add client system prompt schema ([#2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361))
+
+### Other
+
+- *(schema)* specify how git_patch writes paths ([#2362](https://github.com/agentclientprotocol/agent-client-protocol/pull/2362))
+- *(unstable)* clarify that a forked session is active ([#2359](https://github.com/agentclientprotocol/agent-client-protocol/pull/2359))
+- *(schema)* list full v2 session baseline on AgentCapabilities.session ([#2358](https://github.com/agentclientprotocol/agent-client-protocol/pull/2358))
+- *(schema)* clarify v2 foreground work can start without a prompt ([#2357](https://github.com/agentclientprotocol/agent-client-protocol/pull/2357))
+
 ## [2.0.0-alpha.8](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.7...schema-v2.0.0-alpha.8) - 2026-10-09
 
 ### Added

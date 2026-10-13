@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [1.12.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.11.0...v1.12.0) - 2026-10-13
+
+### Added
+
+- *(unstable)* add client system prompt schema ([#2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361))
+- *(rust)* implement Eq for content blocks ([#2352](https://github.com/agentclientprotocol/agent-client-protocol/pull/2352))
+
+### Other
+
+- *(schema)* specify how git_patch writes paths ([#2362](https://github.com/agentclientprotocol/agent-client-protocol/pull/2362))
+- *(unstable)* clarify that a forked session is active ([#2359](https://github.com/agentclientprotocol/agent-client-protocol/pull/2359))
+- *(schema)* list full v2 session baseline on AgentCapabilities.session ([#2358](https://github.com/agentclientprotocol/agent-client-protocol/pull/2358))
+- *(schema)* clarify v2 foreground work can start without a prompt ([#2357](https://github.com/agentclientprotocol/agent-client-protocol/pull/2357))
+
 ## [1.11.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.2...v1.11.0) - 2026-10-09
 
 ### Added
