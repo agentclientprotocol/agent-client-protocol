@@ -79,6 +79,11 @@ restore methods.
 2. Add `replayFrom` to `ResumeSessionRequest` as an optional tagged union.
 3. Add the initial `replayFrom` variant `{ "type": "start" }`.
 
+Replay applies top-level `_meta` as a [metadata patch](./meta-patches.mdx), as
+live delivery does, and does not reset it. When the Client may already hold
+metadata for an entity, the Agent removes stale keys by setting them to `null`,
+or sends `_meta: null` before the current object.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -94,4 +99,5 @@ An object leaves room for future cursor forms that need fields. The initial
 
 ## Revision history
 
+- 2026-10-13: Replay applies top-level `_meta` as a key-level patch, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-02: Initial draft.

@@ -53,7 +53,7 @@ The v2 `ToolCallUpdate` payload has the following semantics:
 - Any concrete value replaces the previous value.
 - `content` and `locations` are replaced as whole arrays, not appended.
 - `[]` and `null` both clear a collection field.
-- `_meta` preserves omitted, `null`, and object values as distinct update signals.
+- `_meta` preserves omitted, `null`, and object values as distinct update signals. An object patches the stored metadata by top-level key, as defined by [Metadata Patches](./meta-patches.mdx).
 - For a new `toolCallId`, omitted fields use Client defaults.
 - Agents **SHOULD** include `title` the first time they report a `toolCallId`.
 
@@ -118,6 +118,7 @@ Tool-call updates need both operations. Omission means "I am not changing this f
 
 ## Revision history
 
+- 2026-10-13: A top-level `_meta` object now patches stored metadata by key, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-14: Distinguished tool-call content item chunks from terminal byte-stream chunks.
 - 2026-07-02: Updated permission requests to carry tool-call updates through an optional `subject` tagged union and to use separate `title` and `description` fields for permission-specific prompt text.
 - 2026-06-09: Added `tool_call_content_chunk` for streaming tool-call content.

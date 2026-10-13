@@ -38,6 +38,55 @@ Clients may propagate fields to the agent for correlation purposes, such as `req
 
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
 
+### Metadata Patches
+
+Upsert updates carry a top-level `_meta` that the Client stores with the entity they create or update: `tool_call_update` (including the `toolCall` of a permission request's `tool_call` subject), `terminal_update`, `user_message`, `agent_message`, `agent_thought`, `session_info_update`, and `compaction_update`. Clients apply this `_meta` as a patch, one top-level key at a time, using the same rule as the update's other fields:
+
+- Omit `_meta` to leave the stored metadata unchanged.
+- Set `_meta` to `null` to clear all stored metadata.
+- Send an object to patch the stored metadata:
+  - Keys the object omits keep their stored values, so `_meta: {}` changes nothing.
+  - A key set to `null` is removed. Removing a key that is not stored does nothing.
+  - Any other value replaces that key's stored value whole. Clients **MUST NOT** merge nested objects, and a `null` nested inside the value is ordinary data.
+
+For example, if a tool call's stored `_meta` is:
+
+```json
+{
+  "zed.dev/progress": 0.5,
+  "acme.dev/review": { "state": "pending" }
+}
+```
+
+and a later update sends:
+
+```json
+{
+  "sessionUpdate": "tool_call_update",
+  "toolCallId": "call_001",
+  "_meta": {
+    "zed.dev/progress": null,
+    "acme.dev/review": { "reviewer": "sam" },
+    "proxy.dev/route": "edge"
+  }
+}
+```
+
+the stored `_meta` becomes:
+
+```json
+{
+  "acme.dev/review": { "reviewer": "sam" },
+  "proxy.dev/route": "edge"
+}
+```
+
+A key set to `null` never holds stored data, including on the first update for an entity, so a key cannot store a literal JSON `null`; an extension that needs one can wrap it, for example `{ "value": null }`. Stored metadata with no keys is the same as no metadata. Because each top-level key is replaced whole, the implementation that owns a key, such as an extension using a namespaced key, can set, replace, or remove it without knowing the other keys. This does not resolve conflicts between writers: updates to the same key apply in receive order, and `_meta: null` clears every key.
+
+Replay and resynchronization apply these patches exactly as live delivery does and never reset metadata implicitly. An update that replaces another field, such as a message update with `content`, leaves the `_meta` keys it does not mention. To send the current metadata of an entity the Client may already hold, the Agent removes stale keys: it either sets each one to `null` alongside the current keys, or sends `_meta: null` and then the current object in a later update. The second form is not atomic, even within a JSON-RPC batch, so the Client may briefly hold no metadata. Send `_meta: null`, not `{}`, when the current metadata is empty. Intermediaries that combine updates **MUST** keep removals and clears.
+
+Other `_meta` fields are not patches, including the `_meta` of `plan_update`. Metadata on requests, responses, notification params, chunks, content items, snapshots, and other nested objects describes only the object that carries it, and a key set to `null` there is ordinary data. Do not copy such metadata into a patch unchanged, for example from a `session/list` entry into a `session_info_update`: its `null` key values would become removals. Put data about a single notification, rather than the entity, in the `session/update` notification's `params._meta`.
+
 ## Extension Methods
 
 The protocol reserves any method name starting with an underscore (`_`) for custom extensions. This allows implementations to add new functionality without the risk of conflicting with future protocol versions.

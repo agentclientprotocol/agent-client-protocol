@@ -310,7 +310,9 @@ Clients apply message updates and chunks in the order they are received for each
 - A message update with `content` replaces all content currently stored for that message, including content accumulated from earlier chunks.
 - A message update with `content: []` or `content: null` clears the message content.
 - A chunk appends its `content` to whatever content is current for that message, whether that content came from an earlier message update or earlier chunks.
-- A chunk's `_meta`, when present, is chunk-scoped.
+- A message update's top-level `_meta` patches the message's stored metadata by
+  top-level key, even when the same update replaces `content`, as described in [Metadata Patches](/protocol/v2/extensibility#metadata-patches). A chunk's `_meta`, when present, is
+  chunk-scoped.
 
 For example, if an Agent sends `agent_message` with `content: [A]`, then sends `agent_message_chunk` with `B`, the rendered message content is `[A, B]`. If it later sends another `agent_message` with `content: [C]`, the rendered content becomes `[C]`; the earlier full content and chunks are replaced. Subsequent chunks append to `[C]`.
 
@@ -546,7 +548,9 @@ The following `compaction_update` fields are optional, nullable patches:
 
 For each patch field, omission leaves the stored value unchanged, `null` clears
 it, and a concrete value replaces it. On a first-seen ID, omission and `null`
-both start with no value. `summary: []` also clears the summary.
+both start with no value. `summary: []` also clears the summary. A `_meta`
+object patches the stored metadata by top-level key instead of replacing it;
+see [Metadata Patches](/protocol/v2/extensibility#metadata-patches).
 
 Clients apply updates and chunks in receive order for each ID. Chunks append
 to the current summary; a concrete `summary` replaces all previously

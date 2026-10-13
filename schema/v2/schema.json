@@ -672,7 +672,7 @@
       ]
     },
     "ToolCallUpdate": {
-      "description": "Represents an upsert for a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nOnly [`ToolCallUpdate::tool_call_id`] is required. Other fields have patch semantics:\nomitted fields leave the existing tool call value unchanged, `null` clears or\nunsets the value, and concrete values replace the previous value. For\ncollection fields, concrete arrays replace the previous collection, and both\n`null` and `[]` clear the collection. When a client receives a tool call ID it\nhas not seen before, omitted fields use client defaults.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)",
+      "description": "Represents an upsert for a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nOnly [`ToolCallUpdate::tool_call_id`] is required. Other fields have patch semantics:\nomitted fields leave the existing tool call value unchanged, `null` clears or\nunsets the value, and concrete values replace the previous value. For\ncollection fields, concrete arrays replace the previous collection, and both\n`null` and `[]` clear the collection. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When a client receives a tool\ncall ID it has not seen before, omitted fields use client defaults.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)",
       "type": "object",
       "properties": {
         "toolCallId": {
@@ -744,7 +744,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted means no metadata update; `null` is an\nexplicit clear signal. Implementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -4976,7 +4976,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. Omitted means no metadata update; `null` is an explicit clear signal.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5006,7 +5006,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. Omitted means no metadata update; `null` is an explicit clear signal.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5036,7 +5036,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. Omitted means no metadata update; `null` is an explicit clear signal.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5435,7 +5435,7 @@
       }
     },
     "TerminalUpdate": {
-      "description": "An upsert for the stored state of an agent-owned terminal.\n\nOnly [`TerminalUpdate::terminal_id`] is required. Other fields have patch\nsemantics: omitted fields leave the stored value unchanged, `null` clears\nit, and concrete values replace it. When the terminal ID is new, omitted\nfields start unknown.",
+      "description": "An upsert for the stored state of an agent-owned terminal.\n\nOnly [`TerminalUpdate::terminal_id`] is required. Other fields have patch\nsemantics: omitted fields leave the stored value unchanged, `null` clears\nit, and concrete values replace it. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When the terminal ID is new,\nomitted fields start unknown.",
       "type": "object",
       "properties": {
         "terminalId": {
@@ -5488,7 +5488,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted means no metadata update; `null` is an\nexplicit clear signal. Implementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5786,7 +5786,7 @@
       "required": ["configOptions"]
     },
     "SessionInfoUpdate": {
-      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.\n\nOmitted fields leave the existing session info unchanged. `null` clears the\ncorresponding value.",
+      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.\n\nOmitted fields leave the existing session info unchanged. `null` clears the\ncorresponding value. A concrete `_meta` object patches the stored metadata by\ntop-level key.",
       "type": "object",
       "properties": {
         "title": {
@@ -5801,7 +5801,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted means no metadata update; `null` is an\nexplicit clear signal. Implementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5959,7 +5959,7 @@
       ]
     },
     "CompactionUpdate": {
-      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary.",
+      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary. A concrete `_meta` object patches the\nstored metadata by top-level key instead of replacing it.",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -5993,7 +5993,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "Extensible metadata patch for this compaction.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true

@@ -50,6 +50,7 @@ Each whole-message update is an upsert keyed by `messageId`:
 - Any concrete value replaces the previous value.
 - `content` is replaced as a whole array, not appended.
 - `[]` and `null` both clear `content`.
+- A `_meta` object patches the stored metadata by top-level key instead of replacing it, as defined by [Metadata Patches](./meta-patches.mdx).
 - For a new `messageId`, omitted fields use Client defaults.
 
 The matching chunk updates remain:
@@ -165,4 +166,5 @@ The Client appends those chunks to the message for that `messageId`. A later mes
 
 ## Revision history
 
+- 2026-10-13: A top-level `_meta` object now patches stored metadata by key, per [Metadata Patches](./meta-patches.mdx).
 - 2026-06-09: Initial draft.

@@ -12,7 +12,7 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal};
+use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal, apply_meta_update};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 /// Represents an upsert for a tool call that the language model has requested.
@@ -24,8 +24,9 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 /// omitted fields leave the existing tool call value unchanged, `null` clears or
 /// unsets the value, and concrete values replace the previous value. For
 /// collection fields, concrete arrays replace the previous collection, and both
-/// `null` and `[]` clear the collection. When a client receives a tool call ID it
-/// has not seen before, omitted fields use client defaults.
+/// `null` and `[]` clear the collection. A concrete `_meta` object instead
+/// patches the stored metadata by top-level key. When a client receives a tool
+/// call ID it has not seen before, omitted fields use client defaults.
 ///
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[serde_as]
@@ -85,10 +86,13 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_output: MaybeUndefined<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -175,11 +179,10 @@ impl ToolCallUpdate {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// Patches, clears, or leaves unchanged tool-call metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`].
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -189,7 +192,8 @@ impl ToolCallUpdate {
     /// Applies a later tool-call patch to this stored tool-call state.
     ///
     /// Fields set to `null` are preserved as `null` so callers can decide how to
-    /// render an explicitly cleared value.
+    /// render an explicitly cleared value. A concrete `_meta` object patches the
+    /// stored metadata by top-level key, as described by [`apply_meta_update`].
     pub fn apply_update(&mut self, update: ToolCallUpdate) {
         debug_assert_eq!(self.tool_call_id, update.tool_call_id);
         if !update.name.is_undefined() {
@@ -216,9 +220,7 @@ impl ToolCallUpdate {
         if !update.raw_output.is_undefined() {
             self.raw_output = update.raw_output;
         }
-        if !update.meta.is_undefined() {
-            self.meta = update.meta;
-        }
+        apply_meta_update(&mut self.meta, update.meta);
     }
 }
 
@@ -1120,6 +1122,35 @@ mod tests {
     }
 
     #[test]
+    fn tool_call_update_patches_meta_by_top_level_key() {
+        let mut stored: ToolCallUpdate = from_value(json!({
+            "toolCallId": "tc_1",
+            "_meta": {"zed.dev/a": 1, "acme.dev/b": {"x": 1}}
+        }))
+        .unwrap();
+
+        // A writer that only knows its own key must not erase other keys.
+        stored.apply_update(
+            from_value(json!({"toolCallId": "tc_1", "_meta": {"proxy.dev/c": true}})).unwrap(),
+        );
+        stored.apply_update(
+            from_value(json!({
+                "toolCallId": "tc_1",
+                "_meta": {"zed.dev/a": null, "acme.dev/b": {"y": 2}}
+            }))
+            .unwrap(),
+        );
+
+        assert_eq!(
+            to_value(&stored).unwrap(),
+            json!({
+                "toolCallId": "tc_1",
+                "_meta": {"acme.dev/b": {"y": 2}, "proxy.dev/c": true}
+            })
+        );
+    }
+
+    #[test]
     fn tool_call_wire_patches_preserve_omitted_fields_and_replace_values() {
         let initial = json!({
             "toolCallId": "tc_1",
@@ -1157,7 +1188,6 @@ mod tests {
             ("locations", json!([])),
             ("rawInput", json!({})),
             ("rawOutput", json!({})),
-            ("_meta", json!({})),
         ] {
             let original = expected[field].clone();
             // Empty values replace rather than merge; null remains distinct.

@@ -299,9 +299,14 @@ pub struct SessionMessage {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
-    /// Omitted leaves metadata unchanged; `null` clears it.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// Implementations MUST NOT make assumptions about values in `_meta`.
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -350,7 +355,10 @@ impl SessionMessage {
         self
     }
 
-    /// Sets, clears, or leaves unchanged message metadata.
+    /// Patches, clears, or leaves unchanged message metadata.
+    ///
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -726,7 +734,8 @@ pub enum CompactionStatus {
 ///
 /// `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 /// stored value unchanged, `null` clears it, and a concrete value replaces it.
-/// `summary: []` also clears the summary.
+/// `summary: []` also clears the summary. A concrete `_meta` object patches the
+/// stored metadata by top-level key instead of replacing it.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -748,7 +757,14 @@ pub struct CompactionUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub error: MaybeUndefined<String>,
-    /// Extensible metadata patch for this compaction.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
+    ///
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -786,7 +802,10 @@ impl CompactionUpdate {
         self
     }
 
-    /// Sets, clears, or omits the metadata patch.
+    /// Patches, clears, or leaves unchanged compaction metadata.
+    ///
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -852,9 +871,10 @@ impl CompactionSummaryChunk {
 ///
 /// Only [`SubagentUpdate::session_id`] is required. Other fields have
 /// patch semantics: omitted fields leave the stored value unchanged, `null`
-/// clears or unsets the value, and concrete values replace it. For `state`,
-/// `null` removes the current state report and leaves activity unconfirmed;
-/// it does not report idle or cancellation. A child whose capabilities are
+/// clears or unsets the value, and concrete values replace it. A concrete
+/// `_meta` object instead patches the stored metadata by top-level key. For
+/// `state`, `null` removes the current state report and leaves activity
+/// unconfirmed; it does not report idle or cancellation. A child whose capabilities are
 /// unset permits no Client-initiated session mutations.
 ///
 /// The title and description provide the parent's display metadata for the
@@ -910,10 +930,13 @@ pub struct SubagentUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub state: MaybeUndefined<StateUpdate>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -970,7 +993,10 @@ impl SubagentUpdate {
         self
     }
 
-    /// Sets, clears, or leaves unchanged subagent metadata.
+    /// Patches, clears, or leaves unchanged subagent metadata.
+    ///
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -1278,7 +1304,8 @@ impl ConfigOptionUpdate {
 /// This allows clients to display dynamic session names and track session state changes.
 ///
 /// Omitted fields leave the existing session info unchanged. `null` clears the
-/// corresponding value.
+/// corresponding value. A concrete `_meta` object patches the stored metadata by
+/// top-level key.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1297,10 +1324,13 @@ pub struct SessionInfoUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -1332,11 +1362,10 @@ impl SessionInfoUpdate {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// Patches, clears, or leaves unchanged session metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -1890,10 +1919,13 @@ pub struct UserMessage {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -1922,11 +1954,10 @@ impl UserMessage {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// Patches, clears, or leaves unchanged message metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -1962,10 +1993,13 @@ pub struct AgentMessage {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -1994,11 +2028,10 @@ impl AgentMessage {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// Patches, clears, or leaves unchanged message metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -2034,10 +2067,13 @@ pub struct AgentThought {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -2066,11 +2102,10 @@ impl AgentThought {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// Patches, clears, or leaves unchanged thought metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();

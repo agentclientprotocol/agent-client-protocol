@@ -106,10 +106,11 @@ unchanged when omitted, explicitly clear or unset the value when `null`, and
 replace the previous value when concrete values are sent. For a new
 `toolCallId`, omitted fields use Client defaults. `content` and `locations` are
 replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
-the field to leave it unchanged, set it to `null` to clear it, or send an
-object to replace the whole stored object; Clients do not merge its keys with
-earlier ones. Use
-`tool_call_content_chunk` when a tool produces content incrementally and the
+the field to leave it unchanged or set it to `null` to clear it. An object
+patches the stored metadata by top-level key: a key set to `null` is removed,
+any other value replaces that key whole, and keys the object omits are
+unchanged. See [Metadata Patches](/protocol/v2/draft/extensibility#metadata-patches).
+Use `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection. Display-only terminal bytes use `terminal_output_chunk` instead.
 For `name` specifically, omission leaves the existing name unchanged, `null`
@@ -455,7 +456,9 @@ empty.
   and `null` both mean the value was not provided. Conventional POSIX signal
   names include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use
   platform-specific names. Terminal exit and tool call status are independent.
-- The top-level `_meta` is terminal-scoped and follows the same patch semantics.
+- The top-level `_meta` is terminal-scoped and follows the same patch semantics,
+  except that an object patches the stored metadata by top-level key. See
+  [Metadata Patches](/protocol/v2/draft/extensibility#metadata-patches).
 
 For example, a process terminated by a POSIX termination signal can report
 `"exitStatus": { "signal": "SIGTERM" }`.

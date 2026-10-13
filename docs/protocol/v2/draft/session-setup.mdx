@@ -265,6 +265,13 @@ arrive after a message update, they append to that update's current content.
 Message updates that omit `content` can update other optional fields without
 changing the current content.
 
+Replay also applies top-level `_meta` as a
+[metadata patch](/protocol/v2/draft/extensibility#metadata-patches) and does not reset it.
+A message update that replaces `content` leaves `_meta` keys it does not
+mention. When the Client may already hold metadata for an entity, the Agent
+removes stale keys by setting them to `null`, or sends `_meta: null` before the
+current object.
+
 When all requested replay entries have been reported to the Client, the Agent
 **MUST** respond to the original `session/resume` request.
 

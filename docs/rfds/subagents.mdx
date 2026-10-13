@@ -134,7 +134,9 @@ Only `update.sessionId` is required:
 
 In both versions, these optional fields are nullable patches: omission means
 unchanged, `null` clears the field, and a concrete value replaces the whole
-previous field. Clearing `title` or `description` removes the parent's display
+previous field. The exception is a concrete `_meta` object in v2, which patches
+the stored metadata by top-level key as defined by
+[v2 Metadata Patches](/rfds/v2/meta-patches). Clearing `title` or `description` removes the parent's display
 override. Clearing `state` leaves current activity unconfirmed, not idle.
 Both `capabilities: null` and `capabilities: {}` disable Client-initiated
 mutations.
@@ -286,8 +288,10 @@ missing participants do not prevent displaying the message.
 
 Whole-message updates use the same patch convention in both versions:
 omitted `content` and `_meta` leave the stored value unchanged, `null` clears
-the field, and concrete values replace the whole field. `content: []` also
-clears accumulated content. New messages start with empty content and no
+the field, and concrete values replace the whole field. The exception is a
+concrete `_meta` object in v2, which patches the stored metadata by top-level
+key as defined by [v2 Metadata Patches](/rfds/v2/meta-patches). `content: []`
+also clears accumulated content. New messages start with empty content and no
 metadata when those fields are omitted. Chunk `_meta` is not a message patch:
 omitted or `null` means no metadata for that chunk.
 
@@ -1209,6 +1213,10 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-13: In v2, a concrete top-level `_meta` object on `subagent_update`
+  and `session_message` patches stored metadata by key, per
+  [v2 Metadata Patches](/rfds/v2/meta-patches). v1 still replaces the whole
+  object.
 - 2026-10-05: Limited the cancellation cascade to the descendant work that the
   cancelled work waits on, leaving other descendants, such as background
   children, to the Agent. Clients clean up a descendant's pending requests and

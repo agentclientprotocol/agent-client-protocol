@@ -2300,10 +2300,13 @@ content.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
@@ -2335,10 +2338,13 @@ content.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
@@ -2990,43 +2996,34 @@ timeline position. Later updates with the same ID patch that entity in place.
 
 `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 stored value unchanged, `null` clears it, and a concrete value replaces it.
-`summary: []` also clears the summary.
+`summary: []` also clears the summary. A concrete `_meta` object patches the
+stored metadata by top-level key instead of replacing it.
 
 **Type:** Object
 
 **Properties:**
 
-<ResponseField name="_meta" type={"object | null"}>
-  Extensible metadata patch for this compaction.
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
+
 </ResponseField>
-<ResponseField
-  name="compactionId"
-  type={<a href="#compactionid">CompactionId</a>}
-  required
->
+<ResponseField name="compactionId" type={<a href="#compactionid">CompactionId</a>} required>
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
-<ResponseField name="error" type={"string | null"}>
+<ResponseField name="error" type={"string | null"} >
   Human-readable error details for the compaction.
 </ResponseField>
-<ResponseField
-  name="status"
-  type={<a href="#compactionstatus">CompactionStatus</a>}
-  required
->
+<ResponseField name="status" type={<a href="#compactionstatus">CompactionStatus</a>} required>
   Current lifecycle status.
 </ResponseField>
-<ResponseField
-  name="summary"
-  type={
-    <>
-      <span>
-        <a href="#contentblock">ContentBlock[]</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
+<ResponseField name="summary" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
   Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
@@ -8269,7 +8266,8 @@ Agents send this notification to update session information like title or custom
 This allows clients to display dynamic session names and track session state changes.
 
 Omitted fields leave the existing session info unchanged. `null` clears the
-corresponding value.
+corresponding value. A concrete `_meta` object patches the stored metadata by
+top-level key.
 
 **Type:** Object
 
@@ -8277,10 +8275,13 @@ corresponding value.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
@@ -8312,9 +8313,14 @@ An upsert for an inter-session message.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  Omitted leaves metadata unchanged; `null` clears it.
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-Implementations MUST NOT make assumptions about values in `_meta`.
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
@@ -8499,10 +8505,13 @@ fields in the new update patch the previous fields for that message.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
@@ -8559,10 +8568,13 @@ fields in the new update patch the previous fields for that message.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
@@ -8619,10 +8631,13 @@ fields in the new update patch the previous fields for that message.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
@@ -8931,10 +8946,13 @@ A tool call has been created or updated.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
@@ -8986,10 +9004,13 @@ An agent-owned terminal has been created or updated.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="command" type={"string | null"} >
@@ -9148,10 +9169,13 @@ Session metadata has been updated (title, timestamps, custom metadata)
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -9246,40 +9270,30 @@ A context compaction has been created or updated.
 
 <Expandable title="Properties">
 
-<ResponseField name="_meta" type={"object | null"}>
-  Extensible metadata patch for this compaction.
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
+
 </ResponseField>
-<ResponseField
-  name="compactionId"
-  type={<a href="#compactionid">CompactionId</a>}
-  required
->
+<ResponseField name="compactionId" type={<a href="#compactionid">CompactionId</a>} required>
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
-<ResponseField name="error" type={"string | null"}>
+<ResponseField name="error" type={"string | null"} >
   Human-readable error details for the compaction.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"compaction_update"`.
 </ResponseField>
-<ResponseField
-  name="status"
-  type={<a href="#compactionstatus">CompactionStatus</a>}
-  required
->
+<ResponseField name="status" type={<a href="#compactionstatus">CompactionStatus</a>} required>
   Current lifecycle status.
 </ResponseField>
-<ResponseField
-  name="summary"
-  type={
-    <>
-      <span>
-        <a href="#contentblock">ContentBlock[]</a>
-      </span>
-      <span> | null</span>
-    </>
-  }
->
+<ResponseField name="summary" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
   Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
@@ -9327,10 +9341,13 @@ that ownership association's metadata.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
@@ -9383,9 +9400,14 @@ received from another session.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  Omitted leaves metadata unchanged; `null` clears it.
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-Implementations MUST NOT make assumptions about values in `_meta`.
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
@@ -9905,9 +9927,10 @@ is required.
 
 Only `SubagentUpdate::session_id` is required. Other fields have
 patch semantics: omitted fields leave the stored value unchanged, `null`
-clears or unsets the value, and concrete values replace it. For `state`,
-`null` removes the current state report and leaves activity unconfirmed;
-it does not report idle or cancellation. A child whose capabilities are
+clears or unsets the value, and concrete values replace it. A concrete
+`_meta` object instead patches the stored metadata by top-level key. For
+`state`, `null` removes the current state report and leaves activity
+unconfirmed; it does not report idle or cancellation. A child whose capabilities are
 unset permits no Client-initiated session mutations.
 
 The title and description provide the parent's display metadata for the
@@ -9926,10 +9949,13 @@ change this association.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
@@ -10198,8 +10224,9 @@ An upsert for the stored state of an agent-owned terminal.
 
 Only `TerminalUpdate::terminal_id` is required. Other fields have patch
 semantics: omitted fields leave the stored value unchanged, `null` clears
-it, and concrete values replace it. When the terminal ID is new, omitted
-fields start unknown.
+it, and concrete values replace it. A concrete `_meta` object instead
+patches the stored metadata by top-level key. When the terminal ID is new,
+omitted fields start unknown.
 
 **Type:** Object
 
@@ -10207,10 +10234,13 @@ fields start unknown.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="command" type={"string | null"} >
@@ -10611,8 +10641,9 @@ Only `ToolCallUpdate::tool_call_id` is required. Other fields have patch semanti
 omitted fields leave the existing tool call value unchanged, `null` clears or
 unsets the value, and concrete values replace the previous value. For
 collection fields, concrete arrays replace the previous collection, and both
-`null` and `[]` clear the collection. When a client receives a tool call ID it
-has not seen before, omitted fields use client defaults.
+`null` and `[]` clear the collection. A concrete `_meta` object instead
+patches the stored metadata by top-level key. When a client receives a tool
+call ID it has not seen before, omitted fields use client defaults.
 
 See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls)
 
@@ -10622,10 +10653,13 @@ See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draf
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted means no metadata update; `null` is an
-explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
@@ -10861,10 +10895,13 @@ content.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys. Omitted means no metadata update; `null` is an explicit clear signal.
+metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT make assumptions about values at these keys.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
