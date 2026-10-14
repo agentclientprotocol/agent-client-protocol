@@ -41,6 +41,7 @@ Agents advertise the new behavior with optional markers. Omission or `null` mean
 
 - `limit`: the Agent honors `limit` and `includeWorktrees` on `session/list` and guarantees the order below.
 - `subscribe`: the Agent supports `session/list/subscribe`, `session/list/changes` and `session/list/unsubscribe`.
+- `agentWorktrees`: the Agent sets `agentWorktree` on every row whose session runs in a linked Git worktree that the Agent itself created. Without this marker a missing `agentWorktree` means "unknown", not "created by the user".
 
 In v1 they extend the existing `SessionListCapabilities`:
 
@@ -48,7 +49,7 @@ In v1 they extend the existing `SessionListCapabilities`:
 {
   "agentCapabilities": {
     "sessionCapabilities": {
-      "list": { "limit": {}, "subscribe": {} }
+      "list": { "limit": {}, "subscribe": {}, "agentWorktrees": {} }
     }
   }
 }
@@ -60,13 +61,13 @@ In v2, `session/list` is part of the baseline session surface, so the markers go
 {
   "capabilities": {
     "session": {
-      "list": { "limit": {}, "subscribe": {} }
+      "list": { "limit": {}, "subscribe": {}, "agentWorktrees": {} }
     }
   }
 }
 ```
 
-The new row fields need no capability: they are optional and Clients ignore what is missing.
+The new row fields need no capability: they are optional and Clients ignore what is missing. The one exception is `agentWorktree`: its absence means "not created by the Agent" only when `agentWorktrees` is advertised.
 
 ### `session/list` request and order
 
@@ -106,7 +107,8 @@ New optional fields on `SessionInfo`:
   "forkedFrom": "sess_parent42",
   "state": "requires_action",
   "lastTurnEndedAt": "2026-10-06T09:58:10Z",
-  "cost": { "amount": 1.23, "currency": "USD" }
+  "cost": { "amount": 1.23, "currency": "USD" },
+  "agentWorktree": true
 }
 ```
 
@@ -118,6 +120,7 @@ New optional fields on `SessionInfo`:
 | `state`           | `running`, `idle`, `requires_action` (the v2 `state_update` values) `reviewing` (the agent is in a code-review mode) or `error`: not running, and the last turn ended with an error rather than a user cancel. A new turn clears it. Omitted when the Agent does not know, for example for a session driven by another process it cannot see. |
 | `lastTurnEndedAt` | When the last turn ended. Clients use it to decide whether there is unseen output; `updatedAt` cannot be used for that, because it also moves when the user types a prompt elsewhere.                                                                                                                                                         |
 | `cost`            | The existing `Cost` type from `usage_update`. Only sent when the Agent already has the value; Agents are not expected to compute it.                                                                                                                                                                                                          |
+| `agentWorktree`   | `true` when the session runs in a linked Git worktree that the Agent itself created and manages for it (for example `claude --worktree` or a Codex app worktree), as opposed to a worktree the user created. Omitted otherwise. The row's `cwd` stays the session's own directory inside the worktree. See `agentWorktrees` above.            |
 
 All values are best-effort snapshots. A field that is missing from a refreshed row means "unknown now": in particular a missing `state` clears a previously reported one. A Client that has the session open keeps using the session's own `session/update` stream, which is authoritative.
 
@@ -186,6 +189,8 @@ Prior art: the same design is implemented as a JetBrains `_meta` extension (`_me
 
 Both implementations can include sessions from the project's linked Git worktrees, the way the native clients do (Claude Code's `includeWorktrees`, Codex TUI's resume picker), behind the same opt-in `includeWorktrees` flag, and report each row's real `cwd`. Their archive and unarchive follow #2161 (boolean `archived` row field), with the three-value `archived` filter described above, and archiving stops a session that is open, as proposed above.
 
+Both also mark the rows of worktrees the Agent created, as `_meta.jetbrains.air.agentWorktree` with the capability `sessionWorktrees`. `claude-agent-acp` ([agentclientprotocol/claude-agent-acp#1352](https://github.com/agentclientprotocol/claude-agent-acp/pull/1352)) reads the transcript's `worktree-state` record: the latest one counts, and only when the session entered a worktree it created, not an existing one. `codex-acp` ([agentclientprotocol/codex-acp#631](https://github.com/agentclientprotocol/codex-acp/pull/631)) checks for the `codex-thread.json` owner file Codex writes into the worktree's git directory.
+
 Plan:
 
 1. Land this RFD as a draft and collect feedback, especially on the capability spelling and on the subscription.
@@ -220,6 +225,10 @@ They are complementary. The JetBrains extension also implements archive/unarchiv
 
 Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex only exposes token counts for loaded threads. Requiring a value would force Agents to re-read whole transcripts and maintain price tables. `cost` is sent only when the Agent already has it.
 
+### Why mark worktrees the Agent created?
+
+Agents increasingly create a Git worktree per session on their own: `claude --worktree`, the Codex app and the Copilot app all do. To the user such a session belongs to the project they started it from, not to a separate checkout. A worktree the user created by hand is a deliberate separate checkout. With `includeWorktrees` a Client gets both kinds with nothing to tell them apart, and only the Agent knows which worktrees it made (for example from its own transcript or a marker file it writes into the worktree). `agentWorktree` lets the Client show an Agent-made session under its project and leave user-made worktrees to its own worktree handling. The capability marker keeps an old Agent's missing field from reading as "created by the user".
+
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 - **Keep it in `_meta`.** That is how it is implemented today, but every Client and Agent pair would need its own extension for a need every history view has.
@@ -236,3 +245,4 @@ Agents differ: Claude Code persists a cumulative `cost-state` per session, Codex
 - 2026-10-08: Replaced the change hint with a list subscription on a `cwd`.
 - 2026-10-08: Added the `reviewing` and `error` states.
 - 2026-10-09: Proposed that archiving a session stops it.
+- 2026-10-15: Added the `agentWorktree` row field and the `agentWorktrees` capability marker, to tell worktrees the Agent created from worktrees the user created.
