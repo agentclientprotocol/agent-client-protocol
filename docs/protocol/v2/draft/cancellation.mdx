@@ -41,6 +41,8 @@ Both kinds of cancellation answer `session/prompt` with `-32800` only before the
 
 ## Example: Cascading Cancellation Flow
 
+Sending `session/cancel` does not automatically send `$/cancel_request` for outstanding Agent-to-Client requests. An Agent can explicitly propagate cancellation to those requests, but the Client **MUST** answer pending permission requests with the `cancelled` outcome when it sends `session/cancel`, as specified in [active session work cancellation](/protocol/v2/draft/prompt-lifecycle#cancellation); it does not wait for `$/cancel_request`.
+
 ```mermaid
 sequenceDiagram
     participant Client
@@ -59,14 +61,10 @@ sequenceDiagram
     Note over Client,Agent: 3. Client cancels active session work
     Client->>Agent: session/cancel (sessionId)
 
-    Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: $/cancel_request (id=2) [permission request]
-    Agent->>Client: $/cancel_request (id=3) [permission request]
+    Note over Client,Agent: 4. Client cancels pending permission requests
+    Client->>Agent: response to id=2 (outcome: cancelled)
+    Client->>Agent: response to id=3 (outcome: cancelled)
 
-    Note over Client,Agent: 5. Client confirms individual cancellations
-    Client->>Agent: response to id=2 (error -32800 "Cancelled")
-    Client->>Agent: response to id=3 (error -32800 "Cancelled")
-
-    Note over Client,Agent: 6. Agent reports cancellation completion
+    Note over Client,Agent: 5. Agent stops active work and reports cancellation completion
     Agent->>Client: session/update (state_update: idle, stopReason: "cancelled")
 ```
