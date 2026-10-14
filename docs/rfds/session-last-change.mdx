@@ -1,0 +1,143 @@
+---
+title: "A session's last change: one definition, and catching up to it"
+---
+
+Author(s): [nikita-ashihmin](https://github.com/nikita-ashihmin)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+A Client that stores its own copy of a session's history needs to answer one question when it reconnects: _has this session changed since I last saw it?_ Today it cannot, because the only signal — `updatedAt` on a `session/list` row — means something different in every Agent. This RFD proposes two things, in that order of importance.
+
+- **One definition of "last change".** `updatedAt` moves when, and only when, the session's retained conversation changes. Connecting, resuming, writing a settings checkpoint, or touching a transcript file does not move it. Every Agent interprets it the same way, so a Client can compare it against its own stored copy and get a reliable yes or no.
+- **A way to act on a "yes" without replaying everything.** If the Agent advertises it, the Client resumes with `replayFrom: { "type": "message", "messageId": "..." }` and receives only what it is missing. If the Agent does not advertise it, or no longer retains that message, the Client resumes with `{ "type": "start" }` and rebuilds its copy from scratch — exactly what it does today.
+
+The second part is an optional optimization gated by `session.resume.replayFromMessage`. The first part is the fix: without it, a Client cannot even decide whether to catch up.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+`session/list` reports `updatedAt` as the "RFC 3339 timestamp of the last activity in the session". "Activity" is not defined, and the two most widely deployed open-source adapters read it differently:
+
+- [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) derives it from the session transcript — historically the file's mtime, now the time of the last message capped at the mtime.
+- [`codex-acp`](https://github.com/agentclientprotocol/codex-acp) reports the thread's `updated_at`, which moves on every write to the rollout, including the settings checkpoint that a plain resume appends.
+
+Both therefore move `updatedAt` for a reconnect that added nothing to the conversation. For a Client that holds no history this is harmless: the value is a sort key for a session picker and a slightly wrong order costs nothing.
+
+For a Client that _persists_ history it is the whole problem. An IDE that renders a transcript before any Agent process exists, a mobile surface relayed from such an IDE, a proxy that journals a session — each of these has a stored copy, goes offline, and comes back to a session that may have been continued in another surface in the meantime: the same user ran the same session in the vendor's terminal CLI, or another IDE window attached to it. Such a Client compares the row's `updatedAt` against the newest entry in its own copy, and the comparison is unusable:
+
+- With no tolerance, a reconnect that changed nothing reads as a change, so the Client rebuilds its transcript after an idle reconnect — visible, since a rebuild re-renders the whole conversation.
+- With a tolerance wide enough to suppress that, it stops seeing real continuations, which is the case it exists for.
+
+There is no tolerance that separates the two, because the two produce the same kind of event. In practice Clients give up on the comparison and show a stale transcript, or paper over it with agent-specific `_meta` fields. The [Session list extensions RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/2323) standardizes `lastPromptAt`, which fixes list _ordering_; "last change" and "last prompt" are different questions, and a Client that persists history is asking the first one.
+
+A second, smaller problem shows up once the comparison works: the only way to act on it is `replayFrom: { "type": "start" }`, which re-sends everything the Client already has. In one measured session of a shipping IDE Client, a transcript that was behind by roughly fifty turns was recovered by replaying **27,765 updates**. The cost scales with the session, not with the gap, so the long-lived sessions most likely to be continued elsewhere are the most expensive to resynchronize.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### `updatedAt` means the last change to the conversation
+
+Replace the current one-line definition with a normative one:
+
+> `updatedAt` is the RFC 3339 timestamp of the last change to the session's retained conversation. A change is an addition to, or a removal from, the history the Agent would replay for this session: a user message inserted by a prompt, a message or chunk the Agent produced, a tool call and its result, a compaction, a rewind.
+>
+> Agents **MUST NOT** move `updatedAt` for anything else. Creating a connection, loading or resuming the session, writing session configuration, re-reading or rewriting the stored transcript, and reporting the session in a list are explicitly not changes.
+>
+> Agents **SHOULD** derive the value from the retained history itself rather than from the storage that holds it, so that a rewrite of the transcript file does not read as a change. When an Agent cannot determine the value, it **MUST** omit the field rather than substitute the storage timestamp.
+
+The final sentence matters as much as the rest: an omitted `updatedAt` tells a Client "ask me directly", while a storage timestamp tells it something false in a shape it cannot detect.
+
+This narrows a field that Clients already read, so it is a behavior change for the Agents named above — but in the direction every Client already assumes the field has, and in the direction the field's own name points.
+
+### Catching up without a full replay
+
+[The v2 Session Resume Replay RFD](/rfds/v2/session-resume-replay) defines `replayFrom: { "type": "start" }` and explicitly reserves cursors that identify a message. This is that cursor:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/resume",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "cwd": "/home/user/project",
+    "replayFrom": { "type": "message", "messageId": "msg_agent_c42b9" }
+  }
+}
+```
+
+Gated by one capability marker:
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "resume": { "replayFromMessage": {} }
+    }
+  }
+}
+```
+
+- The cursor is **inclusive**, as the existing rule requires: the Agent replays the named message first, then all retained history after it. The Client names the newest message it stored, receives it back, and upserts it by `messageId` — already idempotent under the current rules — which is also its confirmation that the two copies meet at that point.
+- `messageId` names a message of this session as the Agent reported it; a Client **MUST NOT** construct one. For as long as the Agent retains a message, every report of it — live, replayed, or replayed again after a restart — **MUST** use the same `messageId`. v2 already requires this for a retained user message inserted by `session/prompt`; the cursor needs it to hold for Agent messages too.
+- When the Agent **does not retain** the named message — a compaction dropped it, a rewind removed it, the ID predates a format change — it **MUST** fail the request with `-32602` and replay nothing. The Client then resumes again with `{ "type": "start" }` and rebuilds. An Agent that did not advertise the marker answers a message cursor the same way.
+
+That last rule is deliberately the dumb one. The Client always knows which of the two replays it asked for, so it always knows whether to append or to clear its copy, and no in-band marker is needed to tell it. The cost is one extra round trip on the rare diverged path, in exchange for the Agent never having to describe a replay it has already started sending.
+
+Clients and Agents that do not opt in keep today's behavior exactly: a Client with no stored history ignores all of this, and a Client that stores history falls back to the full replay it performs today.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A user imports a session into an IDE, works in it, closes the window, and continues the same session for an afternoon in the vendor's terminal CLI. The IDE lists sessions on the next start, sees an `updatedAt` newer than the last entry in its stored copy, and knows — without a tolerance, without knowing which Agent it is talking to, without reading anyone's transcript format — that it is behind. It resumes with the ID of its newest stored message and receives the afternoon: fifty turns, not twenty-eight thousand updates, appended to the transcript already on screen.
+
+Had the user rewound the session in the terminal, that message would no longer be retained, the resume fails, and the IDE resumes again from the start and rebuilds. Had the user merely reconnected in the terminal and typed nothing, `updatedAt` would not have moved and the IDE would not have asked at all.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. **Docs.** Rewrite the `updatedAt` field description in session list with the normative definition, including the omit-rather-than-substitute rule.
+2. **Reference implementations.** `codex-acp` stops reporting the rollout's `updated_at` and reports the time of the newest conversation entry; `claude-agent-acp` drops the mtime cap and the mtime fallback, omitting the field when it cannot read the transcript. Both are closer to the definition than to each other today.
+3. **Schema.** Add the `ReplayFromMessage` variant to the `ReplayFrom` union and the `session.resume.replayFromMessage` marker, and extend "Resuming Sessions" with the cursor, the stable-ID requirement, and the not-retained error.
+4. **Reference implementations, part two.** Both adapters can honor a message cursor by scanning their own transcript to the ID and replaying the tail — the same scan their list already performs.
+5. **Fold in.** Once championed, the cursor half can be merged into the Session Resume Replay RFD, which reserved it, rather than living on as a separate document.
+
+Steps 1 and 2 stand on their own and are worth landing without the rest.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Isn't `lastPromptAt` from the Session list extensions RFD already this?
+
+No, and the two compose rather than compete. `lastPromptAt` answers "when did the user last engage with this session", which is what a recency-sorted picker wants and what a long agent turn should not disturb. `updatedAt` answers "when did this session's content last change", which is what a Client holding a copy of that content needs. A session where the Agent worked for an hour after one prompt has one `lastPromptAt` and many changes.
+
+### Why not add a new field instead of narrowing `updatedAt`?
+
+Because the narrow meaning is the one the field's name already claims, and the one every Client already assumes. Adding a second, stricter timestamp leaves `updatedAt` as a field whose meaning no Client can rely on, and every Client would have to read the new one, so the old one would carry no information while still being sent.
+
+### Why should an Agent omit `updatedAt` rather than fall back to the file's mtime?
+
+An omitted field is honest and detectable: the Client sees it and asks the Agent directly, or treats the session as unknown. A storage timestamp is wrong in a way the Client cannot see, and it is wrong in the expensive direction — it reads as a change, so the Client rebuilds a transcript that did not change.
+
+### Why does a non-retained cursor error instead of falling back to a full replay?
+
+So that the Client never has to be told which replay it is receiving. If the Agent could silently switch to a full replay, the Client would have to learn that from somewhere before applying the updates — and the `session/resume` response, which ends the replay, arrives after every update it would describe. An error costs one round trip on the diverged path and keeps the Agent from having to narrate its own replay.
+
+### Why a `messageId` and not an opaque Agent-provided cursor?
+
+An opaque cursor would have to survive a Client restart, and the protocol already tells Clients not to persist the opaque `session/list` pagination cursor; a second opaque token with the opposite lifetime rule invites exactly the wrong handling. A `messageId` is already required on every message update, is already stable for retained user messages across restarts, and is already stored by every Client this RFD is for.
+
+### How does this interact with compaction?
+
+A compaction changes the retained conversation, so it moves `updatedAt`. If the cursor names a message the compaction dropped, that message is not retained and the error path applies, which is correct: the Client's copy no longer shares a tail with the Agent's.
+
+## Revision history
+
+- 2026-10-14: Initial draft.
