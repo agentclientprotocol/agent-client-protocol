@@ -1406,11 +1406,21 @@ impl UsageUpdate {
 
 /// The state of the agent's foreground work has changed.
 ///
-/// Foreground work can start without a prompt, such as when the agent follows up
-/// on a background task that finished; it reports the same states either way.
+/// Foreground work is the agent's active response or workflow in the session,
+/// including model processing, tool execution, and waiting for user action needed
+/// to continue that work. It can start with a prompt or be agent-initiated, for
+/// example to pursue an ongoing goal or follow up on a completed background task.
+/// Either way, the agent MUST report `running` when foreground work starts or
+/// resumes, and `idle` when it ends. The agent SHOULD include a stop reason on
+/// that idle update. Agent-initiated work does not require a prompt request or a
+/// synthetic user message.
 ///
 /// Background activity can continue and emit other `session/update` notifications
-/// while `idle`. Those notifications do not change this state.
+/// while `idle`. Those notifications, including a detached task's progress or
+/// completion, do not by themselves change this state. A permission request only
+/// warrants `requires_action` when foreground work is blocked on user action.
+///
+/// See protocol docs: [Foreground and Background Work](https://agentclientprotocol.com/protocol/prompt-lifecycle#foreground-and-background-work)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "state", rename_all = "snake_case")]
@@ -1418,7 +1428,7 @@ impl UsageUpdate {
 pub enum StateUpdate {
     /// Foreground work is in progress.
     Running(RunningStateUpdate),
-    /// The agent is ready to process a new prompt.
+    /// No foreground work is active. Background activity may continue.
     Idle(IdleStateUpdate),
     /// Foreground work is blocked on user action.
     RequiresAction(RequiresActionStateUpdate),
@@ -1478,10 +1488,11 @@ impl RunningStateUpdate {
     }
 }
 
-/// The agent is ready to process a new prompt.
+/// No foreground work is active. Background activity may continue.
 ///
 /// Agents SHOULD include a `stopReason` when the idle transition ends foreground
-/// work. An omitted, `null`, or malformed `stopReason` means the agent is not
+/// work. An idle update that does not end foreground work need not include one.
+/// Receivers treat an omitted, `null`, or malformed `stopReason` as the agent not
 /// reporting one.
 #[serde_as]
 #[skip_serializing_none]

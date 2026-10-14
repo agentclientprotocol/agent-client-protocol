@@ -3,7 +3,7 @@ title: "Prompt Lifecycle"
 description: "How prompts, state updates, and completion fit together"
 ---
 
-A prompt starts or contributes to foreground work in a session. Foreground work can also start without a prompt, such as when the Agent follows up on a background task that finished; it reports the same states either way. The [Agent](/protocol/v2/draft/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
+A prompt starts or contributes to [foreground work](#foreground-and-background-work) in a session. Foreground work can also start without a prompt, such as when the Agent follows up on a background task that finished; it reports the same states either way. The [Agent](/protocol/v2/draft/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
 
 `session/prompt` lasts until the Agent inserts the user message into the ACP conversation. This is what acceptance means for a prompt. The response returns that message's `messageId`; the Agent reports its content and placement, foreground state, output, and completion through `session/update` notifications.
 
@@ -110,6 +110,38 @@ The two views have independent message IDs. The Agent reports each side only
 when observed; Clients must not synthesize an incoming entry from an outgoing
 one or forward the content themselves. Neither view acknowledges completed
 recipient processing.
+
+## Foreground and Background Work
+
+**Foreground work** is the Agent's active response or workflow in the session, including model processing, tool execution, and waiting for user action needed to continue that work. The Agent **MUST** treat that work as foreground whether it was started by a user prompt or by the Agent, for example to pursue an ongoing goal, continue earlier work, or act on a completed background task.
+
+**Background activity** runs independently of the active response or workflow. A detached task continuing to run, its progress or completion updates, and session metadata updates do not by themselves start foreground work. If the Agent begins a response or workflow to act on a background result, that work is foreground work.
+
+The same lifecycle requirements apply regardless of what started foreground work:
+
+- The Agent **MUST** report `running` when foreground work starts or resumes.
+- While foreground work is blocked on user action, the Agent **SHOULD** report `requires_action`.
+- When foreground work ends, the Agent **MUST** report `idle`, even if background activity continues, and **SHOULD** include the corresponding [stop reason](#stop-reasons).
+
+Agent-initiated work does not require a `session/prompt` request or a synthetic user message. State updates describe the session's foreground work, not individual model exchanges, tool calls, or prompt requests.
+
+For example, when a background task completes and the Agent starts a follow-up response:
+
+```text
+Agent → Client: state_update (running)
+Agent → Client: agent_message / tool_call_update / …
+Agent → Client: state_update (idle, stopReason: end_turn)
+```
+
+In contrast, if the Agent only reports a detached task's progress or completion while idle:
+
+```text
+Agent → Client: tool_call_update (in_progress)
+Agent → Client: tool_call_update (completed)
+Session remains idle; no foreground work started or ended.
+```
+
+A permission request does not by itself change the foreground state. If it blocks foreground work, the Agent **SHOULD** report `requires_action`. If it belongs only to independent background activity, the session may remain `idle`. Resolving a permission request does not itself imply `running`: the Agent **MUST** report `running` if foreground work starts or resumes as a result. See [Requesting Permission](/protocol/v2/draft/tool-calls#requesting-permission).
 
 ## Prompt Lifecycle
 
@@ -667,13 +699,13 @@ When foreground work ends, the Agent **MUST** report `idle` with a `state_update
 }
 ```
 
-Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update with the corresponding [`StopReason`](#stop-reasons).
+Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update. They **SHOULD** include the corresponding [`StopReason`](#stop-reasons).
 
 ### 5. Tool Invocation and Status Reporting
 
 Before proceeding with execution, the Agent **MAY** request permission from the Client via the `session/request_permission` method.
 
-While foreground work is blocked on a permission response or other user action, the Agent **SHOULD** report `requires_action`. When work resumes, the Agent **SHOULD** report `running`.
+While foreground work is blocked on a permission response or other user action, the Agent **SHOULD** report `requires_action`. When foreground work resumes, the Agent **MUST** report `running`. A permission request for independent background activity does not by itself change the foreground state; see [Foreground and Background Work](#foreground-and-background-work).
 
 Once permission is granted (if required), the Agent **SHOULD** invoke the tool and report a status update marking the tool as `in_progress`:
 
@@ -764,7 +796,7 @@ The cycle returns to [step 3](#3-agent-reports-output), continuing until the lan
 
 ## Stop Reasons
 
-When an Agent stops foreground work, it must specify the corresponding `StopReason` on an idle `state_update` session update:
+When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update:
 
 <ResponseField name="end_turn">
   The Agent has no more work to perform after the language model finishes
@@ -843,7 +875,7 @@ do not represent additional work or usage.
 <ResponseField name="running">Foreground work is in progress.</ResponseField>
 
 <ResponseField name="idle">
-  No foreground work is in progress. The Agent is ready to process a new prompt.
+  No foreground work is active. Background activity may continue.
 </ResponseField>
 
 <ResponseField name="requires_action">

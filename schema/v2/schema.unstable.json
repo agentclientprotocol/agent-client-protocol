@@ -6637,7 +6637,7 @@
       "required": ["totalTokens", "inputTokens", "outputTokens"]
     },
     "IdleStateUpdate": {
-      "description": "The agent is ready to process a new prompt.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An omitted, `null`, or malformed `stopReason` means the agent is not\nreporting one.",
+      "description": "No foreground work is active. Background activity may continue.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An idle update that does not end foreground work need not include one.\nReceivers treat an omitted, `null`, or malformed `stopReason` as the agent not\nreporting one.",
       "type": "object",
       "properties": {
         "usage": {
@@ -6850,7 +6850,7 @@
       }
     },
     "StateUpdate": {
-      "description": "The state of the agent's foreground work has changed.\n\nForeground work can start without a prompt, such as when the agent follows up\non a background task that finished; it reports the same states either way.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications do not change this state.",
+      "description": "The state of the agent's foreground work has changed.\n\nForeground work is the agent's active response or workflow in the session,\nincluding model processing, tool execution, and waiting for user action needed\nto continue that work. It can start with a prompt or be agent-initiated, for\nexample to pursue an ongoing goal or follow up on a completed background task.\nEither way, the agent MUST report `running` when foreground work starts or\nresumes, and `idle` when it ends. The agent SHOULD include a stop reason on\nthat idle update. Agent-initiated work does not require a prompt request or a\nsynthetic user message.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications, including a detached task's progress or\ncompletion, do not by themselves change this state. A permission request only\nwarrants `requires_action` when foreground work is blocked on user action.\n\nSee protocol docs: [Foreground and Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#foreground-and-background-work)",
       "anyOf": [
         {
           "description": "Foreground work is in progress.",
@@ -6869,7 +6869,7 @@
           ]
         },
         {
-          "description": "The agent is ready to process a new prompt.",
+          "description": "No foreground work is active. Background activity may continue.",
           "type": "object",
           "properties": {
             "state": {
