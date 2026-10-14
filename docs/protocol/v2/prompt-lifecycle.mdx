@@ -600,7 +600,7 @@ The Agent **MAY** also report current session context and cumulative cost state 
 
 ### 4. Report Completion
 
-When the Agent is ready to process a new prompt, it **MUST** report `idle` with a `state_update` notification. When the transition ends foreground work, the Agent **MUST** include the corresponding [`StopReason`](#stop-reasons):
+When foreground work ends, the Agent **MUST** report `idle` with a `state_update` notification and include the corresponding [`StopReason`](#stop-reasons):
 
 ```json
 {
@@ -788,7 +788,7 @@ Clients detect a lost connection or an exited Agent process themselves; no updat
 <ResponseField name="running">Foreground work is in progress.</ResponseField>
 
 <ResponseField name="idle">
-  The Agent is ready to process a new prompt.
+  No foreground work is in progress. The Agent is ready to process a new prompt.
 </ResponseField>
 
 <ResponseField name="requires_action">
@@ -810,6 +810,8 @@ Clients **MAY** cancel active session work at any time by sending a `session/can
   }
 }
 ```
+
+If the Agent cancels a prompt request before insertion, it answers that request with `-32800` as described in [request cancellation](/protocol/v2/cancellation). Once the message is inserted, the prompt request still succeeds with its `messageId`; cancellation does not undo that insertion.
 
 The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification.
 
