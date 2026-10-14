@@ -188,7 +188,62 @@ This means checks like `promptCapabilities.image === true` become presence check
 - `capabilities.session` itself is **optional**, so agents that don't do session-based prompting (for example, agents that only serve specialized extension surfaces) can omit it entirely. Currently there isn't protocol support for this, but several experiments are in flight and we are making sure non-session components can be expressed via capabilities.
 - `loadSession` is gone along with `session/load` (see [Session setup](#session-setup-and-lifecycle)).
 - The individual `list`, `resume`, and `close` markers are gone: advertising `capabilities.session` at all now **requires** supporting the baseline methods `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`. Optional extras such as `session.delete`, `session.additionalDirectories`, `session.prompt`, and `session.mcp` keep their own markers.
-- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminal execution](#client-file-system-and-terminal-execution-removed)). Stable v2 currently defines no standard Client capability fields. Agent-owned terminal display is baseline behavior, not a Client execution capability.
+- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminal execution](#client-file-system-and-terminal-execution-removed)). Stable v2 defines Client `auth` and `elicitation` capability groups. Agent-owned terminal display is baseline behavior, not a Client execution capability.
+
+### Complete v1 → v2 capability mapping
+
+The tables below cover the capability fields in the stable and draft schemas. Paths in the first column are relative to v1 `agentCapabilities` or `clientCapabilities`. Paths in the second are relative to v2 `capabilities`. A **Draft only** row does not become available merely by negotiating v2.
+
+Convert a boolean support marker from `true` to `{}` and from `false` to an omitted key or `null` only where the table defines a corresponding v2 marker. Object support markers remain objects. Do not copy removed v1 fields into v2 capabilities or move them into `_meta` as though they were standard v2 capabilities. A removed marker may mean the feature is now baseline, not that the feature was removed.
+
+#### Agent capability fields
+
+| v1 Agent field                                                | v2 Agent field or behavior                                                                                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Baseline session support (implicit in v1)                     | Advertise `session: {}` only when all seven v2 baseline session methods are implemented.                                              |
+| `loadSession`                                                 | Removed with `session/load`. Migrate restoration to `session/resume`.                                                                 |
+| `promptCapabilities.image`                                    | `session.prompt.image`. Boolean → object marker.                                                                                      |
+| `promptCapabilities.audio`                                    | `session.prompt.audio`. Boolean → object marker.                                                                                      |
+| `promptCapabilities.embeddedContext`                          | `session.prompt.embeddedContext`. Boolean → object marker.                                                                            |
+| MCP stdio support (implicit in v1)                            | Explicit `session.mcp.stdio: {}` marker. Advertise only if supported.                                                                 |
+| `mcpCapabilities.http`                                        | `session.mcp.http`. Boolean → object marker.                                                                                          |
+| `mcpCapabilities.sse`                                         | Removed with the legacy SSE transport. Use HTTP when supported.                                                                       |
+| `mcpCapabilities.acp`                                         | **Draft only.** `session.mcp.acp`. Boolean → object marker.                                                                           |
+| `sessionCapabilities.list`                                    | Marker removed. `session/list` is required when `session` is advertised.                                                              |
+| `sessionCapabilities.resume`                                  | Marker removed. `session/resume` is required when `session` is advertised.                                                            |
+| `sessionCapabilities.close`                                   | Marker removed. `session/close` is required when `session` is advertised.                                                             |
+| `sessionCapabilities.delete`                                  | `session.delete`.                                                                                                                     |
+| `sessionCapabilities.additionalDirectories`                   | `session.additionalDirectories`.                                                                                                      |
+| `sessionCapabilities.systemPrompt`, including `mode.override` | **Draft only.** `session.systemPrompt`, including `mode.override`. Object markers unchanged.                                          |
+| `sessionCapabilities.fork`                                    | **Draft only.** `session.fork`.                                                                                                       |
+| `auth.logout`                                                 | Marker removed. A non-empty `authMethods` list requires both `auth/login` and `auth/logout`.                                          |
+| `auth`                                                        | `auth` remains a group for authentication-related extensions, not method availability.                                                |
+| `providers`                                                   | **Draft only.** `providers`. Object marker unchanged.                                                                                 |
+| `nes` and its nested `events` and `context` fields            | **Draft only.** `nes`. Nested fields unchanged, including document-event markers, `syncKind`, context markers, and `maxCount` limits. |
+| `positionEncoding`                                            | **Draft only.** `positionEncoding`. Selected encoding unchanged.                                                                      |
+
+#### Client capability fields
+
+| v1 Client field                                  | v2 Client field or behavior                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `fs.readTextFile`, `fs.writeTextFile`            | Removed with Client file-system methods. Expose Client-provided file tools through MCP if needed.                                    |
+| `terminal`                                       | Removed with Client terminal-control methods. Agent-owned terminal display does not require a Client capability.                     |
+| `auth.terminal`                                  | `auth.terminal`. Boolean → object marker. This is distinct from the removed execution `terminal` capability.                         |
+| `elicitation.form`, `elicitation.url`            | `elicitation.form`, `elicitation.url`. Object markers unchanged. An empty `elicitation` object advertises no modes.                  |
+| `session.configOptions.boolean`                  | Marker removed. v2 supports boolean config options without Client capability negotiation.                                            |
+| `session.notices`                                | Marker removed. v2 notices require no Client capability and may be ignored.                                                          |
+| `session.compaction`                             | Marker removed. v2 compaction updates require no Client capability.                                                                  |
+| `session`                                        | Group removed. Its standard children have the behavior described above.                                                              |
+| `plan`                                           | Marker removed. `plan_update` is stable in v2 without Client capability negotiation. `plan_removed` remains **Draft only**.          |
+| `subagents`                                      | Marker removed. Subagent updates and session-directed messages remain **Draft only** in v2 but require no Client `subagents` marker. |
+| `nes.jump`, `nes.rename`, `nes.searchAndReplace` | **Draft only.** Same fields under `nes`. Object markers unchanged.                                                                   |
+| `positionEncodings`                              | **Draft only.** `positionEncodings`. Encoding preference list unchanged.                                                             |
+
+The draft per-child-session `capabilities.cancel` marker in `subagent_update` is unchanged. It is not an initialize capability.
+
+For surviving capability objects, move `_meta` with its owning group (for example, Agent `promptCapabilities._meta` → `capabilities.session.prompt._meta`). Root capability metadata moves to `capabilities._meta`. For removed groups or markers, review extension semantics and choose a supported root or nested `_meta` location explicitly. See [Advertising Custom Capabilities](/protocol/v2/extensibility#advertising-custom-capabilities).
+
+Receivers **MUST** ignore unknown fields, including nested capability fields, but this does not make v1 field names valid v2 advertisements. See [Unknown Object Fields](/protocol/v2/extensibility#unknown-object-fields).
 
 ## Authentication
 

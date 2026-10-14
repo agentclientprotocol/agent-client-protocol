@@ -38,6 +38,14 @@ Clients may propagate fields to the agent for correlation purposes, such as `req
 
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
 
+## Unknown Object Fields
+
+Receivers **MUST** ignore unrecognized properties of protocol-defined objects, including properties nested within capability objects. An otherwise valid message **MUST NOT** be rejected solely because it contains unrecognized properties. Ignoring a property means not assigning protocol behavior to it. It does not imply support for the feature it describes.
+
+This rule does not relax validation of known properties or change their documented handling of malformed values. Unknown enum values, discriminator values, and method names follow their own rules. They are not unknown object fields. A malformed value for a known discriminator **MUST NOT** be treated as an unknown variant.
+
+Ignoring an unknown property means not interpreting it. Implementations are not required to remove it from the message.
+
 ## Extension Methods
 
 The protocol reserves any method name starting with an underscore (`_`) for custom extensions. This allows implementations to add new functionality without the risk of conflicting with future protocol versions.
@@ -123,7 +131,15 @@ When storing, replaying, proxying, or forwarding data, implementations **SHOULD*
 
 ## Advertising Custom Capabilities
 
-Implementations **SHOULD** use the `_meta` field in capability objects to advertise support for extensions and their methods:
+Implementations **SHOULD** advertise support for extensions and their methods using namespaced entries in capability objects' `_meta` fields:
+
+- Use `capabilities._meta` for independent extension surfaces or extensions that apply across capability groups.
+- Use a nested capability object's `_meta`, where that object defines one, for extensions scoped to that capability. For example, an extension to session prompting belongs in `capabilities.session.prompt._meta`.
+- Creating a standard capability object to carry `_meta` still advertises the standard support associated with that object. An Agent **MUST NOT** send `capabilities.session: { "_meta": ... }` unless it supports all seven baseline session methods.
+
+Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Use the same metadata location and namespaced key on both sides of an extension's negotiation.
+
+For example, an Agent can advertise an independent workspace extension without advertising session support:
 
 ```json
 {

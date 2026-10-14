@@ -724,7 +724,7 @@ Display-only terminal bytes use `terminal_output_chunk`, not
 Terminals](/protocol/v2/draft/tool-calls#display-only-terminals) for their
 per-terminal byte ordering and snapshot semantics.
 
-While tools execute on the Agent, they **MAY** leverage Client capabilities negotiated during initialization.
+Tools execute on the Agent. Clients may expose tools through MCP servers supplied during session setup. v2 does not define Client file-system or terminal-execution capabilities. Client interactions such as elicitation remain subject to their own negotiated capabilities.
 
 When the tool completes, the Agent sends another update with the final status and any content:
 

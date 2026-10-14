@@ -108,6 +108,8 @@ only apply within a supported surface.
 
 Capabilities may specify the availability of protocol methods, notifications, or a subset of their parameters. They may also signal behaviors of the Agent or Client implementation.
 
+Receivers **MUST** ignore unknown capability fields at every nesting level, as described in [Unknown Object Fields](/protocol/v2/extensibility#unknown-object-fields). Unknown fields do not advertise support for any capability the receiver understands.
+
 Implementations can also [advertise custom capabilities](/protocol/v2/extensibility#advertising-custom-capabilities) using the `_meta` field to indicate support for protocol extensions.
 
 ### Client Capabilities
