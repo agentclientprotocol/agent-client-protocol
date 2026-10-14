@@ -1298,6 +1298,10 @@ pub struct ResumeSessionRequest {
     /// replay includes the position identified by the cursor. Supplying
     /// `{ "type": "start" }` means the Agent should replay all retained
     /// conversation history before responding.
+    ///
+    /// Agents MUST reject unsupported cursor types or malformed cursor values
+    /// with `-32602` (Invalid params), rather than substituting another cursor
+    /// or resuming without replay.
     #[serde(default)]
     pub replay_from: Option<ReplayFrom>,
     /// **UNSTABLE**
@@ -1413,9 +1417,10 @@ pub enum ReplayFrom {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this cursor should preserve the raw
-    /// payload when storing, replaying, proxying, or forwarding requests, and
-    /// otherwise reject the request rather than guessing where to replay from.
+    /// Intermediaries SHOULD preserve the raw payload when storing, replaying,
+    /// proxying, or forwarding requests. Agents that do not support this cursor
+    /// MUST reject the request with `-32602` (Invalid params), rather than
+    /// substituting another cursor or resuming without replay.
     #[serde(untagged)]
     Other(OtherReplayFrom),
 }

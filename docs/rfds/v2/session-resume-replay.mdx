@@ -50,9 +50,22 @@ The initial replay cursor is:
 conversation history through `session/update` notifications before responding to the
 `session/resume` request.
 
+The schema accepts custom and future cursor types for preservation by
+intermediaries. An Agent that does not support the supplied cursor type
+**MUST** reject `session/resume` with `-32602` (Invalid params), rather than
+substituting another cursor or resuming without replay. Malformed cursors also
+result in `-32602`.
+
 This does not require the Agent to retain every inserted user message.
 Live-only or discarded messages may be absent; retained user messages must
 preserve the ID returned on insertion, as defined by the [Prompt Lifecycle RFD](./prompt.mdx#correlation-and-replay).
+
+Agents **SHOULD** preserve agent and thought message IDs across replay when
+possible, but Clients cannot assume stability across reconnects or Agent
+restarts. Full replay should rebuild those message histories rather than merge
+them into existing history solely by ID. The empty-content primer for chunked
+replay initializes or clears content only under the ID used in that replay;
+it does not reconcile messages previously delivered under different IDs.
 
 Replay cursors are inclusive: replay includes the position identified by the
 cursor. Future cursors that identify a message would replay that message before

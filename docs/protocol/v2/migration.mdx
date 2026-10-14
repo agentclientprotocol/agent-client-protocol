@@ -648,7 +648,9 @@ v1 had two ways to reattach to a session: `session/load` (replays full history, 
 - Omit `replayFrom` (or send `null`) for v1 `resume` behavior: reattach without replay.
 - `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays the entire conversation as `session/update` notifications (using the same message, tool-call, and plan updates as live traffic) before responding.
 
-The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods.
+The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods. The schema accepts custom and future cursor types for preservation by intermediaries, but Agents **MUST** reject unsupported types or malformed cursors with `-32602` (Invalid params), not silently fall back to another replay mode.
+
+Retained user messages **MUST** preserve the ID returned by `session/prompt`. Agents **SHOULD** preserve agent and thought message IDs when possible, but Clients cannot assume those IDs remain stable across reconnects or restarts. For full replay, Clients **SHOULD** rebuild agent and thought message history rather than merge it into existing history solely by `messageId`. An empty-content primer resets only the ID used in that replay; it cannot clear a message previously delivered under another ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
 
 ### Consistent lifecycle requests
 
