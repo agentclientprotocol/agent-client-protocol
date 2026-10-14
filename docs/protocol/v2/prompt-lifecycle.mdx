@@ -211,6 +211,8 @@ Insertion is not a promise of durable storage or model consumption. Every insert
 
 A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. If the response is lost, the submission's outcome remains uncertain: replay may omit live-only or discarded messages, and a retry can create another submission.
 
+The same insertion boundary applies when [closing the session](/protocol/v2/session-setup#closing-active-sessions) cancels a pending prompt: if closing prevents insertion, the request receives `-32800` (Request Cancelled); if the message has already been inserted, it receives a successful `messageId` response. Prompt responses need not precede the close response.
+
 ### 3. Agent Reports Output
 
 When foreground work starts or resumes, the Agent **MUST** send a `state_update` notification with `state: "running"`:
