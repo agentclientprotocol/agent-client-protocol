@@ -3569,9 +3569,10 @@ pub enum StopReason {
     Refusal,
     /// Active session work was cancelled by the client via `session/cancel`.
     ///
-    /// Agents should report this stop reason on an idle `state_update` session update
+    /// Agents MUST report this stop reason on an idle `state_update` session update
     /// when cancellation succeeds, even if cancellation causes exceptions in
-    /// underlying operations.
+    /// underlying operations. Agents MUST catch these errors and report
+    /// `cancelled`, not `error`.
     Cancelled,
     /// The active work ended because something failed.
     ///
@@ -5965,12 +5966,19 @@ pub enum ClientNotification {
     /// This is a notification sent by the client to cancel active work in a
     /// session.
     ///
-    /// Upon receiving this notification, the Agent SHOULD:
-    /// - Stop all language model requests as soon as possible
-    /// - Abort all tool call invocations in progress
-    /// - Send any pending `session/update` notifications
-    /// - Report an idle `state_update` with `StopReason::Cancelled` after
-    ///   cancellation succeeds
+    /// Upon receiving this notification, the Agent SHOULD stop all language model
+    /// requests and all tool call invocations as soon as possible.
+    ///
+    /// After all ongoing operations have been successfully aborted and pending
+    /// updates have been sent, the Agent MUST send an idle `state_update` session
+    /// update with the `cancelled` stop reason.
+    ///
+    /// Agents MUST catch errors caused by aborting cancelled work and report the
+    /// `cancelled` stop reason, not `error`.
+    ///
+    /// The Agent MAY send content or tool call updates after receiving
+    /// `session/cancel`, but MUST send them before the idle `state_update` that
+    /// reports cancellation.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
     CancelSessionNotification(Box<CancelSessionNotification>),
