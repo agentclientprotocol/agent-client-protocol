@@ -114,6 +114,12 @@ Capabilities may specify the availability of protocol methods, notifications, or
 
 Implementations can also [advertise custom capabilities](/protocol/v2/draft/extensibility#advertising-custom-capabilities) using the `_meta` field to indicate support for protocol extensions.
 
+Experimental features follow their own documented negotiation requirements, not
+a connection-wide unstable-schema flag. See [Experimental Features and
+Negotiation](/protocol/v2/draft/extensibility#experimental-features-and-negotiation)
+for the distinction between capability-gated operations and capability-free
+informational additions.
+
 ### Client Capabilities
 
 Clients **MAY** include defined capability fields in `capabilities`.
@@ -167,6 +173,13 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
   Authentication-related extensions supported by the Agent. This field is
   orthogonal to `authMethods` and does not advertise the availability of
   `auth/login` or `auth/logout`.
+</ResponseField>
+
+<ResponseField name="providers" type="ProvidersCapabilities Object">
+  **Unstable.** The Agent supports `providers/list`, `providers/set`, and
+  `providers/disable`. Omitted or `null` means unsupported; supplying `{}` means
+  supported. Clients **MUST NOT** call these methods unless this capability is
+  present, even if their SDK exposes the experimental request types.
 </ResponseField>
 
 #### Session Capabilities

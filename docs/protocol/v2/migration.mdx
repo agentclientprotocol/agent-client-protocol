@@ -19,7 +19,7 @@ If you only remember five things, remember these:
 
 This guide describes the stable v2 baseline (`schema/v2/schema.json`). The v2 protocol surface as a whole is still labeled draft, so gate **v2 support behind explicit version negotiation and feature flags until it stabilizes.**
 
-The unstable schema (`schema/v2/schema.unstable.json`) layers opt-in draft features on top of that baseline. Negotiating `protocolVersion: 2` does **not** imply any of them. Gate each behind its own capability or feature flag the same as v1.
+The unstable schema (`schema/v2/schema.unstable.json`) layers experimental features on top of that baseline. Negotiating `protocolVersion: 2` does **not** imply support for them. Follow each feature's documented negotiation requirements: optional operations requiring peer participation use explicit capabilities or another documented mechanism, while informational additions with safe forward-compatible handling may be sent without a capability when the feature permits it. Local feature flags control rollout, not peer support. See [Experimental Features and Negotiation](/protocol/v2/extensibility#experimental-features-and-negotiation).
 
 ## Version negotiation
 
@@ -824,7 +824,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 
 ## Migration checklist: SDKs
 
-1. **Separate the versions.** Keep v1 and v2 schemas, generated models, and test fixtures fully separate, and gate unstable-v2 surfaces independently of `protocolVersion: 2`.
+1. **Separate the versions.** Keep v1 and v2 schemas, generated models, and test fixtures fully separate. Exposing unstable-v2 types does not advertise support; enforce each feature's documented negotiation requirements independently of `protocolVersion: 2`.
 2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics. A plain nullable/optional type erases a distinction the protocol depends on.
 3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.

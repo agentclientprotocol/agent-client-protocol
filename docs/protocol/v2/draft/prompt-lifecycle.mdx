@@ -431,6 +431,8 @@ No Client capability is required in v2. Clients that do not implement `notice`
 may preserve it through the [unknown-update
 fallback](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants) and
 ignore it or present it generically; this does not give it replay semantics.
+This is [capability-free informational delivery](/protocol/v2/draft/extensibility#experimental-features-and-negotiation),
+not an advertisement that the Client will display the notice.
 
 At any point while a session exists, including outside prompt processing, the
 Agent **MAY** send a live user-facing notice:
@@ -484,7 +486,9 @@ Agent may emit a new notice.
 
 #### Session Compaction
 
-No Client capability is required in v2.
+No Client capability is required in v2. Clients without compaction-specific
+handling may preserve, ignore, or generically display these informational updates
+under the [v2 negotiation rules](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
 
 The Agent **MAY** report context compaction as one persistent, ID-addressed
 timeline entity. A single `compaction_update` with `status: "completed"` is
@@ -668,6 +672,40 @@ When the Agent is ready to process a new prompt, it **MUST** report `idle` with 
 ```
 
 Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update with the corresponding [`StopReason`](#stop-reasons).
+
+#### End-Turn Token Usage (Unstable)
+
+The Agent **MAY** include `usage` on an idle `state_update` to report token usage
+for completed foreground work. It is not part of the `session/prompt` response
+and is distinct from the current context-window and cumulative cost information
+in [`usage_update`](#session-usage-updates).
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "idle",
+      "stopReason": "end_turn",
+      "usage": {
+        "totalTokens": 150,
+        "inputTokens": 100,
+        "outputTokens": 50
+      }
+    }
+  }
+}
+```
+
+`usage` is optional and nullable; omission and `null` both mean no usage was
+reported. No capability is required. Clients without this experimental field
+ignore it, and Clients that recognize it discard malformed usage rather than
+rejecting the idle transition. Sending usage does not establish that the Client
+displays it. See [Experimental Features and
+Negotiation](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
 
 ### 5. Tool Invocation and Status Reporting
 
