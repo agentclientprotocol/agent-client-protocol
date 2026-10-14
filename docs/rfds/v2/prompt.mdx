@@ -256,7 +256,7 @@ We could explore adding which permission or elicitation it is waiting on if we w
 
 In v1, `session/prompt` lasts until the end of the turn, so its error response can report a failure at any point: an expired credential, a provider outage, an exhausted quota. Once the response arrives at insertion, that channel is gone, and a failure after insertion has to end foreground work through the same `state_update` that reports every other outcome.
 
-When foreground work ends because of a failure after the user message was inserted, the Agent reports `idle` with the `error` stop reason and, when it has one, the error:
+When foreground work ends because of a failure after the user message was inserted, the Agent **MUST** report `idle` and **SHOULD** include the `error` stop reason and failure details. An Agent that knows it is idle but cannot determine why the work stopped may omit the stop reason; Clients still recognize that foreground work ended without inferring success or failure:
 
 ```json
 {

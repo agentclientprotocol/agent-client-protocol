@@ -699,6 +699,8 @@ When foreground work ends, the Agent **MUST** report `idle` with a `state_update
 }
 ```
 
+The Agent **MUST** send any pending updates for the foreground work that ended before sending its idle update. Background activity may continue to emit updates afterward.
+
 Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update. They **SHOULD** include the corresponding [`StopReason`](#stop-reasons).
 
 ### 5. Tool Invocation and Status Reporting
@@ -796,7 +798,7 @@ The cycle returns to [step 3](#3-agent-reports-output), continuing until the lan
 
 ## Stop Reasons
 
-When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update:
+When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update. If the Agent knows it is idle but cannot determine why the work stopped, it may omit the stop reason. Clients **MUST** recognize `idle` as the end of foreground work even when the stop reason is omitted, `null`, malformed, or unknown; without a recognized stop reason, Clients cannot infer how the work ended.
 
 <ResponseField name="end_turn">
   The Agent has no more work to perform after the language model finishes
@@ -823,7 +825,7 @@ Custom or future stop reasons can be used when Clients can display a generic sto
 
 ## Failures
 
-When foreground work ends because something failed, the corresponding stop reason is `error`. For work started by a prompt, this covers failures after the user message was inserted; earlier failures are an error response to `session/prompt`. This stop reason carries the failure in an `error` field beside `stopReason`, which the Agent **SHOULD** include:
+When foreground work ends because something failed, the Agent **MUST** report `idle` and **SHOULD** include the `error` stop reason. For work started by a prompt, this covers failures after the user message was inserted, including failures before any model output; earlier failures are an error response to `session/prompt`. This stop reason carries the failure in an `error` field beside `stopReason`, which the Agent **SHOULD** include:
 
 ```json
 {
