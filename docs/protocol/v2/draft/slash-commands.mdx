@@ -136,3 +136,5 @@ The Agent recognizes the command prefix and processes it accordingly. Commands m
 The same [prompt insertion contract](/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted) applies to commands: the successful response returns the inserted user message's `messageId`, and the Agent reports that message through a `user_message` update or `user_message_chunk` updates with the same ID.
 
 If a command is handled locally and the runtime does not record it, the adapter inserts a live-only user message into the ACP conversation. It need not wait for a runtime insertion event or keep a permanent transcript entry. If the command is retained and replayed later, it uses the same message ID and is not executed again.
+
+For example, an adapter can report a locally handled `/compact` as a live-only user message containing `/compact`, even if the runtime records only a summary. The ACP user message represents the command invocation; it need not match the runtime's transcript or expanded instructions.

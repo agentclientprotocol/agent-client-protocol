@@ -3497,6 +3497,9 @@ impl PromptRequest {
 /// agent has finished processing it.
 /// Processing and completion are reported through `state_update` session updates.
 ///
+/// Insertion is the logical addition of a user message with a message ID and a position
+/// relative to other messages in the ACP conversation.
+///
 /// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
 #[serde_as]
 #[skip_serializing_none]
@@ -3575,8 +3578,9 @@ pub enum StopReason {
     Cancelled,
     /// The active work ended because something failed.
     ///
-    /// For work started by a prompt, this covers failures after the user message
-    /// was inserted; earlier failures are an error response to `session/prompt`.
+    /// This includes pre-insertion foreground work. A prompt failure before
+    /// insertion also requires an error response to `session/prompt`; after
+    /// insertion, the prompt's response remains successful.
     Error(ErrorStopReason),
     /// Custom or future stop reason.
     ///
@@ -5810,17 +5814,23 @@ pub enum ClientRequest {
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),
     /// Processes a user prompt within a session.
     ///
-    /// Acceptance means insertion into the ACP conversation:
-    /// - Receives user messages with optional context (files, images, etc.)
-    /// - Returns the inserted user message's ID without waiting for processing to finish
+    /// Acceptance means adding a logical user message with an ID and a position
+    /// relative to other messages in the ACP conversation, not receipt or queueing.
+    /// The Agent MUST return the inserted message's ID without waiting for
+    /// processing to finish.
     ///
     /// The Agent reports the user message with the same ID through `session/update`;
-    /// this notification may arrive before or after the response. Processing state,
-    /// output, tool calls, and completion are also reported through session updates.
+    /// this notification may arrive before or after the response, but neither may
+    /// precede insertion. Processing state, output, tool calls, and completion are
+    /// also reported through session updates.
     ///
     /// An error response means the user message was not inserted. Once it is
     /// inserted, the Agent MUST NOT answer with an error, even if the work fails
     /// before the response is sent; it ends that work with the `error` stop reason.
+    ///
+    /// A rejected submission produces no user-message updates. Foreground state
+    /// follows its normal lifecycle independently of the request outcome:
+    /// `running` may precede insertion, and rejection alone does not imply `idle`.
     ///
     /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/prompt-lifecycle)
     PromptRequest(Box<PromptRequest>),

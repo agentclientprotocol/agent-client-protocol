@@ -1415,6 +1415,10 @@ impl UsageUpdate {
 /// that idle update. Agent-initiated work does not require a prompt request or a
 /// synthetic user message.
 ///
+/// `running` may precede user-message insertion, for example during a foreground
+/// hook. It is not acknowledgment of insertion, and rejecting a prompt does not
+/// itself end foreground work.
+///
 /// Background activity can continue and emit other `session/update` notifications
 /// while `idle`. Those notifications, including a detached task's progress or
 /// completion, do not by themselves change this state. A permission request only

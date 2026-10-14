@@ -97,6 +97,8 @@ A permission request does not by itself change the foreground state. If it block
 
 A typical prompt-driven flow enables rich interactions between the user, Agent, and any connected tools.
 
+The diagram shows one possible ordering; see [Insertion and ordering](#insertion-and-ordering).
+
 <br />
 
 ```mermaid
@@ -196,7 +198,11 @@ The Client sends a user message with `session/prompt`:
 
 ### 2. Prompt Accepted
 
-**Acceptance means insertion**, not receipt, queueing, or processing completion. The Agent **MUST** respond successfully once it has inserted the user message into the ACP conversation, without waiting for foreground work to finish. It **MUST NOT** send a successful response merely because it has received the input or assigned an ID. Requests rejected before insertion use a JSON-RPC error response. Once the user message is inserted, the Agent **MUST NOT** report a later failure as an error response, even if it has not sent the response yet: it responds successfully and reports the failure as described in [Failures](#failures). This includes [request cancellation](/protocol/v2/cancellation): once the message is inserted, the Agent answers `session/prompt` with its `messageId` rather than a `-32800` error, and foreground work is stopped with [`session/cancel`](#cancellation) or ends with a stop reason.
+**Acceptance means insertion**: the Agent has logically added a user message to the ACP conversation, with a `messageId` and a position relative to other messages. Receipt, queueing, and assigning an ID are not insertion.
+
+The Agent **MUST** respond successfully once the message is inserted, without waiting for foreground work to finish, and **MUST NOT** do so before insertion. Once inserted, it **MUST NOT** return an error response, even if failure or [request cancellation](/protocol/v2/cancellation) occurs before the response is sent. It returns the `messageId`; subsequent work outcomes are reported as described in [Failures](#failures) and [Cancellation](#cancellation).
+
+An adapter can use a runtime's user-message echo or insertion event as evidence of insertion. For a [locally handled command](/protocol/v2/slash-commands#running-commands) that the runtime does not record, it can instead insert a live-only ACP user message.
 
 The response contains the inserted user message's agent-generated `messageId`:
 
@@ -215,7 +221,7 @@ The response contains the inserted user message's agent-generated `messageId`:
   string; omission and explicit `null` are invalid.
 </ResponseField>
 
-The Agent **MUST** also report the inserted user message through a `user_message` update with the full `content` array or streamed `user_message_chunk` updates. All updates for that message **MUST** use the returned `messageId`. The response and updates describe the same insertion, but Clients **MUST** tolerate the updates arriving before or after the response.
+The Agent **MUST** also report the inserted user message through a `user_message` update with the full `content` array or streamed `user_message_chunk` updates. All updates for that message **MUST** use the returned `messageId` and **MUST NOT** precede insertion. Clients **MUST** tolerate the updates arriving before or after the response.
 
 ```json
 {
@@ -244,6 +250,16 @@ Insertion is not a promise of durable storage or model consumption. Every insert
 A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. If the response is lost, the submission's outcome remains uncertain: replay may omit live-only or discarded messages, and a retry can create another submission.
 
 The same insertion boundary applies when [closing the session](/protocol/v2/session-setup#closing-active-sessions) cancels a pending prompt: if closing prevents insertion, the request receives `-32800` (Request Cancelled); if the message has already been inserted, it receives a successful `messageId` response. Prompt responses need not precede the close response.
+
+#### Insertion and ordering
+
+`running` reports foreground work, not insertion. It may precede insertion, the prompt response, and user-message updates, for example while a foreground hook runs. It does not acknowledge a pending prompt's insertion.
+
+#### Prompts that are never inserted
+
+If a request is rejected before insertion, including by a hook or early failure, the Agent **MUST** return a JSON-RPC error response and **MUST NOT** emit user-message updates for that submission. [Request cancellation](/protocol/v2/cancellation) before insertion uses `-32800`.
+
+The [foreground lifecycle](#foreground-and-background-work) applies independently of the request outcome: report `idle` when no foreground work remains, not merely because a prompt was rejected. A failed foreground hook can therefore require both a prompt error response and an idle update. If no foreground work started, rejection requires no state transition.
 
 ### 3. Agent Reports Output
 
@@ -777,7 +793,7 @@ Custom or future stop reasons can be used when Clients can display a generic sto
 
 ## Failures
 
-When foreground work ends because something failed, the Agent **MUST** report `idle` and **SHOULD** include the `error` stop reason. For work started by a prompt, this covers failures after the user message was inserted, including failures before any model output; earlier failures are an error response to `session/prompt`. This stop reason carries the failure in an `error` field beside `stopReason`, which the Agent **SHOULD** include:
+When foreground work ends because something failed, the Agent **MUST** report `idle` and **SHOULD** include the `error` stop reason. This includes pre-insertion work and failures before any model output. The prompt's response still follows the [insertion boundary](#2-prompt-accepted). This stop reason carries the failure in an `error` field beside `stopReason`, which the Agent **SHOULD** include:
 
 ```json
 {
@@ -810,7 +826,7 @@ Before reporting the failure, the Agent **SHOULD** give each tool call that the 
 
 The `error` stop reason is only for failures that end foreground work:
 
-- A failure before the user message is inserted is a JSON-RPC error response to `session/prompt`.
+- A failure before the user message is inserted requires a JSON-RPC error response to `session/prompt`, whether or not it also ends foreground work.
 - A failure the Agent recovers from while work continues, such as a retried model request or a failed tool call, is reported with a [notice](#session-notices) or a tool call whose status is `failed`, and does not change the state.
 - Errors raised while aborting cancelled work are reported with the `cancelled` stop reason, as described in [Cancellation](#cancellation).
 - A failure in background activity while the Agent is `idle` is not a stop reason, since no foreground work ended.

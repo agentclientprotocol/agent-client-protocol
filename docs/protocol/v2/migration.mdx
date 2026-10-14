@@ -288,6 +288,8 @@ In v2, acceptance means insertion of the user message into the ACP conversation.
 
 `messageId` is a required, non-null string identifying the inserted user message. The request is unchanged; Clients do not generate this ID.
 
+Insertion adds a logical user message with an ID and a position relative to other messages. See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted) for adapter examples.
+
 Everything else happens through `session/update` notifications:
 
 1. **User message update.** The Agent **MUST** report the inserted message's content and placement, either as a `user_message` update with a full `content` array or as streamed `user_message_chunk` updates. These use the same agent-owned `messageId` as the response. The response and updates describe the same insertion, but updates may arrive before or after the response:
@@ -307,7 +309,7 @@ Everything else happens through `session/update` notifications:
    }
    ```
 
-2. **Running state.** When foreground work starts or resumes, the Agent **MUST** send a `state_update` with `"state": "running"`.
+2. **Running state.** When foreground work starts or resumes, the Agent **MUST** send a `state_update` with `"state": "running"`. This may precede insertion, for example while a foreground hook runs; it is not acknowledgment of insertion.
 
 3. **Output.** Messages, thoughts, plans, and tool calls stream as before (with the changes described in the following sections).
 
@@ -332,7 +334,9 @@ Clients reconcile their submitted input with the response's `(sessionId, message
 
 An Agent may know it is idle without knowing why the work stopped. Clients **MUST** recognize idle even when the stop reason is omitted, `null`, malformed, or unknown; they cannot infer success or failure without a recognized stop reason.
 
-User messages, including locally handled commands, must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response remains ambiguous; neither replay omission nor an identical message proves which submission was inserted, and retrying is not automatically safe.
+User messages, including [locally handled commands](/protocol/v2/slash-commands#running-commands), must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response remains ambiguous; neither replay omission nor an identical message proves which submission was inserted, and retrying is not automatically safe.
+
+Pre-insertion rejection receives a JSON-RPC error response with no user-message updates for that submission. State updates still describe actual foreground work, independently of the request outcome; see [Prompts that are never inserted](/protocol/v2/prompt-lifecycle#prompts-that-are-never-inserted).
 
 ### Session states
 
