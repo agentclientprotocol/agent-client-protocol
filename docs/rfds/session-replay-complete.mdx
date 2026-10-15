@@ -45,7 +45,7 @@ JetBrains uses a private `_meta` contract between its cloud agent and its IDE Cl
 - Optionally, it also carries `_meta.loadSessionReplaySize`. Despite the name, the value is the **last index**, not the count. This naming trap is a lesson for any standard field.
 - The last replayed notification carries `_meta.loadSessionEndOfRecordedHistory: true`.
 
-The Client renders the history when it sees the end flag. If a load ends with marked notifications but without the end flag, the Client treats the replay as truncated and does not rebuild a transcript from it. claude-agent-acp and codex-acp are adding the same marks.
+The Client renders the history when it sees the end flag. If a load ends with marked notifications but without the end flag, the Client treats the replay as truncated and does not rebuild a transcript from it. claude-agent-acp ([#1361](https://github.com/agentclientprotocol/claude-agent-acp/pull/1361)) and codex-acp ([#635](https://github.com/agentclientprotocol/codex-acp/pull/635)) are adding the same marks.
 
 The idea works, but every pair of implementations that wants it must agree on private keys. This RFD proposes to standardize the idea. It does not propose to standardize these key names.
 
@@ -165,7 +165,7 @@ Adapters stop inventing private `_meta` keys for this. A Client implements one r
 1. **Schema (v1, unstable).** Add a `ReplayComplete` variant with only `_meta` to `SessionUpdate`. Add `replayComplete` to the Agent `SessionCapabilities` and to the Client `ClientSessionCapabilities`. Keep both behind an unstable feature flag.
 2. **Schema (v2).** Add the `replay_complete` variant to the v2 `SessionUpdate` union.
 3. **Docs.** Update [Session Setup](/protocol/v1/session-setup) for v1 and the v2 draft. The sequence diagram gets a `replay_complete` step between "All content streamed" and the response. Document the ordering rule and the truncation table.
-4. **SDKs.** Expose the variant and the capabilities in the Rust and TypeScript SDKs. A helper in the Agent SDKs can buffer live updates for a session while its replay runs.
+4. **SDKs.** Expose the variant and the capabilities in the Rust and TypeScript SDKs. A helper in the Agent SDKs can buffer live updates for a session while its replay runs. The Client SDKs must deliver the updates of a loading session to the Client before the response. The Kotlin SDK queues them in a placeholder session until the response and creates the session operations only then, so a Client on it cannot see `replay_complete` early. For `session/load` and `session/resume`, the Client knows the session ID before the request, so an SDK can register the session operations before it sends the request.
 5. **Adapters and Clients.** Implement in claude-agent-acp and codex-acp, and in the JetBrains Client. The existing `_meta` marks can stay for a transition period. The last marked notification is followed by `replay_complete`.
 
 ## Frequently asked questions
