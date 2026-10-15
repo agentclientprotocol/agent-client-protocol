@@ -195,7 +195,8 @@
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
-              "rfds/subagents"
+              "rfds/subagents",
+              "rfds/client-system-prompt"
             ]
           },
           {
@@ -224,7 +225,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/session-compaction", "rfds/session-notices"]
+            "pages": []
           },
           {
             "group": "Completed",
@@ -248,7 +249,9 @@
               "rfds/boolean-config-option",
               "rfds/elicitation",
               "rfds/auth-methods",
-              "rfds/tool-call-name"
+              "rfds/tool-call-name",
+              "rfds/session-compaction",
+              "rfds/session-notices"
             ]
           }
         ]

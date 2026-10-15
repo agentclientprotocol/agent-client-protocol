@@ -10,7 +10,7 @@ use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, SkipListener};
+use crate::IntoOption;
 
 use super::{ContentBlock, Error, Meta, TerminalId};
 
@@ -23,7 +23,7 @@ use super::{ContentBlock, Error, Meta, TerminalId};
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCall {
@@ -51,13 +51,13 @@ pub struct ToolCall {
     #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub content: Vec<ToolCallContent>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub locations: Vec<ToolCallLocation>,
@@ -202,7 +202,7 @@ impl ToolCall {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallUpdate {
@@ -255,7 +255,7 @@ impl ToolCallUpdate {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallUpdateFields {
@@ -283,12 +283,12 @@ pub struct ToolCallUpdateFields {
     #[serde(default)]
     pub name: Option<String>,
     /// Replace the content collection.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub content: Option<Vec<ToolCallContent>>,
     /// Replace the locations collection.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub locations: Option<Vec<ToolCallLocation>>,
@@ -538,7 +538,7 @@ impl ToolCallStatus {
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "schemars", schemars(extend("discriminator" = {"propertyName": "type"})))]
 #[non_exhaustive]
@@ -572,7 +572,7 @@ impl From<Diff> for ToolCallContent {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Content {
@@ -620,7 +620,7 @@ impl Content {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Terminal {

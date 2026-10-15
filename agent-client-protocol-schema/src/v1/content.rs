@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use crate::{IntoOption, SkipListener};
+use crate::IntoOption;
 
 use super::Meta;
 
@@ -31,7 +31,7 @@ use super::Meta;
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "schemars", schemars(extend("discriminator" = {"propertyName": "type"})))]
 #[non_exhaustive]
@@ -65,7 +65,7 @@ pub enum ContentBlock {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct TextContent {
     /// Optional annotations that help clients decide how to display or route this content.
@@ -127,7 +127,7 @@ impl<T: Into<String>> From<T> for ContentBlock {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ImageContent {
@@ -200,7 +200,7 @@ impl ImageContent {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AudioContent {
@@ -260,7 +260,7 @@ impl AudioContent {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct EmbeddedResource {
     /// Optional annotations that help clients decide how to display or route this content.
@@ -314,7 +314,7 @@ impl EmbeddedResource {
 
 /// Resource content that can be embedded in a message.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum EmbeddedResourceResource {
@@ -328,7 +328,7 @@ pub enum EmbeddedResourceResource {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextResourceContents {
@@ -388,7 +388,7 @@ impl TextResourceContents {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BlobResourceContents {
@@ -448,7 +448,7 @@ impl BlobResourceContents {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResourceLink {
@@ -560,12 +560,12 @@ impl ResourceLink {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Annotations {
     /// Intended recipients for this content, such as the user or assistant.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
@@ -589,6 +589,35 @@ pub struct Annotations {
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+/// Priorities are compared with [`f64::total_cmp`] (the IEEE 754 total order), so
+/// equality is reflexive even for NaN and annotations, and the content that
+/// carries them, can be `Eq`. Unlike `==`, it treats `0.0` and `-0.0` as
+/// different, matching how they serialize.
+impl PartialEq for Annotations {
+    fn eq(&self, other: &Self) -> bool {
+        let Self {
+            audience,
+            last_modified,
+            priority,
+            meta,
+        } = self;
+        *audience == other.audience
+            && *last_modified == other.last_modified
+            && priority_eq(*priority, other.priority)
+            && *meta == other.meta
+    }
+}
+
+impl Eq for Annotations {}
+
+fn priority_eq(a: Option<f64>, b: Option<f64>) -> bool {
+    match (a, b) {
+        (Some(a), Some(b)) => a.total_cmp(&b).is_eq(),
+        (None, None) => true,
+        _ => false,
+    }
 }
 
 impl Annotations {
@@ -646,6 +675,34 @@ pub enum Role {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_annotations_equality_is_reflexive() {
+        let nan = Annotations::new().priority(f64::NAN);
+        assert_eq!(nan, nan.clone());
+        assert_eq!(
+            Annotations::new().priority(0.5),
+            Annotations::new().priority(0.5)
+        );
+        assert_ne!(
+            Annotations::new().priority(0.0),
+            Annotations::new().priority(-0.0)
+        );
+        assert_ne!(
+            serde_json::to_string(&Annotations::new().priority(0.0)).unwrap(),
+            serde_json::to_string(&Annotations::new().priority(-0.0)).unwrap()
+        );
+        assert_ne!(
+            Annotations::new().priority(0.5),
+            Annotations::new().priority(1.0)
+        );
+        assert_ne!(nan, Annotations::new().priority(0.5));
+        assert_ne!(Annotations::new().priority(0.5), Annotations::new());
+        assert_ne!(
+            Annotations::new().priority(0.5).audience(vec![Role::User]),
+            Annotations::new().priority(0.5)
+        );
+    }
 
     #[test]
     fn test_text_content_roundtrip() {

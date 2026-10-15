@@ -35,7 +35,7 @@ A typical flow follows this pattern:
 
 <Step title="Prompt Turn">
    - Client → Agent: `session/prompt` to send user message
-   - Agent → Client: `session/update` notifications for progress updates and advisory notices
+   - Agent → Client: `session/update` notifications for progress updates and user-facing notices
    - Agent → Client: File operations or permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
    - Turn ends and the Agent sends the `session/prompt` response with a stop reason
@@ -213,14 +213,16 @@ Clients provide the interface between users and agents. They are typically code 
   post={[<a href="/protocol/v1/draft/schema#session%2Fupdate">Schema</a>]}
 >
   [Send session updates](/protocol/v1/draft/prompt-turn#3-agent-reports-output)
-  to inform the Client of changes (no response expected). This includes: -
-  [Message chunks](/protocol/v1/draft/content) (agent, user, thought) - [Tool
-  calls and updates](/protocol/v1/draft/tool-calls) -
-  [Plans](/protocol/v1/draft/agent-plan) - [Available commands
-  updates](/protocol/v1/draft/slash-commands#advertising-commands) - [Mode
-  changes](/protocol/v1/draft/session-modes#from-the-agent) - [Advisory
-  notices](/protocol/v1/draft/prompt-turn#session-notices) - [Context
-  compactions](/protocol/v1/draft/prompt-turn#session-compaction)
+  to inform the Client of changes (no response expected). This includes:
+
+- [Message chunks](/protocol/v1/draft/content) (agent, user, thought)
+- [Tool calls and updates](/protocol/v1/draft/tool-calls)
+- [Plans](/protocol/v1/draft/agent-plan)
+- [Available commands updates](/protocol/v1/draft/slash-commands#advertising-commands)
+- [Mode changes](/protocol/v1/draft/session-modes#from-the-agent)
+- [User-facing notices](/protocol/v1/draft/prompt-turn#session-notices)
+- [Context compactions](/protocol/v1/draft/prompt-turn#session-compaction)
+
 </ResponseField>
 
 ## Argument requirements

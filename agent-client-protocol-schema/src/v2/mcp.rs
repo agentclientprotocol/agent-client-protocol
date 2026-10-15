@@ -18,7 +18,7 @@ use super::{McpServerAcpId, Meta};
 /// `code` and `message` are required and non-null. `data` is optional;
 /// explicit `null` is preserved separately from an omitted key.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct McpError {
     /// Inner MCP error code; never an ACP error code.
@@ -69,7 +69,7 @@ impl McpError {
 /// Senders must include exactly one outcome; receivers prefer `result` if both are present.
 #[serde_as]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = "mcp/message")))]
 #[non_exhaustive]
@@ -148,7 +148,7 @@ impl McpRequestId {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
 #[non_exhaustive]
@@ -212,7 +212,7 @@ impl MessageMcpRequest {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
 #[non_exhaustive]

@@ -453,13 +453,19 @@ Cancels ongoing operations for a session.
 This is a notification sent by the client to cancel active work in a
 session.
 
-Upon receiving this notification, the Agent SHOULD:
+Upon receiving this notification, the Agent SHOULD stop all language model
+requests and all tool call invocations as soon as possible.
 
-- Stop all language model requests as soon as possible
-- Abort all tool call invocations in progress
-- Send any pending `session/update` notifications
-- Report an idle `state_update` with `StopReason::Cancelled` after
-  cancellation succeeds
+After all ongoing operations have been successfully aborted and pending
+updates have been sent, the Agent MUST send an idle `state_update` session
+update with the `cancelled` stop reason.
+
+Agents MUST catch errors caused by aborting cancelled work and report the
+`cancelled` stop reason, not `error`.
+
+The Agent MAY send content or tool call updates after receiving
+`session/cancel`, but MUST send them before the idle `state_update` that
+reports cancellation.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 
@@ -500,6 +506,17 @@ Request parameters for closing an active session.
 The agent **must** cancel any ongoing work related to the session (treat it
 as if `session/cancel` was called) and then free up any resources associated
 with the session.
+
+When closing cancels active foreground work, the Agent MUST send the final
+updates for that work and the idle `state_update` with `stopReason: "cancelled"`
+before responding successfully to `session/close`. Closing an idle session
+does not itself require another idle update.
+
+Closing may also cancel pending `session/prompt` requests, including queued
+prompts. If closing prevents a prompt's user message from being inserted, the
+Agent MUST answer that request with `-32800` (Request Cancelled). If the message
+has already been inserted, the Agent MUST respond successfully with its
+`messageId`. Prompt responses need not precede the close response.
 
 **Type:** Object
 
@@ -595,6 +612,10 @@ The agent should create a new session with the same conversation context as the
 original, allowing operations like generating summaries without affecting the
 original session's history.
 
+As with `session/new`, the forked session is active once the agent responds,
+set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
+The client can prompt it without calling `session/resume` first.
+
 #### <span class="font-mono">ForkSessionRequest</span>
 
 **UNSTABLE**
@@ -636,6 +657,20 @@ session.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to fork.
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the forked session.
+
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the source session or use its default
+instructions. Clients MUST only send this when the Agent advertises
+`session.systemPrompt`, and SHOULD send the same value they used for the
+source session.
+
 </ResponseField>
 
 #### <span class="font-mono">ForkSessionResponse</span>
@@ -776,6 +811,18 @@ additional roots are activated for the new session.
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP (Model Context Protocol) servers the agent should connect to.
 </ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the new session.
+
+Optional. Omitted and `null` are equivalent and mean the Agent uses its
+own default instructions. Clients MUST only send this when the Agent
+advertises `session.systemPrompt`.
+
+</ResponseField>
 
 #### <span class="font-mono">NewSessionResponse</span>
 
@@ -818,14 +865,23 @@ Used in all subsequent requests for this conversation.
 
 Processes a user prompt within a session.
 
-Acceptance means insertion into the ACP conversation:
-
-- Receives user messages with optional context (files, images, etc.)
-- Returns the inserted user message's ID without waiting for processing to finish
+Acceptance means adding a logical user message with an ID and a position
+relative to other messages in the ACP conversation, not receipt or queueing.
+The Agent MUST return the inserted message's ID without waiting for
+processing to finish.
 
 The Agent reports the user message with the same ID through `session/update`;
-this notification may arrive before or after the response. Processing state,
-output, tool calls, and completion are also reported through session updates.
+this notification may arrive before or after the response, but neither may
+precede insertion. Processing state, output, tool calls, and completion are
+also reported through session updates.
+
+An error response means the user message was not inserted. Once it is
+inserted, the Agent MUST NOT answer with an error, even if the work fails
+before the response is sent; it ends that work with the `error` stop reason.
+
+A rejected submission produces no user-message updates. Foreground state
+follows its normal lifecycle independently of the request outcome:
+`running` may precede insertion, and rejection alone does not imply `idle`.
 
 See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)
 
@@ -876,6 +932,9 @@ Response acknowledging that a user prompt was inserted into the ACP conversation
 This response does not indicate that the prompt was merely received or queued, nor that the
 agent has finished processing it.
 Processing and completion are reported through `state_update` session updates.
+
+Insertion is the logical addition of a user message with a message ID and a position
+relative to other messages in the ACP conversation.
 
 See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted)
 
@@ -954,9 +1013,27 @@ replay includes the position identified by the cursor. Supplying
 `\{ "type": "start" \}` means the Agent should replay all retained
 conversation history before responding.
 
+Agents MUST reject unsupported cursor types or malformed cursor values
+with `-32602` (Invalid params), rather than substituting another cursor
+or resuming without replay.
+
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to resume.
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the resumed session.
+
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the session or use its default instructions.
+Clients MUST only send this when the Agent advertises
+`session.systemPrompt`, and SHOULD send the same value they used when the
+session was created.
+
 </ResponseField>
 
 #### <span class="font-mono">ResumeSessionResponse</span>
@@ -1773,8 +1850,9 @@ Supplying `\{\}` means the agent supports provider configuration methods.
 
 Optional. Omitted or `null` both mean the agent does not support the
 `session/*` method surface. Supplying `\{\}` means the agent supports the
-baseline session methods: `session/new`, `session/prompt`,
-`session/cancel`, and `session/update`.
+baseline session methods: `session/new`, `session/list`,
+`session/resume`, `session/close`, `session/prompt`, `session/cancel`,
+and `session/update`.
 
 </ResponseField>
 
@@ -2377,19 +2455,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 ## <span class="font-mono">CompactionId</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Unique identifier for a context compaction within a session.
 
 **Type:** `string`
 
 ## <span class="font-mono">CompactionStatus</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Lifecycle state of a context compaction.
 
@@ -2421,13 +2491,8 @@ extensions. Other unknown values are reserved for future ACP statuses.
 
 ## <span class="font-mono">CompactionSummaryChunk</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A content block appended to the retained summary of an in-progress
-compaction. Agents send chunks only after an `in_progress` update and before
-the terminal update for the same ID.
+A content block appended to a compaction's summary. A first-seen ID creates
+an in-progress compaction. Chunks append in receive order.
 
 **Type:** Object
 
@@ -2453,17 +2518,12 @@ the terminal update for the same ID.
 
 ## <span class="font-mono">CompactionUpdate</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A context compaction upsert. The first update fixes the compaction's
+A context compaction upsert. The first notification fixes the compaction's
 timeline position. Later updates with the same ID patch that entity in place.
 
 `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 stored value unchanged, `null` clears it, and a concrete value replaces it.
-`summary: []` also clears the retained summary. A non-empty summary is only
-valid with `completed`; `error` is only valid with `failed`.
+`summary: []` also clears the summary.
 
 **Type:** Object
 
@@ -2480,7 +2540,7 @@ valid with `completed`; `error` is only valid with `failed`.
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
 <ResponseField name="error" type={"string | null"}>
-  Human-readable description of why the compaction failed.
+  Human-readable error details for the compaction.
 </ResponseField>
 <ResponseField
   name="status"
@@ -2500,7 +2560,7 @@ valid with `completed`; `error` is only valid with `failed`.
     </>
   }
 >
-  Complete replacement user-displayable summary retained by the compaction.
+  Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -3084,8 +3144,14 @@ Text patch format used by `DiffPatch`.
 <ResponseField name="git_patch" type="string">
 One or more `diff --git` sections in Git's `--patch` (`-p`) text format.
 
-Paths MUST be absolute. Surrounding commit metadata and email envelopes
-MUST NOT be included.
+Unlike Git, which writes paths relative to the repository root, every
+path MUST be absolute, including in `rename from`, `rename to`,
+`copy from`, and `copy to` lines, and MUST NOT have a prefix such as
+Git's default `a/` and `b/`. Otherwise paths follow Git: `/dev/null`
+names the missing side of an added or deleted file in the `---` and
+`+++` lines, and paths with unusual characters are quoted as Git quotes
+them. Surrounding commit metadata and email envelopes MUST NOT be
+included.
 
 </ResponseField>
 
@@ -4009,6 +4075,22 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
   Other undefined error code.
 </ResponseField>
 
+## <span class="font-mono">ErrorStopReason</span>
+
+Details of a failure that ended active work.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+
 ## <span class="font-mono">ExtNotification</span>
 
 Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -4110,11 +4192,16 @@ future ACP variants.
 
 ## <span class="font-mono">IdleStateUpdate</span>
 
-The agent is ready to process a new prompt.
+No foreground work is active. Background activity may continue.
 
-**Type:** Object
+Agents SHOULD include a `stopReason` when the idle transition ends foreground
+work. An idle update that does not end foreground work need not include one.
+Receivers treat an omitted, `null`, or malformed `stopReason` as the agent not
+reporting one.
 
-**Properties:**
+**Type:** Union
+
+**Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4124,11 +4211,12 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why foreground work stopped.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends foreground work.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
@@ -4141,6 +4229,130 @@ Token usage for completed foreground work.
 Optional. Omitted or `null` both mean the agent is not reporting token
 usage for this state update.
 
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="end_turn" type="object">
+The active work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+allowed agent requests before returning idle.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue. The user
+prompt and everything that comes after it won't be included in the next
+prompt, so this should be reflected in the UI.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+Active session work was cancelled by the client via `session/cancel`.
+
+Agents MUST report this stop reason on an idle `state_update` session update
+when cancellation succeeds, even if cancellation causes exceptions in
+underlying operations. Agents MUST catch these errors and report
+`cancelled`, not `error`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+This includes pre-insertion foreground work. A prompt failure before
+insertion also requires an error response to `session/prompt`; after
+insertion, the prompt's response remains successful.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ImageContent</span>
@@ -4695,7 +4907,11 @@ An Internet media type identifying the format of protocol content.
 
 ## <span class="font-mono">MessageId</span>
 
-Unique identifier for a message within a session.
+Identifier for a message, unique among messages of the same type within a session.
+
+Each message type, such as user messages, agent messages, and agent thoughts,
+has its own ID space: messages of different types may share an ID and remain
+distinct messages.
 
 **Type:** `string`
 
@@ -4827,11 +5043,7 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 ## <span class="font-mono">Notice</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Fire-and-forget advisory information for the user.
+Fire-and-forget information for the user.
 
 Notices are live events rather than session history. Agents must not rely on
 a notice being received, displayed, or seen by the user.
@@ -4866,10 +5078,6 @@ Omitted and `null` are equivalent and mean no description was supplied.
 </ResponseField>
 
 ## <span class="font-mono">NoticeSeverity</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Severity hint for a session notice.
 
@@ -5622,9 +5830,10 @@ Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
-Receivers that do not understand this cursor should preserve the raw
-payload when storing, replaying, proxying, or forwarding requests, and
-otherwise reject the request rather than guessing where to replay from.
+Intermediaries SHOULD preserve the raw payload when storing, replaying,
+proxying, or forwarding requests. Agents that do not support this cursor
+MUST reject the request with `-32602` (Invalid params), rather than
+substituting another cursor or resuming without replay.
 
 <Expandable title="Properties">
 
@@ -6083,6 +6292,17 @@ prompt extensions beyond the baseline text and resource-link content
 required by `session/prompt`.
 
 </ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#sessionsystempromptcapabilities">SessionSystemPromptCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `systemPrompt` on session lifecycle requests.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports `systemPrompt` in `append` mode.
+
+</ResponseField>
 
 ## <span class="font-mono">SessionConfigBoolean</span>
 
@@ -6533,6 +6753,92 @@ Implementations MUST NOT make assumptions about values in `_meta`.
   Optional sending session identity; omission or `null` retains a known value.
 </ResponseField>
 
+## <span class="font-mono">SessionSystemPromptCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for client-provided system prompts.
+
+Supplying `\{\}` means the agent supports `systemPrompt` on session lifecycle
+requests in `append` mode.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="mode" type={<><span><a href="#sessionsystempromptmodecapabilities">SessionSystemPromptModeCapabilities</a></span><span> | null</span></>} >
+  Delivery modes the agent supports in addition to `append`.
+
+Optional. Omitted or `null` both mean the agent supports only `append`.
+
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptModeCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System prompt delivery modes the agent supports in addition to `append`.
+
+`append` has no entry because every agent advertising `session.systemPrompt`
+supports it.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="override" type={<><span><a href="#sessionsystempromptoverridecapabilities">SessionSystemPromptOverrideCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `override` mode.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports replacing its built-in default
+instructions with the client-provided system prompt.
+
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptOverrideCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for the `override` system prompt mode.
+
+Supplying `\{\}` means the agent supports replacing its built-in default
+instructions with the client-provided system prompt.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
 ## <span class="font-mono">SessionUpdate</span>
 
 Different types of updates that can be sent while a session exists.
@@ -6757,7 +7063,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="idle" type="object">
-The agent is ready to process a new prompt.
+No foreground work is active. Background activity may continue.
 
 <Expandable title="Properties">
 
@@ -6772,11 +7078,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"idle"`.
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why foreground work stopped.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends foreground work.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
@@ -6792,6 +7099,131 @@ usage for this state update.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="end_turn" type="object">
+The active work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+allowed agent requests before returning idle.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue. The user
+prompt and everything that comes after it won't be included in the next
+prompt, so this should be reflected in the UI.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+Active session work was cancelled by the client via `session/cancel`.
+
+Agents MUST report this stop reason on an idle `state_update` session update
+when cancellation succeeds, even if cancellation causes exceptions in
+underlying operations. Agents MUST catch these errors and report
+`cancelled`, not `error`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+This includes pre-insertion foreground work. A prompt failure before
+insertion also requires an error response to `session/prompt`; after
+insertion, the prompt's response remains successful.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="requires_action" type="object">
@@ -7167,11 +7599,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="notice" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Advisory information for the user that is not part of session history.
+Information for the user that is not part of session history.
 
 No Client capability is required. Clients that do not understand or
 present notices may ignore them.
@@ -7207,10 +7635,6 @@ Omitted and `null` are equivalent and mean no description was supplied.
 </ResponseField>
 
 <ResponseField name="compaction_update" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A context compaction has been created or updated.
 
 <Expandable title="Properties">
@@ -7226,7 +7650,7 @@ A context compaction has been created or updated.
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
 <ResponseField name="error" type={"string | null"}>
-  Human-readable description of why the compaction failed.
+  Human-readable error details for the compaction.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"compaction_update"`.
@@ -7249,17 +7673,13 @@ A context compaction has been created or updated.
     </>
   }
 >
-  Complete replacement user-displayable summary retained by the compaction.
+  Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
 </Expandable>
 </ResponseField>
 
 <ResponseField name="compaction_summary_chunk" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A content block appended to a context compaction's retained summary.
 
 <Expandable title="Properties">
@@ -7444,8 +7864,25 @@ future ACP variants.
 
 The state of the agent's foreground work has changed.
 
+Foreground work is the agent's active response or workflow in the session,
+including model processing, tool execution, and waiting for user action needed
+to continue that work. It can start with a prompt or be agent-initiated, for
+example to pursue an ongoing goal or follow up on a completed background task.
+Either way, the agent MUST report `running` when foreground work starts or
+resumes, and `idle` when it ends. The agent SHOULD include a stop reason on
+that idle update. Agent-initiated work does not require a prompt request or a
+synthetic user message.
+
+`running` may precede user-message insertion, for example during a foreground
+hook. It is not acknowledgment of insertion, and rejecting a prompt does not
+itself end foreground work.
+
 Background activity can continue and emit other `session/update` notifications
-while `idle`. Those notifications do not change this state.
+while `idle`. Those notifications, including a detached task's progress or
+completion, do not by themselves change this state. A permission request only
+warrants `requires_action` when foreground work is blocked on user action.
+
+See protocol docs: [Foreground and Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#foreground-and-background-work)
 
 **Type:** Union
 
@@ -7470,7 +7907,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="idle" type="object">
-The agent is ready to process a new prompt.
+No foreground work is active. Background activity may continue.
 
 <Expandable title="Properties">
 
@@ -7485,11 +7922,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"idle"`.
 </ResponseField>
-<ResponseField name="stopReason" type={<><span><a href="#stopreason">StopReason</a></span><span> | null</span></>} >
-  Indicates why foreground work stopped.
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-Agents SHOULD include this when the idle transition ends foreground work.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
 </ResponseField>
 <ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
@@ -7505,6 +7943,131 @@ usage for this state update.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="end_turn" type="object">
+The active work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+allowed agent requests before returning idle.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue. The user
+prompt and everything that comes after it won't be included in the next
+prompt, so this should be reflected in the UI.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+Active session work was cancelled by the client via `session/cancel`.
+
+Agents MUST report this stop reason on an idle `state_update` session update
+when cancellation succeeds, even if cancellation causes exceptions in
+underlying operations. Agents MUST catch these errors and report
+`cancelled`, not `error`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+This includes pre-insertion foreground work. A prompt failure before
+insertion also requires an error response to `session/prompt`; after
+insertion, the prompt's response remains successful.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="requires_action" type="object">
@@ -7568,51 +8131,6 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
-</ResponseField>
-
-## <span class="font-mono">StopReason</span>
-
-Reasons why an agent stops active session work.
-
-See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
-
-**Type:** Union
-
-<ResponseField name="end_turn" type="string">
-  The active work ended successfully.
-</ResponseField>
-
-<ResponseField name="max_tokens" type="string">
-  The active work ended because the agent reached the maximum number of tokens.
-</ResponseField>
-
-<ResponseField name="max_turn_requests" type="string">
-  The active work ended because the agent reached the maximum number of allowed
-  agent requests before returning idle.
-</ResponseField>
-
-<ResponseField name="refusal" type="string">
-  The active work ended because the agent refused to continue. The user prompt
-  and everything that comes after it won't be included in the next prompt, so
-  this should be reflected in the UI.
-</ResponseField>
-
-<ResponseField name="cancelled" type="string">
-Active session work was cancelled by the client via `session/cancel`.
-
-Agents should report this stop reason on an idle `state_update` session update
-when cancellation succeeds, even if cancellation causes exceptions in
-underlying operations.
-
-</ResponseField>
-
-<ResponseField name="other" type="string">
-Custom or future stop reason.
-
-Values beginning with `_` are reserved for implementation-specific
-extensions. Unknown values that do not begin with `_` are reserved for
-future ACP variants.
-
 </ResponseField>
 
 ## <span class="font-mono">StringFormat</span>
@@ -7853,6 +8371,96 @@ A concrete `StateUpdate` replaces the entire previous snapshot.
 
 Optional and nullable. Omitted means unchanged; `null` clears it. If no
 title is set, the Client chooses a fallback presentation.
+
+</ResponseField>
+
+## <span class="font-mono">SystemPrompt</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client-provided system-level instructions for a session.
+
+Clients MUST only send this when the Agent advertises
+`session.systemPrompt`. Agents that cannot apply it, for example because of
+an unadvertised mode or an unsupported content block type, MUST return an
+error instead of creating, resuming, or forking the session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<a href="#contentblock">ContentBlock[]</a>} required>
+  The system prompt content.
+
+Agents advertising the capability MUST accept `ContentBlock::Text`.
+Clients MUST NOT send other content block types until a future
+capability allows them, and Agents MUST return an error for content
+blocks they do not support, including unknown types preserved as
+`ContentBlock::Other`.
+
+</ResponseField>
+<ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
+  How the Agent combines `content` with its own instructions.
+
+Required on the wire, so every request states its mode. In Rust,
+`SystemPrompt::new` starts it as `SystemPromptMode::Append`. Unknown
+values parse as `SystemPromptMode::Other`; Agents MUST return an error
+for modes they do not support.
+
+</ResponseField>
+
+## <span class="font-mono">SystemPromptMode</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+How the Agent combines a client-provided system prompt with its own instructions.
+
+Unknown modes parse as `SystemPromptMode::Other` so they can be stored,
+proxied, or forwarded. An Agent MUST return an error for a mode it does not
+support rather than treating it as `append` or `override`.
+
+**Type:** Union
+
+<ResponseField name="append" type="string">
+Add the content to the Agent's own instructions rather than replacing them.
+
+Every Agent that advertises `session.systemPrompt` supports this mode.
+Agents SHOULD give the content system-level precedence, for example in the
+model's system prompt or developer instructions rather than in user-turn
+content. Where it is placed and how it is formatted is implementation-defined.
+
+</ResponseField>
+
+<ResponseField name="override" type="string">
+Replace the Agent's built-in default instructions with the content.
+
+This does not change tool availability, MCP servers, permissions, or session
+configuration. Context the Agent supplies from the workspace or environment
+MAY still be included. Clients that use this mode take responsibility for any
+tool guidance or safety instructions the Agent's default instructions
+provided, and MUST only use it when the Agent advertises
+`session.systemPrompt.mode.override`.
+
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future system prompt mode.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
 
 </ResponseField>
 

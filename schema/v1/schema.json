@@ -318,15 +318,13 @@
           "description": "Line number to start reading from (1-based).",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0,
-          "x-deserialize-default-on-error": true
+          "minimum": 0
         },
         "limit": {
           "description": "Maximum number of lines to read.",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0,
-          "x-deserialize-default-on-error": true
+          "minimum": 0
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -1174,30 +1172,24 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "env": {
           "description": "Environment variables for the command.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "cwd": {
           "description": "Working directory for the command. Must be an absolute path.",
-          "type": ["string", "null"],
-          "x-deserialize-default-on-error": true
+          "type": ["string", "null"]
         },
         "outputByteLimit": {
           "description": "Maximum number of output bytes to retain.\n\nWhen the limit is exceeded, the Client truncates from the beginning of the output\nto stay within the limit.\n\nThe Client MUST ensure truncation happens at a character boundary to maintain valid\nstring output, even if this means the retained output is slightly less than the\nspecified limit.",
           "type": ["integer", "null"],
           "format": "uint64",
-          "minimum": 0,
-          "x-deserialize-default-on-error": true
+          "minimum": 0
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -2759,14 +2751,11 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "env": {
           "description": "Additional environment variables to set on the configured agent invocation for terminal auth.\nThese values override same-named variables in the base launch configuration.",
           "type": "object",
-          "x-deserialize-default-on-error": true,
           "additionalProperties": {
             "type": "string"
           }
@@ -3828,6 +3817,54 @@
               "$ref": "#/$defs/UsageUpdate"
             }
           ]
+        },
+        {
+          "description": "Information for the user that is not part of session history.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::notices`].",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "notice"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/Notice"
+            }
+          ]
+        },
+        {
+          "description": "A context compaction has been created or updated.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "compaction_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CompactionUpdate"
+            }
+          ]
+        },
+        {
+          "description": "A content block appended to a context compaction's retained summary.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "compaction_summary_chunk"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CompactionSummaryChunk"
+            }
+          ]
         }
       ],
       "discriminator": {
@@ -4250,6 +4287,168 @@
       },
       "required": ["used", "size"]
     },
+    "NoticeSeverity": {
+      "description": "Severity hint for a session notice.",
+      "anyOf": [
+        {
+          "description": "Informational notice.",
+          "type": "string",
+          "const": "info"
+        },
+        {
+          "description": "Warning notice.",
+          "type": "string",
+          "const": "warning"
+        },
+        {
+          "description": "Error notice.",
+          "type": "string",
+          "const": "error"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future notice severity.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP severities.",
+          "type": "string"
+        }
+      ]
+    },
+    "Notice": {
+      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nAgents MUST only send notices when the Client advertised\n[`ClientSessionCapabilities::notices`]. Otherwise, Agents may use an agent\nmessage when the information should still be surfaced to the user.\n\nSee RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)",
+      "type": "object",
+      "properties": {
+        "severity": {
+          "description": "Presentation severity hint.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/NoticeSeverity"
+            }
+          ]
+        },
+        "title": {
+          "description": "Required non-empty plain-text title that can stand alone.",
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "description": "Optional plain-text detail or guidance.\n\nOmitted and `null` are equivalent and mean no description was supplied.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "Metadata scoped to this notice.\n\nOmitted and `null` are equivalent and mean no metadata was supplied.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["severity", "title"]
+    },
+    "CompactionId": {
+      "description": "Unique identifier for a context compaction within a session.",
+      "type": "string"
+    },
+    "CompactionStatus": {
+      "description": "Lifecycle state of a context compaction.",
+      "anyOf": [
+        {
+          "description": "Compaction has started and has not finished.",
+          "type": "string",
+          "const": "in_progress"
+        },
+        {
+          "description": "Compaction finished successfully.",
+          "type": "string",
+          "const": "completed"
+        },
+        {
+          "description": "Compaction finished unsuccessfully.",
+          "type": "string",
+          "const": "failed"
+        },
+        {
+          "description": "Compaction was cancelled before it finished.",
+          "type": "string",
+          "const": "cancelled"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future compaction status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP statuses.",
+          "type": "string"
+        }
+      ]
+    },
+    "CompactionUpdate": {
+      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary.",
+      "type": "object",
+      "properties": {
+        "compactionId": {
+          "description": "The Agent-owned ID of this compaction, unique within the session.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CompactionId"
+            }
+          ]
+        },
+        "status": {
+          "description": "Current lifecycle status.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CompactionStatus"
+            }
+          ]
+        },
+        "summary": {
+          "description": "Complete replacement user-displayable summary content for the compaction.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "error": {
+          "description": "Human-readable error details for the compaction.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "Extensible metadata patch for this compaction.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["compactionId", "status"]
+    },
+    "CompactionSummaryChunk": {
+      "description": "A content block appended to a compaction's summary. A first-seen ID creates\nan in-progress compaction. Chunks append in receive order.\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+      "type": "object",
+      "properties": {
+        "compactionId": {
+          "description": "ID of the compaction whose summary receives this content.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CompactionId"
+            }
+          ]
+        },
+        "content": {
+          "description": "One content block to append.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ContentBlock"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "Metadata scoped to this chunk. Omission and `null` both mean absent.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["compactionId", "content"]
+    },
     "CompleteElicitationNotification": {
       "description": "Notification sent by the agent when a URL-based elicitation is complete.",
       "type": "object",
@@ -4575,11 +4774,35 @@
       "description": "Session-related capabilities supported by the client.",
       "type": "object",
       "properties": {
+        "compaction": {
+          "description": "Support for ID-addressed context compaction updates. Omitted or `null`\nmeans unsupported; `{}` advertises the complete compaction contract.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CompactionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "configOptions": {
           "description": "Config option capabilities supported by the client.\n\nOmitted or `null` both mean the client does not advertise support for any\nconfig option extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionConfigOptionsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "notices": {
+          "description": "Support for live user-facing `notice` session updates.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client can present notices to the user.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NoticeCapabilities"
             },
             {
               "type": "null"
@@ -4594,6 +4817,10 @@
           "additionalProperties": true
         }
       }
+    },
+    "CompactionCapabilities": {
+      "description": "Client support for ID-addressed context compaction updates.",
+      "type": "object"
     },
     "SessionConfigOptionsCapabilities": {
       "description": "Session configuration option capabilities supported by the client.",
@@ -4630,6 +4857,10 @@
           "additionalProperties": true
         }
       }
+    },
+    "NoticeCapabilities": {
+      "description": "Client support for presenting live notices to the user.",
+      "type": "object"
     },
     "AuthCapabilities": {
       "description": "Authentication capabilities supported by the client.\n\nAdvertised during initialization to inform the agent which authentication\nmethod types the client can handle. This governs opt-in types that require\nadditional client-side support.",
@@ -4759,18 +4990,14 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "mcpServers": {
           "description": "List of MCP (Model Context Protocol) servers the agent should connect to.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",
@@ -4950,9 +5177,7 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "cwd": {
           "description": "The working directory for this session. Must be an absolute path.",
@@ -4963,9 +5188,7 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "sessionId": {
           "description": "The ID of the session to load.",
@@ -5052,18 +5275,14 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "mcpServers": {
           "description": "List of MCP servers to connect to for this session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)",

@@ -35,11 +35,15 @@ summary through an optional hook.
 > What are you proposing to improve the situation?
 
 Add `compaction_update` and `compaction_summary_chunk` to `SessionUpdate` in
-ACP v1 and v2. The first `compaction_update` for an ID creates a compaction
+ACP v1 and v2. The first notification for an ID creates a compaction
 entity at that position in the session timeline. Later updates and summary
 chunks with the same ID update that entity in place.
 
-A live compaction starts with:
+A single `compaction_update` with `status: "completed"` is sufficient; reporting
+progress is optional. Summary content is also optional. It may be sent all at
+once in the `summary` field or streamed using `compaction_summary_chunk`.
+
+For example, an Agent can report that compaction has started:
 
 ```json
 {
@@ -49,8 +53,7 @@ A live compaction starts with:
 }
 ```
 
-If the summary is available incrementally, the Agent can append content while
-the compaction is in progress:
+If the summary is available incrementally, the Agent can stream content:
 
 ```json
 {
@@ -65,7 +68,7 @@ the compaction is in progress:
 
 The Agent finishes the same entity by reusing its ID. A non-streaming Agent can
 include the complete summary, while a streaming Agent can use this field as an
-authoritative final replacement:
+authoritative replacement of content received so far:
 
 ```json
 {
@@ -86,6 +89,9 @@ authoritative final replacement:
 `compactionId` is an opaque, Agent-owned string. It is required,
 non-null, unique within the session, and never reused for another compaction.
 
+Clients initialize a first-seen compaction ID with status `in_progress` and unset
+optional fields, then apply the notification.
+
 `status` is required and non-null on every update. Its initial values are:
 
 - `in_progress` - Compaction has started and has not finished.
@@ -101,39 +107,35 @@ unknown values are reserved for future ACP statuses. Clients preserve an
 unknown string and present an opaque generic state without inferring lifecycle
 or control behavior from it.
 
-The normal transition is `in_progress` to one terminal status. An Agent may
-send a terminal status as the first update when replaying history or when its
-underlying runtime only exposes completed compactions. After emitting
-`in_progress`, the Agent must eventually put the entity into exactly one
-terminal status when that compaction ends, unless the session or connection
-ends before the update can be delivered.
+The normal transition is `in_progress` to a terminal status. The Agent **MUST**
+report a terminal status when a reported compaction ends.
 
-The first `compaction_update` fixes the entity's timeline position relative to
-other ID-addressed entities: it follows entities first seen earlier and
-precedes entities first seen later. An Agent must send that update before any
-`compaction_summary_chunk` for the ID. Later patches or chunks for any of those
-entities do not move them or split one entity around the compaction. A Client
-may render an in-progress indicator and replace it with a completed, failed, or
-cancelled presentation when the terminal update arrives.
+The first notification fixes the entity's timeline position in
+notification receive order: it follows previously received timeline content
+and precedes content first received later. Later patches or chunks for an
+ID-addressed entity update it in place; they do not move or split it around the
+compaction.
+
+A Client may render an in-progress indicator and replace it with a completed,
+failed, or cancelled presentation when the corresponding status arrives.
 
 ### Optional fields and patch semantics
 
 The update has three optional, nullable patch fields:
 
 - `summary` is an array of `ContentBlock` values containing the
-  unencrypted, user-displayable content produced or retained by a successful
+  unencrypted, user-displayable summary content produced or retained by a
   compaction. It should faithfully represent the retained summary while
   excluding internal prompt framing or instructions. Text blocks may contain
   Markdown. It is not generic content such as `Compaction completed`.
-- `error` is a human-readable string describing why compaction failed.
+- `error` is a human-readable error description.
 - `_meta` is reserved for extensibility and follows ACP's existing `_meta`
   rules.
 
 For each patch field, omission leaves the stored value unchanged, `null`
 clears it, and a concrete value replaces it. On a first-seen ID, omission and
 `null` both start with no value. For `summary`, both `null` and `[]` clear the
-current content. A non-empty `summary` is only valid with `completed`, and
-`error` is only valid with `failed`.
+current content.
 
 ### Streaming summary content
 
@@ -149,14 +151,20 @@ array replaces all content accumulated from earlier updates and chunks;
 subsequent chunks append to that replacement. `summary: []` or `summary: null`
 clears the accumulated content.
 
-Agents may send summary chunks only after an `in_progress` update and before a
-terminal update. A `completed` update may omit `summary` to retain the content
-accumulated from chunks, or include the complete summary as an authoritative
-final replacement.
+An update may omit `summary` to retain the content accumulated from
+chunks, or include the complete summary as an authoritative replacement.
 
 Agents should omit `summary` when no unencrypted, user-displayable summary is
 available or when exposing it could reveal context that was not otherwise
 user-visible.
+
+### History replay
+
+History replay uses the same update, chunk, and patch semantics as live
+delivery. Replay does not implicitly reset omitted fields. Agents use
+replacement or clearing summary patches as needed to avoid duplicating content
+the Client already holds. The v1 capability gate applies to replay as well as
+live delivery.
 
 ### Version-specific capability
 
@@ -201,7 +209,7 @@ implementations with only lifecycle signals remain fully conformant.
 
 ### Implemented
 
-The protocol implementation landed in
+The initial Preview protocol implementation landed in
 [PR #2002](https://github.com/agentclientprotocol/agent-client-protocol/pull/2002):
 
 - Both protocol versions define `CompactionId`, `CompactionStatus`,
@@ -211,12 +219,19 @@ The protocol implementation landed in
   v2 does not require a capability.
 - Both versions preserve unknown status strings and distinguish omitted,
   `null`, and concrete patch values.
-- Generated unstable schemas and draft protocol guides include the feature.
-  See the [v1 guide](/protocol/v1/draft/prompt-turn#session-compaction) and
-  [v2 guide](/protocol/v2/draft/prompt-lifecycle#session-compaction).
 
-The feature remains behind `unstable_session_compaction` and is not included
-in the stable schemas. Preview does not stabilize the wire contract.
+### Stabilization preparation
+
+The completion change includes compaction in stable and draft schemas and
+protocol guides. See the [v1 guide](/protocol/v1/prompt-turn#session-compaction)
+and [v2 guide](/protocol/v2/prompt-lifecycle#session-compaction).
+
+It makes compaction available unconditionally and removes the
+`unstable_session_compaction` Cargo feature. Existing consumers must remove
+that feature from their dependency configuration. The wire shapes and v1
+capability requirement are unchanged from Preview.
+Protocol v2 as a whole remains opt-in through `unstable_protocol_v2`;
+completing this RFD does not stabilize protocol v2.
 
 The schema crate [does not provide cross-version conversion](/rfds/v2/overview).
 SDKs supporting both versions should use explicit versioned implementations or
@@ -224,28 +239,42 @@ purpose-specific runtime adapters rather than schema-level conversion helpers.
 
 ### Preview validation
 
-The four compaction-specific schema tests cover serialization and
-deserialization, omitted and `null` patch representation, unknown status
-strings, v1 capability representation, and rejection of malformed known v2
-updates. These are wire-format tests, not end-to-end validation of lifecycle,
-capability enforcement, or replay behavior.
-
-During Preview, Agent and Client implementers should add or update examples and
-integration tests to exercise:
+Agent and Client implementers should add or update examples and integration
+tests to exercise:
 
 - V1 capability enforcement for both live updates and replay, including Clients
   that omit the capability or send `null`.
 - Lifecycle transitions to `completed`, `failed`, and `cancelled`, including
   runtimes that only expose completed compactions.
-- Summary chunk ordering, authoritative replacement and clearing, completion
-  with an omitted summary, and failure or cancellation after partial output.
-- Materialized replay with stable IDs and timeline placement, without
-  duplicating accumulated summary content after reconnecting.
+- Summary chunk ordering and first-seen ID initialization, authoritative
+  replacement and clearing, completion with an omitted summary, chunks after
+  terminal updates, and failure or cancellation after partial output.
+- History replay without duplicating accumulated summary content after
+  reconnecting, including v1
+  message chunks without IDs on either side of a compaction boundary.
 - Unknown statuses and v2 updates, and safe omission of summaries that cannot
   be exposed to the user.
 
-Agent/Client interoperability feedback on these behaviors should inform the
-decision to stabilize the feature.
+Cross-repository Agent/Client integration tests and interoperability results
+are not established by this schema repository. The completion review should
+include implementer feedback on these behaviors; core-team approval remains
+the final stabilization decision.
+
+### External implementation evidence
+
+The Claude Agent adapter provides public v1 Agent-side implementation evidence:
+
+- [PR #1134](https://github.com/agentclientprotocol/claude-agent-acp/pull/1134)
+  added experimental compaction updates and summary streaming, released in
+  `0.78.0`.
+- [PR #1154](https://github.com/agentclientprotocol/claude-agent-acp/pull/1154)
+  added regression coverage and terminal cleanup for interrupted compactions,
+  released in `0.80.0`. It addressed cancellations, provider failures, and other
+  interruptions that could otherwise leave an `in_progress` entity unfinished.
+
+This is evidence that an Agent exercised and refined the lifecycle contract,
+not proof of Client presentation, history replay, or cross-implementation
+interoperability. Client-side validation remains a completion-review item.
 
 ## Frequently asked questions
 
@@ -282,8 +311,7 @@ lossless encoding of the Agent's internal replacement history.
 Some runtimes produce summary text incrementally, and ACP v2 already composes
 append-only content chunks with authoritative replacement snapshots for
 messages and tool calls. Compaction follows the same pattern. Runtimes that
-only expose a completed result send one `compaction_update`, and replay always
-uses that materialized form.
+only expose a completed result send one `compaction_update`.
 
 ### Should the Client collapse earlier messages after compaction?
 
@@ -306,11 +334,14 @@ activity into conversation content and cannot replace one stable entity in
 place.
 
 **Separate start and finish events** - Simple to emit, but force Clients to
-correlate events heuristically and replay transient progress instead of one
-materialized entity.
+correlate events heuristically rather than updating one ID-addressed entity.
 
 ## Revision history
 
 - 2026-07-22: Initial draft.
 - 2026-09-23: Moved to Preview; documented the implemented protocol support and
   remaining integration validation.
+- 2026-10-06: Prepared completion and stabilization; included compaction in stable
+  artifacts, removed the unstable Cargo feature, expanded schema regression
+  coverage, and clarified receive-order timeline placement and summary patch
+  semantics independent of compaction status.

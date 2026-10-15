@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::Meta;
-use crate::{IntoOption, SkipListener};
+use crate::IntoOption;
 
 /// Unique identifier for a plan within a session.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -194,7 +194,13 @@ fn other_plan_update_content_schema(schema: &mut Schema) {
     );
 }
 
-const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &["items", "file", "markdown"];
+const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &[
+    "items",
+    #[cfg(feature = "unstable_plan_operations")]
+    "file",
+    #[cfg(feature = "unstable_plan_operations")]
+    "markdown",
+];
 
 impl PlanUpdateContent {
     /// Builds a plan update that replaces the itemized entries for a plan.
@@ -232,7 +238,7 @@ pub struct PlanItems {
     ///
     /// When updating an item-based plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces that plan with each update.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -596,6 +602,11 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn plan_update_content_does_not_hide_malformed_known_experimental_variant() {
         assert!(
             serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
                 "type": "file",

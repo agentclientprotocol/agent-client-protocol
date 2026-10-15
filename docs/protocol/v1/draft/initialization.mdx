@@ -54,14 +54,6 @@ They **SHOULD** also provide a name and version to the Agent.
 }
 ```
 
-<Note>
-  `session.compaction` and `session.notices` are independent Preview
-  capabilities available only in the draft schema. Advertise each only when the
-  Client implements its corresponding
-  [compaction](/protocol/v1/draft/prompt-turn#session-compaction) or
-  [notice](/protocol/v1/draft/prompt-turn#session-notices) semantics.
-</Note>
-
 The Agent **MUST** respond with the chosen [protocol version](#protocol-version) and the [capabilities](#agent-capabilities) it supports. It **SHOULD** also provide a name and version to the Client as well:
 
 ```json
@@ -217,12 +209,11 @@ The Client **SHOULD** specify whether it supports the following capabilities:
 #### Session Notices
 
 <ParamField path="session.notices" type="NoticeCapabilities Object">
-  The Client can present live advisory `notice` session updates to the user.
-  This field is optional and nullable. Omitting `session` or `notices`, or
-  setting either to `null`, means unsupported. Supplying `{}` advertises notice
-  support. Agents must not send notices without this capability and may instead
-  use an agent message when the information should still be surfaced to the
-  user.
+  The Client can present live `notice` session updates to the user. This field
+  is optional and nullable. Omitting `session` or `notices`, or setting either
+  to `null`, means unsupported. Supplying `{}` advertises notice support. Agents
+  must not send notices without this capability and may instead use an agent
+  message when the information should still be surfaced to the user.
 </ParamField>
 
 <Card
@@ -312,6 +303,14 @@ Optionally, they **MAY** support other session methods and notifications by spec
   The Agent supports `additionalDirectories` on supported session lifecycle
   requests. Omitted or `null` both mean the Agent does not advertise support.
   Supplying `{}` means the Agent supports additional workspace roots.
+</ResponseField>
+
+<ResponseField name="systemPrompt" type="SessionSystemPromptCapabilities Object">
+  **Unstable.** The Agent supports
+  [`systemPrompt`](/protocol/v1/draft/session-setup#system-prompt-unstable) on
+  session lifecycle requests. Omitted or `null` both mean the Agent does not
+  advertise support. Supplying `{}` means the Agent supports `append` mode.
+  Supplying `{ "mode": { "override": {} } }` also advertises `override` mode.
 </ResponseField>
 
 <Note>

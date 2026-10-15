@@ -1889,7 +1889,7 @@
       "description": "Text patch format used by [`DiffPatch`].",
       "anyOf": [
         {
-          "description": "One or more `diff --git` sections in Git's `--patch` (`-p`) text format.\n\nPaths MUST be absolute. Surrounding commit metadata and email envelopes\nMUST NOT be included.",
+          "description": "One or more `diff --git` sections in Git's `--patch` (`-p`) text format.\n\nUnlike Git, which writes paths relative to the repository root, every\npath MUST be absolute, including in `rename from`, `rename to`,\n`copy from`, and `copy to` lines, and MUST NOT have a prefix such as\nGit's default `a/` and `b/`. Otherwise paths follow Git: `/dev/null`\nnames the missing side of an added or deleted file in the `---` and\n`+++` lines, and paths with unusual characters are quoted as Git quotes\nthem. Surrounding commit metadata and email envelopes MUST NOT be\nincluded.",
           "type": "string",
           "const": "git_patch"
         },
@@ -3263,7 +3263,7 @@
       "type": "object",
       "properties": {
         "session": {
-          "description": "Session capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not support the\n`session/*` method surface. Supplying `{}` means the agent supports the\nbaseline session methods: `session/new`, `session/prompt`,\n`session/cancel`, and `session/update`.",
+          "description": "Session capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not support the\n`session/*` method surface. Supplying `{}` means the agent supports the\nbaseline session methods: `session/new`, `session/list`,\n`session/resume`, `session/close`, `session/prompt`, `session/cancel`,\nand `session/update`.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCapabilities"
@@ -3351,6 +3351,18 @@
           "anyOf": [
             {
               "$ref": "#/$defs/SessionAdditionalDirectoriesCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "systemPrompt": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `systemPrompt` on session lifecycle requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports `systemPrompt` in `append` mode.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionSystemPromptCapabilities"
             },
             {
               "type": "null"
@@ -3570,6 +3582,66 @@
         }
       }
     },
+    "SessionSystemPromptCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for client-provided system prompts.\n\nSupplying `{}` means the agent supports `systemPrompt` on session lifecycle\nrequests in `append` mode.",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "Delivery modes the agent supports in addition to `append`.\n\nOptional. Omitted or `null` both mean the agent supports only `append`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionSystemPromptModeCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionSystemPromptModeCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem prompt delivery modes the agent supports in addition to `append`.\n\n`append` has no entry because every agent advertising `session.systemPrompt`\nsupports it.",
+      "type": "object",
+      "properties": {
+        "override": {
+          "description": "Whether the agent supports `override` mode.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports replacing its built-in default\ninstructions with the client-provided system prompt.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionSystemPromptOverrideCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionSystemPromptOverrideCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `override` system prompt mode.\n\nSupplying `{}` means the agent supports replacing its built-in default\ninstructions with the client-provided system prompt.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
     "SessionForkCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/fork` method.\n\nSupplying `{}` means the agent supports forking sessions.",
       "type": "object",
@@ -3754,18 +3826,14 @@
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "env": {
           "description": "Additional environment variables to set on the configured agent invocation for terminal auth.\nNames MUST be unique. These values override same-named variables in the\nbase launch configuration.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -4622,7 +4690,7 @@
       "x-method": "session/set_config_option"
     },
     "PromptResponse": {
-      "description": "Response acknowledging that a user prompt was inserted into the ACP conversation.\n\nThis response does not indicate that the prompt was merely received or queued, nor that the\nagent has finished processing it.\nProcessing and completion are reported through `state_update` session updates.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted)",
+      "description": "Response acknowledging that a user prompt was inserted into the ACP conversation.\n\nThis response does not indicate that the prompt was merely received or queued, nor that the\nagent has finished processing it.\nProcessing and completion are reported through `state_update` session updates.\n\nInsertion is the logical addition of a user message with a message ID and a position\nrelative to other messages in the ACP conversation.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted)",
       "type": "object",
       "properties": {
         "messageId": {
@@ -4645,7 +4713,7 @@
       "x-method": "session/prompt"
     },
     "MessageId": {
-      "description": "Unique identifier for a message within a session.",
+      "description": "Identifier for a message, unique among messages of the same type within a session.\n\nEach message type, such as user messages, agent messages, and agent thoughts,\nhas its own ID space: messages of different types may share an ID and remain\ndistinct messages.",
       "type": "string"
     },
     "ExtResponse": {
@@ -5100,7 +5168,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAdvisory information for the user that is not part of session history.\n\nNo Client capability is required. Clients that do not understand or\npresent notices may ignore them.",
+          "description": "Information for the user that is not part of session history.\n\nNo Client capability is required. Clients that do not understand or\npresent notices may ignore them.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5116,7 +5184,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA context compaction has been created or updated.",
+          "description": "A context compaction has been created or updated.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5132,7 +5200,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content block appended to a context compaction's retained summary.",
+          "description": "A content block appended to a context compaction's retained summary.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5575,40 +5643,23 @@
         }
       }
     },
-    "StopReason": {
-      "description": "Reasons why an agent stops active session work.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)",
-      "anyOf": [
-        {
-          "description": "The active work ended successfully.",
-          "type": "string",
-          "const": "end_turn"
-        },
-        {
-          "description": "The active work ended because the agent reached the maximum number of tokens.",
-          "type": "string",
-          "const": "max_tokens"
-        },
-        {
-          "description": "The active work ended because the agent reached the maximum number of\nallowed agent requests before returning idle.",
-          "type": "string",
-          "const": "max_turn_requests"
-        },
-        {
-          "description": "The active work ended because the agent refused to continue. The user\nprompt and everything that comes after it won't be included in the next\nprompt, so this should be reflected in the UI.",
-          "type": "string",
-          "const": "refusal"
-        },
-        {
-          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents should report this stop reason on an idle `state_update` session update\nwhen cancellation succeeds, even if cancellation causes exceptions in\nunderlying operations.",
-          "type": "string",
-          "const": "cancelled"
-        },
-        {
-          "title": "other",
-          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
-          "type": "string"
+    "ErrorStopReason": {
+      "description": "Details of a failure that ended active work.",
+      "type": "object",
+      "properties": {
+        "error": {
+          "description": "The failure, as a JSON-RPC error object.\n\nOptional. Omitted or `null` both mean the agent is not reporting failure details.\nAgents SHOULD include it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
         }
-      ]
+      }
     },
     "Usage": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage information for completed session work.",
@@ -5663,21 +5714,9 @@
       "required": ["totalTokens", "inputTokens", "outputTokens"]
     },
     "IdleStateUpdate": {
-      "description": "The agent is ready to process a new prompt.",
+      "description": "No foreground work is active. Background activity may continue.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An idle update that does not end foreground work need not include one.\nReceivers treat an omitted, `null`, or malformed `stopReason` as the agent not\nreporting one.",
       "type": "object",
       "properties": {
-        "stopReason": {
-          "description": "Indicates why foreground work stopped.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\nAgents SHOULD include this when the idle transition ends foreground work.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/StopReason"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "x-deserialize-default-on-error": true
-        },
         "usage": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage for completed foreground work.\n\nOptional. Omitted or `null` both mean the agent is not reporting token\nusage for this state update.",
           "anyOf": [
@@ -5695,8 +5734,173 @@
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
+        },
+        "stopReason": {
+          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         }
-      }
+      },
+      "anyOf": [
+        {
+          "description": "The active work ended successfully.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "end_turn"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent reached the maximum number of tokens.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_tokens"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent reached the maximum number of\nallowed agent requests before returning idle.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_turn_requests"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent refused to continue. The user\nprompt and everything that comes after it won't be included in the next\nprompt, so this should be reflected in the UI.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "refusal"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents MUST report this stop reason on an idle `state_update` session update\nwhen cancellation succeeds, even if cancellation causes exceptions in\nunderlying operations. Agents MUST catch these errors and report\n`cancelled`, not `error`.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "cancelled"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because something failed.\n\nThis includes pre-insertion foreground work. A prompt failure before\ninsertion also requires an error response to `session/prompt`; after\ninsertion, the prompt's response remains successful.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "error"
+            }
+          },
+          "required": ["stopReason"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorStopReason"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["stopReason"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "end_turn"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_tokens"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_turn_requests"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "refusal"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "cancelled"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "error"
+                  }
+                },
+                "required": ["stopReason"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        },
+        {
+          "title": "none",
+          "description": "No stop reason: `stopReason` is omitted or `null`.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "null"
+            }
+          }
+        }
+      ]
     },
     "RequiresActionStateUpdate": {
       "description": "Foreground work is blocked on user action.",
@@ -5723,7 +5927,7 @@
       }
     },
     "StateUpdate": {
-      "description": "The state of the agent's foreground work has changed.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications do not change this state.",
+      "description": "The state of the agent's foreground work has changed.\n\nForeground work is the agent's active response or workflow in the session,\nincluding model processing, tool execution, and waiting for user action needed\nto continue that work. It can start with a prompt or be agent-initiated, for\nexample to pursue an ongoing goal or follow up on a completed background task.\nEither way, the agent MUST report `running` when foreground work starts or\nresumes, and `idle` when it ends. The agent SHOULD include a stop reason on\nthat idle update. Agent-initiated work does not require a prompt request or a\nsynthetic user message.\n\n`running` may precede user-message insertion, for example during a foreground\nhook. It is not acknowledgment of insertion, and rejecting a prompt does not\nitself end foreground work.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications, including a detached task's progress or\ncompletion, do not by themselves change this state. A permission request only\nwarrants `requires_action` when foreground work is blocked on user action.\n\nSee protocol docs: [Foreground and Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#foreground-and-background-work)",
       "anyOf": [
         {
           "description": "Foreground work is in progress.",
@@ -5742,7 +5946,7 @@
           ]
         },
         {
-          "description": "The agent is ready to process a new prompt.",
+          "description": "No foreground work is active. Background activity may continue.",
           "type": "object",
           "properties": {
             "state": {
@@ -6458,7 +6662,7 @@
       "required": ["used", "size"]
     },
     "NoticeSeverity": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSeverity hint for a session notice.",
+      "description": "Severity hint for a session notice.",
       "anyOf": [
         {
           "description": "Informational notice.",
@@ -6483,7 +6687,7 @@
       ]
     },
     "Notice": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nFire-and-forget advisory information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nNo Client capability is required, and unsupported Clients may ignore notices.\n\nSee RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)",
+      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nNo Client capability is required, and unsupported Clients may ignore notices.\n\nSee RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)",
       "type": "object",
       "properties": {
         "severity": {
@@ -6514,11 +6718,11 @@
       "required": ["severity", "title"]
     },
     "CompactionId": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a context compaction within a session.",
+      "description": "Unique identifier for a context compaction within a session.",
       "type": "string"
     },
     "CompactionStatus": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nLifecycle state of a context compaction.",
+      "description": "Lifecycle state of a context compaction.",
       "anyOf": [
         {
           "description": "Compaction has started and has not finished.",
@@ -6548,7 +6752,7 @@
       ]
     },
     "CompactionUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA context compaction upsert. The first update fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the retained summary. A non-empty summary is only\nvalid with `completed`; `error` is only valid with `failed`.",
+      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary.",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -6568,7 +6772,7 @@
           ]
         },
         "summary": {
-          "description": "Complete replacement user-displayable summary retained by the compaction.",
+          "description": "Complete replacement user-displayable summary content for the compaction.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -6577,7 +6781,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "error": {
-          "description": "Human-readable description of why the compaction failed.",
+          "description": "Human-readable error details for the compaction.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -6591,7 +6795,7 @@
       "required": ["compactionId", "status"]
     },
     "CompactionSummaryChunk": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA content block appended to the retained summary of an in-progress\ncompaction. Agents send chunks only after an `in_progress` update and before\nthe terminal update for the same ID.",
+      "description": "A content block appended to a compaction's summary. A first-seen ID creates\nan in-progress compaction. Chunks append in receive order.",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -6948,7 +7152,7 @@
                 },
                 {
                   "title": "ForkSessionRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForks an existing session to create a new independent session.\n\nThis method is only available if the agent advertises the `session.fork` capability.\n\nThe agent should create a new session with the same conversation context as the\noriginal, allowing operations like generating summaries without affecting the\noriginal session's history.",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nForks an existing session to create a new independent session.\n\nThis method is only available if the agent advertises the `session.fork` capability.\n\nThe agent should create a new session with the same conversation context as the\noriginal, allowing operations like generating summaries without affecting the\noriginal session's history.\n\nAs with `session/new`, the forked session is active once the agent responds,\nset up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.\nThe client can prompt it without calling `session/resume` first.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ForkSessionRequest"
@@ -6984,7 +7188,7 @@
                 },
                 {
                   "title": "PromptRequest",
-                  "description": "Processes a user prompt within a session.\n\nAcceptance means insertion into the ACP conversation:\n- Receives user messages with optional context (files, images, etc.)\n- Returns the inserted user message's ID without waiting for processing to finish\n\nThe Agent reports the user message with the same ID through `session/update`;\nthis notification may arrive before or after the response. Processing state,\noutput, tool calls, and completion are also reported through session updates.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)",
+                  "description": "Processes a user prompt within a session.\n\nAcceptance means adding a logical user message with an ID and a position\nrelative to other messages in the ACP conversation, not receipt or queueing.\nThe Agent MUST return the inserted message's ID without waiting for\nprocessing to finish.\n\nThe Agent reports the user message with the same ID through `session/update`;\nthis notification may arrive before or after the response, but neither may\nprecede insertion. Processing state, output, tool calls, and completion are\nalso reported through session updates.\n\nAn error response means the user message was not inserted. Once it is\ninserted, the Agent MUST NOT answer with an error, even if the work fails\nbefore the response is sent; it ends that work with the `error` stop reason.\n\nA rejected submission produces no user-message updates. Foreground state\nfollows its normal lifecycle independently of the request outcome:\n`running` may precede insertion, and rejection alone does not imply `idle`.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/PromptRequest"
@@ -7318,18 +7522,25 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "mcpServers": {
           "description": "List of MCP (Model Context Protocol) servers the agent should connect to.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
+        },
+        "systemPrompt": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the new session.\n\nOptional. Omitted and `null` are equivalent and mean the Agent uses its\nown default instructions. Clients MUST only send this when the Agent\nadvertises `session.systemPrompt`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SystemPrompt"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -7556,6 +7767,54 @@
       },
       "required": ["name", "command"]
     },
+    "SystemPrompt": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-provided system-level instructions for a session.\n\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`. Agents that cannot apply it, for example because of\nan unadvertised mode or an unsupported content block type, MUST return an\nerror instead of creating, resuming, or forking the session.",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\n[`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown\nvalues parse as [`SystemPromptMode::Other`]; Agents MUST return an error\nfor modes they do not support.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SystemPromptMode"
+            }
+          ]
+        },
+        "content": {
+          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept [`ContentBlock::Text`].\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types preserved as\n[`ContentBlock::Other`].",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          }
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["mode", "content"]
+    },
+    "SystemPromptMode": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown modes parse as [`SystemPromptMode::Other`] so they can be stored,\nproxied, or forwarded. An Agent MUST return an error for a mode it does not\nsupport rather than treating it as `append` or `override`.",
+      "anyOf": [
+        {
+          "description": "Add the content to the Agent's own instructions rather than replacing them.\n\nEvery Agent that advertises `session.systemPrompt` supports this mode.\nAgents SHOULD give the content system-level precedence, for example in the\nmodel's system prompt or developer instructions rather than in user-turn\ncontent. Where it is placed and how it is formatted is implementation-defined.",
+          "type": "string",
+          "const": "append"
+        },
+        {
+          "description": "Replace the Agent's built-in default instructions with the content.\n\nThis does not change tool availability, MCP servers, permissions, or session\nconfiguration. Context the Agent supplies from the workspace or environment\nMAY still be included. Clients that use this mode take responsibility for any\ntool guidance or safety instructions the Agent's default instructions\nprovided, and MUST only use it when the Agent advertises\n`session.systemPrompt.mode.override`.",
+          "type": "string",
+          "const": "override"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future system prompt mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "string"
+        }
+      ]
+    },
     "ListSessionsRequest": {
       "description": "Request parameters for listing existing sessions.",
       "type": "object",
@@ -7640,18 +7899,25 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "mcpServers": {
           "description": "List of MCP servers to connect to for this session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
+        },
+        "systemPrompt": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used for the\nsource session.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SystemPrompt"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -7689,21 +7955,17 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "mcpServers": {
           "description": "List of MCP servers to connect to for this session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "replayFrom": {
-          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted or `null` both mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay all retained\nconversation history before responding.",
+          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted or `null` both mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay all retained\nconversation history before responding.\n\nAgents MUST reject unsupported cursor types or malformed cursor values\nwith `-32602` (Invalid params), rather than substituting another cursor\nor resuming without replay.",
           "anyOf": [
             {
               "$ref": "#/$defs/ReplayFrom"
@@ -7711,8 +7973,18 @@
             {
               "type": "null"
             }
-          ],
-          "x-deserialize-default-on-error": true
+          ]
+        },
+        "systemPrompt": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SystemPrompt"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -7746,7 +8018,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future replay cursor.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this cursor should preserve the raw\npayload when storing, replaying, proxying, or forwarding requests, and\notherwise reject the request rather than guessing where to replay from.",
+          "description": "Custom or future replay cursor.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nIntermediaries SHOULD preserve the raw payload when storing, replaying,\nproxying, or forwarding requests. Agents that do not support this cursor\nMUST reject the request with `-32602` (Invalid params), rather than\nsubstituting another cursor or resuming without replay.",
           "type": "object",
           "properties": {
             "type": {
@@ -7792,7 +8064,7 @@
       }
     },
     "CloseSessionRequest": {
-      "description": "Request parameters for closing an active session.\n\nThe agent **must** cancel any ongoing work related to the session (treat it\nas if `session/cancel` was called) and then free up any resources associated\nwith the session.",
+      "description": "Request parameters for closing an active session.\n\nThe agent **must** cancel any ongoing work related to the session (treat it\nas if `session/cancel` was called) and then free up any resources associated\nwith the session.\n\nWhen closing cancels active foreground work, the Agent MUST send the final\nupdates for that work and the idle `state_update` with `stopReason: \"cancelled\"`\nbefore responding successfully to `session/close`. Closing an idle session\ndoes not itself require another idle update.\n\nClosing may also cancel pending `session/prompt` requests, including queued\nprompts. If closing prevents a prompt's user message from being inserted, the\nAgent MUST answer that request with `-32800` (Request Cancelled). If the message\nhas already been inserted, the Agent MUST respond successfully with its\n`messageId`. Prompt responses need not precede the close response.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -8382,7 +8654,7 @@
               "anyOf": [
                 {
                   "title": "CancelSessionNotification",
-                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Report an idle `state_update` with `StopReason::Cancelled` after\n  cancellation succeeds\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelSessionNotification"

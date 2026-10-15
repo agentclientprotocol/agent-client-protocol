@@ -24,7 +24,7 @@ use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
     ElicitationCapabilities,
 };
-use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
+use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpRequest, MessageMcpResponse};
@@ -145,29 +145,14 @@ pub enum SessionUpdate {
     SessionInfoUpdate(SessionInfoUpdate),
     /// Context window and cost update for the session.
     UsageUpdate(UsageUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Advisory information for the user that is not part of session history.
+    /// Information for the user that is not part of session history.
     ///
     /// No Client capability is required. Clients that do not understand or
     /// present notices may ignore them.
-    #[cfg(feature = "unstable_session_notices")]
     Notice(Notice),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A context compaction has been created or updated.
-    #[cfg(feature = "unstable_session_compaction")]
     CompactionUpdate(CompactionUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A content block appended to a context compaction's retained summary.
-    #[cfg(feature = "unstable_session_compaction")]
     CompactionSummaryChunk(CompactionSummaryChunk),
     /// **UNSTABLE**
     ///
@@ -214,7 +199,7 @@ pub enum SessionUpdate {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionMessageChunk {
@@ -289,7 +274,7 @@ impl SessionMessageChunk {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionMessage {
@@ -307,7 +292,7 @@ pub struct SessionMessage {
     pub recipient_session_id: Option<SessionId>,
     /// Omitted leaves content unchanged; `null` clears it; a concrete array
     /// replaces the whole content collection.
-    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
@@ -612,12 +597,7 @@ mod disabled_session_message_tests {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Severity hint for a session notice.
-#[cfg(feature = "unstable_session_notices")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -637,18 +617,13 @@ pub enum NoticeSeverity {
     Other(String),
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// Fire-and-forget advisory information for the user.
+/// Fire-and-forget information for the user.
 ///
 /// Notices are live events rather than session history. Agents must not rely on
 /// a notice being received, displayed, or seen by the user.
 /// No Client capability is required, and unsupported Clients may ignore notices.
 ///
 /// See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
-#[cfg(feature = "unstable_session_notices")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -677,7 +652,6 @@ pub struct Notice {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_notices")]
 impl Notice {
     /// Builds a notice with the required fields set and optional fields omitted.
     #[must_use]
@@ -705,12 +679,7 @@ impl Notice {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Unique identifier for a context compaction within a session.
-#[cfg(feature = "unstable_session_compaction")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
@@ -718,7 +687,6 @@ impl Notice {
 #[non_exhaustive]
 pub struct CompactionId(pub Arc<str>);
 
-#[cfg(feature = "unstable_session_compaction")]
 impl CompactionId {
     /// Wraps a protocol string as a typed [`CompactionId`].
     #[must_use]
@@ -727,18 +695,14 @@ impl CompactionId {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Lifecycle state of a context compaction.
-#[cfg(feature = "unstable_session_compaction")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum CompactionStatus {
     /// Compaction has started and has not finished.
+    #[default]
     InProgress,
     /// Compaction finished successfully.
     Completed,
@@ -754,22 +718,16 @@ pub enum CompactionStatus {
     Other(String),
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A context compaction upsert. The first update fixes the compaction's
+/// A context compaction upsert. The first notification fixes the compaction's
 /// timeline position. Later updates with the same ID patch that entity in place.
 ///
 /// `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 /// stored value unchanged, `null` clears it, and a concrete value replaces it.
-/// `summary: []` also clears the retained summary. A non-empty summary is only
-/// valid with `completed`; `error` is only valid with `failed`.
-#[cfg(feature = "unstable_session_compaction")]
+/// `summary: []` also clears the summary.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CompactionUpdate {
@@ -777,12 +735,12 @@ pub struct CompactionUpdate {
     pub compaction_id: CompactionId,
     /// Current lifecycle status.
     pub status: CompactionStatus,
-    /// Complete replacement user-displayable summary retained by the compaction.
-    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    /// Complete replacement user-displayable summary content for the compaction.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub summary: MaybeUndefined<Vec<ContentBlock>>,
-    /// Human-readable description of why the compaction failed.
+    /// Human-readable error details for the compaction.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -798,7 +756,6 @@ pub struct CompactionUpdate {
     pub meta: MaybeUndefined<Meta>,
 }
 
-#[cfg(feature = "unstable_session_compaction")]
 impl CompactionUpdate {
     /// Builds a compaction update with optional patch fields omitted.
     #[must_use]
@@ -819,7 +776,7 @@ impl CompactionUpdate {
         self
     }
 
-    /// Sets, clears, or omits the failure description patch.
+    /// Sets, clears, or omits the error details patch.
     #[must_use]
     pub fn error(mut self, error: impl IntoMaybeUndefined<String>) -> Self {
         self.error = error.into_maybe_undefined();
@@ -834,18 +791,12 @@ impl CompactionUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A content block appended to the retained summary of an in-progress
-/// compaction. Agents send chunks only after an `in_progress` update and before
-/// the terminal update for the same ID.
-#[cfg(feature = "unstable_session_compaction")]
+/// A content block appended to a compaction's summary. A first-seen ID creates
+/// an in-progress compaction. Chunks append in receive order.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CompactionSummaryChunk {
@@ -860,7 +811,6 @@ pub struct CompactionSummaryChunk {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_compaction")]
 impl CompactionSummaryChunk {
     /// Builds a summary chunk without metadata.
     #[must_use]
@@ -917,7 +867,7 @@ impl CompactionSummaryChunk {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SubagentUpdate {
@@ -1135,7 +1085,7 @@ impl SessionCancelCapabilities {
 /// update object for clients that store, replay, proxy, or forward session
 /// history.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_session_update_schema))]
 #[serde(rename_all = "camelCase")]
@@ -1195,11 +1145,9 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
 }
 
 fn is_known_session_update(session_update: &str) -> bool {
-    #[cfg(feature = "unstable_session_notices")]
     if session_update == "notice" {
         return true;
     }
-    #[cfg(feature = "unstable_session_compaction")]
     if matches!(
         session_update,
         "compaction_update" | "compaction_summary_chunk"
@@ -1262,11 +1210,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             #[cfg(feature = "unstable_plan_operations")]
             "plan_removed",
             "usage_update",
-            #[cfg(feature = "unstable_session_notices")]
             "notice",
-            #[cfg(feature = "unstable_session_compaction")]
             "compaction_update",
-            #[cfg(feature = "unstable_session_compaction")]
             "compaction_summary_chunk",
             #[cfg(feature = "unstable_subagents")]
             "subagent_update",
@@ -1287,7 +1232,7 @@ fn other_session_update_schema(schema: &mut Schema) {
 #[non_exhaustive]
 pub struct ConfigOptionUpdate {
     /// The full set of configuration options and their current values.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1458,16 +1403,33 @@ impl UsageUpdate {
 
 /// The state of the agent's foreground work has changed.
 ///
+/// Foreground work is the agent's active response or workflow in the session,
+/// including model processing, tool execution, and waiting for user action needed
+/// to continue that work. It can start with a prompt or be agent-initiated, for
+/// example to pursue an ongoing goal or follow up on a completed background task.
+/// Either way, the agent MUST report `running` when foreground work starts or
+/// resumes, and `idle` when it ends. The agent SHOULD include a stop reason on
+/// that idle update. Agent-initiated work does not require a prompt request or a
+/// synthetic user message.
+///
+/// `running` may precede user-message insertion, for example during a foreground
+/// hook. It is not acknowledgment of insertion, and rejecting a prompt does not
+/// itself end foreground work.
+///
 /// Background activity can continue and emit other `session/update` notifications
-/// while `idle`. Those notifications do not change this state.
+/// while `idle`. Those notifications, including a detached task's progress or
+/// completion, do not by themselves change this state. A permission request only
+/// warrants `requires_action` when foreground work is blocked on user action.
+///
+/// See protocol docs: [Foreground and Background Work](https://agentclientprotocol.com/protocol/prompt-lifecycle#foreground-and-background-work)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "state", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum StateUpdate {
     /// Foreground work is in progress.
     Running(RunningStateUpdate),
-    /// The agent is ready to process a new prompt.
+    /// No foreground work is active. Background activity may continue.
     Idle(IdleStateUpdate),
     /// Foreground work is blocked on user action.
     RequiresAction(RequiresActionStateUpdate),
@@ -1527,21 +1489,22 @@ impl RunningStateUpdate {
     }
 }
 
-/// The agent is ready to process a new prompt.
+/// No foreground work is active. Background activity may continue.
+///
+/// Agents SHOULD include a `stopReason` when the idle transition ends foreground
+/// work. An idle update that does not end foreground work need not include one.
+/// Receivers treat an omitted, `null`, or malformed `stopReason` as the agent not
+/// reporting one.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schemars", schemars(transform = idle_state_update_schema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IdleStateUpdate {
-    /// Indicates why foreground work stopped.
-    ///
-    /// Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
-    /// Agents SHOULD include this when the idle transition ends foreground work.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
+    /// Indicates why foreground work stopped, with any fields of that stop reason.
+    #[serde(flatten)]
     pub stop_reason: Option<StopReason>,
     /// **UNSTABLE**
     ///
@@ -1555,7 +1518,7 @@ pub struct IdleStateUpdate {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub usage: Option<Usage>,
+    pub usage: Option<Box<Usage>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1590,7 +1553,7 @@ impl IdleStateUpdate {
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
-        self.usage = usage.into_option();
+        self.usage = usage.into_option().map(Box::new);
         self
     }
 
@@ -1603,6 +1566,49 @@ impl IdleStateUpdate {
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
+    }
+}
+
+/// Makes the schema check stop reasons and keeps their default-on-error hint.
+///
+/// Flattening `Option<StopReason>` adds an empty `{}` branch to the `anyOf`. It
+/// matches any value, so the stop reason branches would check nothing; this
+/// replaces it with a branch for an omitted or `null` `stopReason`. Flattening
+/// also removes the `stopReason` property that carried
+/// `x-deserialize-default-on-error`, which SDKs generated from the schema rely on
+/// to tolerate a malformed value, so this adds it back as a shared property.
+#[cfg(feature = "schemars")]
+fn idle_state_update_schema(schema: &mut Schema) {
+    if let Some(properties) = schema
+        .get_mut("properties")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        properties.insert(
+            "stopReason".into(),
+            serde_json::json!({
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-lifecycle#stop-reasons)",
+                "type": ["string", "null"],
+                "x-deserialize-default-on-error": true
+            }),
+        );
+    }
+    let Some(variants) = schema
+        .get_mut("anyOf")
+        .and_then(serde_json::Value::as_array_mut)
+    else {
+        return;
+    };
+    for variant in variants {
+        if variant.as_object().is_some_and(serde_json::Map::is_empty) {
+            *variant = serde_json::json!({
+                "title": "none",
+                "description": "No stop reason: `stopReason` is omitted or `null`.",
+                "type": "object",
+                "properties": {
+                    "stopReason": { "type": "null" }
+                }
+            });
+        }
     }
 }
 
@@ -1696,7 +1702,7 @@ impl UnknownStateUpdate {
 /// This preserves the unknown `state` discriminator and the rest of the state
 /// object for clients that store, replay, proxy, or forward session history.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_state_update_schema))]
 #[serde(rename_all = "camelCase")]
@@ -1822,7 +1828,7 @@ impl Cost {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ContentChunk {
@@ -1884,14 +1890,14 @@ impl ContentChunk {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct UserMessage {
     /// A unique identifier for the message.
     pub message_id: MessageId,
     /// Complete replacement content for this message.
-    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
@@ -1956,14 +1962,14 @@ impl UserMessage {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentMessage {
     /// A unique identifier for the message.
     pub message_id: MessageId,
     /// Complete replacement content for this message.
-    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
@@ -2028,14 +2034,14 @@ impl AgentMessage {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentThought {
     /// A unique identifier for the thought message.
     pub message_id: MessageId,
     /// Complete replacement content for this thought message.
-    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
@@ -2084,7 +2090,11 @@ impl AgentThought {
     }
 }
 
-/// Unique identifier for a message within a session.
+/// Identifier for a message, unique among messages of the same type within a session.
+///
+/// Each message type, such as user messages, agent messages, and agent thoughts,
+/// has its own ID space: messages of different types may share an ID and remain
+/// distinct messages.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
@@ -2109,7 +2119,7 @@ impl MessageId {
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2353,7 +2363,7 @@ impl TextCommandInput {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2441,7 +2451,7 @@ impl RequestPermissionRequest {
 
 /// The operation requiring permission.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum RequestPermissionSubject {
@@ -2483,7 +2493,7 @@ impl From<CommandPermissionSubject> for RequestPermissionSubject {
 
 /// Permission request details for a tool call.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallPermissionSubject {
@@ -2503,7 +2513,7 @@ impl ToolCallPermissionSubject {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CommandPermissionSubject {
@@ -2570,7 +2580,7 @@ impl CommandPermissionSubject {
 
 /// Custom or future permission subject payload.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_request_permission_subject_schema))]
 #[serde(rename_all = "camelCase")]
@@ -3699,7 +3709,6 @@ mod tests {
         assert_eq!(serde_json::to_value(parsed).unwrap(), wire);
     }
 
-    #[cfg(feature = "unstable_session_notices")]
     #[test]
     fn notice_preserves_wire_shape_nullable_fields_and_open_severity() {
         use serde_json::json;
@@ -3757,12 +3766,21 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_session_notices")]
     #[test]
     fn malformed_known_notice_is_not_hidden_as_unknown() {
         use serde_json::json;
 
         for malformed in [
+            json!({
+                "sessionUpdate": "notice",
+                "severity": "warning",
+                "title": 42
+            }),
+            json!({
+                "sessionUpdate": "notice",
+                "severity": 42,
+                "title": "MCP server unavailable"
+            }),
             json!({
                 "sessionUpdate": "notice",
                 "severity": "warning"
@@ -3782,33 +3800,64 @@ mod tests {
                 "title": "MCP server unavailable"
             }),
         ] {
+            assert!(serde_json::from_str::<SessionUpdate>(&malformed.to_string()).is_err());
             assert!(serde_json::from_value::<SessionUpdate>(malformed).is_err());
         }
     }
 
-    #[cfg(not(feature = "unstable_session_notices"))]
     #[test]
-    fn unsupported_notice_is_preserved_as_an_unknown_update() {
+    fn notice_tolerates_invalid_optional_display_fields_and_custom_severity() {
         use serde_json::json;
 
-        let SessionUpdate::Other(notice) = serde_json::from_value(json!({
+        let wire = json!({
             "sessionUpdate": "notice",
-            "severity": "warning",
-            "title": "MCP server unavailable"
-        }))
-        .unwrap() else {
-            panic!("expected unknown session update");
+            "severity": "_custom",
+            "title": "Provider degraded",
+            "description": 42,
+            "_meta": false
+        });
+        let SessionUpdate::Notice(notice) = serde_json::from_value(wire.clone()).unwrap() else {
+            panic!("expected notice");
         };
-
-        assert_eq!(notice.session_update, "notice");
-        assert_eq!(notice.fields.get("severity"), Some(&json!("warning")));
         assert_eq!(
-            notice.fields.get("title"),
-            Some(&json!("MCP server unavailable"))
+            serde_json::from_str::<SessionUpdate>(&wire.to_string()).unwrap(),
+            SessionUpdate::Notice(notice.clone())
+        );
+        assert_eq!(notice.severity, NoticeSeverity::Other("_custom".into()));
+        assert_eq!(notice.description, None);
+        assert_eq!(notice.meta, None);
+        assert_eq!(
+            serde_json::to_value(notice).unwrap(),
+            json!({"severity": "_custom", "title": "Provider degraded"})
         );
     }
 
-    #[cfg(feature = "unstable_session_compaction")]
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn notice_schema_preserves_required_fields_and_excludes_unknown_fallback() {
+        use serde_json::json;
+
+        let schema = serde_json::to_value(schemars::schema_for!(Notice)).unwrap();
+        assert_eq!(schema["required"], json!(["severity", "title"]));
+        assert_eq!(schema["properties"]["title"]["minLength"], 1);
+        for field in ["description", "_meta"] {
+            assert!(
+                schema["properties"][field]["type"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!("null"))
+            );
+        }
+        let fallback = serde_json::to_value(schemars::schema_for!(OtherSessionUpdate)).unwrap();
+        assert!(
+            fallback["not"]["anyOf"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|variant| variant["properties"]["sessionUpdate"]["const"] == "notice")
+        );
+    }
+
     #[test]
     fn compaction_updates_preserve_patch_and_open_status_semantics() {
         use serde_json::json;
@@ -3842,7 +3891,6 @@ mod tests {
         assert!(update.error.is_undefined());
     }
 
-    #[cfg(feature = "unstable_session_compaction")]
     #[test]
     fn malformed_known_compaction_update_is_not_hidden_as_unknown() {
         use serde_json::json;
@@ -4329,6 +4377,199 @@ mod tests {
         };
 
         assert_eq!(update.cost, None);
+    }
+
+    #[test]
+    fn error_stop_reason_carries_failure_beside_discriminator() {
+        use crate::v2::{Error, ErrorStopReason};
+        use serde_json::json;
+
+        let update =
+            SessionUpdate::StateUpdate(StateUpdate::Idle(IdleStateUpdate::new().stop_reason(
+                StopReason::from(ErrorStopReason::new().error(Error::auth_required())),
+            )));
+        let wire = json!({
+            "sessionUpdate": "state_update",
+            "state": "idle",
+            "stopReason": "error",
+            "error": { "code": -32000, "message": "Authentication required" }
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+            update
+        );
+
+        let with_data =
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::from(
+                ErrorStopReason::new().error(
+                    Error::new(-32099, "Provider unavailable").data(json!({ "status": 503 })),
+                ),
+            )));
+        let wire = json!({
+            "state": "idle",
+            "stopReason": "error",
+            "error": {
+                "code": -32099,
+                "message": "Provider unavailable",
+                "data": { "status": 503 }
+            }
+        });
+        assert_eq!(serde_json::to_value(&with_data).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<StateUpdate>(wire).unwrap(),
+            with_data
+        );
+
+        // Missing, null, and malformed details leave a failure without details;
+        // the stop reason still ends foreground work.
+        let without_details = StateUpdate::Idle(
+            IdleStateUpdate::new().stop_reason(StopReason::from(ErrorStopReason::new())),
+        );
+        for error in [
+            None,
+            Some(json!(null)),
+            Some(json!("failed")),
+            Some(json!({ "message": "missing code" })),
+        ] {
+            let mut wire = json!({ "state": "idle", "stopReason": "error" });
+            if let Some(error) = error {
+                wire["error"] = error;
+            }
+            assert_eq!(
+                serde_json::from_value::<StateUpdate>(wire).unwrap(),
+                without_details
+            );
+        }
+        assert_eq!(
+            serde_json::to_value(&without_details).unwrap(),
+            json!({ "state": "idle", "stopReason": "error" })
+        );
+
+        // `error` is a field of the `error` stop reason only. Beside any other
+        // stop reason it is an unknown field: the update stays readable and the
+        // error has nowhere to go.
+        let parsed: StateUpdate = serde_json::from_value(json!({
+            "state": "idle",
+            "stopReason": "end_turn",
+            "error": { "code": -32603, "message": "Internal error" }
+        }))
+        .unwrap();
+        assert_eq!(
+            parsed,
+            StateUpdate::Idle(IdleStateUpdate::new().stop_reason(StopReason::EndTurn))
+        );
+    }
+
+    #[test]
+    fn flattened_stop_reason_keeps_open_enum_tolerance() {
+        use crate::v2::OtherStopReason;
+        use serde_json::json;
+
+        let meta: Meta = [("source".into(), json!("test"))].into_iter().collect();
+
+        // Omitted, null, and malformed stop reasons all mean no stop reason, as
+        // when `stopReason` was a separate default-on-error field.
+        for stop_reason in [None, Some(json!(null)), Some(json!(true)), Some(json!({}))] {
+            let mut wire = json!({ "state": "idle", "_meta": { "source": "test" } });
+            if let Some(stop_reason) = stop_reason {
+                wire["stopReason"] = stop_reason;
+            }
+            let StateUpdate::Idle(idle) = serde_json::from_value(wire).unwrap() else {
+                panic!("expected idle state update");
+            };
+            assert_eq!(idle.stop_reason, None);
+            assert_eq!(idle.meta, Some(meta.clone()));
+        }
+
+        // Unknown stop reasons keep their own fields for proxies and replay,
+        // while the idle update's fields stay on the idle update.
+        let wire = json!({
+            "state": "idle",
+            "stopReason": "_paused",
+            "resumeAfter": 30,
+            "_meta": { "source": "test" }
+        });
+        let parsed: StateUpdate = serde_json::from_value(wire.clone()).unwrap();
+        let expected = StateUpdate::Idle(
+            IdleStateUpdate::new()
+                .stop_reason(StopReason::Other(OtherStopReason::new(
+                    "_paused",
+                    [("resumeAfter".into(), json!(30))].into_iter().collect(),
+                )))
+                .meta(meta),
+        );
+        assert_eq!(parsed, expected);
+        assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+    }
+
+    #[test]
+    fn known_stop_reasons_are_never_read_as_other() {
+        use crate::v2::{ErrorStopReason, OtherStopReason};
+        use serde_json::json;
+
+        let known = [
+            StopReason::EndTurn,
+            StopReason::MaxTokens,
+            StopReason::MaxTurnRequests,
+            StopReason::Refusal,
+            StopReason::Cancelled,
+            StopReason::Error(ErrorStopReason::new()),
+        ];
+        // Adding a variant breaks this match, so `known` stays complete.
+        for stop_reason in &known {
+            match stop_reason {
+                StopReason::EndTurn
+                | StopReason::MaxTokens
+                | StopReason::MaxTurnRequests
+                | StopReason::Refusal
+                | StopReason::Cancelled
+                | StopReason::Error(_)
+                | StopReason::Other(_) => {}
+            }
+        }
+
+        for stop_reason in known {
+            let update = StateUpdate::Idle(IdleStateUpdate::new().stop_reason(stop_reason));
+            let wire = serde_json::to_value(&update).unwrap();
+            assert_eq!(
+                serde_json::from_value::<StateUpdate>(wire.clone()).unwrap(),
+                update
+            );
+            assert!(
+                serde_json::from_value::<OtherStopReason>(
+                    json!({ "stopReason": wire["stopReason"] })
+                )
+                .is_err(),
+                "{} must not be accepted as a custom stop reason",
+                wire["stopReason"]
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_stop_reason_leaves_usage_on_the_idle_update() {
+        use serde_json::json;
+
+        let usage = json!({ "totalTokens": 10, "inputTokens": 6, "outputTokens": 4 });
+        let wire = json!({ "state": "idle", "stopReason": "_paused", "usage": usage });
+        let StateUpdate::Idle(idle) = serde_json::from_value(wire.clone()).unwrap() else {
+            panic!("expected idle state update");
+        };
+        let Some(StopReason::Other(other)) = &idle.stop_reason else {
+            panic!("expected a custom stop reason");
+        };
+        assert!(other.fields.is_empty());
+
+        #[cfg(feature = "unstable_end_turn_token_usage")]
+        {
+            assert!(idle.usage.is_some());
+            assert_eq!(serde_json::to_value(&idle).unwrap()["usage"], usage);
+        }
+        // Without the feature, `usage` is not a field of the idle update, and it
+        // must not be smuggled through as a field of the stop reason either.
+        #[cfg(not(feature = "unstable_end_turn_token_usage"))]
+        assert!(serde_json::to_value(&idle).unwrap().get("usage").is_none());
     }
 
     #[test]

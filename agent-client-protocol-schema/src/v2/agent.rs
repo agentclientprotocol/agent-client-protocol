@@ -12,13 +12,13 @@ use derive_more::{Display, From};
 #[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
-use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
+use serde_with::{DefaultOnError, DefaultOnNull, VecSkipError, serde_as, skip_serializing_none};
 
 use super::{
-    AbsolutePath, AvailableCommand, ClientCapabilities, ContentBlock, ExtNotification, ExtRequest,
-    ExtResponse, MessageId, Meta, SessionId,
+    AbsolutePath, AvailableCommand, ClientCapabilities, ContentBlock, Error, ExtNotification,
+    ExtRequest, ExtResponse, MessageId, Meta, SessionId,
 };
-use crate::{IntoOption, ProtocolVersion, SkipListener};
+use crate::{IntoOption, ProtocolVersion};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpNotification};
@@ -120,7 +120,7 @@ pub struct InitializeResponse {
     /// Optional. Omitted or empty means the agent does not advertise the
     /// authentication method surface. Supplying one or more valid methods means
     /// the agent MUST support both `auth/login` and `auth/logout`.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub auth_methods: Vec<AuthMethod>,
@@ -786,15 +786,13 @@ pub struct AuthMethodTerminal {
     #[serde(default)]
     pub description: Option<String>,
     /// Additional arguments to append to the configured agent invocation for terminal auth.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Additional environment variables to set on the configured agent invocation for terminal auth.
     /// Names MUST be unique. These values override same-named variables in the
     /// base launch configuration.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -878,15 +876,25 @@ pub struct NewSessionRequest {
     /// These expand the session's workspace scope without changing `cwd`, which
     /// remains the base for relative paths. When omitted or empty, no
     /// additional roots are activated for the new session.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the new session.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the Agent uses its
+    /// own default instructions. Clients MUST only send this when the Agent
+    /// advertises `session.systemPrompt`.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[serde(default)]
+    pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -907,6 +915,8 @@ impl NewSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
+            #[cfg(feature = "unstable_session_system_prompt")]
+            system_prompt: None,
             meta: None,
         }
     }
@@ -926,6 +936,18 @@ impl NewSessionRequest {
     #[must_use]
     pub fn mcp_servers(mut self, mcp_servers: Vec<McpServer>) -> Self {
         self.mcp_servers = mcp_servers;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the new session.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
+        self.system_prompt = system_prompt.into_option();
         self
     }
 
@@ -957,7 +979,7 @@ pub struct NewSessionResponse {
     /// Used in all subsequent requests for this conversation.
     pub session_id: SessionId,
     /// Initial session configuration options.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<SessionConfigOption>,
@@ -966,7 +988,7 @@ pub struct NewSessionResponse {
     /// Optional. Omitted or empty means no initial commands are advertised.
     /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
     /// Later `available_commands_update` notifications replace this list.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub available_commands: Vec<AvailableCommand>,
@@ -1050,15 +1072,27 @@ pub struct ForkSessionRequest {
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the forked
     /// session.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the forked session.
+    ///
+    /// Optional. Omitted and `null` are equivalent; the Agent may then keep a
+    /// system prompt it stored with the source session or use its default
+    /// instructions. Clients MUST only send this when the Agent advertises
+    /// `session.systemPrompt`, and SHOULD send the same value they used for the
+    /// source session.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[serde(default)]
+    pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1081,6 +1115,8 @@ impl ForkSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
+            #[cfg(feature = "unstable_session_system_prompt")]
+            system_prompt: None,
             meta: None,
         }
     }
@@ -1100,6 +1136,18 @@ impl ForkSessionRequest {
     #[must_use]
     pub fn mcp_servers(mut self, mcp_servers: Vec<McpServer>) -> Self {
         self.mcp_servers = mcp_servers;
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the forked session.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
+        self.system_prompt = system_prompt.into_option();
         self
     }
 
@@ -1132,7 +1180,7 @@ pub struct ForkSessionResponse {
     /// Unique identifier for the newly created forked session.
     pub session_id: SessionId,
     /// Initial session configuration options.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<SessionConfigOption>,
@@ -1141,7 +1189,7 @@ pub struct ForkSessionResponse {
     /// Optional. Omitted or empty means no initial commands are advertised.
     /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
     /// Later `available_commands_update` notifications replace this list.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub available_commands: Vec<AvailableCommand>,
@@ -1220,13 +1268,11 @@ pub struct ResumeSessionRequest {
     /// this is the complete resulting additional-root list for the resumed
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// Inclusive cursor describing where conversation replay should begin.
@@ -1236,10 +1282,26 @@ pub struct ResumeSessionRequest {
     /// replay includes the position identified by the cursor. Supplying
     /// `{ "type": "start" }` means the Agent should replay all retained
     /// conversation history before responding.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    ///
+    /// Agents MUST reject unsupported cursor types or malformed cursor values
+    /// with `-32602` (Invalid params), rather than substituting another cursor
+    /// or resuming without replay.
     #[serde(default)]
     pub replay_from: Option<ReplayFrom>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the resumed session.
+    ///
+    /// Optional. Omitted and `null` are equivalent; the Agent may then keep a
+    /// system prompt it stored with the session or use its default instructions.
+    /// Clients MUST only send this when the Agent advertises
+    /// `session.systemPrompt`, and SHOULD send the same value they used when the
+    /// session was created.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[serde(default)]
+    pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1262,6 +1324,8 @@ impl ResumeSessionRequest {
             additional_directories: vec![],
             mcp_servers: vec![],
             replay_from: None,
+            #[cfg(feature = "unstable_session_system_prompt")]
+            system_prompt: None,
             meta: None,
         }
     }
@@ -1297,6 +1361,18 @@ impl ResumeSessionRequest {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// System-level instructions for the resumed session.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
+        self.system_prompt = system_prompt.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1325,9 +1401,10 @@ pub enum ReplayFrom {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this cursor should preserve the raw
-    /// payload when storing, replaying, proxying, or forwarding requests, and
-    /// otherwise reject the request rather than guessing where to replay from.
+    /// Intermediaries SHOULD preserve the raw payload when storing, replaying,
+    /// proxying, or forwarding requests. Agents that do not support this cursor
+    /// MUST reject the request with `-32602` (Invalid params), rather than
+    /// substituting another cursor or resuming without replay.
     #[serde(untagged)]
     Other(OtherReplayFrom),
 }
@@ -1485,7 +1562,7 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct ResumeSessionResponse {
         /// Initial session configuration options.
-        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub config_options: Vec<SessionConfigOption>,
@@ -1494,7 +1571,7 @@ crate::serde_util::default_on_null! {
         /// Optional. Omitted or empty means no initial commands are advertised.
         /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
         /// Later `available_commands_update` notifications replace this list.
-        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub available_commands: Vec<AvailableCommand>,
@@ -1551,6 +1628,17 @@ impl ResumeSessionResponse {
 /// The agent **must** cancel any ongoing work related to the session (treat it
 /// as if `session/cancel` was called) and then free up any resources associated
 /// with the session.
+///
+/// When closing cancels active foreground work, the Agent MUST send the final
+/// updates for that work and the idle `state_update` with `stopReason: "cancelled"`
+/// before responding successfully to `session/close`. Closing an idle session
+/// does not itself require another idle update.
+///
+/// Closing may also cancel pending `session/prompt` requests, including queued
+/// prompts. If closing prevents a prompt's user message from being inserted, the
+/// Agent MUST answer that request with `-32800` (Request Cancelled). If the message
+/// has already been inserted, the Agent MUST respond successfully with its
+/// `messageId`. Prompt responses need not precede the close response.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1757,7 +1845,7 @@ impl ListSessionsRequest {
 #[non_exhaustive]
 pub struct ListSessionsResponse {
     /// Array of session information objects.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
@@ -1916,7 +2004,7 @@ pub struct SessionInfo {
     /// When present, this is the complete ordered additional-root list reported
     /// by the Agent. Omitted and empty values are equivalent: the response
     /// reports no additional roots.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
@@ -2117,7 +2205,7 @@ pub struct SessionConfigSelectGroup {
     /// Human-readable label for this group.
     pub name: String,
     /// The set of option values in this group.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub options: Vec<SessionConfigSelectOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2736,7 +2824,7 @@ impl SetSessionConfigOptionRequest {
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2909,6 +2997,7 @@ pub struct McpServerHttp {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub headers: Vec<HttpHeader>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3051,9 +3140,11 @@ pub struct McpServerStdio {
     /// Absolute path to the MCP server executable.
     pub command: AbsolutePath,
     /// Command-line arguments to pass to the MCP server.
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Environment variables to set when launching the MCP server.
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -3201,6 +3292,128 @@ impl HttpHeader {
     }
 }
 
+// System prompt
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Client-provided system-level instructions for a session.
+///
+/// Clients MUST only send this when the Agent advertises
+/// `session.systemPrompt`. Agents that cannot apply it, for example because of
+/// an unadvertised mode or an unsupported content block type, MUST return an
+/// error instead of creating, resuming, or forking the session.
+#[cfg(feature = "unstable_session_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SystemPrompt {
+    /// How the Agent combines `content` with its own instructions.
+    ///
+    /// Required on the wire, so every request states its mode. In Rust,
+    /// [`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown
+    /// values parse as [`SystemPromptMode::Other`]; Agents MUST return an error
+    /// for modes they do not support.
+    pub mode: SystemPromptMode,
+    /// The system prompt content.
+    ///
+    /// Agents advertising the capability MUST accept [`ContentBlock::Text`].
+    /// Clients MUST NOT send other content block types until a future
+    /// capability allows them, and Agents MUST return an error for content
+    /// blocks they do not support, including unknown types preserved as
+    /// [`ContentBlock::Other`].
+    pub content: Vec<ContentBlock>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_system_prompt")]
+impl SystemPrompt {
+    /// Builds [`SystemPrompt`] with the required fields set; optional fields start unset or empty.
+    ///
+    /// `mode` starts as [`SystemPromptMode::Append`]; use [`SystemPrompt::mode`]
+    /// to request another mode.
+    #[must_use]
+    pub fn new(content: Vec<ContentBlock>) -> Self {
+        Self {
+            mode: SystemPromptMode::default(),
+            content,
+            meta: None,
+        }
+    }
+
+    /// How the Agent combines `content` with its own instructions.
+    #[must_use]
+    pub fn mode(mut self, mode: SystemPromptMode) -> Self {
+        self.mode = mode;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// How the Agent combines a client-provided system prompt with its own instructions.
+///
+/// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+/// proxied, or forwarded. An Agent MUST return an error for a mode it does not
+/// support rather than treating it as `append` or `override`.
+#[cfg(feature = "unstable_session_system_prompt")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SystemPromptMode {
+    /// Add the content to the Agent's own instructions rather than replacing them.
+    ///
+    /// Every Agent that advertises `session.systemPrompt` supports this mode.
+    /// Agents SHOULD give the content system-level precedence, for example in the
+    /// model's system prompt or developer instructions rather than in user-turn
+    /// content. Where it is placed and how it is formatted is implementation-defined.
+    #[default]
+    Append,
+    /// Replace the Agent's built-in default instructions with the content.
+    ///
+    /// This does not change tool availability, MCP servers, permissions, or session
+    /// configuration. Context the Agent supplies from the workspace or environment
+    /// MAY still be included. Clients that use this mode take responsibility for any
+    /// tool guidance or safety instructions the Agent's default instructions
+    /// provided, and MUST only use it when the Agent advertises
+    /// `session.systemPrompt.mode.override`.
+    Override,
+    /// Custom or future system prompt mode.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
 // Prompt
 
 /// Request parameters for sending a user prompt to the agent.
@@ -3211,7 +3424,7 @@ impl HttpHeader {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_PROMPT_METHOD_NAME)))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -3273,6 +3486,9 @@ impl PromptRequest {
 /// agent has finished processing it.
 /// Processing and completion are reported through `state_update` session updates.
 ///
+/// Insertion is the logical addition of a user message with a message ID and a position
+/// relative to other messages in the ACP conversation.
+///
 /// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
 #[serde_as]
 #[skip_serializing_none]
@@ -3329,7 +3545,7 @@ impl PromptResponse {
 /// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-lifecycle#stop-reasons)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "stopReason", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum StopReason {
     /// The active work ended successfully.
@@ -3345,17 +3561,149 @@ pub enum StopReason {
     Refusal,
     /// Active session work was cancelled by the client via `session/cancel`.
     ///
-    /// Agents should report this stop reason on an idle `state_update` session update
+    /// Agents MUST report this stop reason on an idle `state_update` session update
     /// when cancellation succeeds, even if cancellation causes exceptions in
-    /// underlying operations.
+    /// underlying operations. Agents MUST catch these errors and report
+    /// `cancelled`, not `error`.
     Cancelled,
+    /// The active work ended because something failed.
+    ///
+    /// This includes pre-insertion foreground work. A prompt failure before
+    /// insertion also requires an error response to `session/prompt`; after
+    /// insertion, the prompt's response remains successful.
+    Error(ErrorStopReason),
     /// Custom or future stop reason.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     #[serde(untagged)]
-    Other(String),
+    Other(OtherStopReason),
+}
+
+impl From<ErrorStopReason> for StopReason {
+    fn from(value: ErrorStopReason) -> Self {
+        Self::Error(value)
+    }
+}
+
+/// Details of a failure that ended active work.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ErrorStopReason {
+    /// The failure, as a JSON-RPC error object.
+    ///
+    /// Optional. Omitted or `null` both mean the agent is not reporting failure details.
+    /// Agents SHOULD include it.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub error: Option<Box<Error>>,
+}
+
+impl ErrorStopReason {
+    /// Builds [`ErrorStopReason`] with the required fields set; optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The failure, as a JSON-RPC error object.
+    #[must_use]
+    pub fn error(mut self, error: impl IntoOption<Error>) -> Self {
+        self.error = error.into_option().map(Box::new);
+        self
+    }
+}
+
+/// Custom or future stop reason payload.
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_stop_reason_schema))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherStopReason {
+    /// Custom or future stop reason.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    pub stop_reason: String,
+    /// Additional fields from the unknown stop reason payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherStopReason {
+    /// Builds [`OtherStopReason`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(
+        stop_reason: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        remove_idle_state_update_fields(&mut fields);
+        Self {
+            stop_reason: stop_reason.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherStopReason {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let stop_reason = fields
+            .remove("stopReason")
+            .ok_or_else(|| serde::de::Error::missing_field("stopReason"))?;
+        let serde_json::Value::String(stop_reason) = stop_reason else {
+            return Err(serde::de::Error::custom("`stopReason` must be a string"));
+        };
+
+        if KNOWN_STOP_REASONS.contains(&stop_reason.as_str()) {
+            return Err(serde::de::Error::custom(format!(
+                "known stop reason `{stop_reason}` did not match its schema"
+            )));
+        }
+        remove_idle_state_update_fields(&mut fields);
+
+        Ok(Self {
+            stop_reason,
+            fields,
+        })
+    }
+}
+
+const KNOWN_STOP_REASONS: &[&str] = &[
+    "end_turn",
+    "max_tokens",
+    "max_turn_requests",
+    "refusal",
+    "cancelled",
+    "error",
+];
+
+/// Keeps the idle update's own fields out of an unknown stop reason's payload.
+fn remove_idle_state_update_fields(fields: &mut BTreeMap<String, serde_json::Value>) {
+    fields.remove("stopReason");
+    fields.remove("usage");
+    fields.remove("_meta");
+}
+
+#[cfg(feature = "schemars")]
+fn other_stop_reason_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "stopReason",
+        KNOWN_STOP_REASONS,
+    );
 }
 
 /// **UNSTABLE**
@@ -3584,7 +3932,7 @@ pub struct ProviderInfo {
     /// Provider identifier, for example "main" or "openai".
     pub provider_id: ProviderId,
     /// Supported protocol types for this provider.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
@@ -3979,8 +4327,9 @@ pub struct AgentCapabilities {
     ///
     /// Optional. Omitted or `null` both mean the agent does not support the
     /// `session/*` method surface. Supplying `{}` means the agent supports the
-    /// baseline session methods: `session/new`, `session/prompt`,
-    /// `session/cancel`, and `session/update`.
+    /// baseline session methods: `session/new`, `session/list`,
+    /// `session/resume`, `session/close`, `session/prompt`, `session/cancel`,
+    /// and `session/update`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4031,7 +4380,8 @@ impl AgentCapabilities {
     ///
     /// Omitted or `null` both mean the agent does not support the `session/*`
     /// method surface. Supplying `{}` means the agent supports the baseline
-    /// session methods: `session/new`, `session/prompt`, `session/cancel`, and
+    /// session methods: `session/new`, `session/list`, `session/resume`,
+    /// `session/close`, `session/prompt`, `session/cancel`, and
     /// `session/update`.
     #[must_use]
     pub fn session(mut self, session: impl IntoOption<SessionCapabilities>) -> Self {
@@ -4177,6 +4527,19 @@ pub struct SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Whether the agent supports `systemPrompt` on session lifecycle requests.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub system_prompt: Option<SessionSystemPromptCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Whether the agent supports `session/fork`.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -4250,6 +4613,24 @@ impl SessionCapabilities {
         additional_directories: impl IntoOption<SessionAdditionalDirectoriesCapabilities>,
     ) -> Self {
         self.additional_directories = additional_directories.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `systemPrompt` on session lifecycle requests.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[must_use]
+    pub fn system_prompt(
+        mut self,
+        system_prompt: impl IntoOption<SessionSystemPromptCapabilities>,
+    ) -> Self {
+        self.system_prompt = system_prompt.into_option();
         self
     }
 
@@ -4342,6 +4723,188 @@ pub struct SessionAdditionalDirectoriesCapabilities {
 
 impl SessionAdditionalDirectoriesCapabilities {
     /// Builds an empty [`SessionAdditionalDirectoriesCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for client-provided system prompts.
+///
+/// Supplying `{}` means the agent supports `systemPrompt` on session lifecycle
+/// requests in `append` mode.
+#[cfg(feature = "unstable_session_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionSystemPromptCapabilities {
+    /// Delivery modes the agent supports in addition to `append`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent supports only `append`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub mode: Option<SessionSystemPromptModeCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_system_prompt")]
+impl SessionSystemPromptCapabilities {
+    /// Builds an empty [`SessionSystemPromptCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Delivery modes the agent supports in addition to `append`.
+    ///
+    /// Omitted or `null` both mean the agent supports only `append`.
+    #[must_use]
+    pub fn mode(mut self, mode: impl IntoOption<SessionSystemPromptModeCapabilities>) -> Self {
+        self.mode = mode.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// System prompt delivery modes the agent supports in addition to `append`.
+///
+/// `append` has no entry because every agent advertising `session.systemPrompt`
+/// supports it.
+#[cfg(feature = "unstable_session_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionSystemPromptModeCapabilities {
+    /// Whether the agent supports `override` mode.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports replacing its built-in default
+    /// instructions with the client-provided system prompt.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "override")]
+    pub override_: Option<SessionSystemPromptOverrideCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_system_prompt")]
+impl SessionSystemPromptModeCapabilities {
+    /// Builds an empty [`SessionSystemPromptModeCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether the agent supports `override` mode.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports replacing its built-in default
+    /// instructions with the client-provided system prompt.
+    #[must_use]
+    pub fn override_(
+        mut self,
+        override_: impl IntoOption<SessionSystemPromptOverrideCapabilities>,
+    ) -> Self {
+        self.override_ = override_.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `override` system prompt mode.
+///
+/// Supplying `{}` means the agent supports replacing its built-in default
+/// instructions with the client-provided system prompt.
+#[cfg(feature = "unstable_session_system_prompt")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionSystemPromptOverrideCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_system_prompt")]
+impl SessionSystemPromptOverrideCapabilities {
+    /// Builds an empty [`SessionSystemPromptOverrideCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5123,6 +5686,10 @@ pub enum ClientRequest {
     /// The agent should create a new session with the same conversation context as the
     /// original, allowing operations like generating summaries without affecting the
     /// original session's history.
+    ///
+    /// As with `session/new`, the forked session is active once the agent responds,
+    /// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
+    /// The client can prompt it without calling `session/resume` first.
     ForkSessionRequest(Box<ForkSessionRequest>),
     /// Resumes an existing session.
     ///
@@ -5139,13 +5706,23 @@ pub enum ClientRequest {
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),
     /// Processes a user prompt within a session.
     ///
-    /// Acceptance means insertion into the ACP conversation:
-    /// - Receives user messages with optional context (files, images, etc.)
-    /// - Returns the inserted user message's ID without waiting for processing to finish
+    /// Acceptance means adding a logical user message with an ID and a position
+    /// relative to other messages in the ACP conversation, not receipt or queueing.
+    /// The Agent MUST return the inserted message's ID without waiting for
+    /// processing to finish.
     ///
     /// The Agent reports the user message with the same ID through `session/update`;
-    /// this notification may arrive before or after the response. Processing state,
-    /// output, tool calls, and completion are also reported through session updates.
+    /// this notification may arrive before or after the response, but neither may
+    /// precede insertion. Processing state, output, tool calls, and completion are
+    /// also reported through session updates.
+    ///
+    /// An error response means the user message was not inserted. Once it is
+    /// inserted, the Agent MUST NOT answer with an error, even if the work fails
+    /// before the response is sent; it ends that work with the `error` stop reason.
+    ///
+    /// A rejected submission produces no user-message updates. Foreground state
+    /// follows its normal lifecycle independently of the request outcome:
+    /// `running` may precede insertion, and rejection alone does not imply `idle`.
     ///
     /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/prompt-lifecycle)
     PromptRequest(Box<PromptRequest>),
@@ -5251,12 +5828,19 @@ pub enum ClientNotification {
     /// This is a notification sent by the client to cancel active work in a
     /// session.
     ///
-    /// Upon receiving this notification, the Agent SHOULD:
-    /// - Stop all language model requests as soon as possible
-    /// - Abort all tool call invocations in progress
-    /// - Send any pending `session/update` notifications
-    /// - Report an idle `state_update` with `StopReason::Cancelled` after
-    ///   cancellation succeeds
+    /// Upon receiving this notification, the Agent SHOULD stop all language model
+    /// requests and all tool call invocations as soon as possible.
+    ///
+    /// After all ongoing operations have been successfully aborted and pending
+    /// updates have been sent, the Agent MUST send an idle `state_update` session
+    /// update with the `cancelled` stop reason.
+    ///
+    /// Agents MUST catch errors caused by aborting cancelled work and report the
+    /// `cancelled` stop reason, not `error`.
+    ///
+    /// The Agent MAY send content or tool call updates after receiving
+    /// `session/cancel`, but MUST send them before the idle `state_update` that
+    /// reports cancellation.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
     CancelSessionNotification(Box<CancelSessionNotification>),
@@ -5482,8 +6066,8 @@ mod test_serialization {
         else {
             panic!("Expected Stdio variant");
         };
-        assert!(args.is_empty());
-        assert!(env.is_empty());
+        assert_eq!(args, Vec::<String>::new());
+        assert_eq!(env, []);
 
         let http = McpServer::Http(McpServerHttp::new("http-server", "https://api.example.com"));
         assert_eq!(
@@ -5505,7 +6089,7 @@ mod test_serialization {
         else {
             panic!("Expected Http variant");
         };
-        assert!(headers.is_empty());
+        assert_eq!(headers, []);
     }
 
     #[test]
@@ -5773,21 +6357,21 @@ mod test_serialization {
     fn test_session_response_config_options_deserialize_missing_null_and_invalid() {
         let missing: NewSessionResponse =
             serde_json::from_value(json!({ "sessionId": "sess" })).unwrap();
-        assert!(missing.config_options.is_empty());
+        assert_eq!(missing.config_options, []);
 
         let null: NewSessionResponse = serde_json::from_value(json!({
             "sessionId": "sess",
             "configOptions": null
         }))
         .unwrap();
-        assert!(null.config_options.is_empty());
+        assert_eq!(null.config_options, []);
 
         let wrong_shape: NewSessionResponse = serde_json::from_value(json!({
             "sessionId": "sess",
             "configOptions": "oops"
         }))
         .unwrap();
-        assert!(wrong_shape.config_options.is_empty());
+        assert_eq!(wrong_shape.config_options, []);
 
         let valid_option = serde_json::to_value(test_config_option()).unwrap();
         let mixed: NewSessionResponse = serde_json::from_value(json!({
@@ -5798,12 +6382,12 @@ mod test_serialization {
         assert_eq!(mixed.config_options.len(), 1);
 
         let resume: ResumeSessionResponse = serde_json::from_value(json!({})).unwrap();
-        assert!(resume.config_options.is_empty());
+        assert_eq!(resume.config_options, []);
         #[cfg(feature = "unstable_session_fork")]
         {
             let fork: ForkSessionResponse =
                 serde_json::from_value(json!({ "sessionId": "fork" })).unwrap();
-            assert!(fork.config_options.is_empty());
+            assert_eq!(fork.config_options, []);
         }
     }
 
@@ -5905,7 +6489,7 @@ mod test_serialization {
         }
 
         let resume: ResumeSessionResponse = serde_json::from_value(json!(null)).unwrap();
-        assert!(resume.available_commands.is_empty());
+        assert_eq!(resume.available_commands, []);
     }
 
     #[test]
@@ -6210,6 +6794,235 @@ mod test_serialization {
         );
     }
 
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_session_system_prompt_capabilities_serialization() {
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().system_prompt(SessionSystemPromptCapabilities::new())
+            )
+            .unwrap(),
+            json!({ "systemPrompt": {} })
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().system_prompt(
+                    SessionSystemPromptCapabilities::new().mode(
+                        SessionSystemPromptModeCapabilities::new()
+                            .override_(SessionSystemPromptOverrideCapabilities::new())
+                    )
+                )
+            )
+            .unwrap(),
+            json!({ "systemPrompt": { "mode": { "override": {} } } })
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(
+                json!({ "systemPrompt": { "mode": { "override": {} } } })
+            )
+            .unwrap()
+            .system_prompt
+            .and_then(|capabilities| capabilities.mode)
+            .and_then(|mode| mode.override_),
+            Some(SessionSystemPromptOverrideCapabilities::new())
+        );
+
+        // Capabilities fall back to "not advertised" when malformed.
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(json!({ "systemPrompt": "yes" }))
+                .unwrap()
+                .system_prompt,
+            None
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(
+                json!({ "systemPrompt": { "mode": { "override": true } } })
+            )
+            .unwrap()
+            .system_prompt,
+            Some(
+                SessionSystemPromptCapabilities::new()
+                    .mode(SessionSystemPromptModeCapabilities::new())
+            )
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionCapabilities>(
+                json!({ "systemPrompt": { "mode": "override" } })
+            )
+            .unwrap()
+            .system_prompt,
+            Some(SessionSystemPromptCapabilities::new())
+        );
+    }
+
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_system_prompt_lifecycle_request_serialization() {
+        let system_prompt = SystemPrompt::new(vec![ContentBlock::from(
+            "You are a code review specialist.",
+        )]);
+        let system_prompt_json = json!({
+            "mode": "append",
+            "content": [{ "type": "text", "text": "You are a code review specialist." }]
+        });
+
+        let request =
+            NewSessionRequest::new("/home/user/project").system_prompt(system_prompt.clone());
+        let request_json = json!({
+            "cwd": "/home/user/project",
+            "systemPrompt": system_prompt_json
+        });
+        assert_eq!(serde_json::to_value(&request).unwrap(), request_json);
+        assert_eq!(
+            serde_json::from_value::<NewSessionRequest>(request_json).unwrap(),
+            request
+        );
+
+        assert_eq!(
+            serde_json::to_value(
+                ResumeSessionRequest::new("sess_abc123", "/home/user/project")
+                    .system_prompt(system_prompt.clone())
+            )
+            .unwrap()["systemPrompt"],
+            system_prompt_json
+        );
+        #[cfg(feature = "unstable_session_fork")]
+        assert_eq!(
+            serde_json::to_value(
+                ForkSessionRequest::new("sess_abc123", "/home/user/project")
+                    .system_prompt(system_prompt.clone())
+            )
+            .unwrap()["systemPrompt"],
+            system_prompt_json
+        );
+
+        let override_prompt =
+            SystemPrompt::new(vec![ContentBlock::from("...")]).mode(SystemPromptMode::Override);
+        let override_json = json!({
+            "mode": "override",
+            "content": [{ "type": "text", "text": "..." }]
+        });
+        assert_eq!(
+            serde_json::to_value(&override_prompt).unwrap(),
+            override_json
+        );
+        assert_eq!(
+            serde_json::from_value::<SystemPrompt>(override_json).unwrap(),
+            override_prompt
+        );
+    }
+
+    /// `SystemPrompt::new` defaults to `append` in Rust, but `mode` is required on
+    /// the wire, so it is always serialized.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_system_prompt_new_defaults_to_append() {
+        let system_prompt = SystemPrompt::new(vec![ContentBlock::from("...")]);
+        assert_eq!(system_prompt.mode, SystemPromptMode::Append);
+        assert_eq!(
+            serde_json::to_value(&system_prompt).unwrap(),
+            json!({ "mode": "append", "content": [{ "type": "text", "text": "..." }] })
+        );
+    }
+
+    /// Unknown modes follow the enum variant extension rule: they parse as
+    /// `SystemPromptMode::Other` so they are not dropped, and an agent that does
+    /// not support them must reject the request.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_system_prompt_preserves_unknown_modes() {
+        for mode in ["_vendor_mode", "prepend"] {
+            let system_prompt_json =
+                json!({ "mode": mode, "content": [{ "type": "text", "text": "..." }] });
+            let system_prompt: SystemPrompt =
+                serde_json::from_value(system_prompt_json.clone()).unwrap();
+            assert_eq!(
+                system_prompt.mode,
+                SystemPromptMode::Other(mode.to_string())
+            );
+            assert_eq!(
+                serde_json::to_value(&system_prompt).unwrap(),
+                system_prompt_json
+            );
+        }
+    }
+
+    /// The receiver acts on `systemPrompt`, so malformed values fail the request
+    /// (`-32602`) instead of creating a session without the prompt, and `null`
+    /// is equivalent to omitting the field.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    fn assert_system_prompt_is_strict<T>(base: &serde_json::Value)
+    where
+        T: serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
+    {
+        let name = std::any::type_name::<T>();
+        let with = |system_prompt: serde_json::Value| {
+            let mut request = base.clone();
+            request["systemPrompt"] = system_prompt;
+            serde_json::from_value::<T>(request)
+        };
+
+        for system_prompt in [
+            json!("You are a code review specialist."),
+            json!({ "content": [{ "type": "text", "text": "..." }] }),
+            json!({ "mode": null, "content": [{ "type": "text", "text": "..." }] }),
+            json!({ "mode": 1, "content": [{ "type": "text", "text": "..." }] }),
+            json!({ "mode": "append" }),
+            json!({ "mode": "append", "content": "..." }),
+            json!({ "mode": "append", "content": [{ "type": "text" }] }),
+        ] {
+            assert!(
+                with(system_prompt.clone()).is_err(),
+                "{name}.systemPrompt: {system_prompt}"
+            );
+        }
+
+        assert_eq!(
+            with(serde_json::Value::Null).unwrap(),
+            serde_json::from_value::<T>(base.clone()).unwrap(),
+            "{name}.systemPrompt"
+        );
+    }
+
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_session_setup_requests_reject_malformed_system_prompts() {
+        assert!(
+            serde_json::to_value(NewSessionRequest::new("/repo"))
+                .unwrap()
+                .get("systemPrompt")
+                .is_none()
+        );
+        assert_system_prompt_is_strict::<NewSessionRequest>(&json!({ "cwd": "/repo" }));
+        assert_system_prompt_is_strict::<ResumeSessionRequest>(&json!({
+            "sessionId": "sess-1",
+            "cwd": "/repo"
+        }));
+        #[cfg(feature = "unstable_session_fork")]
+        assert_system_prompt_is_strict::<ForkSessionRequest>(&json!({
+            "sessionId": "sess-1",
+            "cwd": "/repo"
+        }));
+    }
+
+    /// Unknown content block types parse as `ContentBlock::Other` so they are not
+    /// dropped; an agent that does not support them must reject the request.
+    #[cfg(feature = "unstable_session_system_prompt")]
+    #[test]
+    fn test_system_prompt_preserves_unknown_content_blocks() {
+        let request: NewSessionRequest = serde_json::from_value(json!({
+            "cwd": "/home/user/project",
+            "systemPrompt": {
+                "mode": "append",
+                "content": [{ "type": "_vendor_video", "uri": "https://example.com/intro.mp4" }]
+            }
+        }))
+        .unwrap();
+        let content = request.system_prompt.unwrap().content;
+        assert_eq!(content.len(), 1);
+        assert!(matches!(content[0], ContentBlock::Other(_)));
+    }
+
     #[test]
     fn test_auth_method_terminal_serialization() {
         let method = AuthMethod::Terminal(AuthMethodTerminal::new("tui-auth", "Terminal Auth"));
@@ -6230,8 +7043,8 @@ mod test_serialization {
         let deserialized: AuthMethod = serde_json::from_value(json).unwrap();
         match deserialized {
             AuthMethod::Terminal(AuthMethodTerminal { args, env, .. }) => {
-                assert!(args.is_empty());
-                assert!(env.is_empty());
+                assert_eq!(args, Vec::<String>::new());
+                assert_eq!(env, []);
             }
             _ => panic!("Expected Terminal variant"),
         }
@@ -6999,6 +7812,122 @@ mod test_serialization {
                 "prompt": "hello"
             }))
             .is_err()
+        );
+    }
+
+    fn assert_session_setup_lists_are_strict<T>(base: &serde_json::Value)
+    where
+        T: serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
+    {
+        let name = std::any::type_name::<T>();
+        let with = |field: &str, value: serde_json::Value| {
+            let mut request = base.clone();
+            request[field] = value;
+            serde_json::from_value::<T>(request)
+        };
+
+        for (field, value) in [
+            // Dropping the malformed server would start the session without it.
+            (
+                "mcpServers",
+                json!([
+                    {"type": "stdio", "name": "github", "command": "/usr/bin/gh-mcp", "env": [{"name": "GITHUB_TOKEN", "value": null}]},
+                    {"type": "stdio", "name": "fs", "command": "/usr/bin/fs-mcp"}
+                ]),
+            ),
+            ("mcpServers", json!({"type": "stdio", "name": "fs"})),
+            ("additionalDirectories", json!(["/repo/lib", 42])),
+            ("additionalDirectories", json!("/repo/lib")),
+        ] {
+            assert!(
+                with(field, value.clone()).is_err(),
+                "{name}.{field}: {value}"
+            );
+        }
+
+        let empty = serde_json::from_value::<T>(base.clone()).unwrap();
+        for field in ["mcpServers", "additionalDirectories"] {
+            assert_eq!(
+                with(field, serde_json::Value::Null).unwrap(),
+                empty,
+                "{name}.{field}"
+            );
+        }
+    }
+
+    #[test]
+    fn session_setup_requests_reject_malformed_mcp_servers_and_directories() {
+        assert_session_setup_lists_are_strict::<NewSessionRequest>(&json!({"cwd": "/repo"}));
+        assert_session_setup_lists_are_strict::<ResumeSessionRequest>(&json!({
+            "sessionId": "sess-1",
+            "cwd": "/repo"
+        }));
+        #[cfg(feature = "unstable_session_fork")]
+        assert_session_setup_lists_are_strict::<ForkSessionRequest>(&json!({
+            "sessionId": "sess-1",
+            "cwd": "/repo"
+        }));
+    }
+
+    #[test]
+    fn resume_session_request_rejects_malformed_replay_from() {
+        let request = |replay_from: serde_json::Value| {
+            serde_json::from_value::<ResumeSessionRequest>(json!({
+                "sessionId": "sess-1",
+                "cwd": "/repo",
+                "replayFrom": replay_from
+            }))
+        };
+
+        // Treating this as omitted would reconnect without the requested replay.
+        assert!(request(json!("start")).is_err());
+        assert_eq!(request(serde_json::Value::Null).unwrap().replay_from, None);
+        assert!(matches!(
+            request(json!({"type": "start"})).unwrap().replay_from,
+            Some(ReplayFrom::Start(_))
+        ));
+    }
+
+    #[test]
+    fn mcp_server_lists_treat_null_as_empty() {
+        let servers: Vec<McpServer> = serde_json::from_value(json!([
+            {"type": "stdio", "name": "fs", "command": "/usr/bin/fs-mcp", "args": null, "env": null},
+            {"type": "http", "name": "api", "url": "https://example.com/mcp", "headers": null}
+        ]))
+        .unwrap();
+
+        assert_eq!(
+            servers,
+            vec![
+                McpServer::Stdio(McpServerStdio::new("fs", "/usr/bin/fs-mcp")),
+                McpServer::Http(McpServerHttp::new("api", "https://example.com/mcp")),
+            ]
+        );
+    }
+
+    #[test]
+    fn terminal_auth_methods_reject_malformed_launch_config() {
+        // The client spawns a process from `args` and `env`, so a malformed
+        // method is dropped from `authMethods` instead of launched with
+        // altered arguments or preserved as an unknown method.
+        let response: InitializeResponse = serde_json::from_value(json!({
+            "protocolVersion": 2,
+            "info": {"name": "agent", "version": "1.0.0"},
+            "authMethods": [
+                {"type": "terminal", "methodId": "bad-args", "name": "Log in", "args": ["auth", "--port", 8123]},
+                {"type": "terminal", "methodId": "bad-env", "name": "Log in", "env": [{"name": "DEBUG", "value": 1}]},
+                {"type": "terminal", "methodId": "null-config", "name": "Log in", "args": null, "env": null},
+                {"type": "agent", "methodId": "agent", "name": "Agent login"}
+            ]
+        }))
+        .unwrap();
+
+        assert_eq!(
+            response.auth_methods,
+            vec![
+                AuthMethod::Terminal(AuthMethodTerminal::new("null-config", "Log in")),
+                AuthMethod::Agent(AuthMethodAgent::new("agent", "Agent login")),
+            ]
         );
     }
 }

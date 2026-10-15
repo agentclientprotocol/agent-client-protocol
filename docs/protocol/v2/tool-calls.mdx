@@ -104,7 +104,9 @@ unchanged when omitted, explicitly clear or unset the value when `null`, and
 replace the previous value when concrete values are sent. For a new
 `toolCallId`, omitted fields use Client defaults. `content` and `locations` are
 replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
-the field to leave it unchanged or set it to `null` to clear it. Use
+the field to leave it unchanged, set it to `null` to clear it, or send an
+object to replace the whole stored object; Clients do not merge its keys with
+earlier ones. Use
 `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection. Display-only terminal bytes use `terminal_output_chunk` instead.
@@ -192,6 +194,8 @@ with `content: []` or `content: null` clears the tool-call content. A
 `tool_call_content_chunk`'s `_meta`, when present, is chunk-scoped.
 
 ## Requesting Permission
+
+Permission requests do not by themselves change the session's foreground state. While foreground work is blocked on a permission response, the Agent **SHOULD** report `requires_action`; when foreground work starts or resumes, it **MUST** report `running`. Requests for independent background activity may arrive while the session remains `idle`. See [Foreground and Background Work](/protocol/v2/prompt-lifecycle#foreground-and-background-work).
 
 The Agent **MAY** request permission from the user before proceeding with an operation, such as executing a tool call, by calling the `session/request_permission` method:
 
@@ -514,8 +518,21 @@ Clients MUST handle diffs where `patch` is omitted or `null`.
 
 <ParamField path="patch.format" type="string" required>
   Patch format. `git_patch`, the only ACP-defined value, is one or more `diff
-  --git` sections in Git's `--patch` (`-p`) text format. Paths MUST be absolute.
+  --git` sections in Git's `--patch` (`-p`) text format. Unlike Git, which
+  writes paths relative to the repository root, every path MUST be absolute,
+  including in `rename from`, `rename to`, `copy from`, and `copy to` lines, and
+  MUST NOT have a prefix such as Git's default `a/` and `b/`. Otherwise paths
+  follow Git: `/dev/null` names the missing side of an added or deleted file in
+  the `---` and `+++` lines, and paths with unusual characters are [quoted as Git
+  quotes them](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath).
   Surrounding commit metadata and email envelopes MUST NOT be included.
+
+Git can produce most of this. With `$ROOT` set to the repository root,
+`git diff --src-prefix="$ROOT/" --dst-prefix="$ROOT/"` writes absolute
+`diff --git`, `---`, and `+++` lines. Git never prefixes `rename from`,
+`rename to`, `copy from`, or `copy to` paths, so those still need the
+repository root prepended, with Git's quoting applied to the full path.
+
 </ParamField>
 
 <ParamField path="patch.text" type="string" required>
