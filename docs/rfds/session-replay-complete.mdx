@@ -8,54 +8,27 @@ Author(s): [nikita-ashihmin](https://github.com/nikita-ashihmin)
 
 > What are you proposing to change?
 
-Add a `replay_complete` session update. The Agent sends it once, after the last replayed history notification of a session load and before the response.
+Add a `replay_complete` session update. The Agent sends it once, after the last replayed history entry of a session load and before the response.
 
-- A Client learns that it holds the full history as soon as the replay ends, not when the Agent finishes the rest of its setup.
-- A Client can tell a complete replay from a truncated one when the load fails, is cancelled, or the connection drops.
-- The signal applies to v1 `session/load` and to v2 `session/resume` with a `replayFrom` cursor.
-- In v1, the Agent advertises the signal with a capability and sends it only to Clients that opt in. In v2, it is required whenever history is replayed.
+With it, a Client can:
 
-The response keeps its current meaning. It still tells the Client that the session is ready for prompts.
+- show the full history as soon as the replay ends, not when the Agent finishes its setup;
+- tell a complete replay from a truncated one when the load fails, is cancelled, or the connection drops.
+
+The signal applies to v1 `session/load` and to v2 `session/resume` with a `replayFrom` cursor. The response keeps its meaning: the session is ready for prompts.
 
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-In v1, [`session/load`](/protocol/v1/session-setup#loading-sessions) replays the conversation as `session/update` notifications. "When **all** the conversation entries have been streamed", the Agent responds. In v2, [`session/resume`](/protocol/v2/draft/session-setup#resuming-sessions) with `replayFrom: { "type": "start" }` has the same contract: the Agent replays all retained history before it responds.
+In v1, [`session/load`](/protocol/v1/session-setup#loading-sessions) replays the conversation as `session/update` notifications, and the Agent responds after all entries. In v2, [`session/resume`](/protocol/v2/draft/session-setup#resuming-sessions) with `replayFrom: { "type": "start" }` has the same contract.
 
-The response is the only signal that the replay is over. But the response also means "the session is ready", and Agents often do expensive work after the replay and before the response. Measurements from one Client (JetBrains) against current adapters:
+The response is the only signal that the replay is over. The response also means "the session is ready", and an Agent can do slow work after the replay and before the response. For example, claude-agent-acp replays the transcript while the Claude CLI starts. We measured the response 0.7–1.9 s after the end of the replay on an idle machine, and 4–9 s on a cold start or a loaded machine.
 
-- **claude-agent-acp** replays the transcript in parallel with the start of the Claude CLI. The history was complete after 0.04–0.9 s. The response came at 0.75–1.9 s on an idle Windows machine. On a first cold start it came 4.3–4.7 s after the history was complete. On a loaded macOS machine where several agents started at once, it came 8–9 s after the history.
-- **codex-acp** waits up to 1 s for a network account read before the replay starts (about 0.7 s on an idle machine). The history itself then took 55 ms.
+This causes two problems:
 
-These numbers describe one implementation on specific machines. They are not protocol facts. They show that the gap between "history complete" and "response" can be seconds, and that it depends on work the Client cannot see.
-
-During that gap the Client holds a complete history that it cannot show with confidence. It has two options:
-
-1. **Wait for the response.** The user looks at an empty or spinning session for seconds while the full transcript is already in memory.
-2. **Guess with a quiet-period debounce.** The Client renders once no update arrives for some time. This is wrong for paged producers: codex-acp reads history in pages of 100 items with one RPC per page, so a pause between pages looks like the end. A wrong guess makes the Client render the transcript in several pieces. Each piece re-lays out the transcript and can build lazily rendered content near the viewport again.
-
-There is a second problem. When a load fails after part of the replay, for example because the Agent crashed, the Client cannot tell whether it received the whole history. This matters for Clients that persist the replay or rebuild a local transcript from it. Such a Client must not replace a good local copy with a truncated one.
-
-### Prior art
-
-JetBrains first used a private `_meta` contract between its cloud agent and its IDE Client. It marks every replayed notification:
-
-- `_meta.loadSessionReplayIndex` is a 0-based position.
-- `_meta.loadSessionReplaySize` is optional. Despite the name, the value is the **last index**, not the count.
-- The last replayed notification carries `_meta.loadSessionEndOfRecordedHistory: true`.
-
-The indexes turned out to be a trap. Producers counted in different units, and the end flag alone answered the completeness question. To set the flag, the Agent must also hold back one notification until it knows that no more follow.
-
-So the JetBrains Client now uses a smaller contract for local agents. It is the shape that this RFD proposes, in private keys:
-
-- The Client declares `loadReplayEnd` in `clientCapabilities._meta.jetbrains.air.capabilities`.
-- After the whole replay and before the response, the Agent sends one `session_info_update` with no `title` and no `updatedAt`. It carries `_meta.jetbrains.air.loadReplayEnd: true`.
-- The Agent sends it for an empty history too. It never sends it after a failed or stopped replay.
-
-claude-agent-acp implements it in [#1361](https://github.com/agentclientprotocol/claude-agent-acp/pull/1361). codex-acp does not need it now, because it answers 2–3 ms after its replay. The Kotlin SDK change that delivers the updates of a loading session before the response is [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146).
-
-The idea works, but every pair of implementations that wants it must agree on private keys. This RFD proposes to standardize the idea. It does not propose to standardize these key names.
+1. **The Client cannot show the history early.** It holds the full history but does not know that it is full. It must wait for the response, or guess with a quiet-period timer. A timer is wrong for a paged producer, because a pause between pages looks like the end. A wrong guess renders the transcript in several pieces.
+2. **The Client cannot detect a truncated replay.** When a load fails after part of the replay, the Client does not know whether it got the whole history. A Client that persists the replay must not replace a good local copy with a truncated one.
 
 ## What we propose to do about it
 
@@ -63,7 +36,7 @@ The idea works, but every pair of implementations that wants it must agree on pr
 
 ### The `replay_complete` update
 
-When the Agent has sent every history entry it selected for a replay, it sends one `session/update` with the `replay_complete` variant:
+After the Agent sends every history entry it selected for a replay, it sends one `session/update` with the `replay_complete` variant:
 
 ```json
 {
@@ -80,42 +53,40 @@ When the Agent has sent every history entry it selected for a replay, it sends o
 
 The variant has no required fields. It accepts `_meta` like every other update.
 
-The rules:
+Rules:
 
-- The Agent **MUST** send `replay_complete` exactly once for each request that replays history. It **MUST** send it before the response to that request.
-- The Agent **MUST** send it for an empty history too. Then it is the first `session/update` for that request.
+- The Agent **MUST** send `replay_complete` exactly once for each request that replays history, before the response to that request.
+- The Agent **MUST** send it for an empty history too. Then it is the first `session/update` of that request.
 - The Agent **MUST NOT** send it for a request that does not replay history: v1 `session/resume`, v2 `session/resume` without `replayFrom`, and `session/new`.
-- The Agent **MUST NOT** send it as a guess. If it cannot finish the replay, it does not send it.
+- The Agent **MUST NOT** send it when it cannot finish the replay.
 
-The Client **MAY** render the replayed history as soon as it receives `replay_complete`. The response still means that the session is ready. The Client **SHOULD** keep prompt input and session controls disabled until the response arrives.
+The Client **MAY** render the history when it receives `replay_complete`. The Client **SHOULD** keep prompt input disabled until the response.
 
 ### No live updates before the marker
 
-The Client can trust the marker only if everything before it is history. So, from the moment the Agent receives a replaying request until it sends `replay_complete`, every `session/update` it sends for that session **MUST** be replayed history.
+Every `session/update` that the Agent sends for the session between the request and `replay_complete` **MUST** be replayed history.
 
-Live events that happen in this window wait until after the marker. Examples are the chunks of a turn that is still in flight, launch progress notices, `available_commands_update`, `config_option_update`, and v2 `state_update`. The Agent buffers them and sends them after `replay_complete`. One JSON-RPC connection delivers messages in order, so the buffering is local to the Agent.
+The Agent buffers live events in this window and sends them after the marker. Examples are the chunks of a turn in flight, launch progress, `available_commands_update`, `config_option_update`, and v2 `state_update`. One JSON-RPC connection is ordered, so the buffer is local to the Agent.
 
-A turn that is in flight during a load is split at a cut point. The retained part up to the cut is history and comes before the marker. The rest is live and comes after it. In v2, message updates and chunks are keyed by `messageId`, so the live chunks append to the replayed message.
+A turn in flight during a load is split at a cut point. The part up to the cut is history and comes before the marker. The rest is live and comes after it. In v2, chunks are keyed by `messageId`, so the live chunks append to the replayed message.
 
-This rule covers `session/update` only. It does not change when the Agent can send requests such as `session/request_permission`. Those **SHOULD** also wait until after the marker, because a Client may not show them before it shows the history.
+Agent requests such as `session/request_permission` **SHOULD** also wait until after the marker, because a Client may not show them before the history.
 
-### Truncated and failed replays
+### Outcomes
 
-With the signal negotiated, the Client can classify every outcome:
+| What the Client received                       | Meaning                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `replay_complete`, then a success response     | Complete history. Session ready.                                                                 |
+| `replay_complete`, then an error response      | Complete history. The session failed to start. The Client can show the history read-only.        |
+| No `replay_complete`, then an error response   | Truncated replay. The Client **MUST NOT** use the updates as the full history.                   |
+| No `replay_complete`, then cancellation or EOF | Truncated replay, as above.                                                                      |
+| No `replay_complete`, then a success response  | Protocol violation. The success response still certifies the history. The Client **MAY** log it. |
 
-| What the Client received                       | Meaning                                                                                                                                  |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `replay_complete`, then a success response     | Complete history. Session ready.                                                                                                         |
-| `replay_complete`, then an error response      | Complete history. The session failed to start. The Client can show the history read-only.                                                |
-| No `replay_complete`, then an error response   | Truncated replay. The Client **MUST NOT** treat the received updates as the full history, for example to replace a persisted transcript. |
-| No `replay_complete`, then cancellation or EOF | Truncated replay, as above.                                                                                                              |
-| No `replay_complete`, then a success response  | Protocol violation. The success response still certifies the history, as in today's contract. The Client **MAY** log the violation.      |
-
-`replay_complete` says that the Agent sent everything it **selected** for this replay. It does not say that the Agent retained everything that ever happened. Agents may already drop live-only messages or old history. Agents **SHOULD** report known gaps with an advisory mechanism such as [session notices](/rfds/session-notices), sent after the marker.
+`replay_complete` means that the Agent sent everything it **selected** for this replay. It does not mean that the Agent retained all history. Agents **SHOULD** report known gaps with a mechanism such as [session notices](/rfds/session-notices), after the marker.
 
 ### Capabilities
 
-**v1.** The v1 `SessionUpdate` union is closed. An older Client can fail to parse an unknown variant. So the signal needs both sides to opt in.
+**v1.** The v1 `SessionUpdate` union is closed, and an older Client can fail on an unknown variant. So both sides opt in.
 
 The Agent advertises support:
 
@@ -142,39 +113,37 @@ The Client advertises support:
 }
 ```
 
-Omission or `null` means unsupported. `{}` means supported. The Agent sends `replay_complete` only when the Client advertised it. The Client expects `replay_complete`, and applies the truncation rules above, only when the Agent advertised it.
+Omission or `null` means unsupported, and `{}` means supported. The Agent sends `replay_complete` only to a Client that advertised it. The Client applies the outcome table only when the Agent advertised it.
 
-**v2.** The v2 `SessionUpdate` union is open under the [enum variant extension rule](/rfds/v2/enum-variant-extension), so an older v2 Client ignores the variant. The signal is cheap for the Agent. We propose that it is **required** in v2: every replaying `session/resume` ends its replay with `replay_complete`. No capability is needed.
+**v2.** The v2 `SessionUpdate` union is open under the [enum variant extension rule](/rfds/v2/enum-variant-extension), so an older v2 Client ignores the variant. We propose that the marker is **required** in v2 for every replaying `session/resume`. No capability is needed.
 
 ### Subagent sessions
 
-A load of a parent session can also replay child sessions, as described in the [Subagent Sessions RFD](/rfds/subagents#reconnection-and-replay). There is one marker for each request. The Agent sends it on the parent `sessionId`, after all history it selected for the parent and the children. Children do not get their own marker.
+A load of a parent session can also replay child sessions, see the [Subagent Sessions RFD](/rfds/subagents#reconnection-and-replay). There is one marker for each request. The Agent sends it on the parent `sessionId`, after the history of the parent and the children.
 
-The marker does not move the freshness boundary of that RFD. Child work state and mutation capabilities that arrive before the response stay historical. They do not authorize Client-initiated mutations.
+The marker does not move the freshness boundary of that RFD. Child state that arrives before the response stays historical.
 
 ### v2 replay cursors
 
-`replay_complete` means "all entries selected by the `replayFrom` cursor have been sent". For `{ "type": "start" }`, that is all retained history. Future cursors use the same rule without change. If a future cursor selects no entries, the marker is the first update, as for an empty history.
+`replay_complete` means that all entries selected by the `replayFrom` cursor were sent. For `{ "type": "start" }`, that is all retained history. If a cursor selects no entries, the marker is the first update.
 
 ## Shiny future
 
 > How will things will play out once this feature exists?
 
-A Client opens a saved session. The history appears as one complete transcript as soon as the Agent has streamed it. A "Starting agent..." indicator then covers the remaining setup until the response arrives and prompt input opens. There is no debounce timer and no transcript that builds up in several pieces.
+A Client opens a saved session and shows the full transcript as soon as the Agent streams it. A "Starting agent..." indicator covers the rest of the setup until the response opens prompt input. The Client needs no timer, and the transcript does not build up in pieces.
 
-When the Agent crashes during a load, the Client knows that the replay was cut short. It keeps its persisted copy and shows an error, and it does not replace the copy with a truncated transcript.
-
-Adapters stop inventing private `_meta` keys for this. A Client implements one rule that works with every Agent that advertises the capability.
+When the Agent crashes during a load, the Client knows that the replay was cut short. It keeps its persisted copy and shows an error.
 
 ## Implementation details and plan
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. **Schema (v1, unstable).** Add a `ReplayComplete` variant with only `_meta` to `SessionUpdate`. Add `replayComplete` to the Agent `SessionCapabilities` and to the Client `ClientSessionCapabilities`. Keep both behind an unstable feature flag.
+1. **Schema (v1, unstable).** Add a `ReplayComplete` variant with only `_meta` to `SessionUpdate`. Add `replayComplete` to the Agent `SessionCapabilities` and to the Client `ClientSessionCapabilities`, behind an unstable feature flag.
 2. **Schema (v2).** Add the `replay_complete` variant to the v2 `SessionUpdate` union.
-3. **Docs.** Update [Session Setup](/protocol/v1/session-setup) for v1 and the v2 draft. The sequence diagram gets a `replay_complete` step between "All content streamed" and the response. Document the ordering rule and the truncation table.
-4. **SDKs.** Expose the variant and the capabilities in the Rust and TypeScript SDKs. A helper in the Agent SDKs can buffer live updates for a session while its replay runs. The Client SDKs must deliver the updates of a loading session to the Client before the response. The Kotlin SDK queues them in a placeholder session until the response and creates the session operations only then, so a Client on it cannot see `replay_complete` early. [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146) adds overloads that take the operations before the request. For `session/load` and `session/resume`, the Client knows the session ID before the request, so an SDK can register the session operations before it sends the request.
-5. **Adapters and Clients.** Implement in claude-agent-acp, in codex-acp, and in the JetBrains Client. The private `loadReplayEnd` event can stay for a transition period, and `replay_complete` replaces it.
+3. **Docs.** Update [Session Setup](/protocol/v1/session-setup) for v1 and the v2 draft. Add a `replay_complete` step to the sequence diagram between "All content streamed" and the response. Document the ordering rule and the outcome table.
+4. **SDKs.** Expose the variant and the capabilities in the SDKs. An Agent SDK helper can buffer live updates while a replay runs. A Client SDK must deliver the updates of a loading session before the response. For `session/load` and `session/resume`, the Client knows the session ID before the request, so the SDK can register the session handler first. [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146) does this for the Kotlin SDK.
+5. **Adapters.** Implement in claude-agent-acp, see [#1361](https://github.com/agentclientprotocol/claude-agent-acp/pull/1361), and in other adapters that do work between the replay and the response.
 
 ## Frequently asked questions
 
@@ -182,62 +151,57 @@ Adapters stop inventing private `_meta` keys for this. A Client implements one r
 
 ### What alternative approaches did you consider, and why did you settle on this one?
 
-We evaluated three designs.
+**(a) One update after the replay.** This RFD proposes it.
 
-**(a) A dedicated `session/update` variant sent once after the replay.** This RFD proposes it.
+- It works for an empty history.
+- The Agent does not need to know which entry is last. A paged producer sends the marker after its last page.
+- It adds one small notification per load.
+- It cannot separate live updates from history alone. The ordering rule fixes this.
+- In v1 it needs a Client capability, because the union is closed.
 
-- It works for an empty history without a special case.
-- The Agent does not need to know which entry is last while it sends it. A paged producer sends the marker after its last page returns. No lookahead buffer is needed.
-- It adds one small notification per load, and nothing to each replayed update.
-- It cannot separate interleaved live updates from history on its own. The ordering rule above fixes this. The Agent already controls the order of its writes, so the rule is cheap.
-- In v1 it needs a Client capability because the union is closed.
+**(b) Replay metadata on each replayed notification:** a position on each, and an end flag on the last.
 
-**(b) Replay metadata on each replayed notification.** Each replayed update carries a position, and the last one carries an end flag. This is the JetBrains prior art.
+- It separates replayed updates from live ones when they interleave.
+- To set the end flag, the Agent must hold back one notification until it knows that no more follow. For a paged producer this adds one page fetch.
+- An empty history has no notification for the flag, so it needs design (a) too.
+- Positions add bytes to every update, and one JSON-RPC connection is ordered already.
 
-- It lets the Client tell replayed updates from live ones even when they interleave. This is its main benefit.
-- To set the end flag, the Agent must know which notification is last. A streaming or paged producer must hold back one notification until it knows whether more follow. This adds latency equal to one page fetch for codex-acp.
-- An empty history has no notification to carry the end flag. It needs a second mechanism, which in practice is design (a).
-- Positions add bytes to every replayed update and add little value. One JSON-RPC connection is ordered and does not drop messages. A count also invites errors, as `loadSessionReplaySize` shows: the name says "size" but the value is the last index.
-- Old Clients ignore unknown fields, so no Client capability is needed. This is its second benefit.
+The ordering rule of (a) gives the benefit of (b) without its costs.
 
-The ordering rule in design (a) gives the benefit of (b) without its costs. Implementations can still send per-notification positions in `_meta` if they need them.
+**(c) The response first, then the history.**
 
-**(c) A capability-gated two-step flow where the response comes first and the history streams after it.**
-
-- It changes what the response means. Today a success response certifies the history. Under (c) it would not, so the Client still needs an end marker for the stream after the response. This is design (a) with a reordered response.
-- The [Subagent Sessions RFD](/rfds/subagents#reconnection-and-replay) uses the response as the freshness boundary for child state and controls. History after the response breaks that boundary.
-- A Client could send a prompt while history still streams. The new turn and old history would then interleave in one stream.
-- Its one benefit is that the Client gets `configOptions` and modes earlier. But the expensive Agent work happens before the response in either case. So (c) does not make the session usable sooner. It only moves the wait.
-
-We did not choose (c).
+- A success response no longer certifies the history, so the Client still needs an end marker. This is (a) with a reordered response.
+- It breaks the freshness boundary of the [Subagent Sessions RFD](/rfds/subagents#reconnection-and-replay).
+- A prompt could interleave with the history in one stream.
+- The slow Agent work still comes before the session is usable.
 
 ### Why a `session/update` variant and not a new notification method?
 
-SDKs dispatch all `session/update` notifications through one handler in order. A separate method such as `session/replay_complete` can reach the application on a different path and lose its order relative to the last replayed update. Unknown notification methods are also handled differently across v1 implementations.
+SDKs dispatch all `session/update` notifications through one ordered handler. A separate method can reach the application on another path and lose its order relative to the last replayed update.
 
-### Why not let the Agent respond earlier instead?
+### Why not let the Agent respond earlier?
 
-The v1 contract ties the response to the end of the replay, and Clients rely on that. Some Agent work, such as starting a CLI or a network account read, really must finish before the session can take prompts. The fix is to report the two milestones separately, not to merge them earlier.
+Clients rely on the response as the end of the replay. Some Agent work, such as a CLI start, must finish before the session can take prompts. The two milestones need two signals.
 
 ### What does the Client do with updates after `replay_complete` but before the response?
 
-They are live. The Client applies them like any live update. In v2, they include current snapshots such as `state_update`. The subagent freshness rules still apply to them until the response arrives.
+They are live, and the Client applies them as live updates. The subagent freshness rules apply until the response.
 
 ### Can a Client load the same session twice at the same time on one connection?
 
-The marker carries the `sessionId`, not the request ID. With two concurrent replaying requests for one session, the Client cannot tell which marker belongs to which request. Clients **SHOULD NOT** send a second replaying request for a session while the first one is pending. See the open questions.
+The marker carries the `sessionId`, not the request ID, so the Client cannot match two markers to two requests. Clients **SHOULD NOT** send a second replaying request for a session while the first one is pending.
 
 ### Does the marker cover `session/fork`?
 
-No. This RFD covers requests that replay history today. Any future method that replays history should adopt the same marker.
+No. A future method that replays history should use the same marker.
 
 ### Open questions
 
-- **Name.** `replay_complete` is short. `history_replayed` and `replay_end` are alternatives.
-- **v2: required or capability?** This RFD proposes required. A capability would let simple v2 Agents skip it, but then every v2 Client needs the debounce fallback again.
-- **Request correlation.** Should the marker carry an optional field that identifies the request, to support concurrent loads of one session?
-- **A resume position.** Should the marker carry an opaque cursor that a future `replayFrom` variant accepts, so a Client can later replay only newer history?
-- **Known gaps.** Should the marker carry an optional flag that says the Agent knows its retained history is incomplete? Or is a session notice enough?
+- **Name.** Alternatives are `history_replayed` and `replay_end`.
+- **v2: required or capability?** This RFD proposes required. With a capability, every v2 Client needs the timer fallback again.
+- **Request correlation.** Should the marker carry an optional request identifier?
+- **Resume position.** Should the marker carry an opaque cursor for a future `replayFrom` variant?
+- **Known gaps.** Should the marker carry a flag for incomplete retained history, or is a session notice enough?
 
 ## Revision history
 
