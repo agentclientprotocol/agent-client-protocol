@@ -2145,7 +2145,7 @@
       ]
     },
     "CreateElicitationRequest": {
-      "description": "Request from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations are tied to a session (optionally a tool call) or a request.",
+      "description": "Request from the agent to elicit structured user input.\n\nThe agent sends this to the client to request information from the user,\neither via a form or by directing them to a URL.\nElicitations are tied to a session (optionally a tool call) or a request.\n\nA session-scoped request follows the aggregate foreground-state contract:\nagents SHOULD report `requires_action` when the whole foreground workflow is\nblocked on user action. Once reported, they MUST report `running` when progress\nresumes, or `idle` if work ends without resuming. Independent background requests\nand request-scoped elicitations do not themselves change session state.\nAccepting a URL does not mean the external interaction completed.\n\nAgents SHOULD cancel pending elicitations no longer needed by cancelled work.\nThe request's scope alone does not establish that dependency.\n\nSee protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/draft/elicitation)",
       "type": "object",
       "properties": {
         "message": {
@@ -4554,7 +4554,7 @@
       "x-method": "auth/logout"
     },
     "NewSessionResponse": {
-      "description": "Response from creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v2/draft/session-setup#creating-a-session)",
+      "description": "Response from creating a new session.\n\nNew sessions default to `idle` until a state update reports otherwise.\nUpdates may arrive before or after this response. Clients MUST NOT overwrite\nan already-reported state when the response arrives.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v2/draft/session-setup#creating-a-session)",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -5111,7 +5111,7 @@
       "x-method": "session/fork"
     },
     "ResumeSessionResponse": {
-      "description": "Response from resuming an existing session.",
+      "description": "Response from resuming an existing session.\n\nThe agent MUST send a current `state_update` after any requested history\nreplay and before this response, even without replay. The update reports\nforeground state after resuming. The response alone does not imply `idle`.\n\nSee protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/v2/draft/session-setup#current-state-synchronization)",
       "type": "object",
       "properties": {
         "configOptions": {
@@ -5915,7 +5915,7 @@
           ]
         },
         {
-          "description": "The state of the agent's foreground work has changed.",
+          "description": "A snapshot of the session's aggregate foreground activity.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -6637,7 +6637,7 @@
       "required": ["totalTokens", "inputTokens", "outputTokens"]
     },
     "IdleStateUpdate": {
-      "description": "No foreground work is active. Background activity may continue.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An idle update that does not end foreground work need not include one.\nReceivers treat an omitted, `null`, or malformed `stopReason` as the agent not\nreporting one.",
+      "description": "No foreground work is active. Background activity may continue.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An idle update that does not end foreground work need not include one.\nReceivers treat an omitted, `null`, or malformed `stopReason` as the agent not\nreporting one.\nRepeated or resume snapshots may carry the last stop reason for context.\nThey MUST NOT be counted as new completions, cancellations, or additional usage.",
       "type": "object",
       "properties": {
         "usage": {
@@ -6666,7 +6666,7 @@
       },
       "anyOf": [
         {
-          "description": "The active work ended successfully.",
+          "description": "The active work ended successfully.\nIncludes locally handled commands that required no model call.",
           "type": "object",
           "properties": {
             "stopReason": {
@@ -6710,7 +6710,7 @@
           "required": ["stopReason"]
         },
         {
-          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents MUST report this stop reason on an idle `state_update` session update\nwhen cancellation succeeds, even if cancellation causes exceptions in\nunderlying operations. Agents MUST catch these errors and report\n`cancelled`, not `error`.",
+          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents MUST report this stop reason on an idle `state_update` when\ncancellation ends active foreground work, even if aborting causes\nexceptions. Agents MUST catch these errors and report `cancelled`, not\n`error`.",
           "type": "object",
           "properties": {
             "stopReason": {
@@ -6826,7 +6826,7 @@
       ]
     },
     "RequiresActionStateUpdate": {
-      "description": "Foreground work is blocked on user action.",
+      "description": "The foreground workflow as a whole is blocked on user action.\n\nAgents SHOULD report this state when foreground work cannot progress without\nuser action. Pending permissions or elicitations alone do not imply this\nstate if other foreground work can progress, or if the requests belong only\nto independent background activity. Once reported, agents MUST report\n`running` when progress resumes, or `idle` if the work ends without resuming.\nResponding to one request does not itself imply `running`.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -6850,7 +6850,7 @@
       }
     },
     "StateUpdate": {
-      "description": "The state of the agent's foreground work has changed.\n\nForeground work is the agent's active response or workflow in the session,\nincluding model processing, tool execution, and waiting for user action needed\nto continue that work. It can start with a prompt or be agent-initiated, for\nexample to pursue an ongoing goal or follow up on a completed background task.\nEither way, the agent MUST report `running` when foreground work starts or\nresumes, and `idle` when it ends. The agent SHOULD include a stop reason on\nthat idle update. Agent-initiated work does not require a prompt request or a\nsynthetic user message.\n\n`running` may precede user-message insertion, for example during a foreground\nhook. It is not acknowledgment of insertion, and rejecting a prompt does not\nitself end foreground work.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications, including a detached task's progress or\ncompletion, do not by themselves change this state. A permission request only\nwarrants `requires_action` when foreground work is blocked on user action.\n\nSee protocol docs: [Foreground and Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#foreground-and-background-work)",
+      "description": "A snapshot of the session's aggregate foreground activity.\n\nForeground work is the agent's active response or workflow in the session,\nincluding model processing, tool execution, and waiting for user action needed\nto continue that work. It can start with a prompt or be agent-initiated, for\nexample to pursue an ongoing goal or follow up on a completed background task.\nEither way, the agent MUST report `running` when foreground work starts,\nor `requires_action` if it starts blocked on user action, and `idle` when it\nends. The agent SHOULD include a stop reason on that idle update.\nAgent-initiated work does not require a prompt request or a synthetic user\nmessage.\n\n`running` may precede user-message insertion, for example during a foreground\nhook. It is not acknowledgment of insertion, and rejecting a prompt does not\nitself end foreground work.\n\nBackground activity can continue and emit other `session/update` notifications\nwhile `idle`. Those notifications, including a detached task's progress or\ncompletion, do not by themselves change this state. A permission request only\nwarrants `requires_action` when foreground work is blocked on user action.\n\nThe agent SHOULD report `requires_action` when the foreground workflow as a\nwhole cannot progress without user action, including permissions or elicitations.\nOnce reported, it MUST report `running` when progress resumes, or `idle` when\nwork ends without resuming.\nIf other foreground work can progress, the state remains `running`. Resolving\none of several requests does not itself change the state. Agents SHOULD ignore\nresponses for work that has already ended rather than use them to resume it.\n\nA new session defaults to idle until a state update reports otherwise.\nResume MUST send a current-state snapshot after any replay and before its\nresponse. The snapshot reports foreground state after resuming.\nThe response alone does not imply idle.\nRepeated snapshots are idempotent, not additional work, completions, or usage.\nA repeated state may carry updated information without another state transition.\nThe agent MUST report `idle` when no foreground activity remains. Completing\nan individual activity while other foreground work continues does not require\nan idle boundary. Local commands use the same lifecycle even without model work.\n\nSee protocol docs: [Session States](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#session-states)",
       "anyOf": [
         {
           "description": "Foreground work is in progress.",
@@ -7945,7 +7945,7 @@
       "required": ["messageId", "content"]
     },
     "CompleteElicitationNotification": {
-      "description": "Notification sent by the agent when a URL-based elicitation is complete.",
+      "description": "Notification sent by the agent when a URL-based elicitation is complete.\n\nThis notification is not a foreground state update.",
       "type": "object",
       "properties": {
         "elicitationId": {
@@ -9898,7 +9898,7 @@
       "description": "The outcome of a permission request.",
       "anyOf": [
         {
-          "description": "Active session work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel active\nsession work, it MUST respond to all pending `session/request_permission`\nrequests with this `Cancelled` outcome.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+          "description": "Active session work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel active\nsession work, it MUST respond to all pending `session/request_permission`\nrequests in that session with this `Cancelled` outcome, without answering\nany request twice. Requests in other sessions are unaffected.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
           "type": "object",
           "properties": {
             "outcome": {
@@ -10215,7 +10215,7 @@
               "anyOf": [
                 {
                   "title": "CancelSessionNotification",
-                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason if cancellation ended active\nforeground work. No additional completion update is required if no\nforeground work was active.\n\nAfter cancellation completes, the Agent SHOULD ignore late answers rather\nthan use them to resume the cancelled work.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelSessionNotification"

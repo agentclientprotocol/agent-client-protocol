@@ -138,3 +138,12 @@ The same [prompt insertion contract](/protocol/v2/prompt-lifecycle#2-prompt-acce
 If a command is handled locally and the runtime does not record it, the adapter inserts a live-only user message into the ACP conversation. It need not wait for a runtime insertion event or keep a permanent transcript entry. If the command is retained and replayed later, it uses the same message ID and is not executed again.
 
 For example, an adapter can report a locally handled `/compact` as a live-only user message containing `/compact`, even if the runtime records only a summary. The ACP user message represents the command invocation; it need not match the runtime's transcript or expanded instructions.
+
+Local handling still uses the
+[foreground lifecycle](/protocol/v2/prompt-lifecycle#work-boundaries-and-local-commands).
+From idle, the Agent **MUST** report an active state for command handling and
+`idle` when no foreground work remains, even if no model call or tool invocation
+occurs. A command with no user-action wait uses `running` → `idle`, and
+**SHOULD** include `stopReason: "end_turn"` for successful completion.
+Completing an individual command while other foreground activity continues
+does not require an idle boundary.

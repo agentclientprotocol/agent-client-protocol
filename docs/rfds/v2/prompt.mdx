@@ -252,6 +252,37 @@ This would be a notification from the agent to indicate that it's current status
 
 We could explore adding which permission or elicitation it is waiting on if we wanted to make it clearer if we wanted.
 
+#### Foreground state contract
+
+The v2 [Session States](/protocol/v2/prompt-lifecycle#session-states) guide
+defines the normative transition table and provides lifecycle examples. States are
+snapshots of aggregate foreground activity, not events for individual requests:
+
+- A new session defaults to idle until a state update reports otherwise.
+  Resume sends a current-state snapshot after any history replay and before
+  its response, even without replay.
+- Starting foreground work reports an active state, including `requires_action`
+  directly if it starts blocked. Reporting later user-action waits is recommended.
+  Once reported, resuming progress reports `running` and ending work reports
+  `idle`. Repeated snapshots are idempotent.
+- Permissions and elicitations for independent background activity do not
+  themselves change an idle foreground state. With concurrent requests, a
+  response changes state only if aggregate foreground activity changes.
+- Completed foreground intervals have an idle boundary. Completing an individual
+  prompt or command while other foreground activity continues needs no boundary.
+  Local commands handled from idle still report
+  an active state and `idle`, even without model work.
+- Session cancellation resolves pending session-scoped permissions and ends
+  active foreground work with `idle(cancelled)`. Agents should cancel individual
+  elicitations that the affected work no longer needs, not every elicitation
+  scoped to the session.
+  After cancellation completes, agents should ignore late answers rather than
+  resume cancelled work. Repeated or resume snapshots do not cause new
+  cancellations. Cancelling idle work needs no additional completion update.
+
+These rules use the existing wire types. Normal completion stop reasons remain
+recommended. The cancellation stop reason is required.
+
 ### Report failures after insertion
 
 In v1, `session/prompt` lasts until the end of the turn, so its error response can report a failure at any point: an expired credential, a provider outage, an exhausted quota. Once the response arrives at insertion, that channel is gone, and a failure after insertion has to end foreground work through the same `state_update` that reports every other outcome.
@@ -333,7 +364,7 @@ The v2 schema and guides define the insertion-receipt response. The implementati
 6. Add serialization and schema coverage for the idle update with an `error`, without one, and with `error: null`, and verify that an `error` beside another stop reason is treated as an unknown field. Exercise a failure after insertion but before the response is sent: the response still succeeds and the idle update reports the failure.
 7. Update examples and generated artifacts, then run `npm run generate` and `npm run check`.
 
-The schema and serialization tests establish the wire shape; adapters still need to implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. Broader v2 lifecycle follow-ups include cancellation races and current-state synchronization on resume. Those are separate from the insertion receipt's identity and are not resolved by adding another prompt ID. Queueing, steering, sender identity, safe retries, and idempotency guarantees remain outside this change.
+The schema and serialization tests establish the wire shape. Adapters still need to implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. The [foreground state contract](#foreground-state-contract) defines current-state synchronization on resume and gives guidance for cancellation races. Adapters and conformance suites should exercise the guide's traces, including concurrent requests and late answers. Those rules are separate from the insertion receipt's identity and do not require another prompt ID. Queueing, steering, sender identity, safe retries, and submission idempotency guarantees remain outside this change.
 
 Depending on how the rest of v2 testing goes, we can either:
 

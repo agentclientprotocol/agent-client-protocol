@@ -31,10 +31,11 @@ sequenceDiagram
             Agent->>Client: session/update
             Note over Agent,Client: All content reported
         end
+        Agent->>Client: "session/update (current state_update)"
         Agent-->>Client: session/resume response
     end
 
-    Note over Client,Agent: Ready for prompts
+    Note over Client,Agent: Session attached. Foreground state synchronized
 ```
 
 <br />
@@ -79,6 +80,14 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 ```
 
 ## Initial Session State
+
+New sessions default to `idle` until a `state_update` reports otherwise. Updates
+may arrive before or after the `session/new` response. Clients **MUST NOT**
+overwrite an already-reported state when the response arrives. An optional
+initial idle notification is a snapshot, not a completed turn.
+
+`session/resume` does not imply idle: an existing session may still be running
+or waiting for user action. See [Current-State Synchronization](#current-state-synchronization).
 
 Agents **MAY** include initial [configuration options](/protocol/v2/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/slash-commands) in `availableCommands` in both `session/new` and `session/resume` responses. For example, a new session can return both:
 
@@ -151,7 +160,9 @@ with:
 When `replayFrom` is omitted or `null`, the Agent **MUST NOT** replay the
 conversation history via `session/update` notifications before responding. It
 restores the session context, reconnects to the requested MCP servers, and
-returns once the session is ready to continue.
+returns once the session is attached and its current foreground state has been
+synchronized. The required current-state snapshot is live synchronization, not
+history replay.
 
 To request full history replay, Clients set `replayFrom` to
 `{ "type": "start" }`:
@@ -277,7 +288,8 @@ Message updates that omit `content` can update other optional fields without
 changing the current content.
 
 When all requested replay entries have been reported to the Client, the Agent
-**MUST** respond to the original `session/resume` request.
+**MUST** synchronize current state as described below, then respond to the
+original `session/resume` request.
 
 ```json
 {
@@ -290,6 +302,24 @@ When all requested replay entries have been reported to the Client, the Agent
 The response **MAY** also include `configOptions` and `availableCommands` as
 described in [Initial Session State](#initial-session-state), whether or not
 history replay was requested.
+
+### Current-State Synchronization
+
+For every successful resume, the Agent **MUST** send a current
+[`state_update`](/protocol/v2/prompt-lifecycle#session-states) after any requested
+history replay and before the resume response. This is required even when
+`replayFrom` is omitted or `null`. The snapshot reports the current foreground
+state after resuming: `idle`, `running`, or `requires_action`.
+
+Agents **MUST NOT** replay historical `state_update` notifications as current
+activity. The snapshot and subsequent live state changes **MUST** be delivered
+in order, without replacing a newer state with a stale snapshot. An idle
+snapshot may include the last stop reason for context, but does not report a
+new completion or cancellation. Clients **MUST NOT** reset the state to idle
+on the resume response.
+
+If connection loss made a pending permission request or elicitation unusable,
+the Agent **SHOULD** reestablish it or safely resolve the wait.
 
 ## Closing Active Sessions
 

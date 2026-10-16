@@ -981,6 +981,10 @@ impl NewSessionRequest {
 
 /// Response from creating a new session.
 ///
+/// New sessions default to `idle` until a state update reports otherwise.
+/// Updates may arrive before or after this response. Clients MUST NOT overwrite
+/// an already-reported state when the response arrives.
+///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
 #[serde_as]
 #[skip_serializing_none]
@@ -1569,6 +1573,12 @@ fn other_replay_from_schema(schema: &mut Schema) {
 
 crate::serde_util::default_on_null! {
     /// Response from resuming an existing session.
+    ///
+    /// The agent MUST send a current `state_update` after any requested history
+    /// replay and before this response, even without replay. The update reports
+    /// foreground state after resuming. The response alone does not imply `idle`.
+    ///
+    /// See protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/session-setup#current-state-synchronization)
     #[serde_as]
     #[skip_serializing_none]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3565,6 +3575,7 @@ impl PromptResponse {
 #[non_exhaustive]
 pub enum StopReason {
     /// The active work ended successfully.
+    /// Includes locally handled commands that required no model call.
     EndTurn,
     /// The active work ended because the agent reached the maximum number of tokens.
     MaxTokens,
@@ -3577,10 +3588,10 @@ pub enum StopReason {
     Refusal,
     /// Active session work was cancelled by the client via `session/cancel`.
     ///
-    /// Agents MUST report this stop reason on an idle `state_update` session update
-    /// when cancellation succeeds, even if cancellation causes exceptions in
-    /// underlying operations. Agents MUST catch these errors and report
-    /// `cancelled`, not `error`.
+    /// Agents MUST report this stop reason on an idle `state_update` when
+    /// cancellation ends active foreground work, even if aborting causes
+    /// exceptions. Agents MUST catch these errors and report `cancelled`, not
+    /// `error`.
     Cancelled,
     /// The active work ended because something failed.
     ///
@@ -5986,7 +5997,12 @@ pub enum ClientNotification {
     ///
     /// After all ongoing operations have been successfully aborted and pending
     /// updates have been sent, the Agent MUST send an idle `state_update` session
-    /// update with the `cancelled` stop reason.
+    /// update with the `cancelled` stop reason if cancellation ended active
+    /// foreground work. No additional completion update is required if no
+    /// foreground work was active.
+    ///
+    /// After cancellation completes, the Agent SHOULD ignore late answers rather
+    /// than use them to resume the cancelled work.
     ///
     /// Agents MUST catch errors caused by aborting cancelled work and report the
     /// `cancelled` stop reason, not `error`.

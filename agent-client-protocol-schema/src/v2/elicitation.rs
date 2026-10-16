@@ -1559,6 +1559,18 @@ impl From<ElicitationRequestScope> for ElicitationScope {
 /// The agent sends this to the client to request information from the user,
 /// either via a form or by directing them to a URL.
 /// Elicitations are tied to a session (optionally a tool call) or a request.
+///
+/// A session-scoped request follows the aggregate foreground-state contract:
+/// agents SHOULD report `requires_action` when the whole foreground workflow is
+/// blocked on user action. Once reported, they MUST report `running` when progress
+/// resumes, or `idle` if work ends without resuming. Independent background requests
+/// and request-scoped elicitations do not themselves change session state.
+/// Accepting a URL does not mean the external interaction completed.
+///
+/// Agents SHOULD cancel pending elicitations no longer needed by cancelled work.
+/// The request's scope alone does not establish that dependency.
+///
+/// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2084,6 +2096,8 @@ impl Default for ElicitationAcceptAction {
 }
 
 /// Notification sent by the agent when a URL-based elicitation is complete.
+///
+/// This notification is not a foreground state update.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

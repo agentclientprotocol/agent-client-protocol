@@ -364,7 +364,7 @@ Everything else happens through `session/update` notifications:
    }
    ```
 
-2. **Running state.** When foreground work starts or resumes, the Agent **MUST** send a `state_update` with `"state": "running"`. This may precede insertion, for example while a foreground hook runs; it is not acknowledgment of insertion.
+2. **Active state.** When foreground work starts, the Agent **MUST** report `running`, or `requires_action` if it starts blocked on user action. After reporting `requires_action`, it **MUST** report `running` when foreground progress resumes. Active state reporting may precede insertion, for example while a foreground hook runs. It is not acknowledgment of insertion.
 
 3. **Output.** Messages, thoughts, plans, and tool calls stream as before (with the changes described in the following sections).
 
@@ -399,11 +399,31 @@ Pre-insertion rejection receives a JSON-RPC error response with no user-message 
 
 - `running`: Foreground work is in progress.
 - `idle`: No foreground work is active. Background activity may continue. Agents **SHOULD** include a `stopReason` when the transition ends foreground work.
-- `requires_action`: Foreground work is blocked on user action. Agents **SHOULD** send this while foreground work is waiting on a permission response, and **MUST** send `running` when foreground work resumes.
+- `requires_action`: Foreground work as a whole is blocked on user action. Agents **SHOULD** send this when blocked, including on elicitations. Once reported, they **MUST** send `running` when foreground progress resumes, or `idle` if the work ends without resuming.
 
-Foreground work is the Agent's active response or workflow in the session, including model processing, tool execution, and waiting for user action needed to continue. Agent-initiated work, such as pursuing an ongoing goal or following up on a completed background task, **MUST** use the same `running` → `idle` lifecycle as prompt-driven work, with the same guidance for stop reasons. It does not require a prompt request or a synthetic user message.
+Foreground work is the Agent's active response or workflow in the session, including model processing, tool execution, and waiting for user action needed to continue. Agent-initiated work, such as pursuing an ongoing goal or following up on a completed background task, **MUST** use the same foreground lifecycle as prompt-driven work, with the same guidance for stop reasons. It does not require a prompt request or a synthetic user message.
 
-Background activity can continue and emit other `session/update` notifications while the Agent reports `idle`. A detached task's progress, completion, or permission request does not by itself change the foreground state. If the Agent starts a response or workflow to act on a background result, it **MUST** report `running` and report `idle` when that work ends, and **SHOULD** include a stop reason on the idle update. See [Foreground and Background Work](/protocol/v2/prompt-lifecycle#foreground-and-background-work) for contrasting examples.
+Background activity can continue and emit other `session/update` notifications while the Agent reports `idle`. A detached task's progress, completion, or permission request does not by itself change the foreground state. If the Agent starts a response or workflow to act on a background result, it **MUST** report an active state and report `idle` when that work ends, and **SHOULD** include a stop reason on the idle update. See [Foreground and Background Work](/protocol/v2/prompt-lifecycle#foreground-and-background-work) for contrasting examples.
+
+States are aggregate snapshots, not per-request events. Clients **MUST** apply
+repeats idempotently, without counting additional work, completions, or usage.
+With concurrent user-action requests, resolving one does not emit `running`
+unless foreground progress actually resumes. If other foreground work can
+progress, the state remains `running` while requests are pending.
+
+The Agent **MUST** report idle when no foreground activity remains, even between
+immediately consecutive turns. Completing an individual prompt or command while
+other foreground activity continues does not require a boundary. Accepted local slash commands **MUST**
+also report an active state and completion when handled from idle, even without
+model work. A command with no user-action wait uses `running` → `idle`.
+
+New sessions default to idle until a state update reports otherwise. Updates
+may arrive before the new-session response, which does not overwrite them.
+Every successful `session/resume` **MUST** be preceded by a current-state
+snapshot, after any requested replay. Resume does not imply idle, and Agents
+**MUST NOT** replay historical state updates as current activity.
+See [Current-State Synchronization](/protocol/v2/session-setup#current-state-synchronization)
+and the [transition table and lifecycle examples](/protocol/v2/prompt-lifecycle#state-transitions).
 
 The v1 stop reasons (`end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled`) are unchanged. They just moved from the `session/prompt` response to the idle `state_update` and describe why foreground work stopped.
 
@@ -413,11 +433,18 @@ v2 adds the `error` stop reason. v1 reported a failure during the turn as an err
 
 `$/cancel_request` and internal request cancellation can no longer answer an inserted `session/prompt` with `-32800`: once the user message is inserted, the Agent responds with its `messageId`, so an error response always means the message was not inserted. Stop the work it started with `session/cancel`.
 
-`session/cancel` is unchanged as a notification, but confirmation moved with the rest of the lifecycle: instead of responding to `session/prompt` with `"stopReason": "cancelled"`, the Agent **MUST** finish sending any pending updates and then send an idle `state_update` with the `cancelled` stop reason. Clients still respond to all pending `session/request_permission` requests with the `cancelled` outcome and **SHOULD** accept tool-call updates that arrive after sending `session/cancel`.
+`session/cancel` is unchanged as a notification, but confirmation moved with the rest of the lifecycle: when active foreground work is cancelled, the Agent **MUST** finish sending any pending updates and then send an idle `state_update` with the `cancelled` stop reason. Clients respond to pending `session/request_permission` requests in that session with the `cancelled` outcome. Agents **SHOULD** cancel individual pending elicitations that the affected work no longer needs rather than cancel every elicitation with that session ID. Clients **SHOULD** accept tool-call updates that arrive after sending `session/cancel`.
+
+After cancellation completes, Agents **SHOULD** ignore late answers and
+external completions rather than use them to resume the cancelled work.
+Responses can race with cancellation before completion. A repeated or resume
+snapshot carrying an old `cancelled` stop reason does not cancel a current
+interaction. If no foreground work was active, no additional completion update
+is required.
 
 ### Why this matters beyond bookkeeping
 
-Because foreground progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume`, multiple clients observing one session, and agent-initiated work. It also supports future queued-work flows.
+Because foreground progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume` and agent-initiated work. It also supports future queued-work flows.
 
 ## Messages and message IDs
 
@@ -647,7 +674,7 @@ A command permission subject is self-contained rather than a patch:
 
 `options` and the response shape are unchanged: options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`. Both unions are extensible in v2, with one safety rule: an Agent that receives an outcome it does not understand **MUST NOT** treat it as approval.
 
-While foreground work is blocked on a permission response, the Agent **SHOULD** report `state_update` with `requires_action`. When foreground work starts or resumes, it **MUST** report `running`. A permission request for independent background activity does not by itself change the foreground state, and resolving a permission request does not itself imply `running`.
+While foreground work as a whole is blocked on a permission response, the Agent **SHOULD** report `state_update` with `requires_action`. Once reported, it **MUST** report `running` when foreground progress resumes, or `idle` if the work ends without resuming. A permission request for independent background activity does not by itself change the foreground state, and resolving a permission request does not itself imply `running`. Apply the [aggregate transition rules](/protocol/v2/prompt-lifecycle#waiting-for-user-action), including with concurrent requests and late answers.
 
 ## Plans
 
