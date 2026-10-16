@@ -17,7 +17,7 @@ For now, v2 should stabilize only the item-based plan content variant:
   "sessionUpdate": "plan_update",
   "plan": {
     "type": "items",
-    "id": "plan-1",
+    "planId": "plan-1",
     "entries": [
       { "content": "Step 1", "priority": "high", "status": "pending" }
     ]
@@ -54,7 +54,7 @@ ACP v2 should:
 - Add `sessionUpdate: "plan_update"` to the default v2 schema.
 - Stabilize only the `plan.type: "items"` content variant for now.
 - Keep unknown plan content variants parseable and preservable using the [v2 enum variant extension](/rfds/v2/enum-variant-extension) rules.
-- Require every plan content variant, including unknown future/custom variants, to carry a plan `id`.
+- Require every plan content variant, including unknown future/custom variants, to carry a `planId`.
 - Remove `ClientCapabilities.plan` from v2.
 - Keep `markdown`, `file`, and `plan_removed` behind `unstable_plan_operations` until the Plan Operations RFD settles.
 
@@ -83,8 +83,8 @@ Clients that only understand item-based plans can still preserve or display unkn
 3. Leave `PlanFile`, `PlanMarkdown`, and `PlanRemoved` behind `unstable_plan_operations`.
 4. Remove `SessionUpdate::Plan` from the v2 schema and make `SessionUpdate::PlanUpdate` the default plan variant.
 5. Keep the removed `sessionUpdate: "plan"` discriminator rejected so it cannot be accepted as an unknown v2 update.
-6. Require `id` on unknown `PlanUpdateContent` fallback payloads.
-7. Document that adapters may map the v1 `plan` update to v2 `plan_update` with `id: "main"`.
+6. Require `planId` on unknown `PlanUpdateContent` fallback payloads.
+7. Document that adapters may map the v1 `plan` update to v2 `plan_update` with `planId: "main"`.
 8. Regenerate v2 schema docs so the default v2 surface shows only the item-based tagged plan shape.
 
 ## Frequently asked questions

@@ -25,6 +25,19 @@ The calling side **MAY** implement graceful cancellation processing by waiting f
 
 Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios (e.g., cancellation of [active session work](/protocol/v2/draft/prompt-lifecycle#cancellation)).
 
+`session/cancel` and `$/cancel_request` have different scopes. Cancelling one
+permission or elicitation request does not automatically cancel the whole
+foreground workflow or determine its state. The Agent applies the aggregate
+[state-transition rules](/protocol/v2/draft/prompt-lifecycle#state-transitions).
+
+On `session/cancel`, Clients **MUST** answer pending permissions in that session
+with the `cancelled` outcome. After cancellation completes, Agents **SHOULD** ignore late
+answers rather than use them to resume the cancelled work. After aborting active
+foreground work and sending its final updates, the Agent **MUST** report `idle`
+with `stopReason: "cancelled"`. No additional completion update is required if
+no foreground work was active. See [Elicitation Cancellation](/protocol/v2/draft/elicitation#session-cancellation)
+for selective cancellation of related requests and external URL interactions.
+
 ## Internal Cancellation
 
 Requests can also be cancelled internally by the executing party without receiving `$/cancel_request`:
@@ -40,6 +53,8 @@ When internal cancellation occurs, the executing party **SHOULD**:
 Both kinds of cancellation answer `session/prompt` with `-32800` only before the user message is inserted. Once it is inserted, the Agent responds successfully with its `messageId`, and the work it started is stopped with [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) or ends with a [stop reason](/protocol/v2/draft/prompt-lifecycle#stop-reasons). See [Prompt Accepted](/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted).
 
 ## Example: Cascading Cancellation Flow
+
+Sending `session/cancel` does not automatically send `$/cancel_request` for outstanding Agent-to-Client requests. An Agent can explicitly propagate cancellation to those requests, but the Client **MUST** answer pending permission requests with the `cancelled` outcome when it sends `session/cancel`, as specified in [active session work cancellation](/protocol/v2/draft/prompt-lifecycle#cancellation); it does not wait for `$/cancel_request`.
 
 ```mermaid
 sequenceDiagram
@@ -59,14 +74,10 @@ sequenceDiagram
     Note over Client,Agent: 3. Client cancels active session work
     Client->>Agent: session/cancel (sessionId)
 
-    Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: $/cancel_request (id=2) [permission request]
-    Agent->>Client: $/cancel_request (id=3) [permission request]
+    Note over Client,Agent: 4. Client cancels pending permission requests
+    Client->>Agent: response to id=2 (outcome: cancelled)
+    Client->>Agent: response to id=3 (outcome: cancelled)
 
-    Note over Client,Agent: 5. Client confirms individual cancellations
-    Client->>Agent: response to id=2 (error -32800 "Cancelled")
-    Client->>Agent: response to id=3 (error -32800 "Cancelled")
-
-    Note over Client,Agent: 6. Agent reports cancellation completion
+    Note over Client,Agent: 5. Agent stops active work and reports cancellation completion
     Agent->>Client: session/update (state_update: idle, stopReason: "cancelled")
 ```

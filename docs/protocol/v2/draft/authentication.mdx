@@ -204,8 +204,9 @@ For a `terminal` method, the Client:
 3. Presents the terminal to the user and waits for the process to exit. Exit
    status zero signals success; a non-zero status, termination without an exit
    status, or cancellation signals failure.
-4. Reconnects and reinitializes the ACP Agent, then retries the operation that
-   required authentication.
+4. Reconnects and reinitializes the ACP Agent, then retries an operation rejected
+   for requiring authentication. For an already-inserted prompt, see
+   [Authentication failures during session work](#authentication-failures-during-session-work).
 
 The descriptor cannot provide a command. The Client derives the command from its
 own Agent configuration. Agents **SHOULD** provide arguments that enter a
@@ -214,6 +215,25 @@ pattern or other in-band success signal; Clients may recognize
 implementation-specific signals only as an extension. The terminal process is
 not the ACP connection, so the Client **MUST NOT** send an `auth/login` request
 for a terminal method.
+
+## Authentication failures during session work
+
+`auth_required` (`-32000`) applies in v2 both to rejected requests and to
+authentication failures that end foreground work. For `session/prompt`, the
+reporting channel depends on whether the user message was inserted:
+
+- Before insertion, the Agent returns an `auth_required` JSON-RPC error response.
+- After insertion, the Agent **MUST** respond successfully with the inserted
+  `messageId`, even if authentication fails before the response is sent. If the
+  failure terminates foreground work, the Agent **MUST** report `idle` and
+  **SHOULD** include `stopReason: "error"` with `error.code: -32000`.
+
+Clients may prompt the user to complete an advertised authentication flow.
+Successful authentication does not itself restart work that already ended.
+Resending the prompt inserts a new message and does not undo the original
+insertion or any tool side effects. Clients **SHOULD NOT** automatically resubmit
+an inserted prompt as though it had been rejected. See
+[Failures](/protocol/v2/draft/prompt-lifecycle#failures).
 
 ## Logging Out
 

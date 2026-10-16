@@ -19,7 +19,7 @@ If you only remember five things, remember these:
 
 This guide describes the stable v2 baseline (`schema/v2/schema.json`). The v2 protocol surface as a whole is still labeled draft, so gate **v2 support behind explicit version negotiation and feature flags until it stabilizes.**
 
-The unstable schema (`schema/v2/schema.unstable.json`) layers opt-in draft features on top of that baseline. Negotiating `protocolVersion: 2` does **not** imply any of them. Gate each behind its own capability or feature flag the same as v1.
+The unstable schema (`schema/v2/schema.unstable.json`) layers experimental features on top of that baseline. Negotiating `protocolVersion: 2` does **not** imply support for them. Follow each feature's documented negotiation requirements: optional operations requiring peer participation use explicit capabilities or another documented mechanism, while informational additions with safe forward-compatible handling may be sent without a capability when the feature permits it. Local feature flags control rollout, not peer support. See [Experimental Features and Negotiation](/protocol/v2/extensibility#experimental-features-and-negotiation).
 
 ## Version negotiation
 
@@ -188,7 +188,62 @@ This means checks like `promptCapabilities.image === true` become presence check
 - `capabilities.session` itself is **optional**, so agents that don't do session-based prompting (for example, agents that only serve specialized extension surfaces) can omit it entirely. Currently there isn't protocol support for this, but several experiments are in flight and we are making sure non-session components can be expressed via capabilities.
 - `loadSession` is gone along with `session/load` (see [Session setup](#session-setup-and-lifecycle)).
 - The individual `list`, `resume`, and `close` markers are gone: advertising `capabilities.session` at all now **requires** supporting the baseline methods `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`. Optional extras such as `session.delete`, `session.additionalDirectories`, `session.prompt`, and `session.mcp` keep their own markers.
-- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminal execution](#client-file-system-and-terminal-execution-removed)). Stable v2 currently defines no standard Client capability fields. Agent-owned terminal display is baseline behavior, not a Client execution capability.
+- The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminal execution](#client-file-system-and-terminal-execution-removed)). Stable v2 defines Client `auth` and `elicitation` capability groups. Agent-owned terminal display is baseline behavior, not a Client execution capability.
+
+### Complete v1 → v2 capability mapping
+
+The tables below cover the capability fields in the stable and draft schemas. Paths in the first column are relative to v1 `agentCapabilities` or `clientCapabilities`. Paths in the second are relative to v2 `capabilities`. A **Draft only** row does not become available merely by negotiating v2.
+
+Convert a boolean support marker from `true` to `{}` and from `false` to an omitted key or `null` only where the table defines a corresponding v2 marker. Object support markers remain objects. Do not copy removed v1 fields into v2 capabilities or move them into `_meta` as though they were standard v2 capabilities. A removed marker may mean the feature is now baseline, not that the feature was removed.
+
+#### Agent capability fields
+
+| v1 Agent field                                                | v2 Agent field or behavior                                                                                                            |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Baseline session support (implicit in v1)                     | Advertise `session: {}` only when all seven v2 baseline session methods are implemented.                                              |
+| `loadSession`                                                 | Removed with `session/load`. Migrate restoration to `session/resume`.                                                                 |
+| `promptCapabilities.image`                                    | `session.prompt.image`. Boolean → object marker.                                                                                      |
+| `promptCapabilities.audio`                                    | `session.prompt.audio`. Boolean → object marker.                                                                                      |
+| `promptCapabilities.embeddedContext`                          | `session.prompt.embeddedContext`. Boolean → object marker.                                                                            |
+| MCP stdio support (implicit in v1)                            | Explicit `session.mcp.stdio: {}` marker. Advertise only if supported.                                                                 |
+| `mcpCapabilities.http`                                        | `session.mcp.http`. Boolean → object marker.                                                                                          |
+| `mcpCapabilities.sse`                                         | Removed with the legacy SSE transport. Use HTTP when supported.                                                                       |
+| `mcpCapabilities.acp`                                         | **Draft only.** `session.mcp.acp`. Boolean → object marker.                                                                           |
+| `sessionCapabilities.list`                                    | Marker removed. `session/list` is required when `session` is advertised.                                                              |
+| `sessionCapabilities.resume`                                  | Marker removed. `session/resume` is required when `session` is advertised.                                                            |
+| `sessionCapabilities.close`                                   | Marker removed. `session/close` is required when `session` is advertised.                                                             |
+| `sessionCapabilities.delete`                                  | `session.delete`.                                                                                                                     |
+| `sessionCapabilities.additionalDirectories`                   | `session.additionalDirectories`.                                                                                                      |
+| `sessionCapabilities.systemPrompt`, including `mode.override` | **Draft only.** `session.systemPrompt`, including `mode.override`. Object markers unchanged.                                          |
+| `sessionCapabilities.fork`                                    | **Draft only.** `session.fork`.                                                                                                       |
+| `auth.logout`                                                 | Marker removed. A non-empty `authMethods` list requires both `auth/login` and `auth/logout`.                                          |
+| `auth`                                                        | `auth` remains a group for authentication-related extensions, not method availability.                                                |
+| `providers`                                                   | **Draft only.** `providers`. Object marker unchanged.                                                                                 |
+| `nes` and its nested `events` and `context` fields            | **Draft only.** `nes`. Nested fields unchanged, including document-event markers, `syncKind`, context markers, and `maxCount` limits. |
+| `positionEncoding`                                            | **Draft only.** `positionEncoding`. Selected encoding unchanged.                                                                      |
+
+#### Client capability fields
+
+| v1 Client field                                  | v2 Client field or behavior                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `fs.readTextFile`, `fs.writeTextFile`            | Removed with Client file-system methods. Expose Client-provided file tools through MCP if needed.                                    |
+| `terminal`                                       | Removed with Client terminal-control methods. Agent-owned terminal display does not require a Client capability.                     |
+| `auth.terminal`                                  | `auth.terminal`. Boolean → object marker. This is distinct from the removed execution `terminal` capability.                         |
+| `elicitation.form`, `elicitation.url`            | `elicitation.form`, `elicitation.url`. Object markers unchanged. An empty `elicitation` object advertises no modes.                  |
+| `session.configOptions.boolean`                  | Marker removed. v2 supports boolean config options without Client capability negotiation.                                            |
+| `session.notices`                                | Marker removed. v2 notices require no Client capability and may be ignored.                                                          |
+| `session.compaction`                             | Marker removed. v2 compaction updates require no Client capability.                                                                  |
+| `session`                                        | Group removed. Its standard children have the behavior described above.                                                              |
+| `plan`                                           | Marker removed. `plan_update` is stable in v2 without Client capability negotiation. `plan_removed` remains **Draft only**.          |
+| `subagents`                                      | Marker removed. Subagent updates and session-directed messages remain **Draft only** in v2 but require no Client `subagents` marker. |
+| `nes.jump`, `nes.rename`, `nes.searchAndReplace` | **Draft only.** Same fields under `nes`. Object markers unchanged.                                                                   |
+| `positionEncodings`                              | **Draft only.** `positionEncodings`. Encoding preference list unchanged.                                                             |
+
+The draft per-child-session `capabilities.cancel` marker in `subagent_update` is unchanged. It is not an initialize capability.
+
+For surviving capability objects, move `_meta` with its owning group (for example, Agent `promptCapabilities._meta` → `capabilities.session.prompt._meta`). Root capability metadata moves to `capabilities._meta`. For removed groups or markers, review extension semantics and choose a supported root or nested `_meta` location explicitly. See [Advertising Custom Capabilities](/protocol/v2/extensibility#advertising-custom-capabilities).
+
+Receivers **MUST** ignore unknown fields, including nested capability fields, but this does not make v1 field names valid v2 advertisements. See [Unknown Object Fields](/protocol/v2/extensibility#unknown-object-fields).
 
 ## Authentication
 
@@ -288,6 +343,8 @@ In v2, acceptance means insertion of the user message into the ACP conversation.
 
 `messageId` is a required, non-null string identifying the inserted user message. The request is unchanged; Clients do not generate this ID.
 
+Insertion adds a logical user message with an ID and a position relative to other messages. See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted) for adapter examples.
+
 Everything else happens through `session/update` notifications:
 
 1. **User message update.** The Agent **MUST** report the inserted message's content and placement, either as a `user_message` update with a full `content` array or as streamed `user_message_chunk` updates. These use the same agent-owned `messageId` as the response. The response and updates describe the same insertion, but updates may arrive before or after the response:
@@ -307,11 +364,11 @@ Everything else happens through `session/update` notifications:
    }
    ```
 
-2. **Running state.** When foreground work starts or resumes, the Agent **MUST** send a `state_update` with `"state": "running"`.
+2. **Active state.** When foreground work starts, the Agent **MUST** report `running`, or `requires_action` if it starts blocked on user action. After reporting `requires_action`, it **MUST** report `running` when foreground progress resumes. Active state reporting may precede insertion, for example while a foreground hook runs. It is not acknowledgment of insertion.
 
 3. **Output.** Messages, thoughts, plans, and tool calls stream as before (with the changes described in the following sections).
 
-4. **Completion.** When the Agent is ready to process a new prompt, it **MUST** report `idle`. When the transition ends foreground work, it **MUST** include the stop reason:
+4. **Completion.** When foreground work ends, the Agent **MUST** report `idle` and **SHOULD** include the stop reason:
 
    ```json
    {
@@ -330,17 +387,43 @@ Everything else happens through `session/update` notifications:
 
 Clients reconcile their submitted input with the response's `(sessionId, messageId)`, including when the message update arrived first. They must not match by content or assume that a successful response means the session is idle. SDKs must keep the session's processing and notification handling alive after the prompt RPC completes.
 
-User messages, including locally handled commands, must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response remains ambiguous; neither replay omission nor an identical message proves which submission was inserted, and retrying is not automatically safe.
+An Agent may know it is idle without knowing why the work stopped. Clients **MUST** recognize idle even when the stop reason is omitted, `null`, malformed, or unknown; they cannot infer success or failure without a recognized stop reason.
+
+User messages, including [locally handled commands](/protocol/v2/slash-commands#running-commands), must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response remains ambiguous; neither replay omission nor an identical message proves which submission was inserted, and retrying is not automatically safe.
+
+Pre-insertion rejection receives a JSON-RPC error response with no user-message updates for that submission. State updates still describe actual foreground work, independently of the request outcome; see [Prompts that are never inserted](/protocol/v2/prompt-lifecycle#prompts-that-are-never-inserted).
 
 ### Session states
 
 `state_update` is new in v2 and reports foreground work, whether or not a prompt started it, using one of three stable states (extensible like all v2 enums):
 
 - `running`: Foreground work is in progress.
-- `idle`: The Agent is ready to process a new prompt. Carries a `stopReason` when the transition ends foreground work.
-- `requires_action`: Foreground work is blocked on user action. Agents **SHOULD** send this while waiting on a permission response, and another `running` update when work resumes.
+- `idle`: No foreground work is active. Background activity may continue. Agents **SHOULD** include a `stopReason` when the transition ends foreground work.
+- `requires_action`: Foreground work as a whole is blocked on user action. Agents **SHOULD** send this when blocked, including on elicitations. Once reported, they **MUST** send `running` when foreground progress resumes, or `idle` if the work ends without resuming.
 
-Background activity can continue and emit other `session/update` notifications while the Agent reports `idle`. Those notifications do not change the state.
+Foreground work is the Agent's active response or workflow in the session, including model processing, tool execution, and waiting for user action needed to continue. Agent-initiated work, such as pursuing an ongoing goal or following up on a completed background task, **MUST** use the same foreground lifecycle as prompt-driven work, with the same guidance for stop reasons. It does not require a prompt request or a synthetic user message.
+
+Background activity can continue and emit other `session/update` notifications while the Agent reports `idle`. A detached task's progress, completion, or permission request does not by itself change the foreground state. If the Agent starts a response or workflow to act on a background result, it **MUST** report an active state and report `idle` when that work ends, and **SHOULD** include a stop reason on the idle update. See [Foreground and Background Work](/protocol/v2/prompt-lifecycle#foreground-and-background-work) for contrasting examples.
+
+States are aggregate snapshots, not per-request events. Clients **MUST** apply
+repeats idempotently, without counting additional work, completions, or usage.
+With concurrent user-action requests, resolving one does not emit `running`
+unless foreground progress actually resumes. If other foreground work can
+progress, the state remains `running` while requests are pending.
+
+The Agent **MUST** report idle when no foreground activity remains, even between
+immediately consecutive turns. Completing an individual prompt or command while
+other foreground activity continues does not require a boundary. Accepted local slash commands **MUST**
+also report an active state and completion when handled from idle, even without
+model work. A command with no user-action wait uses `running` → `idle`.
+
+New sessions default to idle until a state update reports otherwise. Updates
+may arrive before the new-session response, which does not overwrite them.
+Every successful `session/resume` **MUST** be preceded by a current-state
+snapshot, after any requested replay. Resume does not imply idle, and Agents
+**MUST NOT** replay historical state updates as current activity.
+See [Current-State Synchronization](/protocol/v2/session-setup#current-state-synchronization)
+and the [transition table and lifecycle examples](/protocol/v2/prompt-lifecycle#state-transitions).
 
 The v1 stop reasons (`end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled`) are unchanged. They just moved from the `session/prompt` response to the idle `state_update` and describe why foreground work stopped.
 
@@ -350,11 +433,18 @@ v2 adds the `error` stop reason. v1 reported a failure during the turn as an err
 
 `$/cancel_request` and internal request cancellation can no longer answer an inserted `session/prompt` with `-32800`: once the user message is inserted, the Agent responds with its `messageId`, so an error response always means the message was not inserted. Stop the work it started with `session/cancel`.
 
-`session/cancel` is unchanged as a notification, but confirmation moved with the rest of the lifecycle: instead of responding to `session/prompt` with `"stopReason": "cancelled"`, the Agent **MUST** finish sending any pending updates and then send an idle `state_update` with the `cancelled` stop reason. Clients still respond to all pending `session/request_permission` requests with the `cancelled` outcome and **SHOULD** accept tool-call updates that arrive after sending `session/cancel`.
+`session/cancel` is unchanged as a notification, but confirmation moved with the rest of the lifecycle: when active foreground work is cancelled, the Agent **MUST** finish sending any pending updates and then send an idle `state_update` with the `cancelled` stop reason. Clients respond to pending `session/request_permission` requests in that session with the `cancelled` outcome. Agents **SHOULD** cancel individual pending elicitations that the affected work no longer needs rather than cancel every elicitation with that session ID. Clients **SHOULD** accept tool-call updates that arrive after sending `session/cancel`.
+
+After cancellation completes, Agents **SHOULD** ignore late answers and
+external completions rather than use them to resume the cancelled work.
+Responses can race with cancellation before completion. A repeated or resume
+snapshot carrying an old `cancelled` stop reason does not cancel a current
+interaction. If no foreground work was active, no additional completion update
+is required.
 
 ### Why this matters beyond bookkeeping
 
-Because foreground progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume`, multiple clients observing one session, and future agent-initiated or queued work.
+Because foreground progress is now expressed entirely in notifications, the same message flow works for history replay on `session/resume` and agent-initiated work. It also supports future queued-work flows.
 
 ## Messages and message IDs
 
@@ -586,7 +676,7 @@ A command permission subject is self-contained rather than a patch:
 
 `options` and the response shape are unchanged: options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`. Both unions are extensible in v2, with one safety rule: an Agent that receives an outcome it does not understand **MUST NOT** treat it as approval.
 
-While a permission request is pending, the Agent **SHOULD** report `state_update` with `requires_action`, and `running` again once resolved.
+While foreground work as a whole is blocked on a permission response, the Agent **SHOULD** report `state_update` with `requires_action`. Once reported, it **MUST** report `running` when foreground progress resumes, or `idle` if the work ends without resuming. A permission request for independent background activity does not by itself change the foreground state, and resolving a permission request does not itself imply `running`. Apply the [aggregate transition rules](/protocol/v2/prompt-lifecycle#waiting-for-user-action), including with concurrent requests and late answers.
 
 ## Plans
 
@@ -650,7 +740,9 @@ v1 had two ways to reattach to a session: `session/load` (replays full history, 
 - Omit `replayFrom` (or send `null`) for v1 `resume` behavior: reattach without replay.
 - `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays the entire conversation as `session/update` notifications (using the same message, tool-call, and plan updates as live traffic) before responding.
 
-The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods.
+The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods. The schema accepts custom and future cursor types for preservation by intermediaries, but Agents **MUST** reject unsupported types or malformed cursors with `-32602` (Invalid params), not silently fall back to another replay mode.
+
+Retained user messages **MUST** preserve the ID returned by `session/prompt`. Agents **SHOULD** preserve agent and thought message IDs when possible, but Clients cannot assume those IDs remain stable across reconnects or restarts. For full replay, Clients **SHOULD** rebuild agent and thought message history rather than merge it into existing history solely by `messageId`. An empty-content primer resets only the ID used in that replay; it cannot clear a message previously delivered under another ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
 
 ### Consistent lifecycle requests
 
@@ -826,7 +918,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 
 ## Migration checklist: SDKs
 
-1. **Separate the versions.** Keep v1 and v2 schemas, generated models, and test fixtures fully separate, and gate unstable-v2 surfaces independently of `protocolVersion: 2`.
+1. **Separate the versions.** Keep v1 and v2 schemas, generated models, and test fixtures fully separate. Exposing unstable-v2 types does not advertise support; enforce each feature's documented negotiation requirements independently of `protocolVersion: 2`.
 2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics. A plain nullable/optional type erases a distinction the protocol depends on. Apply the top-level `_meta` of upserts as a key-level patch rather than a replacement.
 3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.

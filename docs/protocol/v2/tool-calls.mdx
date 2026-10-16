@@ -196,6 +196,8 @@ with `content: []` or `content: null` clears the tool-call content. A
 
 ## Requesting Permission
 
+Permission requests do not by themselves change the session's foreground state. While foreground work is blocked on a permission response, the Agent **SHOULD** report `requires_action`. Once reported, it **MUST** report `running` when foreground progress resumes, or `idle` if the work ends without resuming. Requests for independent background activity may arrive while the session remains `idle`. See [Waiting for User Action](/protocol/v2/prompt-lifecycle#waiting-for-user-action) for concurrent requests and late answers.
+
 The Agent **MAY** request permission from the user before proceeding with an operation, such as executing a tool call, by calling the `session/request_permission` method:
 
 ```json

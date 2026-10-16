@@ -194,7 +194,13 @@ fn other_plan_update_content_schema(schema: &mut Schema) {
     );
 }
 
-const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &["items", "file", "markdown"];
+const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &[
+    "items",
+    #[cfg(feature = "unstable_plan_operations")]
+    "file",
+    #[cfg(feature = "unstable_plan_operations")]
+    "markdown",
+];
 
 impl PlanUpdateContent {
     /// Builds a plan update that replaces the itemized entries for a plan.
@@ -596,6 +602,11 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn plan_update_content_does_not_hide_malformed_known_experimental_variant() {
         assert!(
             serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
                 "type": "file",

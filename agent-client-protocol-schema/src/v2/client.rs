@@ -120,7 +120,7 @@ pub enum SessionUpdate {
     /// receives another `agent_thought` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
     AgentThought(AgentThought),
-    /// The state of the agent's foreground work has changed.
+    /// A snapshot of the session's aggregate foreground activity.
     StateUpdate(StateUpdate),
     /// A chunk of tool-call content being streamed.
     ToolCallContentChunk(ToolCallContentChunk),
@@ -1433,13 +1433,46 @@ impl UsageUpdate {
     }
 }
 
-/// The state of the agent's foreground work has changed.
+/// A snapshot of the session's aggregate foreground activity.
 ///
-/// Foreground work can start without a prompt, such as when the agent follows up
-/// on a background task that finished; it reports the same states either way.
+/// Foreground work is the agent's active response or workflow in the session,
+/// including model processing, tool execution, and waiting for user action needed
+/// to continue that work. It can start with a prompt or be agent-initiated, for
+/// example to pursue an ongoing goal or follow up on a completed background task.
+/// Either way, the agent MUST report `running` when foreground work starts,
+/// or `requires_action` if it starts blocked on user action, and `idle` when it
+/// ends. The agent SHOULD include a stop reason on that idle update.
+/// Agent-initiated work does not require a prompt request or a synthetic user
+/// message.
+///
+/// `running` may precede user-message insertion, for example during a foreground
+/// hook. It is not acknowledgment of insertion, and rejecting a prompt does not
+/// itself end foreground work.
 ///
 /// Background activity can continue and emit other `session/update` notifications
-/// while `idle`. Those notifications do not change this state.
+/// while `idle`. Those notifications, including a detached task's progress or
+/// completion, do not by themselves change this state. A permission request only
+/// warrants `requires_action` when foreground work is blocked on user action.
+///
+/// The agent SHOULD report `requires_action` when the foreground workflow as a
+/// whole cannot progress without user action, including permissions or elicitations.
+/// Once reported, it MUST report `running` when progress resumes, or `idle` when
+/// work ends without resuming.
+/// If other foreground work can progress, the state remains `running`. Resolving
+/// one of several requests does not itself change the state. Agents SHOULD ignore
+/// responses for work that has already ended rather than use them to resume it.
+///
+/// A new session defaults to idle until a state update reports otherwise.
+/// Resume MUST send a current-state snapshot after any replay and before its
+/// response. The snapshot reports foreground state after resuming.
+/// The response alone does not imply idle.
+/// Repeated snapshots are idempotent, not additional work, completions, or usage.
+/// A repeated state may carry updated information without another state transition.
+/// The agent MUST report `idle` when no foreground activity remains. Completing
+/// an individual activity while other foreground work continues does not require
+/// an idle boundary. Local commands use the same lifecycle even without model work.
+///
+/// See protocol docs: [Session States](https://agentclientprotocol.com/protocol/prompt-lifecycle#session-states)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "state", rename_all = "snake_case")]
@@ -1447,7 +1480,7 @@ impl UsageUpdate {
 pub enum StateUpdate {
     /// Foreground work is in progress.
     Running(RunningStateUpdate),
-    /// The agent is ready to process a new prompt.
+    /// No foreground work is active. Background activity may continue.
     Idle(IdleStateUpdate),
     /// Foreground work is blocked on user action.
     RequiresAction(RequiresActionStateUpdate),
@@ -1507,11 +1540,14 @@ impl RunningStateUpdate {
     }
 }
 
-/// The agent is ready to process a new prompt.
+/// No foreground work is active. Background activity may continue.
 ///
 /// Agents SHOULD include a `stopReason` when the idle transition ends foreground
-/// work. An omitted, `null`, or malformed `stopReason` means the agent is not
+/// work. An idle update that does not end foreground work need not include one.
+/// Receivers treat an omitted, `null`, or malformed `stopReason` as the agent not
 /// reporting one.
+/// Repeated or resume snapshots may carry the last stop reason for context.
+/// They MUST NOT be counted as new completions, cancellations, or additional usage.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1629,7 +1665,14 @@ fn idle_state_update_schema(schema: &mut Schema) {
     }
 }
 
-/// Foreground work is blocked on user action.
+/// The foreground workflow as a whole is blocked on user action.
+///
+/// Agents SHOULD report this state when foreground work cannot progress without
+/// user action. Pending permissions or elicitations alone do not imply this
+/// state if other foreground work can progress, or if the requests belong only
+/// to independent background activity. Once reported, agents MUST report
+/// `running` when progress resumes, or `idle` if the work ends without resuming.
+/// Responding to one request does not itself imply `running`.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2819,7 +2862,8 @@ pub enum RequestPermissionOutcome {
     ///
     /// When a client sends a `session/cancel` notification to cancel active
     /// session work, it MUST respond to all pending `session/request_permission`
-    /// requests with this `Cancelled` outcome.
+    /// requests in that session with this `Cancelled` outcome, without answering
+    /// any request twice. Requests in other sessions are unaffected.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
     Cancelled,

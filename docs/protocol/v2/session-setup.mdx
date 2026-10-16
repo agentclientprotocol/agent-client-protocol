@@ -31,10 +31,11 @@ sequenceDiagram
             Agent->>Client: session/update
             Note over Agent,Client: All content reported
         end
+        Agent->>Client: "session/update (current state_update)"
         Agent-->>Client: session/resume response
     end
 
-    Note over Client,Agent: Ready for prompts
+    Note over Client,Agent: Session attached. Foreground state synchronized
 ```
 
 <br />
@@ -79,6 +80,14 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 ```
 
 ## Initial Session State
+
+New sessions default to `idle` until a `state_update` reports otherwise. Updates
+may arrive before or after the `session/new` response. Clients **MUST NOT**
+overwrite an already-reported state when the response arrives. An optional
+initial idle notification is a snapshot, not a completed turn.
+
+`session/resume` does not imply idle: an existing session may still be running
+or waiting for user action. See [Current-State Synchronization](#current-state-synchronization).
 
 Agents **MAY** include initial [configuration options](/protocol/v2/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/slash-commands) in `availableCommands` in both `session/new` and `session/resume` responses. For example, a new session can return both:
 
@@ -151,7 +160,9 @@ with:
 When `replayFrom` is omitted or `null`, the Agent **MUST NOT** replay the
 conversation history via `session/update` notifications before responding. It
 restores the session context, reconnects to the requested MCP servers, and
-returns once the session is ready to continue.
+returns once the session is attached and its current foreground state has been
+synchronized. The required current-state snapshot is live synchronization, not
+history replay.
 
 To request full history replay, Clients set `replayFrom` to
 `{ "type": "start" }`:
@@ -178,6 +189,12 @@ When `replayFrom.type` is `"start"`, the Agent **MUST** replay all retained
 conversation history to the Client in the form of `session/update` notifications before
 responding. User, agent, and thought messages can each be replayed as message
 updates with full `content` arrays or as chunks.
+
+The schema accepts custom and future `replayFrom.type` values so intermediaries
+can preserve them. An Agent that does not support the supplied cursor type
+**MUST** reject `session/resume` with `-32602` (Invalid params). It **MUST NOT**
+silently substitute another cursor or resume without replay. Malformed
+`replayFrom` values also result in `-32602`.
 
 Agents are not required to persist every inserted user message or retain it for
 any minimum period. Live-only messages, including locally handled commands, may
@@ -244,6 +261,13 @@ inserted by `session/prompt` **MUST** use the ID returned in that prompt
 response, including after reconnecting or restarting the Agent. Replaying a command reports its message; it does not
 execute the command again.
 
+Agents **SHOULD** preserve agent and thought message IDs across replay when
+possible, but these IDs are not guaranteed to remain stable across reconnects
+or Agent restarts. Clients **MUST NOT** rely on them to deduplicate replay
+against previously received history. When requesting full replay, Clients
+**SHOULD** rebuild the agent and thought message history from the replay rather
+than merging it into existing history solely by `messageId`.
+
 `user_message`, `agent_message`, and `agent_thought` updates
 are upserts keyed by `messageId`; their `content` arrays replace the whole
 message content, while chunk updates with the same `messageId` append content.
@@ -251,8 +275,10 @@ message content, while chunk updates with the same `messageId` append content.
 When replay reconstructs a message from its beginning using chunks, the Agent
 **MUST** first send the corresponding message update (`user_message`,
 `agent_message`, or `agent_thought`) with the same ID and `content: []`.
-This clears any content the Client already holds before replayed chunks append.
-A full-content message update can instead replace the retained content directly.
+This initializes or clears content under the ID used for that replay before
+replayed chunks append; it does not reconcile a message previously delivered
+under a different ID. A full-content message update can instead replace content
+under the replayed ID directly.
 
 Clients apply replayed message updates and chunks in the order they are
 received. If a message update with `content` arrives after chunks for the same
@@ -269,7 +295,8 @@ removes stale keys by setting them to `null`, or sends `_meta: null` before the
 current object.
 
 When all requested replay entries have been reported to the Client, the Agent
-**MUST** respond to the original `session/resume` request.
+**MUST** synchronize current state as described below, then respond to the
+original `session/resume` request.
 
 ```json
 {
@@ -282,6 +309,24 @@ When all requested replay entries have been reported to the Client, the Agent
 The response **MAY** also include `configOptions` and `availableCommands` as
 described in [Initial Session State](#initial-session-state), whether or not
 history replay was requested.
+
+### Current-State Synchronization
+
+For every successful resume, the Agent **MUST** send a current
+[`state_update`](/protocol/v2/prompt-lifecycle#session-states) after any requested
+history replay and before the resume response. This is required even when
+`replayFrom` is omitted or `null`. The snapshot reports the current foreground
+state after resuming: `idle`, `running`, or `requires_action`.
+
+Agents **MUST NOT** replay historical `state_update` notifications as current
+activity. The snapshot and subsequent live state changes **MUST** be delivered
+in order, without replacing a newer state with a stale snapshot. An idle
+snapshot may include the last stop reason for context, but does not report a
+new completion or cancellation. Clients **MUST NOT** reset the state to idle
+on the resume response.
+
+If connection loss made a pending permission request or elicitation unusable,
+the Agent **SHOULD** reestablish it or safely resolve the wait.
 
 ## Closing Active Sessions
 
@@ -307,6 +352,10 @@ To close an active session, Clients **MUST** call the `session/close` method wit
 </ParamField>
 
 The Agent **MUST** cancel any ongoing work for that session as if [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation) had been called, then free the resources associated with the session.
+
+When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
+
+Closing may also cancel pending `session/prompt` requests, including queued prompts. If closing prevents a prompt's user message from being inserted, the Agent **MUST** answer that request with `-32800` (Request Cancelled). If the message has already been inserted, the Agent **MUST** respond successfully with its `messageId`, as described in [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted). Prompt responses need not precede the close response.
 
 On success, the Agent responds with an empty result object:
 

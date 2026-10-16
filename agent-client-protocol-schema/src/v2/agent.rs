@@ -981,6 +981,10 @@ impl NewSessionRequest {
 
 /// Response from creating a new session.
 ///
+/// New sessions default to `idle` until a state update reports otherwise.
+/// Updates may arrive before or after this response. Clients MUST NOT overwrite
+/// an already-reported state when the response arrives.
+///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
 #[serde_as]
 #[skip_serializing_none]
@@ -1298,6 +1302,10 @@ pub struct ResumeSessionRequest {
     /// replay includes the position identified by the cursor. Supplying
     /// `{ "type": "start" }` means the Agent should replay all retained
     /// conversation history before responding.
+    ///
+    /// Agents MUST reject unsupported cursor types or malformed cursor values
+    /// with `-32602` (Invalid params), rather than substituting another cursor
+    /// or resuming without replay.
     #[serde(default)]
     pub replay_from: Option<ReplayFrom>,
     /// **UNSTABLE**
@@ -1413,9 +1421,10 @@ pub enum ReplayFrom {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this cursor should preserve the raw
-    /// payload when storing, replaying, proxying, or forwarding requests, and
-    /// otherwise reject the request rather than guessing where to replay from.
+    /// Intermediaries SHOULD preserve the raw payload when storing, replaying,
+    /// proxying, or forwarding requests. Agents that do not support this cursor
+    /// MUST reject the request with `-32602` (Invalid params), rather than
+    /// substituting another cursor or resuming without replay.
     #[serde(untagged)]
     Other(OtherReplayFrom),
 }
@@ -1564,6 +1573,12 @@ fn other_replay_from_schema(schema: &mut Schema) {
 
 crate::serde_util::default_on_null! {
     /// Response from resuming an existing session.
+    ///
+    /// The agent MUST send a current `state_update` after any requested history
+    /// replay and before this response, even without replay. The update reports
+    /// foreground state after resuming. The response alone does not imply `idle`.
+    ///
+    /// See protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/session-setup#current-state-synchronization)
     #[serde_as]
     #[skip_serializing_none]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1639,6 +1654,17 @@ impl ResumeSessionResponse {
 /// The agent **must** cancel any ongoing work related to the session (treat it
 /// as if `session/cancel` was called) and then free up any resources associated
 /// with the session.
+///
+/// When closing cancels active foreground work, the Agent MUST send the final
+/// updates for that work and the idle `state_update` with `stopReason: "cancelled"`
+/// before responding successfully to `session/close`. Closing an idle session
+/// does not itself require another idle update.
+///
+/// Closing may also cancel pending `session/prompt` requests, including queued
+/// prompts. If closing prevents a prompt's user message from being inserted, the
+/// Agent MUST answer that request with `-32800` (Request Cancelled). If the message
+/// has already been inserted, the Agent MUST respond successfully with its
+/// `messageId`. Prompt responses need not precede the close response.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3486,6 +3512,9 @@ impl PromptRequest {
 /// agent has finished processing it.
 /// Processing and completion are reported through `state_update` session updates.
 ///
+/// Insertion is the logical addition of a user message with a message ID and a position
+/// relative to other messages in the ACP conversation.
+///
 /// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
 #[serde_as]
 #[skip_serializing_none]
@@ -3546,6 +3575,7 @@ impl PromptResponse {
 #[non_exhaustive]
 pub enum StopReason {
     /// The active work ended successfully.
+    /// Includes locally handled commands that required no model call.
     EndTurn,
     /// The active work ended because the agent reached the maximum number of tokens.
     MaxTokens,
@@ -3558,14 +3588,16 @@ pub enum StopReason {
     Refusal,
     /// Active session work was cancelled by the client via `session/cancel`.
     ///
-    /// Agents should report this stop reason on an idle `state_update` session update
-    /// when cancellation succeeds, even if cancellation causes exceptions in
-    /// underlying operations.
+    /// Agents MUST report this stop reason on an idle `state_update` when
+    /// cancellation ends active foreground work, even if aborting causes
+    /// exceptions. Agents MUST catch these errors and report `cancelled`, not
+    /// `error`.
     Cancelled,
     /// The active work ended because something failed.
     ///
-    /// For work started by a prompt, this covers failures after the user message
-    /// was inserted; earlier failures are an error response to `session/prompt`.
+    /// This includes pre-insertion foreground work. A prompt failure before
+    /// insertion also requires an error response to `session/prompt`; after
+    /// insertion, the prompt's response remains successful.
     Error(ErrorStopReason),
     /// Custom or future stop reason.
     ///
@@ -5799,17 +5831,23 @@ pub enum ClientRequest {
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),
     /// Processes a user prompt within a session.
     ///
-    /// Acceptance means insertion into the ACP conversation:
-    /// - Receives user messages with optional context (files, images, etc.)
-    /// - Returns the inserted user message's ID without waiting for processing to finish
+    /// Acceptance means adding a logical user message with an ID and a position
+    /// relative to other messages in the ACP conversation, not receipt or queueing.
+    /// The Agent MUST return the inserted message's ID without waiting for
+    /// processing to finish.
     ///
     /// The Agent reports the user message with the same ID through `session/update`;
-    /// this notification may arrive before or after the response. Processing state,
-    /// output, tool calls, and completion are also reported through session updates.
+    /// this notification may arrive before or after the response, but neither may
+    /// precede insertion. Processing state, output, tool calls, and completion are
+    /// also reported through session updates.
     ///
     /// An error response means the user message was not inserted. Once it is
     /// inserted, the Agent MUST NOT answer with an error, even if the work fails
     /// before the response is sent; it ends that work with the `error` stop reason.
+    ///
+    /// A rejected submission produces no user-message updates. Foreground state
+    /// follows its normal lifecycle independently of the request outcome:
+    /// `running` may precede insertion, and rejection alone does not imply `idle`.
     ///
     /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/prompt-lifecycle)
     PromptRequest(Box<PromptRequest>),
@@ -5954,12 +5992,24 @@ pub enum ClientNotification {
     /// This is a notification sent by the client to cancel active work in a
     /// session.
     ///
-    /// Upon receiving this notification, the Agent SHOULD:
-    /// - Stop all language model requests as soon as possible
-    /// - Abort all tool call invocations in progress
-    /// - Send any pending `session/update` notifications
-    /// - Report an idle `state_update` with `StopReason::Cancelled` after
-    ///   cancellation succeeds
+    /// Upon receiving this notification, the Agent SHOULD stop all language model
+    /// requests and all tool call invocations as soon as possible.
+    ///
+    /// After all ongoing operations have been successfully aborted and pending
+    /// updates have been sent, the Agent MUST send an idle `state_update` session
+    /// update with the `cancelled` stop reason if cancellation ended active
+    /// foreground work. No additional completion update is required if no
+    /// foreground work was active.
+    ///
+    /// After cancellation completes, the Agent SHOULD ignore late answers rather
+    /// than use them to resume the cancelled work.
+    ///
+    /// Agents MUST catch errors caused by aborting cancelled work and report the
+    /// `cancelled` stop reason, not `error`.
+    ///
+    /// The Agent MAY send content or tool call updates after receiving
+    /// `session/cancel`, but MUST send them before the idle `state_update` that
+    /// reports cancellation.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
     CancelSessionNotification(Box<CancelSessionNotification>),
