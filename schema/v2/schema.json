@@ -3042,7 +3042,7 @@
       "type": "object",
       "properties": {
         "protocolVersion": {
-          "description": "The protocol version the client specified if supported by the agent,\nor the latest protocol version supported by the agent.\n\nThe client should disconnect, if it doesn't support this version.",
+          "description": "The highest protocol version supported by the agent that is at or below\nthe version requested by the client. If no such version exists,\ninitialization fails with error code -32022.\n\nThe client must check that it supports this version and should disconnect\nif it does not.",
           "allOf": [
             {
               "$ref": "#/$defs/ProtocolVersion"
@@ -4317,6 +4317,13 @@
           "type": "integer",
           "format": "int32",
           "const": -32002
+        },
+        {
+          "title": "Unsupported protocol version",
+          "description": "**Unsupported protocol version**: No protocol version supported by the Agent is at or below the requested version.\nThe error data contains the requested version and the Agent's supported versions.",
+          "type": "integer",
+          "format": "int32",
+          "const": -32022
         },
         {
           "title": "Other",

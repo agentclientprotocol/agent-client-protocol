@@ -95,9 +95,28 @@ See [Capabilities](#capabilities) to learn how non-breaking features are introdu
 
 The `initialize` request **MUST** include the latest protocol version the Client supports.
 
-If the Agent supports the requested version, it **MUST** respond with the same version. Otherwise, the Agent **MUST** respond with the latest version it supports.
+The Agent **MUST** select the highest protocol version it supports that is less than or equal to the requested version. If it supports the requested version, this selects that version. A successful `initialize` response **MUST NOT** select a version higher than the requested version and **MUST** use the selected version's initialization response shape.
 
-If the Client does not support the version specified by the Agent in the `initialize` response, the Client **SHOULD** close the connection and inform the user about it.
+If no supported version is less than or equal to the requested version, the Agent **MUST** reject `initialize` with error code `-32022` (`Unsupported protocol version`). The error's `data` **MUST** be an object containing the required, non-null fields `requested` (the requested protocol version) and `supported` (an array of the protocol versions the Agent supports). An empty `supported` array means the endpoint has no protocol implementations configured.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "error": {
+    "code": -32022,
+    "message": "Unsupported protocol version",
+    "data": {
+      "requested": 1,
+      "supported": [2]
+    }
+  }
+}
+```
+
+A version-mismatch error does not initialize the connection. The Agent **MUST NOT** begin version-specific operations on that connection, and the Client **SHOULD** close it and inform the user. Missing, non-integer, or out-of-range `protocolVersion` values are malformed parameters and **MUST** receive `-32602` (`Invalid params`) instead.
+
+The Client **MUST** check that it supports the version in a successful response. Advertising a latest version does not imply support for every earlier version. If the Client does not support the selected version, it **SHOULD** close the connection and inform the user.
 
 ## Capabilities
 

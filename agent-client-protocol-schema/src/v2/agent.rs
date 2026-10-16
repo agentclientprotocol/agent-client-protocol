@@ -103,10 +103,12 @@ impl InitializeRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct InitializeResponse {
-    /// The protocol version the client specified if supported by the agent,
-    /// or the latest protocol version supported by the agent.
+    /// The highest protocol version supported by the agent that is at or below
+    /// the version requested by the client. If no such version exists,
+    /// initialization fails with error code -32022.
     ///
-    /// The client should disconnect, if it doesn't support this version.
+    /// The client must check that it supports this version and should disconnect
+    /// if it does not.
     pub protocol_version: ProtocolVersion,
     /// Information about the implementation sending this initialize response.
     pub info: Implementation,
