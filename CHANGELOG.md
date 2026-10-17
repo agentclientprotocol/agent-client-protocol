@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.13.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.12.0...v1.13.0) - 2026-10-17
+
+### Added
+
+- *(unstable-v2)* define version mismatch errors ([#2412](https://github.com/agentclientprotocol/agent-client-protocol/pull/2412))
+
 ## [1.12.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.11.0...v1.12.0) - 2026-10-16
 
 ### Added
