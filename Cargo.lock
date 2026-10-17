@@ -8,11 +8,11 @@ version = "1.26.0"
 
 [[package]]
 name = "agent-client-protocol-json-schema-v2"
-version = "2.0.0-alpha.9"
+version = "2.0.0-alpha.10"
 
 [[package]]
 name = "agent-client-protocol-schema"
-version = "1.12.0"
+version = "1.13.0"
 dependencies = [
  "anyhow",
  "derive_more",
