@@ -8126,6 +8126,10 @@
           "description": "A [`SessionConfigValueId`] string value (`type: \"id\"`).",
           "type": "object",
           "properties": {
+            "type": {
+              "type": "string",
+              "const": "id"
+            },
             "value": {
               "description": "The value ID.",
               "allOf": [
@@ -8133,10 +8137,6 @@
                   "$ref": "#/$defs/SessionConfigValueId"
                 }
               ]
-            },
-            "type": {
-              "type": "string",
-              "const": "id"
             }
           },
           "required": ["type", "value"]
@@ -8145,13 +8145,13 @@
           "description": "A boolean value (`type: \"boolean\"`).",
           "type": "object",
           "properties": {
-            "value": {
-              "description": "The boolean value.",
-              "type": "boolean"
-            },
             "type": {
               "type": "string",
               "const": "boolean"
+            },
+            "value": {
+              "description": "The boolean value.",
+              "type": "boolean"
             }
           },
           "required": ["type", "value"]

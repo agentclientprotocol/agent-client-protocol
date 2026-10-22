@@ -7036,13 +7036,13 @@
           "description": "A boolean value (`type: \"boolean\"`).",
           "type": "object",
           "properties": {
-            "value": {
-              "description": "The boolean value.",
-              "type": "boolean"
-            },
             "type": {
               "type": "string",
               "const": "boolean"
+            },
+            "value": {
+              "description": "The boolean value.",
+              "type": "boolean"
             }
           },
           "required": ["type", "value"]
