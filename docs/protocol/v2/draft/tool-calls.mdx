@@ -196,6 +196,11 @@ chunks. Later chunks append to that replacement content. A `tool_call_update`
 with `content: []` or `content: null` clears the tool-call content. A
 `tool_call_content_chunk`'s `_meta`, when present, is chunk-scoped.
 
+An Agent can stream a tool's text output the way it streams message text, by
+sending each piece as a text content item in its own
+`tool_call_content_chunk`. Clients can present adjacent text items as one
+continuous text.
+
 ## Requesting Permission
 
 Permission requests do not by themselves change the session's foreground state. While foreground work is blocked on a permission response, the Agent **SHOULD** report `requires_action`. Once reported, it **MUST** report `running` when foreground progress resumes, or `idle` if the work ends without resuming. Requests for independent background activity may arrive while the session remains `idle`. See [Waiting for User Action](/protocol/v2/draft/prompt-lifecycle#waiting-for-user-action) for concurrent requests and late answers.
