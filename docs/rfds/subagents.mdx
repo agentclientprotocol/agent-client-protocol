@@ -249,6 +249,42 @@ and may use explicitly advertised controls, but cannot submit new
 work to it. Existing permission and security boundaries apply equally to parent
 and child activity.
 
+### Child configuration
+
+Agents **SHOULD** report a child's current configuration, when available, using
+the existing `config_option_update` notification with the child's session ID.
+Send an initial snapshot after announcing the child and a fresh snapshot when
+its configuration changes, including changes between assignments to the same
+child. Each notification contains the complete reported configuration, using
+the existing [v1](/protocol/v1/draft/session-config-options#from-the-agent) or
+[v2](/protocol/v2/draft/session-config-options#from-the-agent) config option
+shapes. No configuration fields are added to the parent association.
+
+Child configuration is not assumed to match the parent's. If the Agent cannot
+report it, the Client **MUST NOT** infer values from the parent or manufacture
+configuration options.
+
+When reporting configuration for a child that does not permit Client-initiated
+configuration changes, Agents **SHOULD** restrict each select option's
+available values to its current value. This preserves the value's
+human-readable name without advertising choices the Client cannot select.
+Clients **SHOULD** display singleton selects as labels or disabled selectors.
+Boolean options have no available-values list and **SHOULD** be displayed
+read-only under the same restriction.
+
+Reporting config options does not authorize `session/set_config_option`, even
+to set an option to its current value. This RFD defines only the `cancel`
+mutation capability; enabling configuration changes requires a future,
+explicit per-child capability. The Agent may still change the child's
+configuration itself and report a new snapshot.
+
+On reconnection, historical configuration may remain visible but **MUST NOT**
+be presented as confirmed current configuration. Agents **SHOULD** refresh
+configuration for restored children when available. With history replay,
+current configuration snapshots are sent after the successful load/resume
+response; without replay, they may arrive before or after that response,
+subject to announcement ordering.
+
 ### Session-directed messages
 
 Add `session_message` and `session_message_chunk` variants to `SessionUpdate`
@@ -1058,6 +1094,12 @@ implementation of child routing or the replay freshness boundary.
 - Mirror v2 child work state to the parent association. Verify that both
   streams converge on the same state and duplicate snapshots do not count
   work completion or usage twice.
+- Report child configuration after announcement, then change its model or
+  reasoning level between assignments. Verify that complete snapshots replace
+  the displayed configuration, missing values are not inherited from the parent,
+  singleton selects and boolean options remain read-only, and reporting options
+  never enables `session/set_config_option`. On reconnection, distinguish
+  historical configuration from fresh snapshots.
 - Send messages to a parent and a sibling from a child's stream. Verify that
   each message has the correct sender, recipient, and content, and that the
   parent-child tree does not change.
