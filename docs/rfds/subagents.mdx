@@ -266,6 +266,11 @@ necessarily the sender. Each update has:
   when supplied.
 - `recipientSessionId`: optional and nullable. Identifies the receiving session
   when supplied.
+- `senderMessageId`: optional and nullable. On an incoming view, the
+  `messageId` of the same message's outgoing view in the sender's transcript.
+- `recipientMessageId`: optional and nullable. On an outgoing view, the
+  `messageId` of the same message's incoming view in the recipient's
+  transcript.
 - `content`: a `session_message` may replace the whole `ContentBlock[]`;
   `session_message_chunk` requires one non-nullable `ContentBlock` to append.
   Normal text, images, audio, and resource content use their existing shapes.
@@ -277,6 +282,20 @@ when available. Later events may omit them or supply previously missing
 identities. For these identity fields, omission and `null` mean not supplied:
 the Client retains any previously reported value. They do not use the
 null-clearing semantics of the mutable `content` and `_meta` fields.
+
+`senderMessageId` and `recipientMessageId` link the two views of a message so
+that a Client looking at either one can find the other, including when it has
+not yet received or rendered the other transcript's entry. They follow the
+same convention as the participant IDs: omission and `null` mean not supplied,
+the Client retains any previously reported value, and a known value does not
+change. An Agent can therefore stream a view before it knows the other one's
+ID and supply the reference later with a chunk or a metadata-only upsert. For
+example, it can add `recipientMessageId` to the outgoing view once it has
+reported the incoming view. Agents **SHOULD** supply each reference once they
+know it. When both views carry references, they **MUST** name each other; a
+Client that receives conflicting references treats the views as unlinked. A
+reference does not indicate that the recipient finished processing the
+message, and it does not establish ownership.
 
 Known participant information must remain consistent with the enclosing
 transcript and earlier updates for that message. When both IDs are known,
@@ -342,12 +361,31 @@ same; the outer session and transcript-local message ID change:
       "messageId": "msg_from_parent_1",
       "senderSessionId": "sess_parent",
       "recipientSessionId": "sess_child_1",
+      "senderMessageId": "msg_to_child_1",
       "content": [
         {
           "type": "text",
           "text": "Also check whether the failure occurs on Windows."
         }
       ]
+    }
+  }
+}
+```
+
+The Agent can then link the parent's outgoing view to it with a metadata-only
+upsert:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_parent",
+    "update": {
+      "sessionUpdate": "session_message",
+      "messageId": "msg_to_child_1",
+      "recipientMessageId": "msg_from_parent_1"
     }
   }
 }
@@ -365,7 +403,7 @@ entry solely from an outgoing entry. This does not prevent a clearly labeled
 projection of outgoing messages in a cross-session view. The two views have
 independently scoped message IDs, and Clients
 **MUST NOT** assume equal IDs identify the same communication across sessions.
-No cross-session message-correlation ID is defined here.
+Only `senderMessageId` and `recipientMessageId` link the two views.
 
 An incoming entry uses this message kind, not an additional ordinary user
 message that would misattribute the communication. Rendering the same entry
@@ -450,7 +488,8 @@ For example, with parent `sess_parent` and child `sess_child_1`:
    This updates the parent's history with a link to the child.
 3. The received view has outer `sessionId: "sess_child_1"` and the same sender
    and recipient. Its independent message ID identifies the entry in the
-   child's history, where the Client can link back to the parent.
+   child's history, and its `senderMessageId` links back to the parent's
+   outgoing view, which can name it with `recipientMessageId`.
 4. The child's own messages, plans, and tool calls have outer
    `sessionId: "sess_child_1"`. They update the child's history, not the
    parent session. V2 work-state notifications use this child-addressed stream
@@ -1017,6 +1056,11 @@ implementation of child routing or the replay freshness boundary.
   invents an Agent-reported incoming entry from outgoing traffic alone.
   Clearly labeled UI projections remain possible, without duplicating the
   communication as an ordinary user message.
+- Stream an incoming view before its outgoing view's ID is known, then supply
+  `senderMessageId` on the incoming view and `recipientMessageId` on the
+  outgoing view. Verify that a Client can go from either view to the other,
+  including before it has rendered the other transcript, and that it does not
+  link views by equal IDs alone.
 - Start a directed message with a chunk, interleave another message, and
   replace accumulated content with a whole snapshot. Start without participant
   metadata, add it later without replacing content, and omit it on subsequent
@@ -1161,6 +1205,17 @@ provide that representation and support streaming. Actual tool operations can
 still be reported normally, but their status does not define a child's lifetime
 or acknowledge that it processed a message.
 
+### Why can both views of a message reference each other?
+
+A Client showing one transcript may need the other view's entry without having
+received or rendered it, for example to open a child's conversation at the
+message a parent sent. One reference would force that Client to search the
+other transcript first, so each view can name the other. Both are optional and
+can arrive in later updates, because an Agent may start streaming a view
+before it knows the other one's ID. Message IDs stay scoped to their
+transcript; requiring both views to share an ID would instead force the Agent
+to know the link before sending the first update of either view.
+
 ### Why not allow prompting or steering a subagent?
 
 The parent Agent can message or reuse a child according to its runtime's
@@ -1213,6 +1268,10 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-22: Added optional `senderMessageId` on the incoming view and
+  `recipientMessageId` on the outgoing view of a session-directed message, so
+  a Client can go from either view to the other without inferring a link from
+  equal IDs. Either can be supplied after the view starts streaming.
 - 2026-10-13: In v2, a concrete top-level `_meta` object on `subagent_update`
   and `session_message` patches stored metadata by key, per
   [v2 Metadata Patches](/rfds/v2/meta-patches). v1 still replaces the whole
