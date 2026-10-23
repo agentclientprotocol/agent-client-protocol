@@ -196,7 +196,8 @@
               "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
               "rfds/subagents",
-              "rfds/client-system-prompt"
+              "rfds/client-system-prompt",
+              "rfds/durable-resumable-http-transport"
             ]
           },
           {
