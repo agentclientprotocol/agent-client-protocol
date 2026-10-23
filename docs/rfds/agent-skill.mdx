@@ -1,0 +1,650 @@
+---
+title: "Agent Skill in Session Setup"
+---
+
+Author(s): [@zhangcongmr](https://github.com/zhangcongmr)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a standard `agentSkills` field to the ACP protocol, allowing Agents to receive modular, composable skill instructions during session setup. This is similar to how `mcpServers` is currently handled in `session/new`, providing a consistent and extensible way to pass system-level instructions to Agents.
+
+The design follows a layered architecture:
+- **Agent Skill**: Contains instructions (what to do and how to do it)
+- **MCP Server**: Provides capabilities (tools, file access, external APIs) (completed)
+
+Skills can declare dependencies on MCP servers and other Skills, enabling modular composition and reuse.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Currently, ACP protocol does not provide a standard mechanism for passing system instructions (system prompts) to Agents during session setup. The `NewSessionRequest` type only supports:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cwd` | `string` | Working directory for the session |
+| `additionalDirectories` | `Array<string>` | Additional directories to include |
+| `mcpServers` | `Array<McpServer>` | MCP servers to connect |
+| `_meta` | `{ [key: string]: unknown }` | Extension metadata |
+
+Example:
+
+```json
+{
+  "cwd": "/path/to/project",
+  "additionalDirectories": [],
+  "mcpServers": []
+}
+```
+
+This forces developers to use workarounds:
+
+1. **Embedding in user messages**: Prepending system instructions to user messages, which is semantically incorrect and pollutes the user message context.
+
+2. **Using `_meta` field**: Placing system instructions in the `_meta` field, which is intended for extension metadata, not core protocol features.
+
+3. **Resource blocks**: Using `ContentBlock::Resource` to pass instructions, which adds unnecessary complexity.
+
+These workarounds lead to:
+- Inconsistent implementations across different Agents
+- Difficulty in distinguishing between system instructions and user messages
+- Potential loss of system instructions during session compaction or resumption
+- No standard way for Clients to know if an Agent supports system instructions
+- No modular, reusable instruction system
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add an `agentSkills` field to `NewSessionRequest`, similar to `mcpServers`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cwd` | `string` | Working directory for the session |
+| `additionalDirectories` | `Array<string>` | Additional directories to include |
+| `mcpServers` | `Array<McpServer>` | MCP servers to connect |
+| `agentSkills` | `Array<AgentSkill>` | Agent skills to load (NEW) |
+| `_meta` | `{ [key: string]: unknown }` | Extension metadata |
+
+### AgentSkill
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Unique name identifier for the skill |
+| `version` | `string` | No | Version string (semver recommended) |
+| `description` | `string` | No | Human-readable description of what this skill does |
+| `content` | `string` | Yes | The skill instruction content |
+| `mimeType` | `string` | No | MIME type for the content, defaults to "text/markdown" |
+| `priority` | `number` | No | Priority level (0-100), higher values indicate higher priority, defaults to 50 |
+| `dependencies` | `SkillDependencies` | No | Dependencies this skill requires |
+| `_meta` | `{ [key: string]: unknown }` | No | Extension metadata |
+
+Example:
+
+```json
+{
+  "name": "react-developer",
+  "version": "1.0.0",
+  "description": "React component development best practices",
+  "content": "You are a React expert. Follow these principles:\n- Use functional components and Hooks\n- Follow single responsibility principle",
+  "mimeType": "text/markdown",
+  "priority": 50,
+  "dependencies": {
+    "mcpServers": ["filesystem", "test-runner"],
+    "skills": ["typescript-best-practices"]
+  }
+}
+```
+
+### SkillDependencies
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `mcpServers` | `Array<string>` | No | MCP server names this skill depends on. These will be started if not already running. |
+| `skills` | `Array<string>` | No | Other skill names this skill depends on. Dependencies are resolved recursively. |
+
+Example:
+
+```json
+{
+  "mcpServers": ["filesystem", "test-runner"],
+  "skills": ["typescript-best-practices"]
+}
+```
+
+### Standardized System Message Format
+
+When Agents process skills, they generate a standardized system message:
+
+#### SystemMessage
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | `"1.0"` | Format version for interoperability |
+| `sessionId` | `string` | The session ID this message belongs to |
+| `timestamp` | `number` | Timestamp when the message was generated |
+| `sections` | `Array<SystemMessageSection>` | Ordered list of message sections |
+
+Example:
+
+```json
+{
+  "version": "1.0",
+  "sessionId": "sess_abc123",
+  "timestamp": 1694764800000,
+  "sections": []
+}
+```
+
+#### SystemMessageSection
+
+A discriminated union type with four variants:
+
+**Behavior Section**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `"behavior"` | Section type identifier |
+| `content` | `string` | Behavior instruction content |
+| `priority` | `number` | Priority level (0-100) |
+| `source` | `string` | Source identifier (e.g., "session-config") |
+
+**Skill Section**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `"skill"` | Section type identifier |
+| `content` | `string` | Skill instruction content |
+| `priority` | `number` | Priority level (0-100) |
+| `source` | `string` | Source identifier (e.g., skill name) |
+| `skillName` | `string` | Name of the skill |
+
+**Tools Section**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `"tools"` | Section type identifier |
+| `tools` | `Array<ToolDeclaration>` | List of available tools |
+
+**Context Section**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `"context"` | Section type identifier |
+| `context` | `ContextInfo` | Context information |
+
+Example:
+
+```json
+{
+  "type": "skill",
+  "content": "You are a React expert...",
+  "priority": 50,
+  "source": "react-developer",
+  "skillName": "react-developer"
+}
+```
+
+#### ToolDeclaration
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `server` | `string` | MCP server name |
+| `tool` | `string` | Tool name |
+| `description` | `string` | Human-readable description |
+| `inputSchema` | `Record<string, unknown>` | JSON Schema for input parameters |
+
+Example:
+
+```json
+{
+  "server": "filesystem",
+  "tool": "read_file",
+  "description": "Read file content",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": { "type": "string", "description": "File path" }
+    },
+    "required": ["path"]
+  }
+}
+```
+
+#### ContextInfo
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cwd` | `string` | Current working directory |
+| `operatingSystem` | `string` | Operating system (e.g., "windows", "linux", "macos") |
+| `timestamp` | `number` | Current timestamp |
+
+Example:
+
+```json
+{
+  "cwd": "/path/to/project",
+  "operatingSystem": "windows",
+  "timestamp": 1694764800000
+}
+```
+
+### Agent Capabilities
+
+Add capability flags to indicate support:
+
+#### SessionCapabilities (agentSkill field)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `supported` | `boolean` | Whether the Agent supports agent skills |
+| `maxSkills` | `number` | Maximum number of skills allowed (optional) |
+| `maxDepth` | `number` | Maximum dependency depth (optional) |
+
+Example:
+
+```json
+{
+  "agentSkill": {
+    "supported": true,
+    "maxSkills": 50,
+    "maxDepth": 10
+  }
+}
+```
+
+### Protocol Flow
+
+1. **Client sends `session/new`**:
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "method": "session/new",
+     "params": {
+       "cwd": "/path/to/project",
+       "mcpServers": [],
+       "agentSkills": [
+         {
+           "name": "base-behavior",
+           "content": "You are a helpful assistant that specializes in TypeScript.",
+           "priority": 100
+         },
+         {
+           "name": "react-developer",
+           "content": "You are a React expert...",
+           "priority": 50,
+           "dependencies": {
+             "mcpServers": ["filesystem", "test-runner"],
+             "skills": ["typescript-best-practices"]
+           }
+         }
+       ]
+     }
+   }
+   ```
+
+2. **Agent processes skills (lazy loading)**:
+   - Agent receives the skills array
+   - Skills are NOT immediately resolved
+   - When a skill is first used, its dependencies are resolved
+   - Circular dependencies are detected at runtime
+
+3. **Agent generates system message**:
+   ```json
+   {
+     "version": "1.0",
+     "sessionId": "sess_abc123",
+     "timestamp": 1694764800000,
+     "sections": [
+       {
+         "type": "behavior",
+         "content": "You are a helpful assistant that specializes in TypeScript.",
+         "priority": 100,
+         "source": "base-behavior"
+       },
+       {
+         "type": "skill",
+         "content": "You are a React expert...",
+         "priority": 50,
+         "source": "react-developer",
+         "skillName": "react-developer"
+       },
+       {
+         "type": "tools",
+         "tools": [
+           {
+             "server": "filesystem",
+             "tool": "read_file",
+             "description": "Read file content",
+             "inputSchema": {
+               "type": "object",
+               "properties": {
+                 "path": { "type": "string", "description": "File path" }
+               },
+               "required": ["path"]
+             }
+           }
+         ]
+       },
+       {
+         "type": "context",
+         "context": {
+           "cwd": "/path/to/project",
+           "operatingSystem": "windows",
+           "timestamp": 1694764800000
+         }
+       }
+     ]
+   }
+   ```
+
+4. **Agent responds**:
+   ```json
+   {
+     "jsonrpc": "2.0",
+     "id": 1,
+     "result": {
+       "sessionId": "sess_abc123",
+       "agentCapabilities": {
+         "sessionCapabilities": {
+           "agentSkill": {
+             "supported": true,
+             "maxSkills": 50,
+             "maxDepth": 10
+           }
+         }
+       }
+     }
+   }
+   ```
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+### For Clients
+
+- Standard way to pass modular instructions to Agents
+- Clear capability negotiation via `agentCapabilities`
+- Consistent behavior across different Agent implementations
+- Ability to dynamically add/remove skills during session
+- Reusable skill definitions across projects
+
+### For Agents
+
+- Clear contract for receiving and processing skills
+- Lazy loading for performance optimization
+- Circular dependency detection at runtime
+- Standardized system message format for LLM consumption
+- Dynamic skill management during session
+
+### For Users
+
+- Better AI assistant behavior through proper system prompts
+- Modular, composable skill system
+- Reusable skills across different tools and projects
+- More predictable interactions across different tools
+- Enhanced customization without polluting user messages
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Phase 1: Protocol Specification
+
+1. Update `NewSessionRequest` type to include `agentSkills`
+2. Add `AgentSkill` and `SkillDependencies` types
+3. Add `SystemMessage` standardized format types
+4. Update `SessionCapabilities` type to include `agentSkill` flag
+5. Update protocol documentation
+6. Add JSON Schema validation
+
+### Phase 2: SDK Implementation
+
+1. Update `@agentclientprotocol/sdk` TypeScript types
+2. Update `SessionBuilder` to support `withAgentSkill()` method
+3. Add `SkillResolver` class for lazy dependency resolution
+4. Add `SystemMessageBuilder` class for generating standardized messages
+5. Add `SkillManager` interface for dynamic skill management
+
+### Phase 3: Agent Implementation
+
+1. Update existing Agents to support the new field
+2. Implement lazy loading with circular dependency detection
+3. Generate standardized system messages
+4. Support dynamic skill addition/removal
+5. Handle backward compatibility (ignore if not supported)
+
+### Phase 4: Client Implementation
+
+1. Update Clients to support sending agent skills
+2. Add UI for managing skills (add, remove, edit)
+3. Handle capability negotiation
+4. Display skill status and dependencies
+
+### Backward Compatibility
+
+- The `agentSkills` field is optional
+- Agents that don't support it will ignore the field
+- Clients should check `agentCapabilities.sessionCapabilities.agentSkill.supported` before sending
+- Existing sessions without agent skills continue to work
+
+### Dependency Resolution (Lazy Loading)
+
+```typescript
+class SkillResolver {
+  private resolving: Set<string> = new Set();
+  private resolved: Map<string, SkillResolution> = new Map();
+  private allSkills: Map<string, AgentSkill>;
+
+  resolve(skillName: string): SkillResolution {
+    // Check if already resolved
+    if (this.resolved.has(skillName)) {
+      return this.resolved.get(skillName)!;
+    }
+
+    // Detect circular dependency
+    if (this.resolving.has(skillName)) {
+      throw new Error(`Circular dependency detected: ${skillName}`);
+    }
+
+    // Mark as resolving
+    this.resolving.add(skillName);
+
+    // Get skill definition
+    const skill = this.allSkills.get(skillName);
+    if (!skill) {
+      throw new Error(`Skill not found: ${skillName}`);
+    }
+
+    // Recursively resolve dependencies
+    const resolvedSkills: AgentSkill[] = [];
+    const resolvedMcpServers: Set<string> = new Set();
+
+    if (skill.dependencies) {
+      if (skill.dependencies.skills) {
+        for (const depName of skill.dependencies.skills) {
+          const depResolution = this.resolve(depName);
+          resolvedSkills.push(depResolution.skill, ...depResolution.resolvedSkills);
+          depResolution.resolvedMcpServers.forEach(s => resolvedMcpServers.add(s));
+        }
+      }
+
+      if (skill.dependencies.mcpServers) {
+        skill.dependencies.mcpServers.forEach(s => resolvedMcpServers.add(s));
+      }
+    }
+
+    // Mark as resolved
+    this.resolving.delete(skillName);
+
+    const resolution: SkillResolution = {
+      skill,
+      resolvedSkills,
+      resolvedMcpServers: Array.from(resolvedMcpServers),
+    };
+
+    this.resolved.set(skillName, resolution);
+    return resolution;
+  }
+}
+```
+
+### System Message Builder
+
+```typescript
+class SystemMessageBuilder {
+  private sections: Array<SystemMessageSection> = [];
+
+  addBehavior(content: string, priority: number = 100): this {
+    this.sections.push({
+      type: "behavior",
+      content,
+      priority,
+      source: "session-config"
+    });
+    return this;
+  }
+
+  addSkill(skill: AgentSkill, resolvedSkills: Array<AgentSkill>): this {
+    // Add main skill
+    this.sections.push({
+      type: "skill",
+      content: skill.content,
+      priority: skill.priority ?? 50,
+      source: skill.name,
+      skillName: skill.name
+    });
+
+    // Add dependent skills
+    for (const depSkill of resolvedSkills) {
+      this.sections.push({
+        type: "skill",
+        content: depSkill.content,
+        priority: depSkill.priority ?? 40,
+        source: depSkill.name,
+        skillName: depSkill.name
+      });
+    }
+
+    return this;
+  }
+
+  addTools(tools: Array<ToolDeclaration>): this {
+    this.sections.push({
+      type: "tools",
+      tools
+    });
+    return this;
+  }
+
+  addContext(context: ContextInfo): this {
+    this.sections.push({
+      type: "context",
+      context
+    });
+    return this;
+  }
+
+  build(sessionId: string): SystemMessage {
+    // Sort sections by priority (higher priority first)
+    const sortedSections = this.sections.sort((a, b) => {
+      const priorityA = 'priority' in a ? a.priority : 0;
+      const priorityB = 'priority' in b ? b.priority : 0;
+      return priorityB - priorityA;
+    });
+
+    return {
+      version: "1.0",
+      sessionId,
+      timestamp: Date.now(),
+      sections: sortedSections
+    };
+  }
+}
+```
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not use `_meta` for system instructions?
+
+The `_meta` field is designed for extension metadata and is not guaranteed to be preserved across session operations. Agent skills are a core feature that should be:
+- Explicitly typed
+- Validated by the protocol
+- Preserved across session lifecycle
+- Discoverable via capabilities
+- Support dependency resolution
+
+### Why separate Agent Skill from MCP servers?
+
+Agent Skills and MCP servers have different responsibilities:
+- **Agent Skills**: Contain instructions (what to do and how to do it)
+- **MCP servers**: Provide capabilities (tools, file access, external APIs)
+
+This separation allows:
+- Skills to be reusable across different MCP server configurations
+- MCP servers to be shared across multiple skills
+- Clear security boundaries (skills are instructions, MCP servers are capabilities)
+
+### How does lazy loading work?
+
+Skills are not resolved until they are first used:
+1. Client sends `session/new` with `agentSkills` array
+2. Agent stores the skills without resolving dependencies
+3. When a skill is referenced, Agent resolves its dependencies
+4. Circular dependencies are detected at runtime
+5. Resolved skills are cached for future use
+
+### What happens with circular dependencies?
+
+If a circular dependency is detected (e.g., Skill A depends on Skill B, which depends on Skill A), the Agent throws an error. The Client should validate skill dependencies before sending them to the Agent.
+
+### Can skills be updated during a session?
+
+Yes, the initial implementation supports dynamic skill management:
+- `addSkill(skill)`: Add a new skill
+- `removeSkill(skillName)`: Remove a skill
+- `updateSkill(skill)`: Update an existing skill
+
+When skills are updated, the system message is regenerated.
+
+### How are tool declarations formatted?
+
+Tool declarations include the full JSON Schema for input parameters:
+
+```json
+{
+  "server": "filesystem",
+  "tool": "read_file",
+  "description": "Read file content",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "File path"
+      }
+    },
+    "required": ["path"]
+  }
+}
+```
+
+This allows the LLM to understand tool parameters and generate correct invocations.
+
+### What about multi-turn conversations?
+
+Agent skills apply to the entire session. They are:
+- Stored with the session
+- Applied to all subsequent prompts
+- Preserved during session compaction
+- Available when loading a session
+
+## Revision history
+
+- 2026-09-15: Initial draft
