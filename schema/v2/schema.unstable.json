@@ -6957,6 +6957,30 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "senderMessageId": {
+          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOptional and nullable: omission or `null` means not supplied and retains a known\nvalue, so it can arrive after the message starts streaming.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "recipientMessageId": {
+          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOptional and nullable: omission or `null` means not supplied and retains a known\nvalue, so it can arrive after the message starts streaming.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "content": {
           "description": "Omitted leaves content unchanged; `null` clears it; a concrete array\nreplaces the whole content collection.",
           "type": ["array", "null"],
@@ -7004,6 +7028,30 @@
           "anyOf": [
             {
               "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "senderMessageId": {
+          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOptional and nullable: omission or `null` means not supplied and retains a known\nvalue, so it can arrive after the message starts streaming.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "recipientMessageId": {
+          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOptional and nullable: omission or `null` means not supplied and retains a known\nvalue, so it can arrive after the message starts streaming.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
             },
             {
               "type": "null"

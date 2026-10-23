@@ -6460,8 +6460,24 @@ A non-empty array replaces all content.
 <ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
   Identifier of this message within the enclosing session's transcript.
 </ResponseField>
+<ResponseField name="recipientMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an outgoing view, the `messageId` of the same message's incoming view in the
+recipient's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional receiving session identity; omission or `null` retains a known value.
+</ResponseField>
+<ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an incoming view, the `messageId` of the same message's outgoing view in the
+sender's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional sending session identity; omission or `null` retains a known value.
@@ -6491,8 +6507,24 @@ Implementations MUST NOT make assumptions about values in `_meta`.
 <ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
   Identifier of this message within the enclosing session's transcript.
 </ResponseField>
+<ResponseField name="recipientMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an outgoing view, the `messageId` of the same message's incoming view in the
+recipient's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional receiving session identity; omission or `null` retains a known value.
+</ResponseField>
+<ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an incoming view, the `messageId` of the same message's outgoing view in the
+sender's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional sending session identity; omission or `null` retains a known value.
@@ -7279,8 +7311,24 @@ A non-empty array replaces all content.
 <ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
   Identifier of this message within the enclosing session's transcript.
 </ResponseField>
+<ResponseField name="recipientMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an outgoing view, the `messageId` of the same message's incoming view in the
+recipient's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional receiving session identity; omission or `null` retains a known value.
+</ResponseField>
+<ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an incoming view, the `messageId` of the same message's outgoing view in the
+sender's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional sending session identity; omission or `null` retains a known value.
@@ -7313,8 +7361,24 @@ Implementations MUST NOT make assumptions about values in `_meta`.
 <ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
   Identifier of this message within the enclosing session's transcript.
 </ResponseField>
+<ResponseField name="recipientMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an outgoing view, the `messageId` of the same message's incoming view in the
+recipient's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional receiving session identity; omission or `null` retains a known value.
+</ResponseField>
+<ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an incoming view, the `messageId` of the same message's outgoing view in the
+sender's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   Optional sending session identity; omission or `null` retains a known value.

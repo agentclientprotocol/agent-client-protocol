@@ -205,6 +205,24 @@ pub struct SessionMessageChunk {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub recipient_session_id: Option<SessionId>,
+    /// On an incoming view, the `messageId` of the same message's outgoing view in the
+    /// sender's transcript.
+    ///
+    /// Optional and nullable: omission or `null` means not supplied and retains a known
+    /// value, so it can arrive after the message starts streaming.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub sender_message_id: Option<MessageId>,
+    /// On an outgoing view, the `messageId` of the same message's incoming view in the
+    /// recipient's transcript.
+    ///
+    /// Optional and nullable: omission or `null` means not supplied and retains a known
+    /// value, so it can arrive after the message starts streaming.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub recipient_message_id: Option<MessageId>,
     /// A single content block appended to the message.
     pub content: ContentBlock,
     /// Optional and nullable chunk-scoped metadata; omitted or `null` means none.
@@ -225,6 +243,8 @@ impl SessionMessageChunk {
             message_id: message_id.into(),
             sender_session_id: None,
             recipient_session_id: None,
+            sender_message_id: None,
+            recipient_message_id: None,
             content,
             meta: None,
         }
@@ -244,6 +264,23 @@ impl SessionMessageChunk {
         recipient_session_id: impl IntoOption<SessionId>,
     ) -> Self {
         self.recipient_session_id = recipient_session_id.into_option();
+        self
+    }
+
+    /// Links an incoming view to the outgoing view's message ID in the sender's transcript.
+    #[must_use]
+    pub fn sender_message_id(mut self, sender_message_id: impl IntoOption<MessageId>) -> Self {
+        self.sender_message_id = sender_message_id.into_option();
+        self
+    }
+
+    /// Links an outgoing view to the incoming view's message ID in the recipient's transcript.
+    #[must_use]
+    pub fn recipient_message_id(
+        mut self,
+        recipient_message_id: impl IntoOption<MessageId>,
+    ) -> Self {
+        self.recipient_message_id = recipient_message_id.into_option();
         self
     }
 
@@ -280,6 +317,24 @@ pub struct SessionMessage {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub recipient_session_id: Option<SessionId>,
+    /// On an incoming view, the `messageId` of the same message's outgoing view in the
+    /// sender's transcript.
+    ///
+    /// Optional and nullable: omission or `null` means not supplied and retains a known
+    /// value, so it can arrive after the message starts streaming.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub sender_message_id: Option<MessageId>,
+    /// On an outgoing view, the `messageId` of the same message's incoming view in the
+    /// recipient's transcript.
+    ///
+    /// Optional and nullable: omission or `null` means not supplied and retains a known
+    /// value, so it can arrive after the message starts streaming.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub recipient_message_id: Option<MessageId>,
     /// Omitted leaves content unchanged; `null` or `[]` clears it.
     /// A non-empty array replaces all content.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
@@ -308,6 +363,8 @@ impl SessionMessage {
             message_id: message_id.into(),
             sender_session_id: None,
             recipient_session_id: None,
+            sender_message_id: None,
+            recipient_message_id: None,
             content: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
@@ -327,6 +384,23 @@ impl SessionMessage {
         recipient_session_id: impl IntoOption<SessionId>,
     ) -> Self {
         self.recipient_session_id = recipient_session_id.into_option();
+        self
+    }
+
+    /// Links an incoming view to the outgoing view's message ID in the sender's transcript.
+    #[must_use]
+    pub fn sender_message_id(mut self, sender_message_id: impl IntoOption<MessageId>) -> Self {
+        self.sender_message_id = sender_message_id.into_option();
+        self
+    }
+
+    /// Links an outgoing view to the incoming view's message ID in the recipient's transcript.
+    #[must_use]
+    pub fn recipient_message_id(
+        mut self,
+        recipient_message_id: impl IntoOption<MessageId>,
+    ) -> Self {
+        self.recipient_message_id = recipient_message_id.into_option();
         self
     }
 
@@ -600,6 +674,56 @@ mod session_message_tests {
                 invalid["messageId"] = bad;
                 assert!(serde_json::from_value::<SessionUpdate>(invalid).is_err());
             }
+        }
+    }
+
+    #[test]
+    fn message_references_link_views_and_can_arrive_late() {
+        let block = ContentBlock::Text(crate::v1::TextContent::new("hello"));
+        let incoming = SessionMessageChunk::new("received-1", block)
+            .sender_session_id(SessionId::new("parent"))
+            .recipient_session_id(SessionId::new("child"))
+            .sender_message_id(MessageId::new("sent-1"));
+        let outgoing =
+            SessionMessage::new("sent-1").recipient_message_id(MessageId::new("received-1"));
+        for (update, wire) in [
+            (
+                SessionUpdate::SessionMessageChunk(incoming),
+                json!({"sessionUpdate": "session_message_chunk", "messageId": "received-1",
+                    "senderSessionId": "parent", "recipientSessionId": "child",
+                    "senderMessageId": "sent-1", "content": {"type": "text", "text": "hello"}}),
+            ),
+            (
+                SessionUpdate::SessionMessage(outgoing),
+                json!({"sessionUpdate": "session_message", "messageId": "sent-1",
+                    "recipientMessageId": "received-1"}),
+            ),
+        ] {
+            assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+            let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(decoded, update);
+        }
+
+        for (kind, content) in [
+            ("session_message", None),
+            (
+                "session_message_chunk",
+                Some(json!({"type": "text", "text": "hello"})),
+            ),
+        ] {
+            let mut wire = json!({"sessionUpdate": kind, "messageId": "m1",
+                "senderMessageId": null, "recipientMessageId": 42});
+            if let Some(content) = content {
+                wire["content"] = content;
+            }
+            let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
+            wire.as_object_mut().unwrap().remove("senderMessageId");
+            wire.as_object_mut().unwrap().remove("recipientMessageId");
+            assert_eq!(
+                serde_json::to_value(decoded).unwrap(),
+                wire,
+                "{kind}: null or malformed references mean not supplied"
+            );
         }
     }
 }

@@ -77,7 +77,11 @@ Clients can render "To …" with a recipient link or "From …" with a sender li
 Without sufficient participant metadata, use a generic inter-session
 presentation and add links when the metadata arrives. Omitted or `null`
 participant IDs mean not supplied and leave previously known identities intact.
-The two views have independent message IDs. The Agent reports each side only
+The two views have independent message IDs. Optional `senderMessageId` on the
+incoming view and `recipientMessageId` on the outgoing view name the other
+view's `messageId`, so a Client can go from either view to the other. They
+follow the participant-ID rules and can arrive in a later update; Clients must
+not link views by equal IDs alone. The Agent reports each side only
 when observed; Clients must not synthesize an incoming entry from an outgoing
 one or forward the content themselves. Neither view acknowledges completed
 recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
