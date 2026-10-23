@@ -32,7 +32,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v4
         with:
-          node-version: latest
+          node-version: "lts/*"
+          check-latest: true
           cache: "npm"
 
       - name: Install dependencies
