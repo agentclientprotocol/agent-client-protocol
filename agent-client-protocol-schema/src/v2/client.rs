@@ -195,6 +195,9 @@ pub enum SessionUpdate {
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
 /// A streamed content block of an inter-session message.
+///
+/// A chunk carries only content. The message's participants and references come from
+/// `session_message` upserts, which can arrive before, between, or after its chunks.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -205,34 +208,6 @@ pub enum SessionUpdate {
 pub struct SessionMessageChunk {
     /// Identifier of this message within the enclosing session's transcript.
     pub message_id: MessageId,
-    /// Optional sending session identity; omission or `null` retains a known value.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub sender_session_id: Option<SessionId>,
-    /// Optional receiving session identity; omission or `null` retains a known value.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub recipient_session_id: Option<SessionId>,
-    /// On an incoming view, the `messageId` of the same message's outgoing view in the
-    /// sender's transcript.
-    ///
-    /// Optional and nullable: omission or `null` means not supplied and retains a known
-    /// value, so it can arrive after the message starts streaming.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub sender_message_id: Option<MessageId>,
-    /// On an outgoing view, the `messageId` of the same message's incoming view in the
-    /// recipient's transcript.
-    ///
-    /// Optional and nullable: omission or `null` means not supplied and retains a known
-    /// value, so it can arrive after the message starts streaming.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub recipient_message_id: Option<MessageId>,
     /// A single content block appended to the message.
     pub content: ContentBlock,
     /// Optional and nullable chunk-scoped metadata; omitted or `null` means none.
@@ -251,47 +226,9 @@ impl SessionMessageChunk {
     pub fn new(message_id: impl Into<MessageId>, content: ContentBlock) -> Self {
         Self {
             message_id: message_id.into(),
-            sender_session_id: None,
-            recipient_session_id: None,
-            sender_message_id: None,
-            recipient_message_id: None,
             content,
             meta: None,
         }
-    }
-
-    /// Supplies the sending session identity, when known.
-    #[must_use]
-    pub fn sender_session_id(mut self, sender_session_id: impl IntoOption<SessionId>) -> Self {
-        self.sender_session_id = sender_session_id.into_option();
-        self
-    }
-
-    /// Supplies the receiving session identity, when known.
-    #[must_use]
-    pub fn recipient_session_id(
-        mut self,
-        recipient_session_id: impl IntoOption<SessionId>,
-    ) -> Self {
-        self.recipient_session_id = recipient_session_id.into_option();
-        self
-    }
-
-    /// Links an incoming view to the outgoing view's message ID in the sender's transcript.
-    #[must_use]
-    pub fn sender_message_id(mut self, sender_message_id: impl IntoOption<MessageId>) -> Self {
-        self.sender_message_id = sender_message_id.into_option();
-        self
-    }
-
-    /// Links an outgoing view to the incoming view's message ID in the recipient's transcript.
-    #[must_use]
-    pub fn recipient_message_id(
-        mut self,
-        recipient_message_id: impl IntoOption<MessageId>,
-    ) -> Self {
-        self.recipient_message_id = recipient_message_id.into_option();
-        self
     }
 
     /// Sets optional chunk-scoped metadata.
@@ -466,7 +403,6 @@ mod session_message_tests {
         for (transcript, id) in [("parent", "sent-1"), ("child", "received-9")] {
             let wire = json!({"sessionId": transcript, "update": {
                 "sessionUpdate": "session_message_chunk", "messageId": id,
-                "senderSessionId": "parent", "recipientSessionId": "child",
                 "content": {"type": "text", "text": "hello"}
             }});
             let decoded: UpdateSessionNotification = serde_json::from_value(wire.clone()).unwrap();
@@ -478,18 +414,25 @@ mod session_message_tests {
             let chunk = SessionMessageChunk::new(
                 id,
                 ContentBlock::Text(crate::v2::TextContent::new("hello")),
-            )
-            .sender_session_id(SessionId::new("parent"))
-            .recipient_session_id(SessionId::new("child"));
+            );
             assert_eq!(chunk.message_id, upsert.message_id);
-            assert_eq!(chunk.sender_session_id, upsert.sender_session_id);
-            assert_eq!(chunk.recipient_session_id, upsert.recipient_session_id);
             assert_eq!(
                 serde_json::to_value(SessionUpdate::SessionMessageChunk(chunk)).unwrap(),
                 wire["update"]
             );
             assert_eq!(serde_json::to_value(upsert).unwrap()["content"], json!([]));
         }
+        // A chunk carries only content, so identity fields on one are not part of it.
+        let with_identity = json!({"sessionUpdate": "session_message_chunk", "messageId": "m1",
+            "senderSessionId": "parent", "recipientSessionId": "child",
+            "senderMessageId": "sent-1", "recipientMessageId": "received-1",
+            "content": {"type": "text", "text": "hello"}});
+        let decoded: SessionUpdate = serde_json::from_value(with_identity).unwrap();
+        assert_eq!(
+            serde_json::to_value(decoded).unwrap(),
+            json!({"sessionUpdate": "session_message_chunk", "messageId": "m1",
+                "content": {"type": "text", "text": "hello"}})
+        );
     }
 
     #[test]
@@ -501,8 +444,11 @@ mod session_message_tests {
                 json!({"type": "text", "text": "hello"}),
             ),
         ] {
-            let base = json!({"sessionUpdate": kind, "messageId": "m1",
-                "senderSessionId": "parent", "recipientSessionId": "child", "content": content});
+            let mut base = json!({"sessionUpdate": kind, "messageId": "m1", "content": content});
+            if kind == "session_message" {
+                base["senderSessionId"] = json!("parent");
+                base["recipientSessionId"] = json!("child");
+            }
             {
                 let key = "messageId";
                 let mut missing = base.clone();
@@ -612,15 +558,16 @@ mod session_message_tests {
             .recipient_session_id(SessionId::new("child"));
         assert_eq!(enriched.sender_session_id, Some(SessionId::new("parent")));
         assert_eq!(enriched.recipient_session_id, Some(SessionId::new("child")));
-        let later =
-            SessionMessageChunk::new("m1", block).sender_session_id(SessionId::new("parent"));
+        let later = SessionMessage::new("m1").sender_session_id(SessionId::new("parent"));
         assert_eq!(later.sender_session_id, Some(SessionId::new("parent")));
         assert_eq!(later.recipient_session_id, None);
+        let more = SessionMessageChunk::new("m1", block);
         for update in [
             SessionUpdate::SessionMessage(minimal),
             SessionUpdate::SessionMessageChunk(first),
             SessionUpdate::SessionMessage(enriched),
-            SessionUpdate::SessionMessageChunk(later),
+            SessionUpdate::SessionMessage(later),
+            SessionUpdate::SessionMessageChunk(more),
         ] {
             let wire = serde_json::to_value(&update).unwrap();
             let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
@@ -630,46 +577,37 @@ mod session_message_tests {
 
     #[test]
     fn invalid_or_null_endpoints_are_absent_but_message_id_is_required() {
-        for (kind, content) in [
-            ("session_message", None),
-            (
-                "session_message_chunk",
-                Some(json!({"type": "text", "text": "hello"})),
-            ),
-        ] {
-            let mut base = json!({"sessionUpdate": kind, "messageId": "m1",
-                "senderSessionId": null, "recipientSessionId": 42});
-            if let Some(content) = content {
-                base["content"] = content;
-            }
-            let decoded: SessionUpdate = serde_json::from_value(base.clone()).unwrap();
-            let encoded = serde_json::to_value(decoded).unwrap();
-            base.as_object_mut().unwrap().remove("senderSessionId");
-            base.as_object_mut().unwrap().remove("recipientSessionId");
-            assert_eq!(encoded, base);
-            for bad in [Value::Null, json!(42)] {
-                let mut invalid = base.clone();
-                invalid["messageId"] = bad;
-                assert!(serde_json::from_value::<SessionUpdate>(invalid).is_err());
-            }
+        let mut base = json!({"sessionUpdate": "session_message", "messageId": "m1",
+            "senderSessionId": null, "recipientSessionId": 42});
+        let decoded: SessionUpdate = serde_json::from_value(base.clone()).unwrap();
+        let encoded = serde_json::to_value(decoded).unwrap();
+        base.as_object_mut().unwrap().remove("senderSessionId");
+        base.as_object_mut().unwrap().remove("recipientSessionId");
+        assert_eq!(encoded, base);
+        for bad in [Value::Null, json!(42)] {
+            let mut invalid = base.clone();
+            invalid["messageId"] = bad;
+            assert!(serde_json::from_value::<SessionUpdate>(invalid).is_err());
         }
     }
 
     #[test]
     fn message_references_link_views_and_can_arrive_late() {
         let block = ContentBlock::Text(crate::v2::TextContent::new("hello"));
-        let incoming = SessionMessageChunk::new("received-1", block)
+        let incoming = SessionMessage::new("received-1")
             .sender_session_id(SessionId::new("parent"))
             .recipient_session_id(SessionId::new("child"))
-            .sender_message_id(MessageId::new("sent-1"));
+            .sender_message_id(MessageId::new("sent-1"))
+            .content(vec![block]);
+        // The outgoing view gets its reference after it started, with a metadata-only upsert.
         let outgoing =
             SessionMessage::new("sent-1").recipient_message_id(MessageId::new("received-1"));
         for (update, wire) in [
             (
-                SessionUpdate::SessionMessageChunk(incoming),
-                json!({"sessionUpdate": "session_message_chunk", "messageId": "received-1",
+                SessionUpdate::SessionMessage(incoming),
+                json!({"sessionUpdate": "session_message", "messageId": "received-1",
                     "senderSessionId": "parent", "recipientSessionId": "child",
-                    "senderMessageId": "sent-1", "content": {"type": "text", "text": "hello"}}),
+                    "senderMessageId": "sent-1", "content": [{"type": "text", "text": "hello"}]}),
             ),
             (
                 SessionUpdate::SessionMessage(outgoing),
@@ -682,27 +620,16 @@ mod session_message_tests {
             assert_eq!(decoded, update);
         }
 
-        for (kind, content) in [
-            ("session_message", None),
-            (
-                "session_message_chunk",
-                Some(json!({"type": "text", "text": "hello"})),
-            ),
-        ] {
-            let mut wire = json!({"sessionUpdate": kind, "messageId": "m1",
-                "senderMessageId": null, "recipientMessageId": 42});
-            if let Some(content) = content {
-                wire["content"] = content;
-            }
-            let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
-            wire.as_object_mut().unwrap().remove("senderMessageId");
-            wire.as_object_mut().unwrap().remove("recipientMessageId");
-            assert_eq!(
-                serde_json::to_value(decoded).unwrap(),
-                wire,
-                "{kind}: null or malformed references mean not supplied"
-            );
-        }
+        let mut wire = json!({"sessionUpdate": "session_message", "messageId": "m1",
+            "senderMessageId": null, "recipientMessageId": 42});
+        let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
+        wire.as_object_mut().unwrap().remove("senderMessageId");
+        wire.as_object_mut().unwrap().remove("recipientMessageId");
+        assert_eq!(
+            serde_json::to_value(decoded).unwrap(),
+            wire,
+            "null or malformed references mean not supplied"
+        );
     }
 }
 

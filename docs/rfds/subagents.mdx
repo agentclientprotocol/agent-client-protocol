@@ -16,9 +16,10 @@ session.
 
 The Agent associates a reusable child session with its parent through an
 upsert-style `subagent_update`. Child events then flow automatically on the
-same connection. Messages between sessions use `session_message` upserts or
-`session_message_chunk` notifications with normal message content and optional
-sender and recipient metadata, rather than tool-call content.
+same connection. Messages between sessions use `session_message` upserts,
+which carry optional sender and recipient metadata, and
+`session_message_chunk` notifications with normal message content, rather
+than tool-call content.
 
 The association is not a task or a one-shot lifetime. The parent can message
 the same child again after earlier work finishes. Client-initiated session
@@ -257,11 +258,20 @@ calls. They use the existing `session/update` notification, not a new JSON-RPC
 method or a new `ContentBlock` type.
 
 The enclosing `params.sessionId` identifies the transcript being updated, not
-necessarily the sender. Each update has:
+necessarily the sender. Both variants have:
 
 - `messageId`: required, non-nullable, and unique within the enclosing session,
   just like other message IDs. It identifies the entry in that transcript, not
   a globally shared message or either participant.
+- `content`: a `session_message` may replace the whole `ContentBlock[]`;
+  `session_message_chunk` requires one non-nullable `ContentBlock` to append.
+  Normal text, images, audio, and resource content use their existing shapes.
+- `_meta`: optional and nullable. It updates message-scoped metadata on
+  `session_message`; it is chunk-scoped on `session_message_chunk`.
+
+Only `session_message` carries the message's identity. A chunk carries only
+content, as `agent_message_chunk` does:
+
 - `senderSessionId`: optional and nullable. Identifies the sending session
   when supplied.
 - `recipientSessionId`: optional and nullable. Identifies the receiving session
@@ -271,17 +281,14 @@ necessarily the sender. Each update has:
 - `recipientMessageId`: optional and nullable. On an outgoing view, the
   `messageId` of the same message's incoming view in the recipient's
   transcript.
-- `content`: a `session_message` may replace the whole `ContentBlock[]`;
-  `session_message_chunk` requires one non-nullable `ContentBlock` to append.
-  Normal text, images, audio, and resource content use their existing shapes.
-- `_meta`: optional and nullable. It updates message-scoped metadata on
-  `session_message`; it is chunk-scoped on `session_message_chunk`.
 
-Agents **SHOULD** include participant IDs on the first message update or chunk
-when available. Later events may omit them or supply previously missing
-identities. For these identity fields, omission and `null` mean not supplied:
-the Client retains any previously reported value. They do not use the
-null-clearing semantics of the mutable `content` and `_meta` fields.
+Agents **SHOULD** include participant IDs on the first `session_message` for a
+message when available, and when streaming a message whose participants are
+known, send that upsert before its first chunk. Later upserts may omit them or
+supply previously missing identities. For these identity fields, omission and
+`null` mean not supplied: the Client retains any previously reported value.
+They do not use the null-clearing semantics of the mutable `content` and
+`_meta` fields.
 
 `senderMessageId` and `recipientMessageId` link the two views of a message so
 that a Client looking at either one can find the other, including when it has
@@ -289,7 +296,7 @@ not yet received or rendered the other transcript's entry. They follow the
 same convention as the participant IDs: omission and `null` mean not supplied,
 the Client retains any previously reported value, and a known value does not
 change. An Agent can therefore stream a view before it knows the other one's
-ID and supply the reference later with a chunk or a metadata-only upsert. For
+ID and supply the reference later with a metadata-only upsert. For
 example, it can add `recipientMessageId` to the outgoing view once it has
 reported the incoming view. Agents **SHOULD** supply each reference once they
 know it. When both views carry references, they **MUST** name each other; a
@@ -442,8 +449,9 @@ notification and complete participant metadata are not required:
 ```
 
 Subsequent chunks append normal message content for the same transcript-local
-`messageId`. Participant metadata can arrive with a later chunk or a
-metadata-only upsert, without repeating or replacing the content:
+`messageId`. Participant metadata and references arrive in a metadata-only
+upsert, before, between, or after the chunks, without repeating or replacing
+the content:
 
 ```json
 {
@@ -464,19 +472,20 @@ metadata-only upsert, without repeating or replacing the content:
 A `session_message` is an upsert: when it supplies a content array, that array
 replaces all content accumulated for the message rather than appending. It can
 also update metadata without resending content. Later chunks append to the
-stored content; chunk metadata does not patch message metadata.
+stored content. A chunk carries no participant IDs or references, and its
+`_meta` does not patch message metadata.
 
 ### Why session IDs appear in different places
 
 These IDs answer different questions; they are not competing ways to route
 the same event:
 
-| Location                                                         | Purpose                                                          |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Outer `params.sessionId`                                         | Which session's transcript or entities does this update address? |
-| `params.update.sessionId` in `subagent_update`                   | Which child is owned by the parent named by the outer ID?        |
-| `params.update.senderSessionId` in a session message or chunk    | Which session sent, or is sending, this message?                 |
-| `params.update.recipientSessionId` in a session message or chunk | Which session is this message addressed to?                      |
+| Location                                                | Purpose                                                          |
+| ------------------------------------------------------- | ---------------------------------------------------------------- |
+| Outer `params.sessionId`                                | Which session's transcript or entities does this update address? |
+| `params.update.sessionId` in `subagent_update`          | Which child is owned by the parent named by the outer ID?        |
+| `params.update.senderSessionId` in a session message    | Which session sent, or is sending, this message?                 |
+| `params.update.recipientSessionId` in a session message | Which session is this message addressed to?                      |
 
 For example, with parent `sess_parent` and child `sess_child_1`:
 
@@ -980,8 +989,9 @@ implementation to use the named SDKs, providers, or integration techniques.
 1. Add the v1 `SubagentCapabilities` marker and the `SubagentUpdate` association
    and `SubagentSessionCapabilities` types in both versions.
 2. Add `SessionMessage` and `SessionMessageChunk` update variants in both
-   versions, using normal content and optional sender and recipient session
-   metadata for incoming and outgoing views.
+   versions, using normal content, with optional sender and recipient session
+   metadata and message references on `SessionMessage` for incoming and
+   outgoing views.
 3. Mirror the v2 `StateUpdate` payload in v1 and embed it in the v1 association
    update. In v2, mirror ordinary child-session state notifications in the
    parent association as well.
@@ -1058,13 +1068,15 @@ implementation of child routing or the replay freshness boundary.
   communication as an ordinary user message.
 - Stream an incoming view before its outgoing view's ID is known, then supply
   `senderMessageId` on the incoming view and `recipientMessageId` on the
-  outgoing view. Verify that a Client can go from either view to the other,
+  outgoing view with metadata-only upserts. Verify that a Client can go from
+  either view to the other,
   including before it has rendered the other transcript, and that it does not
   link views by equal IDs alone.
 - Start a directed message with a chunk, interleave another message, and
   replace accumulated content with a whole snapshot. Start without participant
-  metadata, add it later without replacing content, and omit it on subsequent
-  chunks. Verify that missing metadata remains an inter-session message rather
+  metadata, add it later with a metadata-only upsert without replacing content,
+  and keep streaming chunks. Verify that missing metadata remains an
+  inter-session message rather
   than being attributed to a human or guessed sender.
 - Finish reporting a message before the child finishes processing it, and keep
   receiving child events after the parent's prompt response.
@@ -1216,6 +1228,16 @@ before it knows the other one's ID. Message IDs stay scoped to their
 transcript; requiring both views to share an ID would instead force the Agent
 to know the link before sending the first update of either view.
 
+### Why do chunks carry only content?
+
+A message's identity, its participants and references, lives in one place:
+the `session_message` upsert, as message-level fields do for
+`agent_message`, whose chunks also carry only content. Identity on chunks
+would give the same fields two sources that can disagree, and would make a
+chunk patch message state even though its `_meta` does not. An Agent that
+learns the identity while streaming sends one metadata-only upsert, which
+needs no content.
+
 ### Why not allow prompting or steering a subagent?
 
 The parent Agent can message or reuse a child according to its runtime's
@@ -1271,7 +1293,10 @@ important difference from a user-facing session.
 - 2026-10-22: Added optional `senderMessageId` on the incoming view and
   `recipientMessageId` on the outgoing view of a session-directed message, so
   a Client can go from either view to the other without inferring a link from
-  equal IDs. Either can be supplied after the view starts streaming.
+  equal IDs. Either can be supplied after the view starts streaming. Moved the
+  participant IDs off `session_message_chunk`: chunks carry only content, and
+  a message's participants and references arrive on `session_message`
+  upserts.
 - 2026-10-13: In v2, a concrete top-level `_meta` object on `subagent_update`
   and `session_message` patches stored metadata by key, per
   [v2 Metadata Patches](/rfds/v2/meta-patches). v1 still replaces the whole

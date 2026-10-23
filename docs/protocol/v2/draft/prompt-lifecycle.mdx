@@ -73,11 +73,30 @@ The Agent may report outgoing and incoming messages between sessions,
 separately from user-facing responses and tool calls. The outer
 `params.sessionId` identifies the transcript being updated. Every
 `session_message` or `session_message_chunk` requires `messageId`, scoped to
-that transcript. Optional `senderSessionId` and `recipientSessionId` metadata
-identify the participants. Include them on the first update when available;
-later updates may omit them or add missing identities.
+that transcript. Optional `senderSessionId` and `recipientSessionId` on
+`session_message` identify the participants; chunks carry only content, as
+`agent_message_chunk` does. Include them on the first `session_message` when
+available, before the first chunk of a streamed message; later updates may
+omit them or add missing identities.
 
-For example, an incoming message in the child can begin with a streamed chunk:
+For example, an incoming message in the child can name its participants, then
+stream its content:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message",
+      "messageId": "received_message_1",
+      "senderSessionId": "parent_session",
+      "recipientSessionId": "child_session"
+    }
+  }
+}
+```
 
 ```json
 {
@@ -88,8 +107,6 @@ For example, an incoming message in the child can begin with a streamed chunk:
     "update": {
       "sessionUpdate": "session_message_chunk",
       "messageId": "received_message_1",
-      "senderSessionId": "parent_session",
-      "recipientSessionId": "child_session",
       "content": { "type": "text", "text": "Please investigate " }
     }
   }
@@ -111,7 +128,7 @@ participant IDs mean not supplied and leave previously known identities intact.
 The two views have independent message IDs. Optional `senderMessageId` on the
 incoming view and `recipientMessageId` on the outgoing view name the other
 view's `messageId`, so a Client can go from either view to the other. They
-follow the participant-ID rules and can arrive in a later update; Clients must
+follow the participant-ID rules and can arrive in a later `session_message`; Clients must
 not link views by equal IDs alone. The Agent reports each side only
 when observed; Clients must not synthesize an incoming entry from an outgoing
 one or forward the content themselves. Neither view acknowledges completed
