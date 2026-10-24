@@ -763,10 +763,10 @@ summaries can still be replayed.
 Reconnection separates routing context from current work state and controls.
 When loading or resuming a parent, the Client **MUST** invalidate cached live
 work state and mutation authorization for its children. Historical data may
-remain visible, but effective child capabilities start empty and current work
-state starts unconfirmed. Historical capability patches never populate that
-effective set; omitting a current capability field cannot revive an earlier
-`cancel` grant. The Client **MUST NOT** enable child mutations until the
+remain visible, including a child's last recorded outcome, but effective child
+capabilities start empty and current work state starts unconfirmed. Historical
+capability patches never populate that effective set; omitting a current
+capability field cannot revive an earlier `cancel` grant. The Client **MUST NOT** enable child mutations until the
 load/resume succeeds and a current capability grants them. If the operation
 fails, current state and authorization received during that attempt are
 invalidated.
@@ -784,6 +784,11 @@ for child work-state and mutation-capability snapshots:
 
 - Before the response, these snapshots are historical. They **MUST NOT**
   authorize Client-initiated mutations or establish confirmed current activity.
+- A historical `idle` snapshot records how the child's work ended. The Client
+  **MAY** keep showing that outcome after the response: it authorizes no
+  mutation, and it does not mean the child cannot be given more work. A
+  historical `running` or `requires_action` snapshot does not remain current
+  activity after the response.
 - Current snapshots are sent after the response. Normal association and state
   updates suffice; no extra announcement phase is needed for already-known
   associations. An Agent can omit capabilities when none are enabled, because
@@ -1332,6 +1337,9 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-24: Clarified that after a load or resume with replay, a Client may
+  keep showing a child's replayed `idle` outcome, while replayed `running` and
+  `requires_action` snapshots do not remain current activity.
 - 2026-10-22: Added optional `senderMessageId` on the incoming view and
   `recipientMessageId` on the outgoing view of a session-directed message, so
   a Client can go from either view to the other without inferring a link from
