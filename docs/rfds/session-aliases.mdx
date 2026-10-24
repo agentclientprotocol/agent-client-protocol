@@ -1,0 +1,526 @@
+---
+title: "Session aliases: one conversation, several session IDs"
+---
+
+Author(s): [@uzayer](https://github.com/uzayer)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Let an Agent say that several session IDs name the same conversation, so a
+Client does not show one conversation as two sessions or start a second Agent
+process on a conversation it is already hosting.
+
+- Add an optional `aliases` field to `SessionInfo`. It lists the other IDs
+  under which the Agent has recorded or exposed the same conversation, oldest
+  first, each with a `reason` such as `clear_context` or `compaction`.
+- Mirror it on `SessionInfoUpdate`, as the
+  [Session Info Update RFD](/rfds/session-info-update) already requires for
+  every `SessionInfo` field. The Agent can then announce a new alias on the live
+  session's own `session/update` stream at the moment it creates one.
+- Advertise support with a new `session.aliases` Agent capability. A Client that
+  sees it can rely on the Agent to report every alias it creates, and can stop
+  guessing.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP treats `sessionId` as the single identity of a conversation. A Client
+creates or resumes a session by ID, and [`session/list`](/rfds/session-list)
+returns one `SessionInfo` per ID.
+
+Some Agents keep the public `sessionId` stable but move the conversation to new
+backing storage partway through a session. The ACP session stays the same, but
+the Agent's runtime now records it under a new internal ID. Nothing on the wire
+says so.
+
+### Motivating example
+
+The Claude Agent ACP adapter (`@agentclientprotocol/claude-agent-acp` 0.86.0)
+does this when a user leaves plan mode with "clear context and implement". The
+adapter keeps the ACP `sessionId` and continues the still-pending ACP turn, but
+starts a fresh runtime conversation under a new random ID:
+
+- `dist/clear-context-coordinator.js` lines 44-49 call `restartSession` with
+  `publicSessionId: sessionId`.
+- `dist/acp-agent.js` lines 6914-6915 keep the public ID for the ACP session,
+  and lines 7265-7268 give the runtime a different one:
+
+  ```js
+  if (creationOpts?.resume === undefined || creationOpts?.forkSession) {
+    // Set our own session id if not resuming an existing session.
+    options.sessionId = creationOpts.publicSessionId ? randomUUID() : sessionId;
+  }
+  ```
+
+- `listSessions` (`dist/acp-agent.js` lines 1507-1527) lists the runtime's
+  conversations directly, so the new internal ID shows up in `session/list` as
+  a separate session with its own `sessionId`.
+
+### What a Client sees
+
+Take a desktop ACP Client that also shows sessions the user ran outside it, for
+example the same Agent's CLI in a terminal. It notices them as they appear (by
+watching the Agent's on-disk history) and attributes them through the Agent's
+own `session/list`. It also marks a session as "live elsewhere" while another
+process is still writing it, so it does not fork the conversation by sending a
+prompt into it.
+
+After a clear-context restart in a session the Client is hosting:
+
+1. A new session ID appears that the Client has never seen.
+2. The Agent's `session/list` reports it as an ordinary, separate session.
+3. Its history is being written right now, so the Client marks it "live
+   elsewhere".
+4. If the user opens it, the Client calls `session/load` or `session/resume`
+   and starts a second Agent process on a conversation the first one is still
+   writing.
+
+The Client is hosting that conversation the whole time, but has no way to know
+it. After a restart the problem persists: the history shows the pre-clear part
+under the original ID and the rest under the new one, as two unrelated
+sessions.
+
+### Workarounds today
+
+Clients can guess. One Client treats an unknown ID that first appears in the
+same storage location while one of its own turns is running as an alias of that
+session. This is fragile: it depends on timing and on reading the Agent's
+storage layout, and it has a known false positive when the user starts an
+unrelated session in a terminal during a hosted turn. It also cannot recover
+the link after the Client restarts.
+
+Agents could hide the problem by listing only the public ID, but that means
+keeping a private mapping, and a Client that observes the new ID by any other
+route still cannot connect it to the session.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Give each conversation one canonical `sessionId` (the one the Client created,
+resumed, or listed) and let the Agent report the other IDs that name the same
+conversation.
+
+### `SessionInfo.aliases`
+
+Add an optional `aliases` array to `SessionInfo`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "sessions": [
+      {
+        "sessionId": "sess_a1",
+        "cwd": "/home/user/project",
+        "title": "Add retry logic to the uploader",
+        "updatedAt": "2026-10-06T14:22:15Z",
+        "aliases": [
+          {
+            "sessionId": "4f0c2d9e-7b1a-4c55-9a43-2e8d6f1b0c77",
+            "reason": "clear_context"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Each entry is a `SessionAlias`:
+
+- `sessionId` (required): another ID for the same conversation. It is a
+  `SessionId` and is opaque to the Client.
+- `reason` (optional): why the alias exists. See [Reasons](#reasons).
+- `_meta` (optional): follows ACP's existing `_meta` rules.
+
+The array is ordered from oldest to newest. The last entry is the ID the Agent
+is currently recording the conversation under; if the array is empty or
+omitted, the canonical `sessionId` is.
+
+An alias is an ID the Agent has recorded or exposed for this conversation:
+one it could return from `session/list`, one a user could see in the Agent's
+own tools (a CLI's resume list, for example), or one that names the Agent's own
+history for this conversation. The protocol does not say where or how an Agent
+stores sessions; it only says which IDs belong together.
+
+Omitted and empty mean the same thing: the Agent reports no aliases for this
+session.
+
+### Live announcements through `session_info_update`
+
+Add the same field to `SessionInfoUpdate`. When an Agent that advertises
+`session.aliases` creates a new alias for a session a Client has open, it sends
+the complete updated array on that session's stream:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_a1",
+    "update": {
+      "sessionUpdate": "session_info_update",
+      "aliases": [
+        {
+          "sessionId": "4f0c2d9e-7b1a-4c55-9a43-2e8d6f1b0c77",
+          "reason": "clear_context"
+        }
+      ]
+    }
+  }
+}
+```
+
+`aliases` follows the existing `SessionInfoUpdate` patch rules: omitted leaves
+the stored value unchanged, `null` or `[]` clears it, and a concrete array
+replaces it. Agents send the whole array, not just the new entry, so a Client
+that missed an earlier update still ends up with the full set.
+
+The Agent **SHOULD** send this update before it writes anything under the new
+ID that a Client could observe, and before it streams any content that belongs
+to the new ID. Then a Client that watches for new IDs learns about the alias
+before it sees the new ID anywhere else.
+
+### Reasons
+
+`reason` is an open string enum that follows the
+[v2 enum-extension rules](/rfds/v2/enum-variant-extension), like
+`CompactionStatus`. Its initial values are:
+
+- `clear_context`: the Agent cleared the model context but continued the same
+  ACP session, for example to implement an approved plan.
+- `compaction`: the Agent compacted the context into new storage. Compaction
+  that stays under the same ID does not create an alias; see
+  [Session Compaction](/rfds/session-compaction).
+- `restart`: the Agent restarted its runtime for the session (after a crash or
+  a sign-out, for example) and the runtime assigned a new ID.
+
+Values beginning with `_` are for implementation-specific reasons. Clients keep
+an unknown reason as an opaque string and treat the alias exactly like a known
+one: the reason is for display and diagnostics, never for deciding whether two
+IDs belong together.
+
+`fork` is deliberately not a reason. A fork is a new conversation with its own
+history from that point on, so it must not be merged into its parent. See the
+[FAQ](#why-is-fork-not-a-reason).
+
+### Capability
+
+V1 adds `sessionCapabilities.aliases`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "list": {},
+        "aliases": {}
+      }
+    }
+  }
+}
+```
+
+V2 adds `capabilities.session.aliases`. Omitted or `null` means the Agent does
+not advertise support. Supplying `{}` means the Agent:
+
+1. Sends `session_info_update` with `aliases` whenever it creates an alias for
+   an open session.
+2. If it supports `session/list`, reports known aliases on the canonical entry
+   and does not also list an alias as its own entry.
+3. Accepts an alias wherever it accepts a `sessionId` for an existing session
+   (`session/load`, `session/resume`, `session/close`, `session/delete`, and
+   `session/fork`), resolves it to the canonical session, and uses the
+   canonical `sessionId` in everything it sends back. If it cannot resolve an
+   alias, it returns the same error it would for an unknown session.
+4. Restores the latest state when a Client resumes or loads the canonical ID,
+   not just the part recorded before the first alias.
+
+The capability matters because of what its absence means. Without it, a Client
+cannot tell "this session has no aliases" from "this Agent does not report
+them", so it has to keep guessing. With it, a Client can turn its guesses off
+for that Agent. The decision comes from the capability, never from which Agent
+is connected.
+
+No Client capability is needed. `aliases` is an optional field on types old
+Clients already parse, and unknown fields are ignored, so an Agent can send it
+to every Client.
+
+### What a Client does with it
+
+A Client that sees `session.aliases`:
+
+1. Keeps a map from each alias to its canonical `sessionId`, filled from
+   `session/list` and from `session_info_update`.
+2. When it notices an unknown ID, looks it up in that map first. If it maps to
+   a session the Client is hosting, the new ID is that session and the Client
+   is the one writing it: there is nothing "live elsewhere" and nothing new to
+   show.
+3. If the ID maps to a session the Client is not hosting, it shows and
+   attributes the activity on that canonical session's row, not on a new one.
+4. When the user opens any ID, resolves it to its canonical session first. If
+   that session is already open, it switches to it instead of calling
+   `session/load` or `session/resume` and starting a second Agent process.
+5. Only if the ID is still unknown after a fresh `session/list` does it treat
+   the ID as a new session.
+
+### Avoiding forks of a session that is live elsewhere
+
+A Client that refuses to prompt a session another process is writing needs two
+things: to know which process is writing, and to know which session it is
+writing. ACP does not cover the first; see [Liveness](#is-liveness-in-scope).
+This RFD fixes the second. Activity under any alias is attributed to one
+canonical session, so:
+
+- A Client never mistakes its own writes, under a new alias, for another
+  process's. The phantom "live elsewhere" session goes away.
+- When another process really is writing an alias, the Client's guard applies
+  to the canonical session the user actually sees, so the user cannot start a
+  second Agent process on the same conversation by opening the alias row.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A user leaves plan mode with "clear context and implement", and nothing
+changes in the Client: the same session keeps streaming, the history shows one
+conversation, and no phantom session appears. After a restart, the Client
+lists the conversation once and resumes it with its full history. A Client
+that shows sessions run outside it can show them without guessing which ones
+it already owns.
+
+Agents that keep one ID per conversation have nothing to do. Agents that cannot
+avoid new runtime IDs have a portable way to say so, instead of each Client
+reverse-engineering their storage.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Schema
+
+Behind a new `unstable_session_aliases` feature, in both
+`agent-client-protocol-schema/src/v1` and `src/v2`:
+
+```rust
+/// Another ID that names the same conversation as a session.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionAlias {
+    /// The other ID. Opaque to the Client.
+    pub session_id: SessionId,
+    /// Why the alias exists. Open enum; unknown values are preserved.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default)]
+    pub reason: Option<SessionAliasReason>,
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+// On SessionInfo, next to `additional_directories`:
+#[cfg(feature = "unstable_session_aliases")]
+#[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_, SkipListener>>")]
+#[serde(default, skip_serializing_if = "Vec::is_empty")]
+pub aliases: Vec<SessionAlias>,
+
+// On SessionInfoUpdate, with the existing patch semantics:
+#[cfg(feature = "unstable_session_aliases")]
+#[serde_as(deserialize_as = "DefaultOnError")]
+#[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+pub aliases: MaybeUndefined<Vec<SessionAlias>>,
+
+// On v1 SessionCapabilities and v2 SessionCapabilities:
+#[cfg(feature = "unstable_session_aliases")]
+#[serde_as(deserialize_as = "DefaultOnError")]
+#[serde(default)]
+pub aliases: Option<SessionAliasesCapabilities>,
+```
+
+`SessionAliasReason` follows the same open-enum pattern as `CompactionStatus`:
+known variants plus a catch-all that keeps the original string.
+
+The equivalent TypeScript shape:
+
+```typescript
+type SessionAliasReason =
+  "clear_context" | "compaction" | "restart" | (string & {});
+
+interface SessionAlias {
+  sessionId: SessionId;
+  reason?: SessionAliasReason | null;
+  _meta?: { [key: string]: unknown } | null;
+}
+
+interface SessionInfo {
+  // ...existing fields
+  aliases?: SessionAlias[];
+}
+
+interface SessionInfoUpdate {
+  // ...existing fields
+  aliases?: SessionAlias[] | null;
+}
+```
+
+### Plan
+
+1. Land the schema behind `unstable_session_aliases`, with serialization tests
+   for omitted, `null`, empty, and populated `aliases`, unknown reasons, and
+   both capability shapes.
+2. Document the field in the `session/list` and session-setup docs for v1 and
+   v2 drafts, including how alias IDs resolve in `session/load`,
+   `session/resume`, `session/close`, `session/delete`, and `session/fork`.
+3. Prove it with one Agent and one Client. The motivating adapter can emit the
+   live update today under `_meta` (see the next section), and a desktop Client can replace its timing guess with the alias map.
+
+### Interim `_meta` convention
+
+Until the field lands, an Agent can send the same array, with the same
+semantics, under a namespaced `_meta` key on `session_info_update` and on
+`SessionInfo`, and advertise it in its capability `_meta`, as described in
+[Extensibility](/protocol/v1/extensibility#advertising-custom-capabilities):
+
+```json
+{
+  "sessionUpdate": "session_info_update",
+  "_meta": {
+    "agentclientprotocol.com/aliases": [
+      {
+        "sessionId": "4f0c2d9e-7b1a-4c55-9a43-2e8d6f1b0c77",
+        "reason": "clear_context"
+      }
+    ]
+  }
+}
+```
+
+Moving to the real field is then a rename, not a redesign.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**A dedicated `session/update` variant announcing the switch.** For example,
+`session_storage_update` with the old ID, the new ID, and a reason. It reaches
+the Client at the right moment, but only the Client connected to that session,
+and only while it is connected. A second Client, or the same Client after a
+restart, never learns the link, and `session/list` still shows two sessions. A
+new `SessionUpdate` variant would also likely need a v1 Client capability, as
+`compaction_update` did in the [Session Compaction RFD](/rfds/session-compaction),
+because a v1 Client that does not know the variant cannot be relied on to
+ignore it. This proposal keeps
+the live announcement but carries it on `session_info_update`, which every
+Client already accepts, and makes the same data durable through `session/list`.
+
+**A link on the listed alias, such as `continuesSessionId` or `aliasOf`.** The
+Agent keeps listing the new ID as its own entry and points it at the original.
+This is easy for an Agent that lists its runtime's conversations directly, but
+it has three problems. The live session cannot carry it, because the pointer
+lives on the other entry, so `session_info_update` cannot mirror it. The
+pointer and its target can land on different pages of a paginated
+`session/list`, so the Client may have to fetch every page to resolve one ID.
+And it keeps two resumable entries for one conversation, so Clients still have
+to merge them, and resuming either one gives a different part of the history.
+Putting the set on the canonical entry avoids all three.
+
+**A per-session `storageIds` or `transcriptIds` set.** This has the right shape
+but the wrong concept. ACP says nothing about how Agents store sessions, and
+naming storage in the protocol would make on-disk layout part of the contract.
+Defining aliases as IDs for the same conversation covers the storage case
+without the protocol having to know about storage.
+
+**Keeping it in `_meta` forever.** This works for a single Agent and Client pair,
+which is how it should start, but every Client that shows outside sessions has
+the same problem with every Agent that rotates IDs. A portable field is the
+point.
+
+### Why is `fork` not a reason?
+
+[`session/fork`](/rfds/session-fork) creates a new conversation that shares
+history up to the fork point and then diverges. Merging it into its parent
+would hide a real session and attribute its activity to the wrong
+conversation. A fork already has its own ACP `sessionId`, returned to the
+Client that asked for it. If Clients need to show fork lineage (a "forked from"
+link), that should be a separate field with different semantics, such as
+`forkedFrom`, in a follow-up RFD.
+
+### How does this relate to subagent sessions?
+
+[Subagents](/rfds/subagents) already says that session identity follows the
+exposed conversation, and that adapters whose runtime IDs do not meet that bar
+can derive ACP IDs or keep a mapping. Aliases are the wire form of that
+mapping for the case where one conversation ends up with several IDs. A
+subagent is the opposite case: a distinct conversation with its own session ID
+and an ownership link to its parent. A child session is never an alias of its
+parent, and an Agent must not report one as such.
+
+### Why put aliases on the canonical entry instead of listing them?
+
+So that `session/list` returns one row per conversation, which is what
+[Session List](/rfds/session-list) describes, and so that the live session's
+own updates can carry the set. An Agent that cannot collapse its listing yet
+can still ship the field; it just should not advertise `session.aliases` until
+it follows the listing rule, because Clients use the capability to stop
+guessing.
+
+### Does the Agent have to remember aliases across restarts?
+
+To advertise the capability, yes: rules 2-4 apply to every `session/list`,
+including after the Agent restarts. How it remembers is up to the Agent: a
+small mapping file, a marker in its own history, or the runtime's own lineage
+data. The live update alone already fixes the hosting Client's phantom
+session, so an Agent can send it under `_meta` before it has persistence, as
+long as it does not claim the capability.
+
+### What about IDs the Agent did not create, such as the same conversation continued in a terminal?
+
+They are out of scope. The Agent reports aliases it knows about. If the user
+clears context in the Agent's CLI and the CLI starts a new conversation, that
+is a new session unless the runtime itself records the link. Agents whose
+runtimes do record lineage can report those links too, with an appropriate
+reason.
+
+### Is liveness in scope?
+
+No. This RFD says which IDs belong to the same conversation. It does not say
+whether a conversation is being written right now, or by whom. Clients that
+need that today infer it locally, and this RFD makes that inference attach to
+the right session. A protocol-level answer (for example, an `active` flag or
+an owner on `SessionInfo`, or the attachment model being explored for remote
+multi-client sessions) is a possible follow-up.
+
+### What if two canonical sessions claim the same alias?
+
+That is an Agent bug. Clients should keep the first mapping they saw and may
+log the conflict; they must not merge the two canonical sessions.
+
+### Can an alias also be a canonical `sessionId`?
+
+No. An ID is either canonical (listed as its own entry) or an alias of exactly
+one canonical session. If an Agent ever makes an alias canonical again, for
+example after splitting a conversation, it removes it from the other session's
+`aliases` through `session_info_update` and lists it as its own entry.
+
+### Can agents ship this before the schema lands?
+
+Yes, under the `_meta` key described in "Interim `_meta` convention" above. The
+shape is the same, so switching to the field is a rename.
+
+## Revision history
+
+- 2026-10-06: Initial draft.
