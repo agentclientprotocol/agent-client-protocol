@@ -1,0 +1,273 @@
+---
+title: "Prompt Suggestions"
+---
+
+Author(s): [@nikita-ashihmin](https://github.com/nikita-ashihmin)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `prompt_suggestions` session update to ACP v1 and v2 that carries
+prompts the Agent predicts the user is likely to send next, for the Client to
+offer in its composer. In v1, a Client capability tells the Agent whether
+predicting them is worth the work at all.
+
+The payload is deliberately small:
+
+```json
+{
+  "sessionUpdate": "prompt_suggestions",
+  "suggestions": [{ "text": "Run the test suite and fix what breaks" }]
+}
+```
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Agents increasingly predict a plausible next prompt at the end of a turn. The
+model has the transcript in context and the prediction rides the same prompt
+cache, so producing one is close to free, while a user who accepts it with a
+single keypress skips typing a prompt they would have typed anyway. Editors
+already have the surface for it: the empty composer, which renders a
+grayed-out suggestion, completes it on Tab, and drops it on Escape or on the
+first typed character.
+
+ACP has no event for this. A predicted prompt is neither an agent message
+(it is not conversation content and must not enter history), nor a plan, nor a
+notice, nor session metadata. So each Agent–Client pair invents its own
+channel:
+
+- The Claude Agent adapter and the JetBrains AIR Client carry the value as
+  `session_info_update._meta.promptSuggestions`
+  ([claude-agent-acp PR #1356](https://github.com/agentclientprotocol/claude-agent-acp/pull/1356)).
+  The key deliberately avoids a vendor prefix precisely because the value is
+  not vendor-specific — a sign that it wants to be protocol.
+- Codex has an open request for the same feature
+  ([openai/codex#42587](https://github.com/openai/codex/issues/42587)).
+
+Two further problems follow from having no protocol event:
+
+- **The Agent cannot tell whether the prediction will ever be shown.** An
+  Agent that predicts for every Client either wastes work on Clients with no
+  composer affordance, or ships a Client allowlist.
+- **Clearing is undefined.** A prediction is tied to a moment in the
+  conversation. Without an agreed way to withdraw one, a Client either keeps
+  showing a stale prompt or invents its own expiry rule.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a `prompt_suggestions` variant to `SessionUpdate` in ACP v1 and v2.
+
+### The update
+
+```json
+{
+  "sessionUpdate": "prompt_suggestions",
+  "suggestions": [
+    { "text": "Run the test suite and fix what breaks" },
+    { "text": "Open a PR with these changes" }
+  ]
+}
+```
+
+- `suggestions` is a required, non-null list of suggestion objects, ordered
+  most likely first. An empty list is meaningful: it withdraws whatever the
+  Client is currently offering.
+- Each suggestion has a required, non-null `text`: a plain-text prompt, ready
+  to be placed in the composer verbatim. A Client **MUST** ignore an entry
+  whose `text` is empty or whitespace-only rather than offering a blank
+  suggestion.
+- A suggestion may carry `_meta`, optional and nullable, with omission and
+  `null` equivalent.
+
+Each update **replaces** the session's current set of suggestions. There is no
+append, no per-suggestion identity, and no removal event for a single entry.
+
+### Lifetime
+
+A suggestion describes what makes sense to send _at this point in the
+conversation_. It is a live offer, not conversation history, and **SHOULD NOT**
+be included in session replay or in `session/load` history.
+
+Both sides may end the offer:
+
+- The Agent withdraws it by sending `suggestions: []`.
+- The Client drops it locally — because the user sent a prompt, dismissed it,
+  started typing, or because the Client decided it has gone stale. A Client
+  **MUST NOT** offer suggestions from before the most recent prompt it sent.
+
+Dismissal is local. The Client does not report it, and the Agent does not
+learn whether a suggestion was shown, accepted, or edited before sending. An
+Agent that needs that signal is using the wrong primitive.
+
+### Timing
+
+An Agent typically sends the update right after a turn ends, which is after
+the `session/prompt` response. That is an ordinary agent-initiated update
+outside a turn and follows the existing timing rules; this RFD does not relax
+them. An Agent **MAY** also send one during a turn — a Client that hides
+suggestions while work is running simply has nothing to show yet.
+
+An Agent is not required to send an update for every turn. Predictions are
+commonly suppressed on the first turn of a session, after an API error, while
+a Client-visible mode makes a follow-up meaningless, or when the account is
+rate-limited. A turn that ends with no update is normal, and a Client **MUST
+NOT** wait for one before returning its composer to its idle state.
+
+### Client presentation
+
+A Client that advertises support decides everything about presentation: how
+many suggestions it shows, where, with which keybinding, and whether it shows
+any at all for a given session or user preference. The composer's grayed-out
+completion is the motivating surface, but a chip row, a menu, or a slash-style
+palette are equally valid.
+
+Accepting a suggestion **MUST NOT** send it. It fills the composer and leaves
+the user in control: ACP already has `session/prompt` for sending, and a
+prediction the user has not read is not consent.
+
+### Version-specific capability
+
+For v1, add an optional `promptSuggestions` object to
+`ClientSessionCapabilities`:
+
+```json
+{
+  "clientCapabilities": {
+    "session": {
+      "promptSuggestions": {}
+    }
+  }
+}
+```
+
+Omitting `session`, setting `session` to `null`, omitting
+`promptSuggestions`, or setting it to `null` all mean the Client does not
+advertise support. Supplying `{}` means the Client can offer predicted prompts
+with the semantics in this RFD. Agents **MUST NOT** send `prompt_suggestions`
+updates to a v1 Client unless it advertises this capability.
+
+Unlike [notices](/rfds/session-notices), the capability has no fallback
+channel behind it: an Agent with no composer to fill does not reroute the
+prediction into an agent message. The capability instead tells the Agent
+whether to ask the model for a prediction in the first place. Advertising
+support does not promise that any individual suggestion is displayed.
+
+V2 does not add a capability. It preserves an unknown session update through
+its unknown-update fallback, after which a Client may ignore it. V1 keeps its
+closed `SessionUpdate` union and uses the capability rather than requiring
+unsupported Clients to accept a new variant.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Any Agent that can predict a next prompt reaches any Client with a composer,
+without a vendor key or a Client allowlist. A Client implements the
+grayed-out-suggestion affordance once and gets it from every Agent that
+supports the capability. An Agent that sees no capability spends nothing
+predicting prompts nobody will see.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Proposed phases
+
+1. Define `PromptSuggestion` and the `prompt_suggestions` variant of
+   `SessionUpdate` in both protocol versions, and the v1
+   `ClientSessionCapabilities.promptSuggestions` capability.
+2. Migrate the existing `_meta.promptSuggestions` implementations in the
+   Claude Agent adapter and the AIR Client to the protocol event, keeping the
+   `_meta` key for one release for older peers.
+3. Gather Client evidence from at least one more Client surface before moving
+   out of draft.
+
+### Existing implementation evidence
+
+The mechanism is already running in production, which is the motivation for
+standardizing it rather than designing it from scratch:
+
+| Implementation       | Reference                                                                     | Behavior                                                                                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| JetBrains AIR Client | Ships in the IDE                                                              | Reads `session_info_update._meta.promptSuggestions`, shows the first non-blank text as grayed-out text in an empty composer, completes it on Tab without sending, drops it on typing.            |
+| Claude Agent adapter | [PR #1356](https://github.com/agentclientprotocol/claude-agent-acp/pull/1356) | Forwards one prediction per turn after the turn's result, clears it on the next prompt and on a conversation reset, drops a stale prediction, and sends nothing to a Client that cannot show it. |
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not a field on `session_info_update`?
+
+That is where the current `_meta` implementations put it, and it is the wrong
+home. [Session Info Update](/rfds/session-info-update) requires
+`SessionInfoUpdate` to stay aligned with the `SessionInfo` of `session/list`,
+and a predicted prompt has no business in a session listing: it is ephemeral,
+tied to one point in the conversation, and meaningless once the user sends
+anything. A dedicated variant also lets a Client that cannot offer suggestions
+ignore the event wholesale instead of filtering metadata it must otherwise
+accept.
+
+### Why a list instead of one suggestion?
+
+A single string is what the motivating composer surface renders, but a chip row
+or a menu can offer several, and an Agent that has ranked candidates loses
+nothing by sending them. Clients are free to use only the first. Starting with
+a list avoids a second event later when one Client wants three.
+
+### Why is there no "the Agent is still deciding" state?
+
+An intermediate `pending` state was considered, so a Client could hold its idle
+composer hint instead of showing it and replacing it a moment later. It was
+left out because there is no bound on how long the state may last: an Agent
+that decides not to predict — after an API error, at a rate limit, on the first
+turn — sends nothing at all, so a Client would have to invent a timeout to
+leave the state. A Client that wants to avoid the flicker can delay its own
+idle presentation briefly after a turn; that is a local choice with a local
+remedy. If implementations show the flicker is a real problem, a `pending`
+signal with defined expiry can be added later without changing this event.
+
+### Why does accepting a suggestion not send it?
+
+Because the Agent wrote it. Filling the composer keeps the user as the author
+of every prompt in the transcript, which also makes a wrong prediction cheap:
+the user edits or clears it. A Client is of course free to let a user send
+immediately after accepting.
+
+### Why is the text plain rather than content blocks?
+
+The destination is a text composer. Embedding resources or images in a
+suggestion would make the Client responsible for materializing content the user
+has not asked for yet. If a future use case needs richer suggestions, a
+content-block form can be added alongside `text`.
+
+### How does this interact with slash commands and other composer affordances?
+
+It does not replace them. A suggestion is prompt text; if a Client's composer
+expands slash commands, a suggestion that begins with one behaves exactly as if
+the user had typed it. Which affordance wins when several apply at once is a
+Client decision.
+
+### Does the Agent learn whether the suggestion was used?
+
+No. The follow-up prompt arrives as an ordinary `session/prompt`, with nothing
+marking it as accepted. Reporting acceptance would be useful for evaluating
+prediction quality, but it is a separate primitive with its own privacy
+questions, and this event is useful without it.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+Three were considered: a field on `session_info_update` (rejected above), a
+dedicated `session/prompt_suggestions` request from the Client (rejected: it
+makes the Client poll for something the Agent already knows at turn end, and
+adds a round trip on a path where latency is visible), and leaving it to
+`_meta` (the status quo, which is what produced two incompatible
+implementations of the same idea).
+
+## Revision history
+
+<!-- If there have been major updates to this RFD, you can include the git revisions and a summary of the changes. -->
