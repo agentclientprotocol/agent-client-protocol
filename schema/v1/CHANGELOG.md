@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.26.0...schema-v1.27.0) - 2026-10-24
+
+### Added
+
+- *(unstable)* link session message views and keep identity off chunks ([#2465](https://github.com/agentclientprotocol/agent-client-protocol/pull/2465))
+
+### Other
+
+- *(deps)* bump the minor group with 9 updates ([#2437](https://github.com/agentclientprotocol/agent-client-protocol/pull/2437))
+
 ## [1.26.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.25.0...schema-v1.26.0) - 2026-10-16
 
 ### Added
