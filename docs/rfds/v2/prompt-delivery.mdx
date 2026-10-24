@@ -94,11 +94,11 @@ Omitting `delivery` keeps today's v2 behavior, which this RFD does not define fo
 
 - **Insertion and response.** The v2 rules apply unchanged. The Agent responds with the `messageId` once the message is inserted, which may be a long time after the request. It reports the message with a `user_message` update that uses the same `messageId`.
 - **Idle session.** If the session is already `idle` when the prompt arrives, the Agent inserts it as a normal prompt. This removes the race at the end of a turn, so the Client never has to retry.
-- **Turn ends first.** If the turn ends before a steer reaches a safe point, for any reason except cancellation, the steer starts the next turn. All waiting steers go into that turn together, in the order received. Queued messages follow, each starting its own turn in the order received.
+- **Turn ends first.** If the turn ends before a steer reaches a safe point, for any reason, the steer starts the next turn. All waiting steers go into that turn together, in the order received. Queued messages follow, each starting its own turn in the order received.
 - **Order.** Several steers waiting at the same safe point are inserted there together, in the order received. The `user_message` updates show every Client the final order once each message is inserted.
 - **Waiting on the user.** While the session is `requires_action`, for example during a permission request, the Agent accepts the prompt. It inserts a steer at the next safe point after work resumes. A prompt never answers a pending permission request or elicitation.
 - **Withdrawing.** A Client withdraws a pending message by cancelling its request with [`$/cancel_request`](/protocol/v2/draft/cancellation). The v2 rule already covers the race: before insertion, the request fails with `-32800` (Request Cancelled) and no `user_message` is sent. After insertion, it succeeds with the `messageId`.
-- **`session/cancel`.** Cancelling the session cancels every pending prompt in it, including prompts from other Clients. Each fails with `-32800`. These responses may arrive before or after the `idle` update with the `cancelled` stop reason. The Client can put the text back in the input box so the user does not lose it.
+- **`session/cancel`.** Cancelling stops the current turn, not the pending prompts. After the Agent reports `idle` with the `cancelled` stop reason, waiting steers start the next turn right away, followed by queued messages. This is how a user interrupts the Agent and has it act on their message at once. A Client that wants to discard its pending prompts too withdraws them with `$/cancel_request` first.
 - **Connection closes.** If the connection that sent a pending prompt closes, the Agent **SHOULD** drop the prompt without inserting it. A Client that reconnects can see which messages were inserted from `session/resume` replay, and resend the rest.
 
 A full steer looks like this:
@@ -176,6 +176,23 @@ Every v2 prompt works this way: the response means "inserted." The v2 prompt RFD
 
 A pending prompt belongs to a request, and a closed connection can no longer receive its response or withdraw it. Inserting it anyway could act on a message the user can no longer see or stop. The OpenAI Responses API makes the same choice: queued steers exist only on the current connection.
 
+### How does a user interrupt the Agent and have it act on a message right away?
+
+The Client sends the message with `delivery: "steer"`, then sends `session/cancel`. The running tool calls stop, the turn ends with `cancelled`, and the steer starts the next turn. The work done so far stays in the transcript. Claude Code's Esc and Codex's interrupt with pending steers both behave this way.
+
+ACP keeps each level of stopping separate, so a Client can pick the smallest one:
+
+| User intent                           | Request                                                          |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| Take back one message not yet sent    | `$/cancel_request` on its `session/prompt`                       |
+| Stop the current turn                 | `session/cancel`; pending messages still go next                 |
+| Stop the current turn and drop drafts | `$/cancel_request` on each pending prompt, then `session/cancel` |
+| End the session                       | `session/close`                                                  |
+
+### Why don't pending messages fail when the turn is cancelled?
+
+A user who presses Stop with a message waiting usually wants the Agent to act on that message instead of what it was doing. Dropping it would make the Client resend it, which loses its place in the order and, with several Clients, would let one Client's Stop erase another user's message. Withdrawing is a separate, explicit request.
+
 ### Can a pending message be edited?
 
 Not directly. Withdraw it with `$/cancel_request` and send a new one. A queued message then moves to the end of the queue. Editing in place would need a new method and new race rules, and no implementation has needed it yet. A Client can also keep a message as an editable draft until the user sends it.
@@ -197,6 +214,6 @@ No. An Agent's turn is a loop of model requests and tool calls. Between two requ
 
 ## Revision history
 
-- 2026-10-24: Rebuilt on the v2 prompt lifecycle. Replaced `session/inject`, `session/revoke_inject`, and `session/replace_inject` with a `delivery` field on `session/prompt`, `$/cancel_request` for withdrawing, and no new error codes. Adopted the `session/prompt` approach from [#2255](https://github.com/agentclientprotocol/agent-client-protocol/pull/2255) by [@uzayer](https://github.com/uzayer). Added the response-ordering rule from implementation feedback.
+- 2026-10-24: Rebuilt on the v2 prompt lifecycle. Replaced `session/inject`, `session/revoke_inject`, and `session/replace_inject` with a `delivery` field on `session/prompt`, `$/cancel_request` for withdrawing, and no new error codes. Adopted the `session/prompt` approach from [#2255](https://github.com/agentclientprotocol/agent-client-protocol/pull/2255) by [@uzayer](https://github.com/uzayer). Added the response-ordering rule from implementation feedback. Pending messages survive `session/cancel` and go next, so Stop with a waiting message acts on it at once.
 - 2026-05-24: Revised after review from [@SteffenDE](https://github.com/SteffenDE): made revoke mandatory, defined delivery as the `user_message` update, and removed the option to drop steers during permission waits.
 - 2026-05-19: Initial draft as `session/inject`, from [discussion #1220](https://github.com/agentclientprotocol/agent-client-protocol/discussions/1220).
