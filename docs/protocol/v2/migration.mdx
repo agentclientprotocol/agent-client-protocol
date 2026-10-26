@@ -826,7 +826,7 @@ If you maintain a validator or generated models, v2 also tightens schema-level d
 
 Agents **MAY** now return initial `availableCommands` alongside `configOptions` in `session/new` and `session/resume` responses. The draft `session/fork` response also supports commands for the newly created session when forking is supported. This avoids requiring command notifications before the `session/new` response. See the [setup response example](/protocol/v2/session-setup#initial-session-state).
 
-In setup responses, `availableCommands` is an optional array: omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing. `null` is not a valid outbound value. Tolerant v2 receivers treat `null` or a malformed non-array value like omission and skip invalid command items within an array.
+In setup responses, `availableCommands` is an optional array: omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing. `null` is not a valid outbound value.
 
 `available_commands_update` notifications remain supported for advertising commands later or changing them. Each notification replaces the complete list previously advertised in a response or notification. `[]` clears it.
 

@@ -119,7 +119,7 @@ Agents **MAY** include initial [configuration options](/protocol/v2/draft/sessio
 }
 ```
 
-`availableCommands` is optional. Omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing setup responses. Agents **MUST NOT** send `null` for this field. Tolerant receivers treat `null` or a malformed non-array value like omission and skip invalid command items within an array.
+`availableCommands` is optional. Omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing setup responses. Agents **MUST NOT** send `null` for this field.
 
 Returning commands in the response avoids requiring command notifications before the `session/new` response. Agents can still advertise commands later or update the list through `available_commands_update` notifications. Each notification replaces the complete command list, including `[]` to clear it.
 

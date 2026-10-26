@@ -54,9 +54,8 @@ Accepting an unknown variant does not advertise support for its behavior.
 
 A malformed value for a discriminator recognized by the receiver **MUST NOT**
 fall through to the unknown-variant fallback. Validate recognized variants
-against their defined shapes, honoring documented field-level tolerance (for
-example, discarding malformed optional display metadata). Forward compatibility
-does not make operational request parameters permissive.
+against their defined shapes. Forward compatibility does not make operational
+request parameters permissive.
 
 If a request can't be fulfilled without understanding an unknown variant, the
 receiver **MUST** reject it with `-32602` (Invalid params). Otherwise, it
