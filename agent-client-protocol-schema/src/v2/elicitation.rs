@@ -1941,7 +1941,7 @@ pub enum ElicitationAction {
     ///
     /// Agents that do not understand this action should preserve the raw
     /// payload when storing, replaying, proxying, or forwarding elicitation
-    /// responses. They MUST NOT treat it as a known elicitation action.
+    /// responses, and otherwise MUST handle it as `cancel`.
     #[serde(untagged)]
     Other(OtherElicitationAction),
 }

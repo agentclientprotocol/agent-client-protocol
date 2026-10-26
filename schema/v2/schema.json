@@ -1047,7 +1047,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future content block.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content block type should preserve\nthe raw payload when storing, replaying, proxying, or forwarding content,\nand otherwise ignore it or display it generically.",
+          "description": "Custom or future content block.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content block type should preserve\nthe raw payload when storing, replaying, proxying, or forwarding content,\nand otherwise ignore it or display it generically. Agents MUST reject a\n`session/prompt` request with a content block type they do not support\nwith `-32602`.",
           "type": "object",
           "properties": {
             "type": {
@@ -6540,7 +6540,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future MCP server transport configuration.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this transport should preserve the raw\npayload when storing, replaying, proxying, or forwarding session setup\ndata, and otherwise ignore it or reject the server configuration.",
+          "description": "Custom or future MCP server transport configuration.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this transport should preserve the raw\npayload when storing, replaying, proxying, or forwarding session setup\ndata. Agents MUST reject a request with a transport they do not support\nwith `-32602`.",
           "type": "object",
           "properties": {
             "type": {
@@ -6935,7 +6935,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future session configuration option value payload.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "description": "Custom or future session configuration option value payload.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents MUST reject a `session/set_config_option` request with a value type\nthey do not support with `-32602`.",
           "type": "object",
           "properties": {
             "type": {
@@ -7258,7 +7258,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this action should preserve the raw\npayload when storing, replaying, proxying, or forwarding elicitation\nresponses. They MUST NOT treat it as a known elicitation action.",
+          "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this action should preserve the raw\npayload when storing, replaying, proxying, or forwarding elicitation\nresponses, and otherwise MUST handle it as `cancel`.",
           "type": "object",
           "properties": {
             "action": {

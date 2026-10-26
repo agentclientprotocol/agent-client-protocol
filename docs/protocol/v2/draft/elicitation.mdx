@@ -169,6 +169,8 @@ The Client responds with one of three actions:
 - `decline`: the user explicitly declined.
 - `cancel`: the user dismissed the interaction without choosing.
 
+Agents **MUST** handle an unknown action as `cancel`.
+
 The `content` field is optional on `accept`; receivers treat omission and `null`
 equivalently. It is only meaningful for `accept`; receivers ignore it for
 `decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD**

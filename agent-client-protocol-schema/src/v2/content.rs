@@ -117,7 +117,9 @@ pub enum ContentBlock {
     ///
     /// Receivers that do not understand this content block type should preserve
     /// the raw payload when storing, replaying, proxying, or forwarding content,
-    /// and otherwise ignore it or display it generically.
+    /// and otherwise ignore it or display it generically. Agents MUST reject a
+    /// `session/prompt` request with a content block type they do not support
+    /// with `-32602`.
     #[serde(untagged)]
     Other(OtherContentBlock),
 }

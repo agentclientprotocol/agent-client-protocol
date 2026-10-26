@@ -2587,6 +2587,9 @@ pub enum SessionConfigOptionValue {
     /// Values beginning with `_` are reserved for implementation-specific
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
+    ///
+    /// Agents MUST reject a `session/set_config_option` request with a value type
+    /// they do not support with `-32602`.
     #[serde(untagged)]
     Other(OtherSessionConfigOptionValue),
 }
@@ -2918,7 +2921,8 @@ pub enum McpServer {
     ///
     /// Receivers that do not understand this transport should preserve the raw
     /// payload when storing, replaying, proxying, or forwarding session setup
-    /// data, and otherwise ignore it or reject the server configuration.
+    /// data. Agents MUST reject a request with a transport they do not support
+    /// with `-32602`.
     #[serde(untagged)]
     Other(OtherMcpServer),
 }

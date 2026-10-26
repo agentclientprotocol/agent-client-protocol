@@ -58,6 +58,11 @@ against their defined shapes, honoring documented field-level tolerance (for
 example, discarding malformed optional display metadata). Forward compatibility
 does not make operational request parameters permissive.
 
+If a request can't be fulfilled without understanding an unknown variant, the
+receiver **MUST** reject it with `-32602` (Invalid params). Otherwise, it
+degrades gracefully as the field documents, for example by ignoring the variant
+or displaying it generically.
+
 Payload validation and capability checks are separate. A schema-valid request
 is not necessarily supported or permitted on the connection.
 
