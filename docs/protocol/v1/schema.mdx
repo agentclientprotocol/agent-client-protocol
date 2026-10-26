@@ -105,7 +105,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="clientCapabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
   Capabilities supported by the client.
 
-    - Default: `{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false}`
+    - Default: `{"fs":{"readTextFile":false,"writeTextFile":false},"terminal":false,"auth":{"terminal":false}}`
 
 </ResponseField>
 <ResponseField name="clientInfo" type={<><span><a href="#implementation">Implementation</a></span><span> | null</span></>} >
@@ -951,6 +951,45 @@ Form-based elicitation where the client renders a form from the provided schema.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="url" type="object">
@@ -972,6 +1011,45 @@ URL-based elicitation where the client directs the user to a URL.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="other" type="object">
@@ -997,6 +1075,45 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 #### <span class="font-mono">CreateElicitationResponse</span>
@@ -1801,6 +1918,37 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   MIME type describing the encoded media payload.
 </ResponseField>
 
+## <span class="font-mono">AuthCapabilities</span>
+
+Authentication capabilities supported by the client.
+
+Advertised during initialization to inform the agent which authentication
+method types the client can handle. This governs opt-in types that require
+additional client-side support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="terminal" type={"boolean"} >
+  Whether the client supports `terminal` authentication methods.
+
+The client should set this to `true` only when it can reproduce the
+configured agent invocation in an interactive terminal. When `true`, the
+agent may include `terminal` entries in its authentication methods.
+
+    - Default: `false`
+
+</ResponseField>
+
 ## <span class="font-mono">AuthMethod</span>
 
 Describes an available authentication method.
@@ -1808,13 +1956,51 @@ Describes an available authentication method.
 The `type` field acts as the discriminator in the serialized JSON form.
 When no `type` is present, the method is treated as `agent`.
 
+**Type:** Union
+
+<ResponseField name="terminal" type="object">
+Client runs the configured agent program as a separate interactive
+process, without passing this method to `authenticate`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
+  Additional arguments to append to the configured agent invocation for terminal auth.
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description providing more details about this authentication method.
+</ResponseField>
+<ResponseField name="env" type={"object"} >
+  Additional environment variables to set on the configured agent invocation for terminal auth.
+These values override same-named variables in the base launch configuration.
+</ResponseField>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
+  Unique identifier for this authentication method.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name of the authentication method.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"terminal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="agent">
 Agent handles authentication itself through `authenticate`.
 
 This is the default when no `type` is specified.
 
-**Type:** Object
-
-**Properties:**
+<Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1832,6 +2018,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name of the authentication method.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">AuthMethodAgent</span>
@@ -1867,6 +2056,45 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 Typed identifier used for auth method values on the wire.
 
 **Type:** `string`
+
+## <span class="font-mono">AuthMethodTerminal</span>
+
+Terminal-based authentication method.
+
+The client runs the configured agent program as a separate interactive
+process for the user to authenticate via a TUI. Agents MUST advertise this
+method only when the client enabled its terminal authentication capability.
+A zero exit status signals success; any other termination signals failure.
+The client MUST NOT pass this method to `authenticate`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
+  Additional arguments to append to the configured agent invocation for terminal auth.
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional description providing more details about this authentication method.
+</ResponseField>
+<ResponseField name="env" type={"object"} >
+  Additional environment variables to set on the configured agent invocation for terminal auth.
+These values override same-named variables in the base launch configuration.
+</ResponseField>
+<ResponseField name="id" type={<a href="#authmethodid">AuthMethodId</a>} required>
+  Unique identifier for this authentication method.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Human-readable name of the authentication method.
+</ResponseField>
 
 ## <span class="font-mono">AvailableCommand</span>
 
@@ -2039,6 +2267,14 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 
 </ResponseField>
+<ResponseField name="auth" type={<a href="#authcapabilities">AuthCapabilities</a>} >
+  Authentication capabilities supported by the client.
+Determines which authentication method types the agent may include
+in its `InitializeResponse`.
+
+    - Default: `{"terminal":false}`
+
+</ResponseField>
 <ResponseField name="elicitation" type={<><span><a href="#elicitationcapabilities">ElicitationCapabilities</a></span><span> | null</span></>} >
   Elicitation capabilities supported by the client.
 Determines which elicitation modes the agent may use.
@@ -2084,12 +2320,143 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 
 </ResponseField>
+<ResponseField name="compaction" type={<><span><a href="#compactioncapabilities">CompactionCapabilities</a></span><span> | null</span></>} >
+  Support for ID-addressed context compaction updates. Omitted or `null`
+means unsupported; `\{\}` advertises the complete compaction contract.
+</ResponseField>
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoptionscapabilities">SessionConfigOptionsCapabilities</a></span><span> | null</span></>} >
   Config option capabilities supported by the client.
 
 Omitted or `null` both mean the client does not advertise support for any
 config option extensions.
 
+</ResponseField>
+<ResponseField name="notices" type={<><span><a href="#noticecapabilities">NoticeCapabilities</a></span><span> | null</span></>} >
+  Support for live user-facing `notice` session updates.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means the client can present notices to the user.
+
+</ResponseField>
+
+## <span class="font-mono">CompactionCapabilities</span>
+
+Client support for ID-addressed context compaction updates.
+
+**Type:** `object`
+
+## <span class="font-mono">CompactionId</span>
+
+Unique identifier for a context compaction within a session.
+
+**Type:** `string`
+
+## <span class="font-mono">CompactionStatus</span>
+
+Lifecycle state of a context compaction.
+
+**Type:** Union
+
+<ResponseField name="in_progress" type="string">
+  Compaction has started and has not finished.
+</ResponseField>
+
+<ResponseField name="completed" type="string">
+  Compaction finished successfully.
+</ResponseField>
+
+<ResponseField name="failed" type="string">
+  Compaction finished unsuccessfully.
+</ResponseField>
+
+<ResponseField name="cancelled" type="string">
+  Compaction was cancelled before it finished.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future compaction status.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP statuses.
+
+</ResponseField>
+
+## <span class="font-mono">CompactionSummaryChunk</span>
+
+A content block appended to a compaction's summary. A first-seen ID creates
+an in-progress compaction. Chunks append in receive order.
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  Metadata scoped to this chunk. Omission and `null` both mean absent.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  ID of the compaction whose summary receives this content.
+</ResponseField>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  One content block to append.
+</ResponseField>
+
+## <span class="font-mono">CompactionUpdate</span>
+
+A context compaction upsert. The first notification fixes the compaction's
+timeline position. Later updates with the same ID patch that entity in place.
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+`summary`, `error`, and `_meta` have patch semantics: omission leaves the
+stored value unchanged, `null` clears it, and a concrete value replaces it.
+`summary: []` also clears the summary.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  Extensible metadata patch for this compaction.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  The Agent-owned ID of this compaction, unique within the session.
+</ResponseField>
+<ResponseField name="error" type={"string | null"}>
+  Human-readable error details for the compaction.
+</ResponseField>
+<ResponseField
+  name="status"
+  type={<a href="#compactionstatus">CompactionStatus</a>}
+  required
+>
+  Current lifecycle status.
+</ResponseField>
+<ResponseField
+  name="summary"
+  type={
+    <>
+      <span>
+        <a href="#contentblock">ContentBlock[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -3835,6 +4202,76 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
 
+## <span class="font-mono">Notice</span>
+
+Fire-and-forget information for the user.
+
+Notices are live events rather than session history. Agents must not rely on
+a notice being received, displayed, or seen by the user.
+Agents MUST only send notices when the Client advertised
+`ClientSessionCapabilities::notices`. Otherwise, Agents may use an agent
+message when the information should still be surfaced to the user.
+
+See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata scoped to this notice.
+
+Omitted and `null` are equivalent and mean no metadata was supplied.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
+
+Omitted and `null` are equivalent and mean no description was supplied.
+
+</ResponseField>
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
+
+</ResponseField>
+
+## <span class="font-mono">NoticeCapabilities</span>
+
+Client support for presenting live notices to the user.
+
+**Type:** `object`
+
+## <span class="font-mono">NoticeSeverity</span>
+
+Severity hint for a session notice.
+
+**Type:** Union
+
+<ResponseField name="info" type="string">
+  Informational notice.
+</ResponseField>
+
+<ResponseField name="warning" type="string">
+  Warning notice.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error notice.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future notice severity.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP severities.
+
+</ResponseField>
+
 ## <span class="font-mono">NumberPropertySchema</span>
 
 Schema for number (floating-point) properties in an elicitation form.
@@ -4921,6 +5358,13 @@ Helps clients choose appropriate icons and UI treatment.
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
 </ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that no
+tool name is available.
+
+</ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.
 </ResponseField>
@@ -4964,6 +5408,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   Replace the locations collection.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Update the programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that
+the existing name is left unchanged.
+
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Update the raw input.
@@ -5142,6 +5593,122 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
     - Minimum: `0`
 
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="notice" type="object">
+Information for the user that is not part of session history.
+
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::notices`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata scoped to this notice.
+
+Omitted and `null` are equivalent and mean no metadata was supplied.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
+
+Omitted and `null` are equivalent and mean no description was supplied.
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"notice"`.
+</ResponseField>
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="compaction_update" type="object">
+A context compaction has been created or updated.
+
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Extensible metadata patch for this compaction.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  The Agent-owned ID of this compaction, unique within the session.
+</ResponseField>
+<ResponseField name="error" type={"string | null"}>
+  Human-readable error details for the compaction.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"compaction_update"`.
+</ResponseField>
+<ResponseField
+  name="status"
+  type={<a href="#compactionstatus">CompactionStatus</a>}
+  required
+>
+  Current lifecycle status.
+</ResponseField>
+<ResponseField
+  name="summary"
+  type={
+    <>
+      <span>
+        <a href="#contentblock">ContentBlock[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Complete replacement user-displayable summary content for the compaction.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="compaction_summary_chunk" type="object">
+A content block appended to a context compaction's retained summary.
+
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Metadata scoped to this chunk. Omission and `null` both mean absent.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  ID of the compaction whose summary receives this content.
+</ResponseField>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  One content block to append.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"compaction_summary_chunk"`.
 </ResponseField>
 
 </Expandable>
@@ -5465,6 +6032,13 @@ Helps clients choose appropriate icons and UI treatment.
   File locations affected by this tool call.
 Enables "follow-along" features in clients.
 </ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that no
+tool name is available.
+
+</ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Raw input parameters sent to the tool.
 </ResponseField>
@@ -5664,6 +6238,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   Replace the locations collection.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Update the programmatic name of the tool being invoked.
+
+This field is optional. Omitting it or sending `null` both mean that
+the existing name is left unchanged.
+
 </ResponseField>
 <ResponseField name="rawInput" type={"object"} >
   Update the raw input.

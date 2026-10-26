@@ -70,6 +70,27 @@ Agents **MUST** bind each elicitation and related state to the receiving Client
 connection and, when authentication exists, the verified user identity. A
 `sessionId` alone or an unverified Client-provided identity is not sufficient.
 
+### Foreground State
+
+A session-scoped elicitation follows the aggregate
+[foreground-state contract](/protocol/v2/prompt-lifecycle#waiting-for-user-action).
+When foreground work cannot progress without user action, the Agent **SHOULD**
+report `requires_action`. Once reported, it **MUST** report `running` when
+progress resumes, or `idle` if the work ends without resuming.
+
+An elicitation does not by itself start foreground work. Requests for
+independent background activity can be presented while the session remains
+`idle`. Request-scoped elicitations outside a session do not change any
+session's foreground state. Multiple outstanding requests are tracked
+individually, but their creation and responses do not each cause state updates.
+The Agent remains `running` while other foreground work can progress, and
+remains `requires_action` while the foreground workflow is still blocked.
+
+In URL mode, `accept` only means consent to open the URL. If foreground work
+still needs the user to finish the external interaction, a reported
+`requires_action` remains unchanged. The Agent reports `running` when foreground
+progress actually resumes. `elicitation/complete` is not itself a state update.
+
 ### Form mode
 
 ```json
@@ -165,6 +186,32 @@ unknown or already-completed IDs.
 
 Requests using a mode the Client has not advertised produce JSON-RPC `-32602`
 (Invalid params).
+
+## Session Cancellation
+
+[`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation) does not
+automatically cancel every elicitation scoped to the session. `sessionId` and
+`toolCallId` identify context, not a cancellation instruction.
+
+When cancelling work makes a pending elicitation no longer relevant, the Agent
+**SHOULD** cancel that individual request using
+[`$/cancel_request`](/protocol/v2/cancellation).
+An elicitation can depend on the affected work with or without a `toolCallId`.
+Clients handle individual cancellation using the existing request-cancellation
+rules rather than infer it from session scope. Request-scoped elicitations
+outside the session are unaffected by `session/cancel`.
+
+Clients **SHOULD** dismiss interaction UI they know is no longer relevant.
+An accepted URL interaction may continue externally after its create request
+has returned. Cancelling foreground work does not guarantee that an external
+browser page closes or undo external side effects. A repeated or resume idle
+snapshot carrying a previous `cancelled` stop reason does not cancel a current
+interaction.
+
+A response or external completion can race with cancellation. After foreground
+cancellation completes, the Agent **SHOULD NOT** use late responses or external
+completions to resume the cancelled work. An external URL workflow may still
+complete independently. Cancellation can finish without waiting for it.
 
 ## URL security
 

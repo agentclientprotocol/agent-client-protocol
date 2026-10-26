@@ -80,7 +80,7 @@ The patch fields are:
 - `cwd`: the command's working directory. Every supplied path **MUST** be absolute.
 - `output`: an authoritative replacement snapshot containing required `data`. `data` is RFC 4648 base64-encoded bytes and has JSON Schema `contentEncoding: "base64"`. A concrete snapshot is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. It replaces all previously stored bytes, and Clients **MUST NOT** merge or splice bytes from the previous snapshot into it. Later chunks append to the replacement. Optional nullable `output._meta` is scoped to that snapshot; omission and `null` are equivalent and mean no snapshot metadata was provided.
 - `exitStatus`: a concrete object marks the terminal as exited. Its `exitCode`, `signal`, and `_meta` fields are optional and nullable; omission and `null` are equivalent and mean that value was not provided. Agents should use conventional platform signal names. POSIX examples include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. `exitStatus._meta` is scoped to that exit information. `exitStatus: null` clears a previously reported exit status.
-- The top-level `_meta` is terminal-scoped and follows the same omitted, `null`, and concrete-object patch semantics as the other update fields.
+- The top-level `_meta` is terminal-scoped. Omission and `null` follow the same patch semantics as the other update fields, and a concrete object patches the stored metadata by top-level key, as defined by [Metadata Patches](./meta-patches.mdx).
 
 The terminal's exit status is independent of its tool call's status. Agents should update both when both states change.
 
@@ -187,4 +187,5 @@ Display-only terminal output has a small safe fallback: decode the bytes, saniti
 
 ## Revision history
 
+- 2026-10-13: A top-level `_meta` object now patches stored metadata by key, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-14: Initial draft.

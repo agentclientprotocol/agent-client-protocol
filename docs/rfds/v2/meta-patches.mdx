@@ -1,0 +1,173 @@
+---
+title: "v2 Metadata Patches"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+ACP v2 upsert updates should apply their top-level `_meta` as a patch one level down. Omitted `_meta` leaves the stored metadata unchanged and `null` clears it, as today. A `_meta` object patches the stored metadata by top-level key instead of replacing it: an omitted key is unchanged, a key set to `null` is removed, and any other value replaces that key whole.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+v2 upserts such as [`tool_call_update`](./tool-call-updates.mdx), [`terminal_update`](./terminal-output.mdx), and [message updates](./message-updates.mdx) treat `_meta` like every other patch field: omission leaves it unchanged, `null` clears it, and a concrete object replaces the whole stored object.
+
+Unlike the other patch fields, `_meta` has more than one writer. Its keys are usually namespaced by the extension that owns them, such as `zed.dev/debugMode`, and some are shared conventions such as W3C trace context. Replacing the whole object makes every writer responsible for every other writer's keys:
+
+- An Agent that sends different keys on different reports loses the earlier keys at each later report. v1 gave no rule for keeping a `tool_call_update`'s `_meta`, so v1 Agents that do this lose data after migrating, and the v2 migration guide had to tell them to resend every key on every report.
+- An intermediary, such as a proxy, that adds its own key to an update the Agent sent without `_meta` turns "unchanged" into "replace" and erases the Agent's stored metadata. To avoid that, it must track the stored metadata of every entity it forwards and resend the merged object.
+- Changing one key requires resending all of the others.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+For the top-level `_meta` of v2 upsert updates:
+
+- Omitted `_meta` leaves the stored metadata unchanged.
+- `_meta: null` clears all stored metadata.
+- A `_meta` object patches the stored metadata by top-level key:
+  - Keys the object omits keep their stored values, so `_meta: {}` changes nothing.
+  - A key set to `null` is removed. Removing a key that is not stored does nothing.
+  - Any other value replaces that key's stored value whole. Clients **MUST NOT** merge nested objects, and a `null` nested inside the value is ordinary data.
+- A key set to `null` never holds stored data, including on the first update for an entity.
+- Stored metadata with no keys is the same as no metadata.
+
+This is the three-state rule the update already applies to its own fields, applied one level down. It matches [JSON Merge Patch (RFC 7386)](https://www.rfc-editor.org/rfc/rfc7386) applied only to the top level of `_meta`. A JSON Merge Patch library merges nested objects recursively, so implementations cannot use one unmodified.
+
+The rule applies to the top-level `_meta` of:
+
+- `tool_call_update`, including the `toolCall` of a `session/request_permission` `tool_call` subject
+- `terminal_update`
+- `user_message`, `agent_message`, and `agent_thought`
+- `session_info_update`
+- `compaction_update`
+- the draft-only `subagent_update` and `session_message`
+
+It does not apply to `_meta` anywhere else: requests, responses, notification params, chunks, content items, terminal output snapshots, exit status, command permission subjects, and other nested objects keep their current meaning, where the metadata describes only the object that carries it. Data about a single notification rather than the entity belongs in the `session/update` notification's `params._meta`.
+
+For example, if a tool call's stored `_meta` is:
+
+```json
+{
+  "zed.dev/progress": 0.5,
+  "acme.dev/review": { "state": "pending" }
+}
+```
+
+and a later update sends:
+
+```json
+{
+  "sessionUpdate": "tool_call_update",
+  "toolCallId": "call_001",
+  "_meta": {
+    "zed.dev/progress": null,
+    "acme.dev/review": { "reviewer": "sam" },
+    "proxy.dev/route": "edge"
+  }
+}
+```
+
+the stored `_meta` becomes:
+
+```json
+{
+  "acme.dev/review": { "reviewer": "sam" },
+  "proxy.dev/route": "edge"
+}
+```
+
+### Replay and resynchronization
+
+An object is no longer a complete snapshot of an entity's metadata, so replay needs explicit rules:
+
+- Replay applies metadata patches exactly as live delivery does, in receive order for each entity, and never resets metadata implicitly. An update that replaces another field, such as a message update with `content`, leaves the `_meta` keys it does not mention.
+- Replaying the original updates in order reproduces the stored metadata, provided their removals are kept.
+- To send an entity's current metadata when the Client may already hold some, the Agent removes stale keys. It either sets each one to `null` alongside the current keys, or sends `_meta: null` and then the current object in a later update. The second form is not atomic, even within a JSON-RPC batch, so the Client may briefly hold no metadata.
+- When the current metadata is empty, the Agent sends `_meta: null`, not `{}`.
+- When the Client is known to hold no metadata for the entity, the current object alone is enough.
+- Intermediaries that combine updates **MUST** keep removals and clears. Replacing a clear followed by an object with just that object is wrong when earlier metadata may exist.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Each extension owns its top-level keys. It can set, replace, or remove them without knowing which other keys exist, and each update to its own key replaces that key's value in a single step. Proxies and other intermediaries can annotate forwarded updates without tracking entity state. Agents can change one key without resending the rest, and sending different keys on different reports no longer loses data.
+
+The cost is that replay and resynchronization must remove stale keys explicitly, and replacing all metadata in one update requires knowing which keys to remove.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Keep the schema shape. These upserts already represent `_meta` as a three-state field, and a `_meta` object can already carry `null` values.
+2. Define the rule, including replay, once in the v2 Extensibility page under [Metadata Patches](/protocol/v2/draft/extensibility#metadata-patches), and reference it from the tool call, terminal, message, session info, compaction, and session replay docs, the schema field descriptions, and the migration guide.
+3. Add `apply_meta_update` to the Rust v2 schema module and use it in `ToolCallUpdate::apply_update` and `TerminalUpdate::apply_update`.
+4. Leave v1 unchanged, including the v1 `session_message`, `subagent_update`, and `compaction_update` updates that replace `_meta` as a whole.
+
+### Conformance cases
+
+SDKs that store entity state should cover at least these cases:
+
+| Stored `_meta`            | Incoming `_meta`     | Result               |
+| ------------------------- | -------------------- | -------------------- |
+| `{"a": 1, "b": 2}`        | omitted              | `{"a": 1, "b": 2}`   |
+| `{"a": 1, "b": 2}`        | `null`               | no metadata          |
+| `{"a": 1, "b": 2}`        | `{}`                 | `{"a": 1, "b": 2}`   |
+| `{"a": 1, "b": 2}`        | `{"a": 3}`           | `{"a": 3, "b": 2}`   |
+| `{"a": 1, "b": 2}`        | `{"a": null}`        | `{"b": 2}`           |
+| no metadata               | `{"a": null}`        | no metadata          |
+| `{"a": {"x": 1, "y": 2}}` | `{"a": {"x": 3}}`    | `{"a": {"x": 3}}`    |
+| `{"a": [1, 2]}`           | `{"a": [3]}`         | `{"a": [3]}`         |
+| no metadata               | `{"a": {"x": null}}` | `{"a": {"x": null}}` |
+
+They should also cover unknown keys, a clear followed by an object, and replay over stale metadata.
+
+### Compatibility
+
+When converting v1 to v2, a v1 `_meta` object can be forwarded as is when the v1 source defines no replacement rule, as with `tool_call_update` and `session_info_update`; its keys now merge with earlier ones, and a key set to `null` becomes a removal, the closest v2 equivalent of storing `null`. Where v1 replaces `_meta` as a whole, an adapter that must preserve that behavior needs the previously forwarded keys so it can send `null` for each key that disappeared. Alternatively, it can send `_meta: null` before the new object.
+
+When converting v2 to v1, a v1 receiver may replace the whole stored object and may store `null` values literally. A stateful adapter can keep the merged metadata for each entity and send the complete merged object. A stateless adapter cannot represent key-level patches and must document that it is lossy for `_meta`.
+
+Within v2, an implementation must not copy metadata that is not a patch, such as a `session/list` entry's `_meta`, into a patch unchanged: its `null` key values would become removals.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not merge nested objects too?
+
+The top-level key is the unit of ownership. Below it, the extension that owns the key defines what its value means. A recursive merge would impose merge semantics on values the protocol otherwise treats as opaque, prevent an extension from replacing its own object in one update, and make `null` inside an extension's value mean removal. Stopping at the top level isolates writers from each other while leaving each value to its owner.
+
+### Why can't a key store a literal `null`?
+
+`null` is the removal signal, so storing it would require a second representation of removal. This is the same trade-off `rawInput` and `rawOutput` already make on tool calls, and the one JSON Merge Patch makes. An extension that needs a distinct empty value can use `false`, `{}`, or a value of its own.
+
+### How does a sender replace all metadata at once?
+
+It sets each key it wants to remove to `null` alongside the new keys in a single update. The original sender usually knows which keys it sent earlier. Otherwise it can send `_meta: null` followed by an update with the new object, accepting that the Client briefly has no metadata.
+
+### Why not keep whole replacement and ask writers to resend every key?
+
+That works only when a single writer controls every key and remembers them all. `_meta` is shared by extensions and intermediaries that do not know each other's keys, which is why it was the one patch field that needed a warning in the migration guide.
+
+### Does this resolve conflicts between writers?
+
+No. It keeps writers of different keys from erasing each other's data. Two writers of the same key still depend on receive order, and `_meta: null` still clears every key.
+
+### Why isn't `plan_update` included?
+
+`plan_update` replaces a plan's entries as a whole, and its `_meta` does not distinguish omission from `null`. Whether that metadata belongs to the plan or only to the notification is a separate decision. Making it a retained patch would need its own change.
+
+### Does this change `params._meta` on `session/update`?
+
+No. Notification-level metadata is not stored with an entity and is not a patch. It remains the place for data about a single notification, such as trace context.
+
+## Revision history
+
+- 2026-10-13: Initial draft.

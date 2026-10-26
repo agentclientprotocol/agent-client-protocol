@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
-use crate::SkipListener;
 
 #[cfg(feature = "schemars")]
 use super::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
@@ -134,7 +133,7 @@ impl EnumOption {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
@@ -860,7 +859,7 @@ pub struct MultiSelectPropertySchema {
     /// Default selected values.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default selections are provided.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub default: Option<Vec<String>>,
@@ -1661,7 +1660,7 @@ pub enum ElicitationMode {
 /// object for clients that store, replay, proxy, or forward elicitation
 /// requests.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_mode_schema))]
 #[serde(rename_all = "camelCase")]
@@ -1937,7 +1936,7 @@ pub enum ElicitationAction {
 /// response object for agents that store, replay, proxy, or forward elicitation
 /// responses.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_action_schema))]
 #[serde(rename_all = "camelCase")]

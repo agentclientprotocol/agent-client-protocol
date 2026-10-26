@@ -186,8 +186,9 @@ All fields are optional. Only include fields that have changed; omitted fields a
 </ResponseField>
 
 <ResponseField name="_meta" type="object | null">
-  Agent-specific metadata update. Omit to leave unchanged; set to `null` to
-  clear. See [Extensibility](/protocol/v2/extensibility).
+  Agent-specific metadata patch. Omit to leave unchanged; set to `null` to
+  clear. An object patches the stored metadata by top-level key. See [Metadata
+  Patches](/protocol/v2/extensibility#metadata-patches).
 </ResponseField>
 
 The `sessionId`, `cwd`, and `additionalDirectories` fields are **not** included

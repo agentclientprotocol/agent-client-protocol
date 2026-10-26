@@ -17,7 +17,7 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
-use crate::IntoOption;
+use crate::{IntoOption, ProtocolVersion};
 
 /// Convenience result type using this protocol version's error type.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -127,6 +127,16 @@ impl Error {
         }
     }
 
+    /// No supported protocol version is at or below the requested version.
+    #[must_use]
+    pub fn unsupported_protocol_version(
+        requested: ProtocolVersion,
+        supported: &[ProtocolVersion],
+    ) -> Self {
+        let error: Self = ErrorCode::UnsupportedProtocolVersion.into();
+        error.data(serde_json::json!({ "requested": requested, "supported": supported }))
+    }
+
     /// Converts a standard error into an internal JSON-RPC error.
     ///
     /// The error's string representation is included as additional data.
@@ -185,6 +195,11 @@ pub enum ErrorCode {
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Resource not found")]
     ResourceNotFound, // -32002
+    /// No protocol version supported by the Agent is at or below the requested version.
+    /// The error data contains the requested version and the Agent's supported versions.
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
+    #[strum(to_string = "Unsupported protocol version")]
+    UnsupportedProtocolVersion, // -32022
     /// Other undefined error code.
     #[cfg_attr(feature = "schemars", schemars(untagged))]
     #[strum(to_string = "Unknown error")]
@@ -202,6 +217,7 @@ impl From<i32> for ErrorCode {
             -32800 => ErrorCode::RequestCancelled,
             -32000 => ErrorCode::AuthRequired,
             -32002 => ErrorCode::ResourceNotFound,
+            -32022 => ErrorCode::UnsupportedProtocolVersion,
             _ => ErrorCode::Other(value),
         }
     }
@@ -218,6 +234,7 @@ impl From<ErrorCode> for i32 {
             ErrorCode::RequestCancelled => -32800,
             ErrorCode::AuthRequired => -32000,
             ErrorCode::ResourceNotFound => -32002,
+            ErrorCode::UnsupportedProtocolVersion => -32022,
             ErrorCode::Other(value) => value,
         }
     }
@@ -245,6 +262,7 @@ fn error_code_transform(schema: &mut Schema) {
         "RequestCancelled" => ErrorCode::RequestCancelled,
         "AuthRequired" => ErrorCode::AuthRequired,
         "ResourceNotFound" => ErrorCode::ResourceNotFound,
+        "UnsupportedProtocolVersion" => ErrorCode::UnsupportedProtocolVersion,
         _ => panic!("Unexpected error code name {name}"),
     };
     let mut description = schema
@@ -306,6 +324,26 @@ mod tests {
     use strum::IntoEnumIterator;
 
     use super::*;
+
+    #[test]
+    fn unsupported_protocol_version_includes_requested_and_supported() {
+        let error = Error::unsupported_protocol_version(
+            ProtocolVersion::V1,
+            &[ProtocolVersion::from(2_u16)],
+        );
+        assert_eq!(
+            serde_json::to_value(error).unwrap(),
+            serde_json::json!({
+                "code": -32022,
+                "message": "Unsupported protocol version",
+                "data": { "requested": 1, "supported": [2] },
+            })
+        );
+        assert_eq!(
+            Error::unsupported_protocol_version(ProtocolVersion::V1, &[]).data,
+            Some(serde_json::json!({ "requested": 1, "supported": [] }))
+        );
+    }
 
     #[test]
     fn serialize_error_code() {

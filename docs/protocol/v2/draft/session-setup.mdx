@@ -33,10 +33,11 @@ sequenceDiagram
             Agent->>Client: session/update
             Note over Agent,Client: All content reported
         end
+        Agent->>Client: "session/update (current state_update)"
         Agent-->>Client: session/resume response
     end
 
-    Note over Client,Agent: Ready for prompts
+    Note over Client,Agent: Session attached. Foreground state synchronized
 ```
 
 <br />
@@ -80,6 +81,49 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 }
 ```
 
+## Initial Session State
+
+New sessions default to `idle` until a `state_update` reports otherwise. Updates
+may arrive before or after the `session/new` response. Clients **MUST NOT**
+overwrite an already-reported state when the response arrives. An optional
+initial idle notification is a snapshot, not a completed turn.
+
+`session/resume` does not imply idle: an existing session may still be running
+or waiting for user action. See [Current-State Synchronization](#current-state-synchronization).
+
+Agents **MAY** include initial [configuration options](/protocol/v2/draft/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/draft/slash-commands) in `availableCommands` in `session/new`, `session/resume`, and, when supported, `session/fork` responses. For example, a new session can return both:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "configOptions": [
+      {
+        "configId": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
+      }
+    ],
+    "availableCommands": [
+      {
+        "name": "test",
+        "description": "Run tests for the current project"
+      }
+    ]
+  }
+}
+```
+
+`availableCommands` is optional. Omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing setup responses. Agents **MUST NOT** send `null` for this field. Tolerant receivers treat `null` or a malformed non-array value like omission and skip invalid command items within an array.
+
+Returning commands in the response avoids requiring command notifications before the `session/new` response. Agents can still advertise commands later or update the list through `available_commands_update` notifications. Each notification replaces the complete command list, including `[]` to clear it.
+
+For a fork, `availableCommands` advertises commands available in the newly created session, not the source session.
+
 ## Resuming Sessions
 
 Agents that support the `session` method surface **MUST** support
@@ -120,13 +164,15 @@ with:
 When `replayFrom` is omitted or `null`, the Agent **MUST NOT** replay the
 conversation history via `session/update` notifications before responding. It
 restores the session context, reconnects to the requested MCP servers, and
-returns once the session is ready to continue.
+returns once the session is attached and its current foreground state has been
+synchronized. The required current-state snapshot is live synchronization, not
+history replay.
 
 To request full history replay, Clients set `replayFrom` to
 `{ "type": "start" }`:
 
 Replay cursors are inclusive: replay includes the position identified by the
-cursor. For `{ "type": "start" }`, that means replaying the whole conversation.
+cursor. For `{ "type": "start" }`, that means replaying all retained conversation history.
 
 ```json
 {
@@ -143,10 +189,30 @@ cursor. For `{ "type": "start" }`, that means replaying the whole conversation.
 }
 ```
 
-When `replayFrom.type` is `"start"`, the Agent **MUST** replay the entire
-conversation to the Client in the form of `session/update` notifications before
+When `replayFrom.type` is `"start"`, the Agent **MUST** replay all retained
+conversation history to the Client in the form of `session/update` notifications before
 responding. User, agent, and thought messages can each be replayed as message
 updates with full `content` arrays or as chunks.
+
+The schema accepts custom and future `replayFrom.type` values so intermediaries
+can preserve them. An Agent that does not support the supplied cursor type
+**MUST** reject `session/resume` with `-32602` (Invalid params). It **MUST NOT**
+silently substitute another cursor or resume without replay. Malformed
+`replayFrom` values also result in `-32602`.
+
+Agents are not required to persist every inserted user message or retain it for
+any minimum period. Live-only messages, including locally handled commands, may
+be absent from replay. A successful prompt response confirms insertion, not
+future availability in history; absence from replay does not contradict it.
+
+[Session compactions](/protocol/v2/draft/prompt-lifecycle#session-compaction)
+are replayed using the same update, chunk, and patch semantics as live delivery.
+No Client capability is required.
+
+Live-only [notices](/protocol/v2/draft/prompt-lifecycle#session-notices) are not
+conversation history and **SHOULD NOT** be replayed. If the underlying condition
+is still relevant after resuming finishes, the Agent may emit a new notice as a
+new live event.
 
 For example, a user message from the conversation history:
 
@@ -192,10 +258,31 @@ Followed by the agent's response:
 }
 ```
 
-During replay, the Agent **MUST** include an opaque, unique `messageId` for each
-replayed message. `user_message`, `agent_message`, and `agent_thought` updates
+During replay, the Agent **MUST** include an opaque `messageId` for each
+replayed message, unique among messages of the same
+[type](/protocol/v2/draft/prompt-lifecycle#entity-ids). A retained user
+message inserted by `session/prompt` **MUST** use the ID returned in that
+prompt response, including after reconnecting or restarting the Agent. Replaying a command reports its message; it does not
+execute the command again.
+
+Agents **SHOULD** preserve agent and thought message IDs across replay when
+possible, but these IDs are not guaranteed to remain stable across reconnects
+or Agent restarts. Clients **MUST NOT** rely on them to deduplicate replay
+against previously received history. When requesting full replay, Clients
+**SHOULD** rebuild the agent and thought message history from the replay rather
+than merging it into existing history solely by `messageId`.
+
+`user_message`, `agent_message`, and `agent_thought` updates
 are upserts keyed by `messageId`; their `content` arrays replace the whole
 message content, while chunk updates with the same `messageId` append content.
+
+When replay reconstructs a message from its beginning using chunks, the Agent
+**MUST** first send the corresponding message update (`user_message`,
+`agent_message`, or `agent_thought`) with the same ID and `content: []`.
+This initializes or clears content under the ID used for that replay before
+replayed chunks append; it does not reconcile a message previously delivered
+under a different ID. A full-content message update can instead replace content
+under the replayed ID directly.
 
 Clients apply replayed message updates and chunks in the order they are
 received. If a message update with `content` arrives after chunks for the same
@@ -204,8 +291,16 @@ arrive after a message update, they append to that update's current content.
 Message updates that omit `content` can update other optional fields without
 changing the current content.
 
+Replay also applies top-level `_meta` as a
+[metadata patch](/protocol/v2/draft/extensibility#metadata-patches) and does not reset it.
+A message update that replaces `content` leaves `_meta` keys it does not
+mention. When the Client may already hold metadata for an entity, the Agent
+removes stale keys by setting them to `null`, or sends `_meta: null` before the
+current object.
+
 When all requested replay entries have been reported to the Client, the Agent
-**MUST** respond to the original `session/resume` request.
+**MUST** synchronize current state as described below, then respond to the
+original `session/resume` request.
 
 ```json
 {
@@ -215,8 +310,28 @@ When all requested replay entries have been reported to the Client, the Agent
 }
 ```
 
-The response **MAY** also include initial session configuration state when that
-feature is supported by the Agent.
+The response **MAY** also include `configOptions` and `availableCommands` as
+described in [Initial Session State](#initial-session-state), whether or not
+history replay was requested.
+
+### Current-State Synchronization
+
+For every successful resume, the Agent **MUST** send a current
+[`state_update`](/protocol/v2/draft/prompt-lifecycle#session-states) after any requested
+history replay and before the resume response. This is required even when
+`replayFrom` is omitted or `null`. The snapshot reports the current foreground
+state after resuming: `idle`, `running`, or `requires_action`, or the draft
+`unknown` state when activity is unobservable.
+
+Agents **MUST NOT** replay historical `state_update` notifications as current
+activity. The snapshot and subsequent live state changes **MUST** be delivered
+in order, without replacing a newer state with a stale snapshot. An idle
+snapshot may include the last stop reason for context, but does not report a
+new completion or cancellation. Clients **MUST NOT** reset the state to idle
+on the resume response.
+
+If connection loss made a pending permission request or elicitation unusable,
+the Agent **SHOULD** reestablish it or safely resolve the wait.
 
 ## Closing Active Sessions
 
@@ -245,6 +360,10 @@ with the session ID:
 The Agent **MUST** cancel any ongoing work for that session as if
 [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) had been called, then free the
 resources associated with the session.
+
+When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
+
+Closing may also cancel pending `session/prompt` requests, including queued prompts. If closing prevents a prompt's user message from being inserted, the Agent **MUST** answer that request with `-32800` (Request Cancelled). If the message has already been inserted, the Agent **MUST** respond successfully with its `messageId`, as described in [Prompt Accepted](/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted). Prompt responses need not precede the close response.
 
 On success, the Agent responds with an empty result object:
 
@@ -290,6 +409,69 @@ When present, `additionalDirectories` has the following behavior:
 - on `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
+
+## System Prompt (unstable)
+
+Agents that advertise `session.systemPrompt` allow Clients to include
+system-level instructions on `session/new`, `session/resume`, and, when the
+Agent supports it, `session/fork`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "systemPrompt": {
+      "mode": "append",
+      "content": [
+        {
+          "type": "text",
+          "text": "You are a code review specialist. Focus on security issues."
+        }
+      ]
+    }
+  }
+}
+```
+
+`systemPrompt` has the following behavior:
+
+- `mode` is required and selects how the Agent combines `content` with its own instructions
+- `mode` values beginning with `_` are reserved for implementation-specific modes, and other unknown values for future ACP modes. Clients **MUST** only use a mode the Agent advertised. An Agent that receives a mode it does not support **MUST** return an error rather than treating it as `append` or `override`
+- `append` adds `content` to the Agent's own instructions rather than replacing them. The Agent **SHOULD** give it system-level precedence, for example in the model's system prompt or developer instructions rather than in user-turn content; where it is placed and how it is formatted is up to the Agent
+- `override` replaces the Agent's built-in default instructions. It does not change tool availability, MCP servers, permissions, or session configuration. Context the Agent supplies from the workspace or environment, such as `AGENTS.md` files or skill listings, **MAY** still be included, and Agents **SHOULD** document what they keep. Clients that use `override` take responsibility for any tool guidance or safety instructions the Agent's default instructions provided
+- only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them. Agents **MUST** return an error for content blocks they do not support, including unknown types
+- omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
+- on `session/resume` and `session/fork`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
+- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unadvertised mode, an unsupported content block type, or content that exceeds its limits, it **MUST** return an error and **MUST NOT** create, resume, or fork the session. JSON-RPC `-32602` (Invalid params) is the **RECOMMENDED** error for malformed or unsupported values
+
+Clients **MUST** only send `systemPrompt` when the Agent advertises `session.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `session.systemPrompt.mode.override`:
+
+```json highlight={8-10}
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 2,
+    "capabilities": {
+      "session": {
+        "systemPrompt": {
+          "mode": { "override": {} }
+        }
+      }
+    },
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+Content delivered at system level carries more weight with the model than user turns or tool output. Clients **SHOULD** only send content they trust at that level.
 
 ## Session ID
 
@@ -442,6 +624,11 @@ Before using stdio or HTTP transports, Clients **MUST** verify the Agent's capab
           "http": {}
         }
       }
+    },
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
     }
   }
 }

@@ -76,8 +76,13 @@ consistent with `changes`.
 
 The patch format should be `git_patch`: one or more `diff --git` sections in
 Git's [`--patch` (`-p`) text format](https://git-scm.com/docs/diff-generate-patch).
-Paths MUST be absolute. Surrounding commit metadata and email envelopes MUST NOT
-be included. Agents SHOULD provide `patch` whenever feasible. Clients MUST
+Unlike Git, which writes paths relative to the repository root, every path MUST
+be absolute, including in `rename from`, `rename to`, `copy from`, and `copy to`
+lines, and MUST NOT have a prefix such as Git's default `a/` and `b/`.
+Otherwise paths follow Git: `/dev/null` names the missing side of an added or
+deleted file in the `---` and `+++` lines, and paths with unusual characters are
+quoted as Git quotes them. Surrounding commit metadata and email envelopes MUST
+NOT be included. Agents SHOULD provide `patch` whenever feasible. Clients MUST
 handle diffs where `patch` is omitted or `null`.
 
 Omit `patch` when patch text is not useful:
@@ -155,6 +160,23 @@ This is more specific than a plain unified diff and contains only patch sections
 not surrounding commit metadata or email envelopes. The format is broadly
 supported and can describe multiple files. ACP can add other patch formats later.
 
+### How does a `git_patch` write paths?
+
+ACP paths are absolute, so this is the one place `git_patch` departs from what
+Git writes: Git's paths are relative to the repository root. Without the `a/`
+and `b/` prefixes, every path in the patch, including `rename from`,
+`rename to`, `copy from`, and `copy to` lines, is the absolute path itself, so
+receivers can match it to `changes` without guessing whether a leading
+component is a prefix. Everything else stays as Git writes it, including
+`/dev/null` for the missing side of an add or delete and quoting of unusual
+paths, to keep the text close to what Git patch parsers expect.
+
+Agents using Git can get most of the way by setting `$ROOT` to the repository
+root and running `git diff --src-prefix="$ROOT/" --dst-prefix="$ROOT/"`. Git never
+prefixes `rename from`, `rename to`, `copy from`, or `copy to` paths, so those
+still need the repository root prepended. The result is not meant for
+`git apply`, which rejects absolute paths.
+
 ### Why is `patch` top-level instead of attached to individual changes?
 
 Git `--patch` text can describe several files and several operation kinds at once.
@@ -190,5 +212,6 @@ indicators.
 
 ## Revision history
 
+- 2026-10-12: Specify that every `git_patch` path, including rename and copy headers, is absolute with no `a/` or `b/` prefix, and otherwise follows Git, including `/dev/null` and path quoting
 - 2026-07-20: Define `git_patch` as Git `--patch` text and rename `patch.diff` to `patch.text`
 - 2026-07-02: Initial draft

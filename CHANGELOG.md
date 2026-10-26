@@ -1,5 +1,116 @@
 # Changelog
 
+## [Unreleased]
+
+## [1.12.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.11.0...v1.12.0) - 2026-10-16
+
+### Added
+
+- *(unstable-v2)* patch upsert _meta by top-level key ([#2372](https://github.com/agentclientprotocol/agent-client-protocol/pull/2372))
+- *(unstable)* add client system prompt schema ([#2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361))
+- *(rust)* implement Eq for content blocks ([#2352](https://github.com/agentclientprotocol/agent-client-protocol/pull/2352))
+
+### Fixed
+
+- *(unstable)* remove next edit suggestions ([#2266](https://github.com/agentclientprotocol/agent-client-protocol/pull/2266))
+- *(schema)* align v2 experimental feature compatibility ([#2397](https://github.com/agentclientprotocol/agent-client-protocol/pull/2397))
+
+### Other
+
+- *(unstable-v2)* define foreground state transitions ([#2411](https://github.com/agentclientprotocol/agent-client-protocol/pull/2411))
+- *(v2)* clarify replay IDs and unsupported cursors ([#2398](https://github.com/agentclientprotocol/agent-client-protocol/pull/2398))
+- *(v2)* align normative cancellation requirements ([#2390](https://github.com/agentclientprotocol/agent-client-protocol/pull/2390))
+- *(unstable-v2)* clarify prompt insertion contract ([#2392](https://github.com/agentclientprotocol/agent-client-protocol/pull/2392))
+- *(unstable-v2)* clarify foreground work lifecycle ([#2387](https://github.com/agentclientprotocol/agent-client-protocol/pull/2387))
+- *(v2)* clarify prompt cancellation when closing sessions ([#2385](https://github.com/agentclientprotocol/agent-client-protocol/pull/2385))
+- *(schema)* specify how git_patch writes paths ([#2362](https://github.com/agentclientprotocol/agent-client-protocol/pull/2362))
+- *(unstable)* clarify that a forked session is active ([#2359](https://github.com/agentclientprotocol/agent-client-protocol/pull/2359))
+- *(schema)* list full v2 session baseline on AgentCapabilities.session ([#2358](https://github.com/agentclientprotocol/agent-client-protocol/pull/2358))
+- *(schema)* clarify v2 foreground work can start without a prompt ([#2357](https://github.com/agentclientprotocol/agent-client-protocol/pull/2357))
+
+## [1.11.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.2...v1.11.0) - 2026-10-09
+
+### Added
+
+- *(schema)* stabilize session notices ([#2336](https://github.com/agentclientprotocol/agent-client-protocol/pull/2336))
+- *(schema)* stabilize session compaction ([#2334](https://github.com/agentclientprotocol/agent-client-protocol/pull/2334))
+- *(unstable)* report failures after prompt insertion with an error stop reason ([#2281](https://github.com/agentclientprotocol/agent-client-protocol/pull/2281))
+
+### Fixed
+
+- *(schema)* reject malformed values receivers act on ([#2333](https://github.com/agentclientprotocol/agent-client-protocol/pull/2333))
+
+### Other
+
+- *(schema)* clarify v2 entity IDs are unique per entity type ([#2332](https://github.com/agentclientprotocol/agent-client-protocol/pull/2332))
+- *(rust)* compare empty collections with assert_eq! ([#2279](https://github.com/agentclientprotocol/agent-client-protocol/pull/2279))
+
+## [1.10.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.1...v1.10.2) - 2026-10-01
+
+### Fixed
+
+- *(rust)* remove skipped-entry deserialization logging ([#2273](https://github.com/agentclientprotocol/agent-client-protocol/pull/2273))
+
+### Fixed
+
+- *(rust)* silently skip malformed list entries without logging Serde errors or private payload values. The `tracing` feature remains available as a backwards-compatible no-op.
+
+## [1.10.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.10.0...v1.10.1) - 2026-09-30
+
+### Fixed
+
+- *(unstable)* allow MCP response extensions ([#2265](https://github.com/agentclientprotocol/agent-client-protocol/pull/2265))
+
+## [1.10.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.1...v1.10.0) - 2026-09-30
+
+### Added
+
+- *(unstable-v2)* return available commands in session responses ([#2259](https://github.com/agentclientprotocol/agent-client-protocol/pull/2259))
+- *(unstable)* Initial RFD and schema for subagents ([#1992](https://github.com/agentclientprotocol/agent-client-protocol/pull/1992))
+- *(unstable)* make MCP-over-ACP request-scoped ([#2223](https://github.com/agentclientprotocol/agent-client-protocol/pull/2223))
+
+## [1.9.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.9.0...v1.9.1) - 2026-09-18
+
+### Fixed
+
+- *(rust)* accept null for defaultable payloads ([#2178](https://github.com/agentclientprotocol/agent-client-protocol/pull/2178))
+
+## [1.9.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.8.0...v1.9.0) - 2026-09-18
+
+### Added
+
+- *(unstable-v2)* return message ID on prompt insertion ([#2175](https://github.com/agentclientprotocol/agent-client-protocol/pull/2175))
+- *(unstable)* add v1 session notice capability ([#2171](https://github.com/agentclientprotocol/agent-client-protocol/pull/2171))
+
+### Other
+
+- *(unstable-v2)* cover stateful tool and terminal patches ([#2174](https://github.com/agentclientprotocol/agent-client-protocol/pull/2174))
+
+## [1.8.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.7.0...v1.8.0) - 2026-09-17
+
+### Added
+
+- *(schema)* stabilize tool call name ([#2166](https://github.com/agentclientprotocol/agent-client-protocol/pull/2166))
+- *(unstable)* add session notices schema ([#2004](https://github.com/agentclientprotocol/agent-client-protocol/pull/2004))
+
+### Other
+
+- *(deps)* bump actions-rust-lang/setup-rust-toolchain from 1.17.0 to 2.0.0 ([#2156](https://github.com/agentclientprotocol/agent-client-protocol/pull/2156))
+
+## [1.7.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.6.0...v1.7.0) - 2026-08-20
+
+### Added
+
+- *(unstable)* add session compaction updates ([#2002](https://github.com/agentclientprotocol/agent-client-protocol/pull/2002))
+- *(schema)* stabilize terminal authentication ([#2000](https://github.com/agentclientprotocol/agent-client-protocol/pull/2000))
+- *(rust)* make schemars optional ([#1939](https://github.com/agentclientprotocol/agent-client-protocol/pull/1939))
+- *(schema)* stabilize elicitation ([#1779](https://github.com/agentclientprotocol/agent-client-protocol/pull/1779))
+
+### Other
+
+- *(unstable-v2)* remove conversion helpers ([#1809](https://github.com/agentclientprotocol/agent-client-protocol/pull/1809))
+- *(rfd)* Move terminal auth to preview ([#1796](https://github.com/agentclientprotocol/agent-client-protocol/pull/1796))
+
 ## [1.6.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.5.0...v1.6.0) - 2026-07-21
 
 ### Added

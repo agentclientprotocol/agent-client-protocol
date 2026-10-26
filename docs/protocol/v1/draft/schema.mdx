@@ -68,180 +68,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
-<a id="document-didchange"></a>
-### <span class="font-mono">document/didChange</span>
-
-**UNSTABLE**
-
-Notification sent when a file is edited.
-
-#### <span class="font-mono">DidChangeDocumentNotification</span>
-
-Notification sent when a file is edited.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="contentChanges" type={<a href="#textdocumentcontentchangeevent">TextDocumentContentChangeEvent[]</a>} required>
-  The content changes.
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this notification.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the changed document.
-</ResponseField>
-<ResponseField name="version" type={"int64"} required>
-  The new version number of the document.
-</ResponseField>
-
-<a id="document-didclose"></a>
-### <span class="font-mono">document/didClose</span>
-
-**UNSTABLE**
-
-Notification sent when a file is closed.
-
-#### <span class="font-mono">DidCloseDocumentNotification</span>
-
-Notification sent when a file is closed.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this notification.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the closed document.
-</ResponseField>
-
-<a id="document-didfocus"></a>
-### <span class="font-mono">document/didFocus</span>
-
-**UNSTABLE**
-
-Notification sent when a file becomes the active editor tab.
-
-#### <span class="font-mono">DidFocusDocumentNotification</span>
-
-Notification sent when a file becomes the active editor tab.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="position" type={<a href="#position">Position</a>} required>
-  The current cursor position.
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this notification.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the focused document.
-</ResponseField>
-<ResponseField name="version" type={"int64"} required>
-  The version number of the document.
-</ResponseField>
-<ResponseField name="visibleRange" type={<a href="#range">Range</a>} required>
-  The portion of the file currently visible in the editor viewport.
-</ResponseField>
-
-<a id="document-didopen"></a>
-### <span class="font-mono">document/didOpen</span>
-
-**UNSTABLE**
-
-Notification sent when a file is opened in the editor.
-
-#### <span class="font-mono">DidOpenDocumentNotification</span>
-
-Notification sent when a file is opened in the editor.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="languageId" type={"string"} required>
-  The language identifier of the document (e.g., "rust", "python").
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this notification.
-</ResponseField>
-<ResponseField name="text" type={"string"} required>
-  The full text content of the document.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the opened document.
-</ResponseField>
-<ResponseField name="version" type={"int64"} required>
-  The version number of the document.
-</ResponseField>
-
-<a id="document-didsave"></a>
-### <span class="font-mono">document/didSave</span>
-
-**UNSTABLE**
-
-Notification sent when a file is saved.
-
-#### <span class="font-mono">DidSaveDocumentNotification</span>
-
-Notification sent when a file is saved.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this notification.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the saved document.
-</ResponseField>
-
 ### <span class="font-mono">initialize</span>
 
 Establishes the connection with a client and negotiates protocol capabilities.
@@ -388,7 +214,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Exchanges an MCP-over-ACP message.
+Sends an MCP-over-ACP notification.
 
 #### <span class="font-mono">MessageMcpNotification</span>
 
@@ -398,8 +224,8 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Notification parameters for `mcp/message`.
 
-This is used when the wrapped MCP message is a notification and the outer JSON-RPC
-envelope has no `id`.
+Sent by the provider to the consumer for an active request (including
+subscription acknowledgements and updates); the outer envelope has no `id`.
 
 **Type:** Object
 
@@ -412,9 +238,6 @@ these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
 </ResponseField>
 <ResponseField name="method" type={"string"} required>
   The inner MCP method name.
@@ -425,285 +248,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 If omitted or set to `null`, the inner MCP message has no params.
 
 </ResponseField>
-
-#### <span class="font-mono">MessageMcpRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `mcp/message`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
+<ResponseField name="requestId" type={<a href="#mcprequestid">McpRequestId</a>} required>
+  The identifier of the active inner MCP request.
 </ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
-</ResponseField>
-<ResponseField name="method" type={"string"} required>
-  The inner MCP method name.
-</ResponseField>
-<ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params.
-
-If omitted or set to `null`, the inner MCP message has no params.
-
-</ResponseField>
-
-#### <span class="font-mono">MessageMcpResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response to `mcp/message`.
-
-This is the inner MCP response result payload. Any JSON value is valid.
-
-<a id="nes-accept"></a>
-### <span class="font-mono">nes/accept</span>
-
-**UNSTABLE**
-
-Notification sent when a suggestion is accepted.
-
-#### <span class="font-mono">AcceptNesNotification</span>
-
-Notification sent when a suggestion is accepted.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  The ID of the accepted suggestion.
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this notification.
-</ResponseField>
-
-<a id="nes-close"></a>
-### <span class="font-mono">nes/close</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Closes an active NES session and frees up any resources associated with it.
-
-The agent must cancel any ongoing work and then free up any resources
-associated with the NES session.
-
-#### <span class="font-mono">CloseNesRequest</span>
-
-Request to close an NES session.
-
-The agent **must** cancel any ongoing work related to the NES session
-and then free up any resources associated with the session.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The ID of the NES session to close.
-</ResponseField>
-
-#### <span class="font-mono">CloseNesResponse</span>
-
-Response from closing an NES session.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-<a id="nes-reject"></a>
-### <span class="font-mono">nes/reject</span>
-
-**UNSTABLE**
-
-Notification sent when a suggestion is rejected.
-
-#### <span class="font-mono">RejectNesNotification</span>
-
-Notification sent when a suggestion is rejected.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  The ID of the rejected suggestion.
-</ResponseField>
-<ResponseField name="reason" type={<><span><a href="#nesrejectreason">NesRejectReason</a></span><span> | null</span></>} >
-  The reason for rejection.
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this notification.
-</ResponseField>
-
-<a id="nes-start"></a>
-### <span class="font-mono">nes/start</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Starts an NES session.
-
-#### <span class="font-mono">StartNesRequest</span>
-
-Request to start an NES session.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="repository" type={<><span><a href="#nesrepository">NesRepository</a></span><span> | null</span></>} >
-  Repository metadata, if the workspace is a git repository.
-</ResponseField>
-<ResponseField name="workspaceFolders" type={<><span><a href="#workspacefolder">WorkspaceFolder[]</a></span><span> | null</span></>} >
-  The workspace folders.
-</ResponseField>
-<ResponseField name="workspaceUri" type={"string | null"} >
-  The root URI of the workspace.
-</ResponseField>
-
-#### <span class="font-mono">StartNesResponse</span>
-
-Response to `nes/start`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for the newly started NES session.
-</ResponseField>
-
-<a id="nes-suggest"></a>
-### <span class="font-mono">nes/suggest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Requests a code suggestion.
-
-#### <span class="font-mono">SuggestNesRequest</span>
-
-Request for a code suggestion.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="context" type={<><span><a href="#nessuggestcontext">NesSuggestContext</a></span><span> | null</span></>} >
-  Context for the suggestion, included based on agent capabilities.
-</ResponseField>
-<ResponseField name="position" type={<a href="#position">Position</a>} required>
-  The current cursor position.
-</ResponseField>
-<ResponseField name="selection" type={<><span><a href="#range">Range</a></span><span> | null</span></>} >
-  The current text selection range, if any.
-</ResponseField>
-<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
-  The session ID for this request.
-</ResponseField>
-<ResponseField name="triggerKind" type={<a href="#nestriggerkind">NesTriggerKind</a>} required>
-  What triggered this suggestion request.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the document to suggest for.
-</ResponseField>
-<ResponseField name="version" type={"int64"} required>
-  The version number of the document.
-</ResponseField>
-
-#### <span class="font-mono">SuggestNesResponse</span>
-
-Response to `nes/suggest`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="suggestions" type={<a href="#nessuggestion">NesSuggestion[]</a>} required>
-  The list of suggestions.
+<ResponseField name="serverId" type={<a href="#mcpserveracpid">McpServerAcpId</a>} required>
+  The declared ACP MCP server handling the associated request.
 </ResponseField>
 
 <a id="providers-disable"></a>
@@ -1032,6 +581,10 @@ The agent should create a new session with the same conversation context as the
 original, allowing operations like generating summaries without affecting the
 original session's history.
 
+As with `session/new`, the forked session is active once the agent responds,
+set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
+The client can prompt it without calling `session/load` or `session/resume` first.
+
 #### <span class="font-mono">ForkSessionRequest</span>
 
 **UNSTABLE**
@@ -1073,6 +626,20 @@ session.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to fork.
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the forked session.
+
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the source session or use its default
+instructions. Clients MUST only send this when the Agent advertises
+`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
+for the source session.
+
 </ResponseField>
 
 #### <span class="font-mono">ForkSessionResponse</span>
@@ -1219,6 +786,20 @@ the request `cwd` matches the session's `cwd`.
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to load.
 </ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the loaded session.
+
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the session or use its default instructions.
+Clients MUST only send this when the Agent advertises
+`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
+when the session was created.
+
+</ResponseField>
 
 #### <span class="font-mono">LoadSessionResponse</span>
 
@@ -1294,6 +875,18 @@ additional roots are activated for the new session.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} required>
   List of MCP (Model Context Protocol) servers the agent should connect to.
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the new session.
+
+Optional. Omitted and `null` are equivalent and mean the Agent uses its
+own default instructions. Clients MUST only send this when the Agent
+advertises `sessionCapabilities.systemPrompt`.
+
 </ResponseField>
 
 #### <span class="font-mono">NewSessionResponse</span>
@@ -1464,6 +1057,20 @@ the request `cwd` matches the session's `cwd`.
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to resume.
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System-level instructions for the resumed session.
+
+Optional. Omitted and `null` are equivalent; the Agent may then keep a
+system prompt it stored with the session or use its default instructions.
+Clients MUST only send this when the Agent advertises
+`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
+when the session was created.
+
 </ResponseField>
 
 #### <span class="font-mono">ResumeSessionResponse</span>
@@ -1723,6 +1330,45 @@ Form-based elicitation where the client renders a form from the provided schema.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="url" type="object">
@@ -1744,6 +1390,45 @@ URL-based elicitation where the client directs the user to a URL.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 <ResponseField name="other" type="object">
@@ -1769,6 +1454,45 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="Session">
+Tied to a session, optionally to a specific tool call within that session.
+
+<Expandable title="Properties">
+
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session this elicitation is tied to.
+</ResponseField>
+<ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
+  Optional tool call within the session.
+
+Optional. Omitted and `null` are equivalent and mean the elicitation is scoped to the
+session without a specific tool call.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Request">
+Tied to a specific JSON-RPC request outside of a session
+(e.g., during auth/configuration phases before any session is started).
+
+<Expandable title="Properties">
+
+<ResponseField
+  name="requestId"
+  type={<a href="#requestid">RequestId</a>}
+  required
+>
+  The request this elicitation is tied to.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 </ResponseField>
 
 #### <span class="font-mono">CreateElicitationResponse</span>
@@ -1978,117 +1702,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
-<a id="mcp-connect"></a>
-### <span class="font-mono">mcp/connect</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Opens an MCP-over-ACP connection.
-
-#### <span class="font-mono">ConnectMcpRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `mcp/connect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="serverId" type={<a href="#mcpserveracpid">McpServerAcpId</a>} required>
-  The ACP MCP server ID that was provided by the component declaring the MCP server.
-</ResponseField>
-
-#### <span class="font-mono">ConnectMcpResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response to `mcp/connect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The unique identifier for this MCP-over-ACP connection.
-</ResponseField>
-
-<a id="mcp-disconnect"></a>
-### <span class="font-mono">mcp/disconnect</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Closes an MCP-over-ACP connection.
-
-#### <span class="font-mono">DisconnectMcpRequest</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Request parameters for `mcp/disconnect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection to close.
-</ResponseField>
-
-#### <span class="font-mono">DisconnectMcpResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Response to `mcp/disconnect`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
 <a id="client-mcp-message"></a>
 ### <span class="font-mono">mcp/message</span>
 
@@ -2097,42 +1710,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Exchanges an MCP-over-ACP message.
-
-#### <span class="font-mono">MessageMcpNotification</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Notification parameters for `mcp/message`.
-
-This is used when the wrapped MCP message is a notification and the outer JSON-RPC
-envelope has no `id`.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
-</ResponseField>
-<ResponseField name="method" type={"string"} required>
-  The inner MCP method name.
-</ResponseField>
-<ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params.
-
-If omitted or set to `null`, the inner MCP message has no params.
-
-</ResponseField>
 
 #### <span class="font-mono">MessageMcpRequest</span>
 
@@ -2154,9 +1731,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="connectionId" type={<a href="#mcpconnectionid">McpConnectionId</a>} required>
-  The MCP-over-ACP connection this message is sent on.
-</ResponseField>
 <ResponseField name="method" type={"string"} required>
   The inner MCP method name.
 </ResponseField>
@@ -2166,16 +1740,57 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 If omitted or set to `null`, the inner MCP message has no params.
 
 </ResponseField>
+<ResponseField name="requestId" type={<a href="#mcprequestid">McpRequestId</a>} required>
+  The caller-generated identifier for the inner MCP request.
+</ResponseField>
+<ResponseField name="serverId" type={<a href="#mcpserveracpid">McpServerAcpId</a>} required>
+  The declared ACP MCP server receiving this request.
+</ResponseField>
 
 #### <span class="font-mono">MessageMcpResponse</span>
 
 **UNSTABLE**
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
+The successful outer ACP `mcp/message` response carries exactly one
+inner MCP outcome: an opaque result (including JSON null), or an MCP error.
+Outer ACP errors are reserved for binding and runtime failures.
 
-Response to `mcp/message`.
+Both branches require their carrier key. An error must be a non-null object.
+Unknown outer fields are ignored; inner result and error fields are preserved.
+Carrier `_meta` is optional; null or invalid values are treated as absent.
+Senders must include exactly one outcome; receivers prefer `result` if both are present.
 
-This is the inner MCP response result payload. Any JSON value is valid.
+**Type:** Union
+
+<ResponseField name="Result" type="object">
+An opaque inner MCP result.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Optional ACP carrier metadata.
+</ResponseField>
+<ResponseField name="result" type={"any"} required>
+  Required, even if JSON null.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Error" type="object">
+A structured inner MCP error.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Optional ACP carrier metadata.
+</ResponseField>
+<ResponseField name="error" type={<a href="#mcperror">McpError</a>} required>
+  Required, non-null MCP error object.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
 
 <a id="session-request_permission"></a>
 ### <span class="font-mono">session/request_permission</span>
@@ -2707,25 +2322,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
     - Default: `{"http":false,"sse":false,"acp":false}`
 
 </ResponseField>
-<ResponseField name="nes" type={<><span><a href="#nescapabilities">NesCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-NES (Next Edit Suggestions) capabilities supported by the agent.
-
-Optional. Omitted or `null` both mean the agent does not advertise support
-for NES methods.
-
-</ResponseField>
-<ResponseField name="positionEncoding" type={<><span><a href="#positionencodingkind">PositionEncodingKind</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-The position encoding selected by the agent from the client's supported encodings.
-
-</ResponseField>
 <ResponseField name="promptCapabilities" type={<a href="#promptcapabilities">PromptCapabilities</a>} >
   Prompt capabilities supported by the agent.
 
@@ -2804,10 +2400,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">AuthCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Authentication capabilities supported by the client.
 
 Advertised during initialization to inform the agent which authentication
@@ -2847,10 +2439,6 @@ When no `type` is present, the method is treated as `agent`.
 **Type:** Union
 
 <ResponseField name="terminal" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Client runs the configured agent program as a separate interactive
 process, without passing this method to `authenticate`.
 
@@ -2950,10 +2538,6 @@ Typed identifier used for auth method values on the wire.
 **Type:** `string`
 
 ## <span class="font-mono">AuthMethodTerminal</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Terminal-based authentication method.
 
@@ -3164,11 +2748,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="auth" type={<a href="#authcapabilities">AuthCapabilities</a>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Authentication capabilities supported by the client.
+  Authentication capabilities supported by the client.
 Determines which authentication method types the agent may include
 in its `InitializeResponse`.
 
@@ -3190,17 +2770,6 @@ Determines which file operations the agent can request.
     - Default: `{"readTextFile":false,"writeTextFile":false}`
 
 </ResponseField>
-<ResponseField name="nes" type={<><span><a href="#clientnescapabilities">ClientNesCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-NES (Next Edit Suggestions) capabilities supported by the client.
-
-Optional. Omitted or `null` both mean the client does not advertise any
-NES suggestion-kind extensions.
-
-</ResponseField>
 <ResponseField name="plan" type={<><span><a href="#plancapabilities">PlanCapabilities</a></span><span> | null</span></>} >
   **UNSTABLE**
 
@@ -3212,14 +2781,6 @@ Optional. Omitted or `null` both mean the client does not advertise support.
 Supplying `\{\}` means the client can receive both update types.
 
 </ResponseField>
-<ResponseField name="positionEncodings" type={<a href="#positionencodingkind">PositionEncodingKind[]</a>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-The position encodings supported by the client, in order of preference.
-
-</ResponseField>
 <ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
   Session-related capabilities supported by the client.
 
@@ -3227,37 +2788,24 @@ Optional. Omitted or `null` both mean the client does not advertise any
 session-related extensions.
 
 </ResponseField>
+<ResponseField name="subagents" type={<><span><a href="#subagentcapabilities">SubagentCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the client understands exposed subagent sessions.
+
+Optional and nullable. Omitted or `null` both mean the client does not
+advertise support.
+Supplying `\{\}` means the client understands child associations, work-state
+snapshots, session-directed messages, and restricted-session semantics.
+
+</ResponseField>
 <ResponseField name="terminal" type={"boolean"} >
   Whether the Client support all `terminal/*` methods.
 
     - Default: `false`
 
-</ResponseField>
-
-## <span class="font-mono">ClientNesCapabilities</span>
-
-NES capabilities advertised by the client during initialization.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="jump" type={<><span><a href="#nesjumpcapabilities">NesJumpCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports the `jump` suggestion kind.
-</ResponseField>
-<ResponseField name="rename" type={<><span><a href="#nesrenamecapabilities">NesRenameCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports the `rename` suggestion kind.
-</ResponseField>
-<ResponseField name="searchAndReplace" type={<><span><a href="#nessearchandreplacecapabilities">NesSearchAndReplaceCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports the `searchAndReplace` suggestion kind.
 </ResponseField>
 
 ## <span class="font-mono">ClientSessionCapabilities</span>
@@ -3276,12 +2824,143 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="compaction" type={<><span><a href="#compactioncapabilities">CompactionCapabilities</a></span><span> | null</span></>} >
+  Support for ID-addressed context compaction updates. Omitted or `null`
+means unsupported; `\{\}` advertises the complete compaction contract.
+</ResponseField>
 <ResponseField name="configOptions" type={<><span><a href="#sessionconfigoptionscapabilities">SessionConfigOptionsCapabilities</a></span><span> | null</span></>} >
   Config option capabilities supported by the client.
 
 Omitted or `null` both mean the client does not advertise support for any
 config option extensions.
 
+</ResponseField>
+<ResponseField name="notices" type={<><span><a href="#noticecapabilities">NoticeCapabilities</a></span><span> | null</span></>} >
+  Support for live user-facing `notice` session updates.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+Supplying `\{\}` means the client can present notices to the user.
+
+</ResponseField>
+
+## <span class="font-mono">CompactionCapabilities</span>
+
+Client support for ID-addressed context compaction updates.
+
+**Type:** `object`
+
+## <span class="font-mono">CompactionId</span>
+
+Unique identifier for a context compaction within a session.
+
+**Type:** `string`
+
+## <span class="font-mono">CompactionStatus</span>
+
+Lifecycle state of a context compaction.
+
+**Type:** Union
+
+<ResponseField name="in_progress" type="string">
+  Compaction has started and has not finished.
+</ResponseField>
+
+<ResponseField name="completed" type="string">
+  Compaction finished successfully.
+</ResponseField>
+
+<ResponseField name="failed" type="string">
+  Compaction finished unsuccessfully.
+</ResponseField>
+
+<ResponseField name="cancelled" type="string">
+  Compaction was cancelled before it finished.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future compaction status.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP statuses.
+
+</ResponseField>
+
+## <span class="font-mono">CompactionSummaryChunk</span>
+
+A content block appended to a compaction's summary. A first-seen ID creates
+an in-progress compaction. Chunks append in receive order.
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  Metadata scoped to this chunk. Omission and `null` both mean absent.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  ID of the compaction whose summary receives this content.
+</ResponseField>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  One content block to append.
+</ResponseField>
+
+## <span class="font-mono">CompactionUpdate</span>
+
+A context compaction upsert. The first notification fixes the compaction's
+timeline position. Later updates with the same ID patch that entity in place.
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+`summary`, `error`, and `_meta` have patch semantics: omission leaves the
+stored value unchanged, `null` clears it, and a concrete value replaces it.
+`summary: []` also clears the summary.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  Extensible metadata patch for this compaction.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  The Agent-owned ID of this compaction, unique within the session.
+</ResponseField>
+<ResponseField name="error" type={"string | null"}>
+  Human-readable error details for the compaction.
+</ResponseField>
+<ResponseField
+  name="status"
+  type={<a href="#compactionstatus">CompactionStatus</a>}
+  required
+>
+  Current lifecycle status.
+</ResponseField>
+<ResponseField
+  name="summary"
+  type={
+    <>
+      <span>
+        <a href="#contentblock">ContentBlock[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Complete replacement user-displayable summary content for the compaction.
 </ResponseField>
 
 ## <span class="font-mono">ConfigOptionUpdate</span>
@@ -4472,6 +4151,26 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
   Other undefined error code.
 </ResponseField>
 
+## <span class="font-mono">ErrorStopReason</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Details of a failure that ended a child's foreground work.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+
 ## <span class="font-mono">ExtNotification</span>
 
 Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -4548,6 +4247,143 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="value" type={"string"} required>
   The value to set for the HTTP header.
+</ResponseField>
+
+## <span class="font-mono">IdleStateUpdate</span>
+
+The child is ready to process another prompt.
+
+An omitted, `null`, or malformed `stopReason` means not reported.
+
+**Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP for additional metadata.
+Implementations MUST NOT make assumptions about values at these keys.
+Optional; omitted and `null` mean no metadata for this state snapshot.
+</ResponseField>
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Current work state](https://agentclientprotocol.com/rfds/subagents#current-work-state)
+
+</ResponseField>
+<ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
+  **UNSTABLE** Token usage for completed foreground work.
+
+Optional; omitted or `null` means not reported.
+
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="end_turn" type="object">
+The work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The work ended because the agent reached the maximum number of allowed
+agent requests.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The work ended because the agent refused to continue.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+The work was cancelled.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The work ended because something failed.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Unrecognized stop reason.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">ImageContent</span>
@@ -4759,13 +4595,39 @@ Agent supports `McpServer::Acp`.
 
 </ResponseField>
 
-## <span class="font-mono">McpConnectionId</span>
+## <span class="font-mono">McpError</span>
+
+**UNSTABLE**
+
+An inner MCP error, distinct from an outer ACP binding or runtime error.
+
+`code` and `message` are required and non-null. `data` is optional;
+explicit `null` is preserved separately from an omitted key.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="code" type={"int32"} required>
+  Inner MCP error code; never an ACP error code.
+</ResponseField>
+<ResponseField name="data" type={"any"}>
+  Optional error data; explicit null is retained.
+</ResponseField>
+<ResponseField name="message" type={"string"} required>
+  Inner MCP error message.
+</ResponseField>
+
+## <span class="font-mono">McpRequestId</span>
 
 **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-A unique identifier for an active MCP-over-ACP connection.
+Identifies an inner MCP request active against a server on this ACP connection.
+
+Generated by the caller and preserved unchanged by proxies. This is distinct
+from the outer ACP JSON-RPC request ID.
 
 **Type:** `string`
 
@@ -4919,7 +4781,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 ACP transport configuration for MCP.
 
 The MCP server is provided by an ACP component and communicates over the ACP channel
-using `mcp/connect`, `mcp/message`, and `mcp/disconnect`.
+using `mcp/message`.
 
 **Type:** Object
 
@@ -4953,8 +4815,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Unique identifier for an MCP server using the ACP transport.
 
 The value is opaque and generated by the ACP component providing the MCP server. It is
-used by `mcp/connect` to route connection requests back to the component that declared the
-server.
+used by `mcp/message` to route requests to the component that declared the server.
 
 **Type:** `string`
 
@@ -5171,971 +5032,73 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
 
-## <span class="font-mono">NesCapabilities</span>
+## <span class="font-mono">Notice</span>
 
-NES capabilities advertised by the agent during initialization.
+Fire-and-forget information for the user.
 
-**Type:** Object
+Notices are live events rather than session history. Agents must not rely on
+a notice being received, displayed, or seen by the user.
+Agents MUST only send notices when the Client advertised
+`ClientSessionCapabilities::notices`. Otherwise, Agents may use an agent
+message when the information should still be surfaced to the user.
 
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="context" type={<><span><a href="#nescontextcapabilities">NesContextCapabilities</a></span><span> | null</span></>} >
-  Context the agent wants attached to each suggestion request.
-</ResponseField>
-<ResponseField name="events" type={<><span><a href="#neseventcapabilities">NesEventCapabilities</a></span><span> | null</span></>} >
-  Events the agent wants to receive.
-</ResponseField>
-
-## <span class="font-mono">NesContextCapabilities</span>
-
-Context capabilities the agent wants attached to each suggestion request.
+See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
+  Metadata scoped to this notice.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+Omitted and `null` are equivalent and mean no metadata was supplied.
 
 </ResponseField>
-<ResponseField name="diagnostics" type={<><span><a href="#nesdiagnosticscapabilities">NesDiagnosticsCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants diagnostics context.
-</ResponseField>
-<ResponseField name="editHistory" type={<><span><a href="#nesedithistorycapabilities">NesEditHistoryCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants edit history context.
-</ResponseField>
-<ResponseField name="openFiles" type={<><span><a href="#nesopenfilescapabilities">NesOpenFilesCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants open files context.
-</ResponseField>
-<ResponseField name="recentFiles" type={<><span><a href="#nesrecentfilescapabilities">NesRecentFilesCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants recent files context.
-</ResponseField>
-<ResponseField name="relatedSnippets" type={<><span><a href="#nesrelatedsnippetscapabilities">NesRelatedSnippetsCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants related snippets context.
-</ResponseField>
-<ResponseField name="userActions" type={<><span><a href="#nesuseractionscapabilities">NesUserActionsCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants user actions context.
-</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
 
-## <span class="font-mono">NesDiagnostic</span>
-
-A diagnostic (error, warning, etc.).
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+Omitted and `null` are equivalent and mean no description was supplied.
 
 </ResponseField>
-<ResponseField name="message" type={"string"} required>
-  The diagnostic message.
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
 </ResponseField>
-<ResponseField name="range" type={<a href="#range">Range</a>} required>
-  The range of the diagnostic.
-</ResponseField>
-<ResponseField name="severity" type={<a href="#nesdiagnosticseverity">NesDiagnosticSeverity</a>} required>
-  The severity of the diagnostic.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file containing the diagnostic.
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
+
 </ResponseField>
 
-## <span class="font-mono">NesDiagnosticSeverity</span>
+## <span class="font-mono">NoticeCapabilities</span>
 
-Severity of a diagnostic.
+Client support for presenting live notices to the user.
+
+**Type:** `object`
+
+## <span class="font-mono">NoticeSeverity</span>
+
+Severity hint for a session notice.
 
 **Type:** Union
 
-<ResponseField name="error" type="string">
-  An error.
+<ResponseField name="info" type="string">
+  Informational notice.
 </ResponseField>
 
 <ResponseField name="warning" type="string">
-  A warning.
+  Warning notice.
 </ResponseField>
 
-<ResponseField name="information" type="string">
-  An informational message.
+<ResponseField name="error" type="string">
+  Error notice.
 </ResponseField>
 
-<ResponseField name="hint" type="string">
-  A hint.
-</ResponseField>
-
-## <span class="font-mono">NesDiagnosticsCapabilities</span>
-
-Capabilities for diagnostics context.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesDocumentDidChangeCapabilities</span>
-
-Capabilities for `document/didChange` events.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="syncKind" type={<a href="#textdocumentsynckind">TextDocumentSyncKind</a>} required>
-  The sync kind the agent wants: `"full"` or `"incremental"`.
-</ResponseField>
-
-## <span class="font-mono">NesDocumentDidCloseCapabilities</span>
-
-Marker for `document/didClose` capability support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesDocumentDidFocusCapabilities</span>
-
-Marker for `document/didFocus` capability support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesDocumentDidOpenCapabilities</span>
-
-Marker for `document/didOpen` capability support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesDocumentDidSaveCapabilities</span>
-
-Marker for `document/didSave` capability support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesDocumentEventCapabilities</span>
-
-Document event capabilities the agent wants to receive.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="didChange" type={<><span><a href="#nesdocumentdidchangecapabilities">NesDocumentDidChangeCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants `document/didChange` events, and the sync kind.
-</ResponseField>
-<ResponseField name="didClose" type={<><span><a href="#nesdocumentdidclosecapabilities">NesDocumentDidCloseCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants `document/didClose` events.
-</ResponseField>
-<ResponseField name="didFocus" type={<><span><a href="#nesdocumentdidfocuscapabilities">NesDocumentDidFocusCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants `document/didFocus` events.
-</ResponseField>
-<ResponseField name="didOpen" type={<><span><a href="#nesdocumentdidopencapabilities">NesDocumentDidOpenCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants `document/didOpen` events.
-</ResponseField>
-<ResponseField name="didSave" type={<><span><a href="#nesdocumentdidsavecapabilities">NesDocumentDidSaveCapabilities</a></span><span> | null</span></>} >
-  Whether the agent wants `document/didSave` events.
-</ResponseField>
-
-## <span class="font-mono">NesEditHistoryCapabilities</span>
-
-Capabilities for edit history context.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="maxCount" type={"integer | null"} >
-  Maximum number of edit history entries the agent can use.
-
-    - Minimum: `0`
-
-</ResponseField>
-
-## <span class="font-mono">NesEditHistoryEntry</span>
-
-An entry in the edit history.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="diff" type={"string"} required>
-  A diff representing the edit.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the edited file.
-</ResponseField>
-
-## <span class="font-mono">NesEditSuggestion</span>
-
-A text edit suggestion.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="cursorPosition" type={<><span><a href="#position">Position</a></span><span> | null</span></>} >
-  Optional suggested cursor position after applying edits.
-</ResponseField>
-<ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
-  The text edits to apply.
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file to edit.
-</ResponseField>
-
-## <span class="font-mono">NesEventCapabilities</span>
-
-Event capabilities the agent can consume.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="document" type={<><span><a href="#nesdocumenteventcapabilities">NesDocumentEventCapabilities</a></span><span> | null</span></>} >
-  Document event capabilities.
-</ResponseField>
-
-## <span class="font-mono">NesExcerpt</span>
-
-A code excerpt from a file.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="endLine" type={"uint32"} required>
-  The end line of the excerpt (zero-based).
-
-    - Minimum: `0`
-
-</ResponseField>
-<ResponseField name="startLine" type={"uint32"} required>
-  The start line of the excerpt (zero-based).
-
-    - Minimum: `0`
-
-</ResponseField>
-<ResponseField name="text" type={"string"} required>
-  The text content of the excerpt.
-</ResponseField>
-
-## <span class="font-mono">NesJumpCapabilities</span>
-
-Marker for jump suggestion support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesJumpSuggestion</span>
-
-A jump-to-location suggestion.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="position" type={<a href="#position">Position</a>} required>
-  The target position within the file.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The file to navigate to.
-</ResponseField>
-
-## <span class="font-mono">NesOpenFile</span>
-
-An open file in the editor.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="languageId" type={"string"} required>
-  The language identifier.
-</ResponseField>
-<ResponseField name="lastFocusedMs" type={"integer | null"} >
-  Timestamp in milliseconds since epoch of when the file was last focused.
-
-    - Minimum: `0`
-
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file.
-</ResponseField>
-<ResponseField name="visibleRange" type={<><span><a href="#range">Range</a></span><span> | null</span></>} >
-  The visible range in the editor, if any.
-</ResponseField>
-
-## <span class="font-mono">NesOpenFilesCapabilities</span>
-
-Capabilities for open files context.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesRecentFile</span>
-
-A recently accessed file.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="languageId" type={"string"} required>
-  The language identifier.
-</ResponseField>
-<ResponseField name="text" type={"string"} required>
-  The full text content of the file.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file.
-</ResponseField>
-
-## <span class="font-mono">NesRecentFilesCapabilities</span>
-
-Capabilities for recent files context.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="maxCount" type={"integer | null"} >
-  Maximum number of recent files the agent can use.
-
-    - Minimum: `0`
-
-</ResponseField>
-
-## <span class="font-mono">NesRejectReason</span>
-
-The reason a suggestion was rejected.
-
-**Type:** Union
-
-<ResponseField name="rejected" type="string">
-  The user explicitly dismissed the suggestion.
-</ResponseField>
-
-<ResponseField name="ignored" type="string">
-  The suggestion was shown but the user continued editing without interacting.
-</ResponseField>
-
-<ResponseField name="replaced" type="string">
-  The suggestion was superseded by a newer suggestion.
-</ResponseField>
-
-<ResponseField name="cancelled" type="string">
-  The request was cancelled before the agent returned a response.
-</ResponseField>
-
-## <span class="font-mono">NesRelatedSnippet</span>
-
-A related code snippet from a file.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="excerpts" type={<a href="#nesexcerpt">NesExcerpt[]</a>} required>
-  The code excerpts.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file containing the snippets.
-</ResponseField>
-
-## <span class="font-mono">NesRelatedSnippetsCapabilities</span>
-
-Capabilities for related snippets context.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesRenameCapabilities</span>
-
-Marker for rename suggestion support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesRenameSuggestion</span>
-
-A rename symbol suggestion.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="newName" type={"string"} required>
-  The new name for the symbol.
-</ResponseField>
-<ResponseField name="position" type={<a href="#position">Position</a>} required>
-  The position of the symbol to rename.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The file URI containing the symbol.
-</ResponseField>
-
-## <span class="font-mono">NesRepository</span>
-
-Repository metadata for an NES session.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  The repository name.
-</ResponseField>
-<ResponseField name="owner" type={"string"} required>
-  The repository owner.
-</ResponseField>
-<ResponseField name="remoteUrl" type={"string"} required>
-  The remote URL of the repository.
-</ResponseField>
-
-## <span class="font-mono">NesSearchAndReplaceCapabilities</span>
-
-Marker for search and replace suggestion support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-
-## <span class="font-mono">NesSearchAndReplaceSuggestion</span>
-
-A search-and-replace suggestion.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="isRegex" type={"boolean | null"} >
-  Whether `search` is a regular expression. Defaults to `false`.
-</ResponseField>
-<ResponseField name="replace" type={"string"} required>
-  The replacement text.
-</ResponseField>
-<ResponseField name="search" type={"string"} required>
-  The text or pattern to find.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The file URI to search within.
-</ResponseField>
-
-## <span class="font-mono">NesSuggestContext</span>
-
-Context attached to a suggestion request.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="diagnostics" type={<><span><a href="#nesdiagnostic">NesDiagnostic[]</a></span><span> | null</span></>} >
-  Current diagnostics (errors, warnings).
-</ResponseField>
-<ResponseField name="editHistory" type={<><span><a href="#nesedithistoryentry">NesEditHistoryEntry[]</a></span><span> | null</span></>} >
-  Recent edit history.
-</ResponseField>
-<ResponseField name="openFiles" type={<><span><a href="#nesopenfile">NesOpenFile[]</a></span><span> | null</span></>} >
-  Currently open files in the editor.
-</ResponseField>
-<ResponseField name="recentFiles" type={<><span><a href="#nesrecentfile">NesRecentFile[]</a></span><span> | null</span></>} >
-  Recently accessed files.
-</ResponseField>
-<ResponseField name="relatedSnippets" type={<><span><a href="#nesrelatedsnippet">NesRelatedSnippet[]</a></span><span> | null</span></>} >
-  Related code snippets.
-</ResponseField>
-<ResponseField name="userActions" type={<><span><a href="#nesuseraction">NesUserAction[]</a></span><span> | null</span></>} >
-  Recent user actions (typing, navigation, etc.).
-</ResponseField>
-
-## <span class="font-mono">NesSuggestion</span>
-
-A suggestion returned by the agent.
-
-**Type:** Union
-
-<ResponseField name="edit" type="object">
-A text edit suggestion.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="cursorPosition" type={<><span><a href="#position">Position</a></span><span> | null</span></>} >
-  Optional suggested cursor position after applying edits.
-</ResponseField>
-<ResponseField name="edits" type={<a href="#nestextedit">NesTextEdit[]</a>} required>
-  The text edits to apply.
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="kind" type={"string"} required>
-  The discriminator value. Must be `"edit"`.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file to edit.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="jump" type="object">
-A jump-to-location suggestion.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="kind" type={"string"} required>
-  The discriminator value. Must be `"jump"`.
-</ResponseField>
-<ResponseField name="position" type={<a href="#position">Position</a>} required>
-  The target position within the file.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The file to navigate to.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="rename" type="object">
-A rename symbol suggestion.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="kind" type={"string"} required>
-  The discriminator value. Must be `"rename"`.
-</ResponseField>
-<ResponseField name="newName" type={"string"} required>
-  The new name for the symbol.
-</ResponseField>
-<ResponseField name="position" type={<a href="#position">Position</a>} required>
-  The position of the symbol to rename.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The file URI containing the symbol.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="searchAndReplace" type="object">
-A search-and-replace suggestion.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="id" type={<a href="#nessuggestionid">NesSuggestionId</a>} required>
-  Unique identifier for accept/reject tracking.
-</ResponseField>
-<ResponseField name="isRegex" type={"boolean | null"} >
-  Whether `search` is a regular expression. Defaults to `false`.
-</ResponseField>
-<ResponseField name="kind" type={"string"} required>
-  The discriminator value. Must be `"searchAndReplace"`.
-</ResponseField>
-<ResponseField name="replace" type={"string"} required>
-  The replacement text.
-</ResponseField>
-<ResponseField name="search" type={"string"} required>
-  The text or pattern to find.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The file URI to search within.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-## <span class="font-mono">NesSuggestionId</span>
-
-Unique identifier for a next edit suggestion.
-
-**Type:** `string`
-
-## <span class="font-mono">NesTextEdit</span>
-
-A text edit within a suggestion.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="newText" type={"string"} required>
-  The replacement text.
-</ResponseField>
-<ResponseField name="range" type={<a href="#range">Range</a>} required>
-  The range to replace.
-</ResponseField>
-
-## <span class="font-mono">NesTriggerKind</span>
-
-What triggered the suggestion request.
-
-**Type:** Union
-
-<ResponseField name="automatic" type="string">
-  Triggered by user typing or cursor movement.
-</ResponseField>
-
-<ResponseField name="diagnostic" type="string">
-  Triggered by a diagnostic appearing at or near the cursor.
-</ResponseField>
-
-<ResponseField name="manual" type="string">
-  Triggered by an explicit user action (keyboard shortcut).
-</ResponseField>
-
-## <span class="font-mono">NesUserAction</span>
-
-A user action (typing, cursor movement, etc.).
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="action" type={"string"} required>
-  The kind of action (e.g., "insertChar", "cursorMovement").
-</ResponseField>
-<ResponseField name="position" type={<a href="#position">Position</a>} required>
-  The position where the action occurred.
-</ResponseField>
-<ResponseField name="timestampMs" type={"uint64"} required>
-  Timestamp in milliseconds since epoch.
-
-    - Minimum: `0`
-
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file where the action occurred.
-</ResponseField>
-
-## <span class="font-mono">NesUserActionsCapabilities</span>
-
-Capabilities for user actions context.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="maxCount" type={"integer | null"} >
-  Maximum number of user actions the agent can use.
+<ResponseField name="other" type="string">
+Custom or future notice severity.
 
-    - Minimum: `0`
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP severities.
 
 </ResponseField>
 
@@ -6604,57 +5567,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </Expandable>
 </ResponseField>
 
-## <span class="font-mono">Position</span>
-
-A zero-based position in a text document.
-
-The meaning of `character` depends on the negotiated position encoding.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="character" type={"uint32"} required>
-  Zero-based character offset (encoding-dependent).
-
-    - Minimum: `0`
-
-</ResponseField>
-<ResponseField name="line" type={"uint32"} required>
-  Zero-based line number.
-
-    - Minimum: `0`
-
-</ResponseField>
-
-## <span class="font-mono">PositionEncodingKind</span>
-
-The encoding used for character offsets in positions.
-
-Follows the same conventions as LSP 3.17. The default is UTF-16.
-
-**Type:** Union
-
-<ResponseField name="utf-16" type="string">
-  Character offsets count UTF-16 code units. This is the default.
-</ResponseField>
-
-<ResponseField name="utf-32" type="string">
-  Character offsets count Unicode code points.
-</ResponseField>
-
-<ResponseField name="utf-8" type="string">
-  Character offsets count UTF-8 code units (bytes).
-</ResponseField>
-
 ## <span class="font-mono">PromptCapabilities</span>
 
 Prompt capabilities supported by the agent in `session/prompt` requests.
@@ -6813,29 +5725,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
-## <span class="font-mono">Range</span>
-
-A range in a text document, expressed as start and end positions.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="end" type={<a href="#position">Position</a>} required>
-  The end position (exclusive).
-</ResponseField>
-<ResponseField name="start" type={<a href="#position">Position</a>} required>
-  The start position (inclusive).
-</ResponseField>
-
 ## <span class="font-mono">RequestId</span>
 
 JSON RPC Request Id
@@ -6909,6 +5798,20 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </Expandable>
 </ResponseField>
 
+## <span class="font-mono">RequiresActionStateUpdate</span>
+
+Foreground work is blocked on user action.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP for additional metadata. Implementations
+  MUST NOT make assumptions about values at these keys. Optional; omitted and
+  `null` mean no metadata for this state snapshot.
+</ResponseField>
+
 ## <span class="font-mono">ResourceLink</span>
 
 A resource that the server is capable of reading, included in a prompt or tool call result.
@@ -6961,6 +5864,20 @@ The sender or recipient of messages and data in a conversation.
   The user side of a conversation.
 </ResponseField>
 
+## <span class="font-mono">RunningStateUpdate</span>
+
+Foreground work is in progress.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP for additional metadata. Implementations
+  MUST NOT make assumptions about values at these keys. Optional; omitted and
+  `null` mean no metadata for this state snapshot.
+</ResponseField>
+
 ## <span class="font-mono">SelectedPermissionOutcome</span>
 
 The user selected one of the provided options.
@@ -6989,6 +5906,29 @@ Supplying `\{\}` means the agent supports the `additionalDirectories` field on
 supported session lifecycle requests. Agents that also support
 `session/list` may return `SessionInfo.additionalDirectories` to report the
 complete ordered additional-root list associated with a listed session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">SessionCancelCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capability to cancel work in a subagent session without ending that session.
+
+Supplying `\{\}` advertises support; an omitted or `null` `cancel` does not.
 
 **Type:** Object
 
@@ -7076,6 +6016,17 @@ Supplying `\{\}` means the agent supports listing sessions.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports resuming sessions.
+
+</ResponseField>
+<ResponseField name="systemPrompt" type={<><span><a href="#sessionsystempromptcapabilities">SessionSystemPromptCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `systemPrompt` on session lifecycle requests.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports `systemPrompt` in `append` mode.
 
 </ResponseField>
 
@@ -7484,6 +6435,82 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
+## <span class="font-mono">SessionMessage</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+An upsert for an inter-session message.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  Omitted leaves metadata unchanged; `null` removes it.
+
+Implementations MUST NOT make assumptions about values in `_meta`.
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Omitted leaves content unchanged; `null` or `[]` clears it.
+A non-empty array replaces all content.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  Identifier of this message within the enclosing session's transcript.
+</ResponseField>
+<ResponseField name="recipientMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an outgoing view, the `messageId` of the same message's incoming view in the
+recipient's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
+<ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
+  Optional receiving session identity; omission or `null` retains a known value.
+</ResponseField>
+<ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an incoming view, the `messageId` of the same message's outgoing view in the
+sender's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
+<ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
+  Optional sending session identity; omission or `null` retains a known value.
+</ResponseField>
+
+## <span class="font-mono">SessionMessageChunk</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A streamed content block of an inter-session message.
+
+A chunk carries only content. The message's participants and references come from
+`session_message` upserts, which can arrive before, between, or after its chunks.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  Optional and nullable chunk-scoped metadata; omitted or `null` means none.
+
+Implementations MUST NOT make assumptions about values in `_meta`.
+
+</ResponseField>
+<ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
+  A single content block appended to the message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  Identifier of this message within the enclosing session's transcript.
+</ResponseField>
+
 ## <span class="font-mono">SessionMode</span>
 
 A mode the agent can operate in.
@@ -7546,6 +6573,92 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 Capabilities for the `session/resume` method.
 
 Supplying `\{\}` means the agent supports resuming sessions.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for client-provided system prompts.
+
+Supplying `\{\}` means the agent supports `systemPrompt` on session lifecycle
+requests in `append` mode.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="mode" type={<><span><a href="#sessionsystempromptmodecapabilities">SessionSystemPromptModeCapabilities</a></span><span> | null</span></>} >
+  Delivery modes the agent supports in addition to `append`.
+
+Optional. Omitted or `null` both mean the agent supports only `append`.
+
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptModeCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+System prompt delivery modes the agent supports in addition to `append`.
+
+`append` has no entry because every agent advertising
+`sessionCapabilities.systemPrompt` supports it.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="override" type={<><span><a href="#sessionsystempromptoverridecapabilities">SessionSystemPromptOverrideCapabilities</a></span><span> | null</span></>} >
+  Whether the agent supports `override` mode.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports replacing its built-in default
+instructions with the client-provided system prompt.
+
+</ResponseField>
+
+## <span class="font-mono">SessionSystemPromptOverrideCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for the `override` system prompt mode.
+
+Supplying `\{\}` means the agent supports replacing its built-in default
+instructions with the client-provided system prompt.
 
 **Type:** Object
 
@@ -7685,11 +6798,7 @@ Helps clients choose appropriate icons and UI treatment.
 Enables "follow-along" features in clients.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Programmatic name of the tool being invoked.
+  Programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that no
 tool name is available.
@@ -7740,11 +6849,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Replace the locations collection.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Update the programmatic name of the tool being invoked.
+  Update the programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that
 the existing name is left unchanged.
@@ -7986,6 +7091,485 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </Expandable>
 </ResponseField>
 
+<ResponseField name="notice" type="object">
+Information for the user that is not part of session history.
+
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::notices`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata scoped to this notice.
+
+Omitted and `null` are equivalent and mean no metadata was supplied.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Optional plain-text detail or guidance.
+
+Omitted and `null` are equivalent and mean no description was supplied.
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"notice"`.
+</ResponseField>
+<ResponseField name="severity" type={<a href="#noticeseverity">NoticeSeverity</a>} required>
+  Presentation severity hint.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  Required non-empty plain-text title that can stand alone.
+
+    - Min length: `1`
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="compaction_update" type="object">
+A context compaction has been created or updated.
+
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Extensible metadata patch for this compaction.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  The Agent-owned ID of this compaction, unique within the session.
+</ResponseField>
+<ResponseField name="error" type={"string | null"}>
+  Human-readable error details for the compaction.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"compaction_update"`.
+</ResponseField>
+<ResponseField
+  name="status"
+  type={<a href="#compactionstatus">CompactionStatus</a>}
+  required
+>
+  Current lifecycle status.
+</ResponseField>
+<ResponseField
+  name="summary"
+  type={
+    <>
+      <span>
+        <a href="#contentblock">ContentBlock[]</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
+  Complete replacement user-displayable summary content for the compaction.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="compaction_summary_chunk" type="object">
+A content block appended to a context compaction's retained summary.
+
+Agents MUST only send this update when the Client advertised
+`ClientSessionCapabilities::compaction`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Metadata scoped to this chunk. Omission and `null` both mean absent.
+</ResponseField>
+<ResponseField
+  name="compactionId"
+  type={<a href="#compactionid">CompactionId</a>}
+  required
+>
+  ID of the compaction whose summary receives this content.
+</ResponseField>
+<ResponseField
+  name="content"
+  type={<a href="#contentblock">ContentBlock</a>}
+  required
+>
+  One content block to append.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"compaction_summary_chunk"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="subagent_update" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Announces a child session created and owned by this session, or updates
+that ownership association's metadata.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+Omitted means unchanged; `null` removes the metadata.
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
+  Client-initiated session mutations permitted for this subagent session.
+
+Omitted means unchanged; `null` clears the capability set and disables
+child mutations. If never supplied, no session mutations are permitted.
+Read-only operations retain their normal protocol semantics and capability
+requirements. A concrete object replaces the whole capability set.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  The parent's human-readable description of the child's role or purpose.
+
+Omitted means unchanged; `null` clears it. If unset, the Client chooses
+a fallback presentation. This is current display metadata, not the
+history of instructions sent to the child.
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The opaque session ID identifying the child in all ACP messages.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"subagent_update"`.
+</ResponseField>
+<ResponseField name="state" type={<><span><a href="#stateupdate">StateUpdate</a></span><span> | null</span></>} >
+  Current state snapshot for the child session.
+
+Omitted means unchanged; `null` clears the current activity without
+asserting idle or sending an `unknown` snapshot. A concrete state
+replaces the previous state object wholesale. If never supplied, the
+current activity is unset/unconfirmed.
+
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  The parent's human-readable display title for this child. It need not be unique.
+
+Omitted means unchanged; `null` clears it. If unset, the Client chooses
+a fallback presentation.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="session_message" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A message upsert observed in this session's transcript, sent to or
+received from another session.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  Omitted leaves metadata unchanged; `null` removes it.
+
+Implementations MUST NOT make assumptions about values in `_meta`.
+
+</ResponseField>
+<ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
+  Omitted leaves content unchanged; `null` or `[]` clears it.
+A non-empty array replaces all content.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  Identifier of this message within the enclosing session's transcript.
+</ResponseField>
+<ResponseField name="recipientMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an outgoing view, the `messageId` of the same message's incoming view in the
+recipient's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
+<ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
+  Optional receiving session identity; omission or `null` retains a known value.
+</ResponseField>
+<ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
+  On an incoming view, the `messageId` of the same message's outgoing view in the
+sender's transcript.
+
+Optional and nullable: omission or `null` means not supplied and retains a known
+value, so it can arrive after the message starts streaming.
+
+</ResponseField>
+<ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
+  Optional sending session identity; omission or `null` retains a known value.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"session_message"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="session_message_chunk" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+One content block appended to a sent or received session message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  Optional and nullable chunk-scoped metadata; omitted or `null` means none.
+
+Implementations MUST NOT make assumptions about values in `_meta`.
+
+</ResponseField>
+<ResponseField name="content" type={<a href="#contentblock">ContentBlock</a>} required>
+  A single content block appended to the message.
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  Identifier of this message within the enclosing session's transcript.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"session_message_chunk"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">StateUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Current foreground-work state of a reusable child session.
+
+Each update is a whole-object snapshot. Idle does not terminate the child;
+the parent can message it again, transitioning it back to running.
+Background activity may still emit other session updates while idle.
+
+**Type:** Union
+
+<ResponseField name="running" type="object">
+Foreground work is in progress.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP for additional metadata. Implementations
+  MUST NOT make assumptions about values at these keys. Optional; omitted and
+  `null` mean no metadata for this state snapshot.
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"running"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="idle" type="object">
+The child is ready to process another prompt.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP for additional metadata.
+Implementations MUST NOT make assumptions about values at these keys.
+Optional; omitted and `null` mean no metadata for this state snapshot.
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"idle"`.
+</ResponseField>
+<ResponseField name="stopReason" type={"string | null"} >
+  Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
+
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+
+See protocol docs: [Current work state](https://agentclientprotocol.com/rfds/subagents#current-work-state)
+
+</ResponseField>
+<ResponseField name="usage" type={<><span><a href="#usage">Usage</a></span><span> | null</span></>} >
+  **UNSTABLE** Token usage for completed foreground work.
+
+Optional; omitted or `null` means not reported.
+
+</ResponseField>
+
+</Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="end_turn" type="object">
+The work ended successfully.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"end_turn"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_tokens" type="object">
+The work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The work ended because the agent reached the maximum number of allowed
+agent requests.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The work ended because the agent refused to continue.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cancelled" type="object">
+The work was cancelled.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"cancelled"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The work ended because something failed.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Unrecognized stop reason.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="none" type="object">
+No stop reason: `stopReason` is omitted or `null`.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"null"}></ResponseField>
+
+</Expandable>
+</ResponseField>
+
+</ResponseField>
+
+<ResponseField name="requires_action" type="object">
+Foreground work is blocked on user action.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP for additional metadata. Implementations
+  MUST NOT make assumptions about values at these keys. Optional; omitted and
+  `null` mean no metadata for this state snapshot.
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"requires_action"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="unknown" type="object">
+The Agent cannot currently determine foreground activity.
+
+This replaces previously confirmed activity without ending the work or session.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP for additional metadata. Implementations
+  MUST NOT make assumptions about values at these keys. Optional; omitted and
+  `null` mean no metadata for this state snapshot.
+</ResponseField>
+<ResponseField name="state" type={"string"} required>
+  The discriminator value. Must be `"unknown"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="state" type={"string"} required>
+  Unrecognized state discriminator.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">StopReason</span>
 
 Reasons why an agent stops processing a prompt turn.
@@ -8145,6 +7729,221 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
 
+## <span class="font-mono">SubagentCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capability marker for exposing reusable child sessions as restricted ACP sessions.
+
+Supplying `\{\}` advertises support for child association and state updates,
+session-directed messages, and restricted-session semantics. The client
+must advertise this capability before the agent sends subagent updates or
+session-directed messages.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP to allow clients and agents to attach
+  additional metadata to their interactions. Implementations MUST NOT make
+  assumptions about values at these keys.
+</ResponseField>
+
+## <span class="font-mono">SubagentSessionCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client-initiated session mutations permitted for a specific subagent session.
+
+A mutation requires an explicit per-child capability; support for the method
+on ordinary sessions does not grant support on a child.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+</ResponseField>
+<ResponseField name="cancel" type={<><span><a href="#sessioncancelcapabilities">SessionCancelCapabilities</a></span><span> | null</span></>} >
+  Permits the client to cancel this child's current work without ending
+the session. Omitted or `null` means unsupported; an object (including
+`\{\}`) means supported.
+</ResponseField>
+
+## <span class="font-mono">SubagentUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification that the enclosing parent session created and owns a child session.
+
+Later updates modify the existing association's metadata, not its ownership.
+
+Sent on the immediate parent session. The first update for an unknown
+`SubagentUpdate::session_id` announces the child and MUST be sent
+before any live child traffic or live message naming the child as sender
+or recipient. Parents may message and reuse an announced child across
+multiple operations.
+Child events are delivered automatically on the same connection; no child
+load, resume, or subscription is needed.
+
+Only the subagent session ID is required. Omitted patch fields keep their
+previous values; `null` clears them. Clearing capabilities disables child
+mutations. Clearing state leaves current activity unset/unconfirmed: it does
+not imply idle, stop work, or create an `unknown` state snapshot. A concrete
+state replaces the entire previous state object, not the session.
+The title and description provide the parent's display metadata for the
+child. They do not replace the content of individual messages or operations.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+Omitted means unchanged; `null` removes the metadata.
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
+  Client-initiated session mutations permitted for this subagent session.
+
+Omitted means unchanged; `null` clears the capability set and disables
+child mutations. If never supplied, no session mutations are permitted.
+Read-only operations retain their normal protocol semantics and capability
+requirements. A concrete object replaces the whole capability set.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  The parent's human-readable description of the child's role or purpose.
+
+Omitted means unchanged; `null` clears it. If unset, the Client chooses
+a fallback presentation. This is current display metadata, not the
+history of instructions sent to the child.
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The opaque session ID identifying the child in all ACP messages.
+</ResponseField>
+<ResponseField name="state" type={<><span><a href="#stateupdate">StateUpdate</a></span><span> | null</span></>} >
+  Current state snapshot for the child session.
+
+Omitted means unchanged; `null` clears the current activity without
+asserting idle or sending an `unknown` snapshot. A concrete state
+replaces the previous state object wholesale. If never supplied, the
+current activity is unset/unconfirmed.
+
+</ResponseField>
+<ResponseField name="title" type={"string | null"} >
+  The parent's human-readable display title for this child. It need not be unique.
+
+Omitted means unchanged; `null` clears it. If unset, the Client chooses
+a fallback presentation.
+
+</ResponseField>
+
+## <span class="font-mono">SystemPrompt</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client-provided system-level instructions for a session.
+
+Clients MUST only send this when the Agent advertises
+`sessionCapabilities.systemPrompt`. Agents that cannot apply it, for example
+because of an unadvertised mode or an unsupported content block type, MUST
+return an error instead of creating, loading, resuming, or forking the
+session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={<a href="#contentblock">ContentBlock[]</a>} required>
+  The system prompt content.
+
+Agents advertising the capability MUST accept `ContentBlock::Text`.
+Clients MUST NOT send other content block types until a future
+capability allows them, and Agents MUST return an error for content
+blocks they do not support.
+
+</ResponseField>
+<ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
+  How the Agent combines `content` with its own instructions.
+
+Required on the wire, so every request states its mode. In Rust,
+`SystemPrompt::new` starts it as `SystemPromptMode::Append`. Unknown
+values parse as `SystemPromptMode::Other`; Agents MUST return an error
+for modes they do not support.
+
+</ResponseField>
+
+## <span class="font-mono">SystemPromptMode</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+How the Agent combines a client-provided system prompt with its own instructions.
+
+Unknown modes parse as `SystemPromptMode::Other` so they can be stored,
+proxied, or forwarded. An Agent MUST return an error for a mode it does not
+support rather than treating it as `append` or `override`.
+
+**Type:** Union
+
+<ResponseField name="append" type="string">
+Add the content to the Agent's own instructions rather than replacing them.
+
+Every Agent that advertises `sessionCapabilities.systemPrompt` supports this mode.
+Agents SHOULD give the content system-level precedence, for example in the
+model's system prompt or developer instructions rather than in user-turn
+content. Where it is placed and how it is formatted is implementation-defined.
+
+</ResponseField>
+
+<ResponseField name="override" type="string">
+Replace the Agent's built-in default instructions with the content.
+
+This does not change tool availability, MCP servers, permissions, or session
+configuration. Context the Agent supplies from the workspace or environment
+MAY still be included. Clients that use this mode take responsibility for any
+tool guidance or safety instructions the Agent's default instructions
+provided, and MUST only use it when the Agent advertises
+`sessionCapabilities.systemPrompt.mode.override`.
+
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future system prompt mode.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
 ## <span class="font-mono">Terminal</span>
 
 Embed a terminal created with `terminal/create` by its id.
@@ -8222,46 +8021,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
   Text payload carried by this content block.
-</ResponseField>
-
-## <span class="font-mono">TextDocumentContentChangeEvent</span>
-
-A content change event for a document.
-
-When `range` is `None`, `text` is the full content of the document.
-When `range` is `Some`, `text` replaces the given range.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="range" type={<><span><a href="#range">Range</a></span><span> | null</span></>} >
-  The range of the document that changed. If `None`, the entire content is replaced.
-</ResponseField>
-<ResponseField name="text" type={"string"} required>
-  The new text for the range, or the full document content if `range` is `None`.
-</ResponseField>
-
-## <span class="font-mono">TextDocumentSyncKind</span>
-
-How the agent wants document changes delivered.
-
-**Type:** Union
-
-<ResponseField name="full" type="string">
-  Client sends the entire file content on each change.
-</ResponseField>
-
-<ResponseField name="incremental" type="string">
-  Client sends only the changed ranges.
 </ResponseField>
 
 ## <span class="font-mono">TextResourceContents</span>
@@ -8345,11 +8104,7 @@ Helps clients choose appropriate icons and UI treatment.
 Enables "follow-along" features in clients.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Programmatic name of the tool being invoked.
+  Programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that no
 tool name is available.
@@ -8556,11 +8311,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Replace the locations collection.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Update the programmatic name of the tool being invoked.
+  Update the programmatic name of the tool being invoked.
 
 This field is optional. Omitting it or sending `null` both mean that
 the existing name is left unchanged.
@@ -8631,6 +8382,32 @@ See protocol docs: [Creating](https://agentclientprotocol.com/protocol/v1/draft/
 
 <ResponseField name="other" type="string">
   Other tool types (default).
+</ResponseField>
+
+## <span class="font-mono">UnknownStateUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The Agent cannot currently determine foreground activity.
+
+Report this when activity becomes unobservable, not merely because the child
+has been quiet. The Client MUST stop presenting the previous state as confirmed
+current activity, but may retain it as last known. A later state replaces this
+snapshot normally.
+
+This is not a task outcome or session closure. It does not cancel work, resolve
+pending requests, or revoke capabilities; capabilities are updated separately.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  The _meta property is reserved by ACP for additional metadata. Implementations
+  MUST NOT make assumptions about values at these keys. Optional; omitted and
+  `null` mean no metadata for this state snapshot.
 </ResponseField>
 
 ## <span class="font-mono">UnstructuredCommandInput</span>
@@ -8740,27 +8517,4 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
     - Minimum: `0`
 
-</ResponseField>
-
-## <span class="font-mono">WorkspaceFolder</span>
-
-A workspace folder.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="name" type={"string"} required>
-  The display name of the folder.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the folder.
 </ResponseField>

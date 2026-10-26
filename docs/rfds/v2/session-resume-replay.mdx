@@ -46,9 +46,26 @@ The initial replay cursor is:
 }
 ```
 
-`replayFrom: { "type": "start" }` means the Agent replays the whole
-conversation through `session/update` notifications before responding to the
+`replayFrom: { "type": "start" }` means the Agent replays all retained
+conversation history through `session/update` notifications before responding to the
 `session/resume` request.
+
+The schema accepts custom and future cursor types for preservation by
+intermediaries. An Agent that does not support the supplied cursor type
+**MUST** reject `session/resume` with `-32602` (Invalid params), rather than
+substituting another cursor or resuming without replay. Malformed cursors also
+result in `-32602`.
+
+This does not require the Agent to retain every inserted user message.
+Live-only or discarded messages may be absent; retained user messages must
+preserve the ID returned on insertion, as defined by the [Prompt Lifecycle RFD](./prompt.mdx#correlation-and-replay).
+
+Agents **SHOULD** preserve agent and thought message IDs across replay when
+possible, but Clients cannot assume stability across reconnects or Agent
+restarts. Full replay should rebuild those message histories rather than merge
+them into existing history solely by ID. The empty-content primer for chunked
+replay initializes or clears content only under the ID used in that replay;
+it does not reconcile messages previously delivered under different IDs.
 
 Replay cursors are inclusive: replay includes the position identified by the
 cursor. Future cursors that identify a message would replay that message before
@@ -75,6 +92,11 @@ restore methods.
 2. Add `replayFrom` to `ResumeSessionRequest` as an optional tagged union.
 3. Add the initial `replayFrom` variant `{ "type": "start" }`.
 
+Replay applies top-level `_meta` as a [metadata patch](./meta-patches.mdx), as
+live delivery does, and does not reset it. When the Client may already hold
+metadata for an entity, the Agent removes stale keys by setting them to `null`,
+or sends `_meta: null` before the current object.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -90,4 +112,5 @@ An object leaves room for future cursor forms that need fields. The initial
 
 ## Revision history
 
+- 2026-10-13: Replay applies top-level `_meta` as a key-level patch, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-02: Initial draft.

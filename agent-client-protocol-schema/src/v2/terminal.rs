@@ -6,7 +6,7 @@ use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
-use super::{AbsolutePath, Meta};
+use super::{AbsolutePath, Meta, apply_meta_update};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 /// Unique identifier for an agent-owned terminal within a session.
@@ -38,7 +38,7 @@ impl IntoOption<TerminalId> for &str {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Terminal {
@@ -188,11 +188,12 @@ impl TerminalExitStatus {
 ///
 /// Only [`TerminalUpdate::terminal_id`] is required. Other fields have patch
 /// semantics: omitted fields leave the stored value unchanged, `null` clears
-/// it, and concrete values replace it. When the terminal ID is new, omitted
-/// fields start unknown.
+/// it, and concrete values replace it. A concrete `_meta` object instead
+/// patches the stored metadata by top-level key. When the terminal ID is new,
+/// omitted fields start unknown.
 #[serde_as]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalUpdate {
@@ -219,10 +220,13 @@ pub struct TerminalUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub exit_status: MaybeUndefined<TerminalExitStatus>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -275,7 +279,10 @@ impl TerminalUpdate {
         self
     }
 
-    /// Sets, clears, or leaves unchanged terminal metadata.
+    /// Patches, clears, or leaves unchanged terminal metadata.
+    ///
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`].
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -285,7 +292,9 @@ impl TerminalUpdate {
     /// Applies a later terminal patch to this stored terminal state.
     ///
     /// Fields set to `null` remain `null` so callers can distinguish explicit
-    /// clearing from an update that did not mention the field.
+    /// clearing from an update that did not mention the field. A concrete
+    /// `_meta` object patches the stored metadata by top-level key, as described
+    /// by [`apply_meta_update`].
     pub fn apply_update(&mut self, update: TerminalUpdate) {
         debug_assert_eq!(self.terminal_id, update.terminal_id);
         if !update.command.is_undefined() {
@@ -300,9 +309,7 @@ impl TerminalUpdate {
         if !update.exit_status.is_undefined() {
             self.exit_status = update.exit_status;
         }
-        if !update.meta.is_undefined() {
-            self.meta = update.meta;
-        }
+        apply_meta_update(&mut self.meta, update.meta);
     }
 }
 
@@ -310,7 +317,7 @@ impl TerminalUpdate {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalOutputChunk {
@@ -354,6 +361,7 @@ impl TerminalOutputChunk {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::{from_value, json, to_value};
 
     #[test]
     fn terminal_reference_meta_is_optional_and_content_scoped() {
@@ -449,6 +457,65 @@ mod tests {
             stored.exit_status,
             MaybeUndefined::Value(TerminalExitStatus::new().signal("SIGTERM"))
         );
+    }
+
+    #[test]
+    fn terminal_wire_patches_preserve_omitted_fields_and_replace_values() {
+        let initial = json!({
+            "terminalId": "term_1",
+            "_meta": {"source": "replay", "opaque": {"sequence": 1}}
+        });
+        let mut stored: TerminalUpdate = from_value(initial.clone()).unwrap();
+        // A metadata-only first update leaves output and exit status unknown.
+        assert_eq!(to_value(&stored).unwrap(), initial);
+
+        let populated = json!({
+            "terminalId": "term_1",
+            "command": "cargo check",
+            "cwd": "/workspace/project",
+            "output": {"data": "b2xk", "_meta": {"source": "snapshot"}},
+            "exitStatus": {"exitCode": 0, "_meta": {"observed": true}}
+        });
+        stored.apply_update(from_value(populated.clone()).unwrap());
+        let mut expected = populated;
+        expected["_meta"] = initial["_meta"].clone();
+        assert_eq!(to_value(&stored).unwrap(), expected);
+
+        for (field, empty) in [
+            ("command", json!("")),
+            ("output", json!({"data": ""})),
+            ("exitStatus", json!({})),
+        ] {
+            let original = expected[field].clone();
+            // Nested objects are replacements too: an empty output snapshot
+            // must not inherit snapshot metadata, and an empty exit-status
+            // object means exited with unknown details, not exit code zero.
+            for replacement in [empty, json!(null), original] {
+                stored.apply_update(
+                    from_value(json!({"terminalId": "term_1", (field): replacement})).unwrap(),
+                );
+                expected[field] = replacement;
+                assert_eq!(to_value(&stored).unwrap(), expected, "patching {field}");
+
+                stored.apply_update(from_value(json!({"terminalId": "term_1"})).unwrap());
+                assert_eq!(to_value(&stored).unwrap(), expected, "omitting {field}");
+            }
+        }
+
+        // Top-level `_meta` patches individual keys instead of replacing the object.
+        stored.apply_update(
+            from_value(json!({
+                "terminalId": "term_1",
+                "_meta": {"source": null, "opaque": {"other": 2}, "extra": true}
+            }))
+            .unwrap(),
+        );
+        expected["_meta"] = json!({"opaque": {"other": 2}, "extra": true});
+        assert_eq!(to_value(&stored).unwrap(), expected, "patching _meta keys");
+
+        stored.apply_update(from_value(json!({"terminalId": "term_1", "_meta": null})).unwrap());
+        expected["_meta"] = json!(null);
+        assert_eq!(to_value(&stored).unwrap(), expected, "clearing _meta");
     }
 
     #[test]

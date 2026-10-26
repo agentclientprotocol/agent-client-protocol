@@ -327,6 +327,356 @@ mod schema_annotation_tests {
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
 
     #[test]
+    fn generated_notice_schema_is_available_without_unstable_features() {
+        let schema = root_schema_value();
+        let notice = def_schema(&schema, "Notice");
+        assert_eq!(notice["required"], serde_json::json!(["severity", "title"]));
+        assert!(!notice["description"].as_str().unwrap().contains("UNSTABLE"));
+        let title = property_schema(&schema, "Notice", "title");
+        assert_eq!(title["type"], "string");
+        assert_eq!(title["minLength"], 1);
+        assert_no_extension(title, DEFAULT_ON_ERROR_EXTENSION);
+        for (field, types) in [
+            ("description", serde_json::json!(["string", "null"])),
+            ("_meta", serde_json::json!(["object", "null"])),
+        ] {
+            let property = property_schema(&schema, "Notice", field);
+            assert_eq!(property["type"], types);
+            assert_bool_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+        }
+
+        let severities = def_schema(&schema, "NoticeSeverity")["anyOf"]
+            .as_array()
+            .unwrap();
+        for severity in ["info", "warning", "error"] {
+            assert!(
+                severities
+                    .iter()
+                    .any(|variant| variant["const"] == severity)
+            );
+        }
+        let other = severities
+            .iter()
+            .find(|variant| variant["title"] == "other")
+            .unwrap();
+        assert_eq!(other["type"], "string");
+        for constraint in ["const", "enum", "pattern", "not"] {
+            assert!(other.get(constraint).is_none());
+        }
+        assert!(severities.iter().all(|variant| variant["type"] == "string"));
+
+        let updates = def_schema(&schema, "SessionUpdate");
+        let variants = updates
+            .get("oneOf")
+            .or_else(|| updates.get("anyOf"))
+            .and_then(Value::as_array)
+            .unwrap();
+        let variant = variants
+            .iter()
+            .find(|variant| {
+                variant.pointer("/properties/sessionUpdate/const") == Some(&Value::from("notice"))
+            })
+            .expect("notice must be a standard session update");
+        assert!(schema_contains_ref(variant, "#/$defs/Notice"));
+        assert!(
+            !variant["description"]
+                .as_str()
+                .unwrap()
+                .contains("UNSTABLE")
+        );
+
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            let capability = property_schema(&schema, "ClientSessionCapabilities", "notices");
+            assert!(schema_contains_ref(
+                capability,
+                "#/$defs/NoticeCapabilities"
+            ));
+            assert!(
+                capability["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| variant["type"] == "null")
+            );
+            assert!(
+                !def_schema(&schema, "ClientSessionCapabilities")["required"]
+                    .as_array()
+                    .is_some_and(|fields| fields.contains(&Value::from("notices")))
+            );
+        }
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            assert!(schema["$defs"].get("NoticeCapabilities").is_none());
+            let fallback = variants
+                .iter()
+                .find(|variant| variant["title"] == "other")
+                .unwrap();
+            assert!(
+                fallback["not"]["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| {
+                        variant.pointer("/properties/sessionUpdate/const")
+                            == Some(&Value::from("notice"))
+                    })
+            );
+        }
+    }
+
+    #[test]
+    fn generated_compaction_schema_is_available_without_unstable_features() {
+        let schema = root_schema_value();
+        assert_eq!(def_schema(&schema, "CompactionId")["type"], "string");
+        for (definition, required, referenced_fields) in [
+            (
+                "CompactionUpdate",
+                serde_json::json!(["compactionId", "status"]),
+                [
+                    ("compactionId", "CompactionId"),
+                    ("status", "CompactionStatus"),
+                ],
+            ),
+            (
+                "CompactionSummaryChunk",
+                serde_json::json!(["compactionId", "content"]),
+                [
+                    ("compactionId", "CompactionId"),
+                    ("content", "ContentBlock"),
+                ],
+            ),
+        ] {
+            let def = def_schema(&schema, definition);
+            assert_eq!(def["required"], required);
+            assert!(!def["description"].as_str().unwrap().contains("UNSTABLE"));
+            for (field, target) in referenced_fields {
+                let property = property_schema(&schema, definition, field);
+                // Required fields reference the non-null type directly, not a
+                // nullable alternative, and have no deserialization default.
+                assert_eq!(
+                    property["allOf"],
+                    serde_json::json!([{"$ref": format!("#/$defs/{target}")}])
+                );
+                assert!(property.get("anyOf").is_none());
+                assert!(property.get("type").is_none());
+                assert_no_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+            }
+        }
+        for (definition, field, types) in [
+            (
+                "CompactionUpdate",
+                "summary",
+                serde_json::json!(["array", "null"]),
+            ),
+            (
+                "CompactionUpdate",
+                "error",
+                serde_json::json!(["string", "null"]),
+            ),
+            (
+                "CompactionUpdate",
+                "_meta",
+                serde_json::json!(["object", "null"]),
+            ),
+            (
+                "CompactionSummaryChunk",
+                "_meta",
+                serde_json::json!(["object", "null"]),
+            ),
+        ] {
+            let property = property_schema(&schema, definition, field);
+            assert_eq!(property["type"], types);
+            assert!(
+                !def_schema(&schema, definition)["required"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|required| required == field),
+                "{definition}.{field} must remain optional"
+            );
+            assert_bool_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+        }
+        let summary = property_schema(&schema, "CompactionUpdate", "summary");
+        assert!(schema_contains_ref(summary, "#/$defs/ContentBlock"));
+        assert_bool_extension(summary, SKIP_INVALID_ITEMS_EXTENSION);
+
+        let updates = def_schema(&schema, "SessionUpdate");
+        let variants = updates
+            .get("oneOf")
+            .or_else(|| updates.get("anyOf"))
+            .and_then(Value::as_array)
+            .unwrap();
+        for (discriminator, definition) in [
+            ("compaction_update", "CompactionUpdate"),
+            ("compaction_summary_chunk", "CompactionSummaryChunk"),
+        ] {
+            let variant = variants
+                .iter()
+                .find(|variant| {
+                    variant.pointer("/properties/sessionUpdate/const")
+                        == Some(&Value::from(discriminator))
+                })
+                .unwrap_or_else(|| panic!("missing {discriminator} variant"));
+            assert!(schema_contains_ref(
+                variant,
+                &format!("#/$defs/{definition}")
+            ));
+            assert_eq!(variant["required"], serde_json::json!(["sessionUpdate"]));
+            assert!(
+                !variant["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE")
+            );
+        }
+    }
+
+    #[test]
+    fn generated_compaction_status_is_an_open_non_null_string() {
+        let schema = root_schema_value();
+        let variants = def_schema(&schema, "CompactionStatus")["anyOf"]
+            .as_array()
+            .unwrap();
+        for status in ["in_progress", "completed", "failed", "cancelled"] {
+            assert!(
+                variants
+                    .iter()
+                    .any(|variant| { variant["type"] == "string" && variant["const"] == status }),
+                "missing known compaction status {status}"
+            );
+        }
+        let other = variants
+            .iter()
+            .find(|variant| variant["title"] == "other")
+            .unwrap();
+        assert_eq!(other["type"], "string");
+        for constraint in ["const", "enum", "pattern", "not"] {
+            assert!(
+                other.get(constraint).is_none(),
+                "status must accept future and extension strings"
+            );
+        }
+        assert!(variants.iter().all(|variant| variant["type"] == "string"));
+    }
+
+    #[cfg(not(feature = "unstable_protocol_v2"))]
+    #[test]
+    fn generated_v1_compaction_capability_is_optional_nullable_and_stable() {
+        let schema = root_schema_value();
+        assert_eq!(
+            def_schema(&schema, "CompactionCapabilities")["type"],
+            "object"
+        );
+        for (definition, field, target) in [
+            ("ClientCapabilities", "session", "ClientSessionCapabilities"),
+            (
+                "ClientSessionCapabilities",
+                "compaction",
+                "CompactionCapabilities",
+            ),
+        ] {
+            let property = property_schema(&schema, definition, field);
+            assert!(schema_contains_ref(property, &format!("#/$defs/{target}")));
+            assert!(
+                property["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| variant["type"] == "null")
+            );
+            assert!(
+                !def_schema(&schema, definition)["required"]
+                    .as_array()
+                    .is_some_and(|fields| fields.iter().any(|required| required == field))
+            );
+            assert!(
+                !property["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE")
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_fallback_schema_rejects_compaction_discriminators() {
+        let schema = root_schema_value();
+        let fallback = def_schema(&schema, "SessionUpdate")["anyOf"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|variant| variant["title"] == "other")
+            .unwrap();
+        let exclusions = fallback["not"]["anyOf"].as_array().unwrap();
+        for discriminator in ["compaction_update", "compaction_summary_chunk"] {
+            assert!(
+                exclusions.contains(&serde_json::json!({
+                    "type": "object",
+                    "properties": {"sessionUpdate": {"type": "string", "const": discriminator}},
+                    "required": ["sessionUpdate"]
+                })),
+                "the fallback must reject {discriminator} regardless of payload fields"
+            );
+        }
+    }
+
+    #[test]
+    fn generated_prompt_response_matches_protocol_version() {
+        let schema = root_schema_value();
+        let response = def_schema(&schema, "PromptResponse");
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            assert_eq!(response["required"], serde_json::json!(["messageId"]));
+            let message_id = property_schema(&schema, "PromptResponse", "messageId");
+            assert!(schema_contains_ref(message_id, "#/$defs/MessageId"));
+            assert_eq!(def_schema(&schema, "MessageId")["type"], "string");
+            assert_no_extension(message_id, DEFAULT_ON_ERROR_EXTENSION);
+            assert!(response.pointer("/properties/stopReason").is_none());
+        }
+
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            assert_eq!(response["required"], serde_json::json!(["stopReason"]));
+            assert!(response.pointer("/properties/messageId").is_none());
+        }
+
+        let request = def_schema(&schema, "PromptRequest");
+        assert!(request.pointer("/properties/messageId").is_none());
+        assert!(request.pointer("/properties/promptId").is_none());
+    }
+
+    #[test]
+    fn generated_schema_includes_optional_tool_call_names() {
+        let schema = root_schema_value();
+        let definitions = [
+            "ToolCallUpdate",
+            #[cfg(not(feature = "unstable_protocol_v2"))]
+            "ToolCall",
+        ];
+
+        for definition in definitions {
+            let name = property_schema(&schema, definition, "name");
+            assert_eq!(name["type"], serde_json::json!(["string", "null"]));
+            assert!(
+                !def_schema(&schema, definition)["required"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|field| field == "name"),
+                "{definition}.name must remain optional"
+            );
+            assert!(
+                !name["description"].as_str().unwrap().contains("UNSTABLE"),
+                "{definition}.name must be stable"
+            );
+            assert_bool_extension(name, DEFAULT_ON_ERROR_EXTENSION);
+        }
+    }
+
+    #[test]
     fn generated_schema_includes_tolerant_deserialization_extensions() {
         let schema = root_schema_value();
 
@@ -362,6 +712,88 @@ mod schema_annotation_tests {
         let auth_methods = property_schema(&schema, "InitializeResponse", "authMethods");
         assert_bool_extension(auth_methods, DEFAULT_ON_ERROR_EXTENSION);
         assert_bool_extension(auth_methods, SKIP_INVALID_ITEMS_EXTENSION);
+    }
+
+    /// v1 has the idle snapshot only for unstable subagents; it matches v2's shape.
+    #[cfg(any(feature = "unstable_protocol_v2", feature = "unstable"))]
+    #[test]
+    fn generated_idle_state_update_ties_error_to_error_stop_reason() {
+        let schema = root_schema_value();
+        let idle = def_schema(&schema, "IdleStateUpdate");
+
+        assert!(
+            idle.pointer("/properties/error").is_none(),
+            "`error` must not be a shared idle property"
+        );
+        let stop_reason = property_schema(&schema, "IdleStateUpdate", "stopReason");
+        assert_bool_extension(stop_reason, DEFAULT_ON_ERROR_EXTENSION);
+        assert_eq!(stop_reason["type"], serde_json::json!(["string", "null"]));
+
+        let variants = idle["anyOf"].as_array().unwrap();
+        assert!(
+            variants.iter().any(|variant| variant["title"] == "none"
+                && variant.pointer("/properties/stopReason/type") == Some(&Value::from("null"))),
+            "the omitted stop reason must be a described branch, not an empty schema"
+        );
+        assert!(!variants.contains(&serde_json::json!({})));
+        let stop_reason_variant = |stop_reason: &str| {
+            variants
+                .iter()
+                .find(|variant| {
+                    variant.pointer("/properties/stopReason/const")
+                        == Some(&Value::from(stop_reason))
+                })
+                .unwrap_or_else(|| panic!("missing `{stop_reason}` stop reason variant"))
+        };
+        let end_turn = stop_reason_variant("end_turn");
+        assert!(!schema_contains_ref(end_turn, "#/$defs/ErrorStopReason"));
+        let error_variant = stop_reason_variant("error");
+        assert!(schema_contains_ref(
+            error_variant,
+            "#/$defs/ErrorStopReason"
+        ));
+
+        let error_stop_reason = def_schema(&schema, "ErrorStopReason");
+        assert!(
+            error_stop_reason.get("required").is_none(),
+            "`error` must remain optional"
+        );
+        let error = property_schema(&schema, "ErrorStopReason", "error");
+        assert!(schema_contains_ref(error, "#/$defs/Error"));
+        assert!(
+            error["anyOf"]
+                .as_array()
+                .is_some_and(|variants| variants.iter().any(|variant| variant["type"] == "null")),
+            "ErrorStopReason.error must accept null"
+        );
+        assert_bool_extension(error, DEFAULT_ON_ERROR_EXTENSION);
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_session_responses_include_optional_available_commands() {
+        let schema = root_schema_value();
+        for definition in [
+            "NewSessionResponse",
+            "ResumeSessionResponse",
+            #[cfg(feature = "unstable")]
+            "ForkSessionResponse",
+        ] {
+            let commands = property_schema(&schema, definition, "availableCommands");
+            assert_eq!(commands["type"], "array");
+            assert_eq!(commands["items"]["$ref"], "#/$defs/AvailableCommand");
+            assert!(
+                !def_schema(&schema, definition)
+                    .get("required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required
+                        .iter()
+                        .any(|field| field == "availableCommands")),
+                "{definition}.availableCommands must remain optional"
+            );
+            assert_bool_extension(commands, DEFAULT_ON_ERROR_EXTENSION);
+            assert_bool_extension(commands, SKIP_INVALID_ITEMS_EXTENSION);
+        }
     }
 
     #[cfg(feature = "unstable_protocol_v2")]
@@ -693,7 +1125,6 @@ mod schema_annotation_tests {
         );
     }
 
-    #[cfg(feature = "unstable_protocol_v2")]
     fn schema_contains_ref(schema: &Value, ref_path: &str) -> bool {
         match schema {
             Value::Object(object) => object.iter().any(|(key, value)| {
@@ -1050,9 +1481,18 @@ starting with '$/' it is free to ignore the notification."
             }
         }
 
-        #[expect(clippy::too_many_lines)]
         fn document_variant_table_row(&mut self, variant: &Value) {
+            self.document_variant_with_refs(variant, &mut BTreeSet::new());
+        }
+
+        #[expect(clippy::too_many_lines)]
+        fn document_variant_with_refs(
+            &mut self,
+            variant: &Value,
+            active_references: &mut BTreeSet<String>,
+        ) {
             let enum_values = variant.get("enum").and_then(|v| v.as_array());
+            let merged_variant = self.merge_variant_definition(variant);
 
             write!(&mut self.output, "<ResponseField name=\"").unwrap();
 
@@ -1158,8 +1598,8 @@ starting with '$/' it is free to ignore the notification."
             };
 
             // 1. Check for $ref (direct)
-            if let Some(merged_variant) = self.merge_variant_definition(variant) {
-                merge_from(&merged_variant);
+            if let Some(merged_variant) = &merged_variant {
+                merge_from(merged_variant);
             } else {
                 // 1. Check for $ref (direct)
                 if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
@@ -1200,8 +1640,55 @@ starting with '$/' it is free to ignore the notification."
                 writeln!(&mut self.output, "</Expandable>").unwrap();
             }
 
+            // Traverse the original composition, not the merged properties: each
+            // conjunctive member can introduce its own independent alternatives.
+            // Keep their required fields out of the shared property list.
+            self.document_nested_variants(variant, active_references);
+
             writeln!(&mut self.output, "</ResponseField>").unwrap();
             writeln!(&mut self.output).unwrap();
+        }
+
+        fn document_nested_variants(
+            &mut self,
+            definition: &Value,
+            active_references: &mut BTreeSet<String>,
+        ) {
+            if let Some(reference) = definition.get("$ref").and_then(Value::as_str) {
+                let name = reference.strip_prefix("#/$defs/").unwrap_or(reference);
+                if let Some(referenced) = self.definitions.get(name).cloned() {
+                    if active_references.insert(name.to_string()) {
+                        self.document_nested_variants(&referenced, active_references);
+                        active_references.remove(name);
+                    } else {
+                        writeln!(
+                            &mut self.output,
+                            "\nSee [{name}](#{}) for recursive alternatives.\n",
+                            Self::anchor_text(name)
+                        )
+                        .unwrap();
+                    }
+                }
+            }
+
+            if let Some(members) = definition.get("allOf").and_then(Value::as_array) {
+                for member in members {
+                    self.document_nested_variants(member, active_references);
+                }
+            }
+
+            for keyword in ["anyOf", "oneOf"] {
+                let Some(variants) = definition.get(keyword).and_then(Value::as_array) else {
+                    continue;
+                };
+
+                writeln!(&mut self.output).unwrap();
+                writeln!(&mut self.output, "**Alternatives (`{keyword}`):**").unwrap();
+                writeln!(&mut self.output).unwrap();
+                for variant in variants {
+                    self.document_variant_with_refs(variant, active_references);
+                }
+            }
         }
 
         fn document_enum_simple(&mut self, definition: &Value) {
@@ -1538,6 +2025,15 @@ starting with '$/' it is free to ignore the notification."
         }
 
         fn get_type_string(schema: &Value) -> String {
+            // An unconstrained JSON Schema (possibly with only a description)
+            // accepts every JSON value, not only objects.
+            if schema
+                .as_object()
+                .is_some_and(|fields| fields.keys().all(|key| key == "description"))
+            {
+                return "\"any\"".to_string();
+            }
+
             // Check for $ref
             if let Some(ref_val) = schema.get("$ref").and_then(|v| v.as_str()) {
                 let type_name = ref_val.strip_prefix("#/$defs/").unwrap_or(ref_val);
@@ -1811,17 +2307,7 @@ starting with '$/' it is free to ignore the notification."
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "auth/logout" => self.agent.get("LogoutAuthRequest").unwrap(),
-                "nes/start" => self.agent.get("StartNesRequest").unwrap(),
-                "nes/suggest" => self.agent.get("SuggestNesRequest").unwrap(),
-                "nes/close" => self.agent.get("CloseNesRequest").unwrap(),
-                "nes/accept" => self.agent.get("AcceptNesNotification").unwrap(),
-                "nes/reject" => self.agent.get("RejectNesNotification").unwrap(),
-                "document/didOpen" => self.agent.get("DidOpenDocumentNotification").unwrap(),
-                "document/didChange" => self.agent.get("DidChangeDocumentNotification").unwrap(),
-                "document/didClose" => self.agent.get("DidCloseDocumentNotification").unwrap(),
-                "document/didSave" => self.agent.get("DidSaveDocumentNotification").unwrap(),
-                "document/didFocus" => self.agent.get("DidFocusDocumentNotification").unwrap(),
-                "mcp/message" => self.agent.get("MessageMcpRequest").unwrap(),
+                "mcp/message" => self.agent.get("MessageMcpNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -1847,9 +2333,7 @@ starting with '$/' it is free to ignore the notification."
                 "elicitation/complete" => {
                     self.client.get("CompleteElicitationNotification").unwrap()
                 }
-                "mcp/connect" => self.client.get("ConnectMcpRequest").unwrap(),
                 "mcp/message" => self.client.get("MessageMcpRequest").unwrap(),
-                "mcp/disconnect" => self.client.get("DisconnectMcpRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -2001,6 +2485,19 @@ starting with '$/' it is free to ignore the notification."
     mod tests {
         use super::MarkdownGenerator;
         use serde_json::json;
+
+        #[test]
+        fn unconstrained_json_schema_renders_any_value() {
+            assert_eq!(MarkdownGenerator::get_type_string(&json!({})), "\"any\"");
+            assert_eq!(
+                MarkdownGenerator::get_type_string(&json!({"description": "Opaque MCP result"})),
+                "\"any\""
+            );
+            assert_eq!(
+                MarkdownGenerator::get_type_string(&json!({"type": "object"})),
+                "\"object\""
+            );
+        }
 
         #[test]
         fn document_union_includes_shared_properties() {
@@ -2156,6 +2653,314 @@ starting with '$/' it is free to ignore the notification."
             let form_pos = generator.output.find("\"form\"").unwrap();
             assert!(variants_pos < session_pos);
             assert!(session_pos < form_pos);
+        }
+
+        #[test]
+        fn document_union_preserves_nested_ref_any_of_alternatives() {
+            let mut generator = MarkdownGenerator::new("schema.json");
+            generator.definitions.insert(
+                "FormMode".to_string(),
+                json!({
+                    "anyOf": [
+                        {
+                            "properties": {
+                                "sessionId": { "type": "string" },
+                                "toolCallId": { "type": "string" }
+                            },
+                            "required": ["sessionId"],
+                            "title": "Session",
+                            "type": "object"
+                        },
+                        {
+                            "properties": {
+                                "requestId": { "type": "string" }
+                            },
+                            "required": ["requestId"],
+                            "title": "Request",
+                            "type": "object"
+                        }
+                    ],
+                    "properties": {
+                        "mode": { "const": "form", "type": "string" },
+                        "requestedSchema": { "type": "object" }
+                    },
+                    "required": ["mode", "requestedSchema"],
+                    "type": "object"
+                }),
+            );
+            let definition = json!({
+                "oneOf": [
+                    { "$ref": "#/$defs/FormMode" },
+                    {
+                        "properties": {
+                            "mode": { "const": "other", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ]
+            });
+
+            generator.document_type(4, "CreateElicitationRequest", &definition);
+
+            assert_scope_alternatives(&generator.output, "anyOf");
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"mode\" type={\"string\"} required>")
+            );
+            assert!(
+                generator.output.contains(
+                    "<ResponseField name=\"requestedSchema\" type={\"object\"} required>"
+                )
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"sessionId\" type={\"string\"} required>")
+            );
+            let tool_call_line = generator
+                .output
+                .lines()
+                .find(|line| line.contains("<ResponseField name=\"toolCallId\""))
+                .expect("toolCallId should be rendered");
+            assert!(
+                !tool_call_line.contains("required"),
+                "toolCallId should remain optional"
+            );
+            assert!(
+                generator
+                    .output
+                    .contains("<ResponseField name=\"requestId\" type={\"string\"} required>")
+            );
+        }
+
+        #[test]
+        fn document_union_preserves_nested_all_of_one_of_alternatives() {
+            let mut generator = MarkdownGenerator::new("schema.json");
+            generator.definitions.insert(
+                "UrlMode".to_string(),
+                json!({
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "sessionId": { "type": "string" }
+                            },
+                            "required": ["sessionId"],
+                            "title": "Session",
+                            "type": "object"
+                        },
+                        {
+                            "properties": {
+                                "requestId": { "type": "string" }
+                            },
+                            "required": ["requestId"],
+                            "title": "Request",
+                            "type": "object"
+                        }
+                    ],
+                    "properties": {
+                        "mode": { "const": "url", "type": "string" },
+                        "url": { "type": "string" }
+                    },
+                    "required": ["mode", "url"],
+                    "type": "object"
+                }),
+            );
+            let definition = json!({
+                "oneOf": [
+                    {
+                        "allOf": [
+                            { "$ref": "#/$defs/UrlMode" },
+                            {
+                                "properties": {
+                                    "elicitationId": { "type": "string" }
+                                },
+                                "required": ["elicitationId"]
+                            }
+                        ],
+                        "title": "URL"
+                    },
+                    {
+                        "properties": {
+                            "mode": { "const": "other", "type": "string" }
+                        },
+                        "required": ["mode"],
+                        "type": "object"
+                    }
+                ]
+            });
+
+            generator.document_type(4, "CreateElicitationRequest", &definition);
+
+            assert_scope_alternatives(&generator.output, "oneOf");
+            for field in ["mode", "url", "elicitationId", "sessionId", "requestId"] {
+                assert!(
+                    generator.output.contains(&format!(
+                        "<ResponseField name=\"{field}\" type={{\"string\"}} required>"
+                    )),
+                    "{field} should be rendered with its own required flag"
+                );
+            }
+        }
+
+        fn assert_scope_alternatives(output: &str, keyword: &str) {
+            let (shared, alternatives) = output
+                .split_once(&format!("**Alternatives (`{keyword}`):**"))
+                .expect("scope alternatives should be rendered");
+            for field in ["sessionId", "requestId"] {
+                assert!(!shared.contains(field), "{field} is not a shared field");
+                assert_eq!(
+                    output.matches(&format!("name=\"{field}\"")).count(),
+                    1,
+                    "{field} should be rendered once per mode:\n{output}"
+                );
+            }
+
+            let (_, session) = alternatives
+                .split_once("<ResponseField name=\"Session\"")
+                .expect("session scope should be rendered");
+            let (session, request) = session
+                .split_once("<ResponseField name=\"Request\"")
+                .expect("request scope should be rendered");
+            assert!(session.contains("name=\"sessionId\""));
+            assert!(!session.contains("name=\"requestId\""));
+            assert!(request.contains("name=\"requestId\""));
+            assert!(!request.contains("name=\"sessionId\""));
+        }
+
+        #[test]
+        fn document_union_preserves_inline_and_composed_alternatives() {
+            let scope = json!({
+                "anyOf": [
+                    {
+                        "title": "Session",
+                        "type": "object",
+                        "properties": { "sessionId": { "type": "string" } },
+                        "required": ["sessionId"]
+                    },
+                    {
+                        "title": "Request",
+                        "type": "object",
+                        "properties": { "requestId": { "type": "string" } },
+                        "required": ["requestId"]
+                    }
+                ]
+            });
+
+            for variant in [
+                scope.clone(),
+                json!({ "allOf": [{ "type": "object" }, scope] }),
+                json!({
+                    "allOf": [
+                        { "$ref": "#/$defs/ScopeAlias" },
+                        { "oneOf": [{ "type": "string" }, { "type": "null" }] }
+                    ]
+                }),
+            ] {
+                let mut generator = MarkdownGenerator::new("schema.json");
+                generator
+                    .definitions
+                    .insert("Scope".to_string(), scope.clone());
+                generator.definitions.insert(
+                    "WrappedScope".to_string(),
+                    json!({ "allOf": [{ "$ref": "#/$defs/Scope" }] }),
+                );
+                generator.definitions.insert(
+                    "ScopeAlias".to_string(),
+                    json!({ "$ref": "#/$defs/WrappedScope" }),
+                );
+
+                generator.document_variant_table_row(&variant);
+
+                assert_scope_alternatives(&generator.output, "anyOf");
+                assert_eq!(
+                    generator
+                        .output
+                        .matches("**Alternatives (`anyOf`):**")
+                        .count(),
+                    1
+                );
+                if variant.pointer("/allOf/1/oneOf").is_some() {
+                    assert_eq!(
+                        generator
+                            .output
+                            .matches("**Alternatives (`oneOf`):**")
+                            .count(),
+                        1,
+                        "independent conjunctive groups should remain separate"
+                    );
+                }
+            }
+        }
+
+        #[test]
+        fn document_union_links_recursive_alternatives() {
+            for target in ["Recursive", "Indirect"] {
+                let mut generator = MarkdownGenerator::new("schema.json");
+                generator.definitions.insert(
+                    "Recursive".to_string(),
+                    json!({
+                        "anyOf": [
+                            { "type": "string" },
+                            { "$ref": format!("#/$defs/{target}") }
+                        ]
+                    }),
+                );
+                generator.definitions.insert(
+                    "Indirect".to_string(),
+                    json!({ "oneOf": [{ "$ref": "#/$defs/Recursive" }] }),
+                );
+
+                generator.document_variant_table_row(&json!({ "$ref": "#/$defs/Recursive" }));
+
+                assert_eq!(
+                    generator
+                        .output
+                        .matches("**Alternatives (`anyOf`):**")
+                        .count(),
+                    1,
+                    "a recursive definition should not be expanded again"
+                );
+                assert!(
+                    generator
+                        .output
+                        .contains("See [Recursive](#recursive) for recursive alternatives.")
+                );
+            }
+        }
+
+        #[test]
+        fn document_elicitation_request_includes_each_mode_scope() {
+            let schema = crate::root_schema_value();
+            let mut generator = MarkdownGenerator::new("schema.json");
+            generator.definitions = schema["$defs"]
+                .as_object()
+                .unwrap()
+                .iter()
+                .map(|(name, definition)| (name.clone(), definition.clone()))
+                .collect();
+
+            generator.document_type(
+                4,
+                "CreateElicitationRequest",
+                &schema["$defs"]["CreateElicitationRequest"],
+            );
+
+            let (_, form) = generator
+                .output
+                .split_once("<ResponseField name=\"form\"")
+                .unwrap();
+            let (form, url) = form
+                .split_once("<ResponseField name=\"url\" type=\"object\">")
+                .unwrap();
+            let (url, other) = url
+                .split_once("<ResponseField name=\"other\" type=\"object\">")
+                .unwrap();
+            for mode in [form, url, other] {
+                assert_scope_alternatives(mode, "anyOf");
+                assert_eq!(mode.matches("name=\"toolCallId\"").count(), 1);
+            }
         }
 
         #[test]

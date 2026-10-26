@@ -71,6 +71,11 @@ pub enum Response<Result, Error> {
         /// The id of the request this response answers.
         id: RequestId,
         /// Method-specific response data.
+        // Require the key even when the payload's deserializer accepts null.
+        #[serde(
+            deserialize_with = "Deserialize::deserialize",
+            bound(deserialize = "Result: Deserialize<'de>")
+        )]
         result: Result,
     },
     /// A failed JSON-RPC response.

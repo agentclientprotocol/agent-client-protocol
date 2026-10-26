@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.26.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.25.0...schema-v1.26.0) - 2026-10-16
+
+### Added
+
+- *(unstable)* add client system prompt schema ([#2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361))
+
+### Fixed
+
+- *(unstable)* remove next edit suggestions ([#2266](https://github.com/agentclientprotocol/agent-client-protocol/pull/2266))
+
+### Other
+
+- *(unstable)* clarify that a forked session is active ([#2359](https://github.com/agentclientprotocol/agent-client-protocol/pull/2359))
+
+## [1.25.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.24.1...schema-v1.25.0) - 2026-10-09
+
+### Added
+
+- *(schema)* stabilize session notices ([#2336](https://github.com/agentclientprotocol/agent-client-protocol/pull/2336))
+- *(schema)* stabilize session compaction ([#2334](https://github.com/agentclientprotocol/agent-client-protocol/pull/2334))
+- *(unstable)* report failures after prompt insertion with an error stop reason ([#2281](https://github.com/agentclientprotocol/agent-client-protocol/pull/2281))
+
+### Fixed
+
+- *(schema)* reject malformed values receivers act on ([#2333](https://github.com/agentclientprotocol/agent-client-protocol/pull/2333))
+
+## [1.24.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.24.0...schema-v1.24.1) - 2026-09-30
+
+### Fixed
+
+- *(unstable)* allow MCP response extensions ([#2265](https://github.com/agentclientprotocol/agent-client-protocol/pull/2265))
+
+## [1.24.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.23.0...schema-v1.24.0) - 2026-09-30
+
+### Added
+
+- *(unstable)* Initial RFD and schema for subagents ([#1992](https://github.com/agentclientprotocol/agent-client-protocol/pull/1992))
+- *(unstable)* make MCP-over-ACP request-scoped ([#2223](https://github.com/agentclientprotocol/agent-client-protocol/pull/2223))
+
+## [1.23.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.22.0...schema-v1.23.0) - 2026-09-18
+
+### Added
+
+- *(unstable)* add v1 session notice capability ([#2171](https://github.com/agentclientprotocol/agent-client-protocol/pull/2171))
+
+## [1.22.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.21.0...schema-v1.22.0) - 2026-09-17
+
+### Added
+
+- *(schema)* stabilize tool call name ([#2166](https://github.com/agentclientprotocol/agent-client-protocol/pull/2166))
+- *(unstable)* add session notices schema ([#2004](https://github.com/agentclientprotocol/agent-client-protocol/pull/2004))
+
+## [1.21.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.20.0...schema-v1.21.0) - 2026-08-20
+
+### Added
+
+- *(unstable)* add session compaction updates ([#2002](https://github.com/agentclientprotocol/agent-client-protocol/pull/2002))
+- *(schema)* stabilize terminal authentication ([#2000](https://github.com/agentclientprotocol/agent-client-protocol/pull/2000))
+- *(schema)* stabilize elicitation ([#1779](https://github.com/agentclientprotocol/agent-client-protocol/pull/1779))
+
+### Other
+
+- *(rfd)* Move terminal auth to preview ([#1796](https://github.com/agentclientprotocol/agent-client-protocol/pull/1796))
+
 ## [1.20.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.19.1...schema-v1.20.0) - 2026-07-21
 
 ### Added

@@ -1,0 +1,349 @@
+---
+title: "Client-Provided System Prompt"
+---
+
+- Author(s): [@wpfleger96](https://github.com/wpfleger96)
+- Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Allow clients to provide system-level instructions for a session in ACP v1 and v2. Today, ACP has no mechanism for a client to deliver system-level instructions to an agent — the only content a client can send is user-role messages via `session/prompt`. This means behavioral instructions, persona definitions, and platform context all compete with user content in the same message role, instead of reaching the instructions the agent gives the model at system level.
+
+We propose:
+
+- A `systemPrompt` session capability, advertised by agents at `initialize`, so clients know before creating a session whether system prompt delivery is supported.
+- An optional `systemPrompt` object on `session/new` with a `mode` and `content`. `content` is a `ContentBlock[]` for consistency with `session/prompt`, with text as the baseline. Clients re-send the object on the other session lifecycle requests, as they already do for `cwd` and `mcpServers`.
+- Two modes: **append** (the baseline: client instructions are added to the agent's own instructions) and **override** (client content replaces the agent's built-in default instructions), the latter gated behind an `override` sub-capability.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Aside from the extensibility `_meta` field present on every request, ACP's `session/new` accepts only `cwd`, `mcpServers`, and `additionalDirectories`, and `session/prompt` accepts only `sessionId` and `prompt` (a `ContentBlock[]` of user content). There is no `systemPrompt`, `instructions`, or equivalent field on any ACP method in v1 or v2.
+
+This creates several problems for clients that need to provide behavioral instructions to agents:
+
+**Workarounds are fragmented and non-standard.** Every implementation works around the gap differently:
+
+- [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) added a `_meta.systemPrompt` extension ([issue #90](https://github.com/agentclientprotocol/claude-agent-acp/issues/90), [PR #91](https://github.com/agentclientprotocol/claude-agent-acp/pull/91)). A string replaces the Claude Code preset and an object with `append` adds to it — the same two modes this RFD proposes. But the spec states implementations "MUST NOT make assumptions about values at these keys," making `_meta` unsuitable for instruction delivery that agents are expected to act on. The implementation silently dropped `excludeDynamicSections` for months ([issue #581](https://github.com/agentclientprotocol/claude-agent-acp/issues/581)), demonstrating the fragility of non-standard extensions.
+- [Buzz](https://github.com/block/buzz) is a Nostr-based team collaboration and messaging platform where AI agents are first-class workspace members. Each managed agent has a persona (behavioral instructions, role definition, platform context) that the ACP harness needs to deliver as system-level instructions. Today, Buzz injects this as `[System]\n{content}` prepended to the user message on every turn — content that never reaches the LLM's system slot. Buzz's own [Persona Pack Spec](https://github.com/block/buzz/blob/main/crates/buzz-persona/PERSONA_PACK_SPEC.md) lists "true system prompt injection via ACP" as a planned feature, explicitly acknowledging the current approach is a workaround.
+- [Goose](https://github.com/aaif-goose/goose) builds its system prompt internally via `PromptManager` and stores per-session overrides and additions, but the only way for an ACP client to set them is a Goose-specific extension method, `_goose/unstable/session/system-prompt/set`, with `set` (replace) and `append` modes. Goose has [an open issue](https://github.com/aaif-goose/goose/issues/7596) documenting the same gap in terms of its "recipe" system — recipes are Goose's mechanism for injecting behavioral instructions into a session, and the issue notes "there is no recipe field on `NewSessionRequest` and no logic to load/apply a recipe to the new session's agent." Goose's `_goose/session/update_project` method works around this by sending a project ID that the agent resolves to a file on disk — a Goose-specific indirection, not a protocol-level solution.
+- Codex supports both modes through configuration — `developer_instructions` adds a developer message and `model_instructions_file` replaces its base instructions — but [`codex-acp`](https://github.com/zed-industries/codex-acp) exposes neither to ACP clients.
+
+**Instruction following degrades when instructions are in user messages.** OpenAI's Instruction Hierarchy paper ([arXiv 2404.13208](https://arxiv.org/abs/2404.13208)) trains models to prioritize system messages over user and third-party content, and reports robustness gains of up to 63% (for defending against system prompt extraction). Research on system message compliance ([SysBench, arXiv 2408.10943](https://arxiv.org/abs/2408.10943)) further demonstrates that LLMs are specifically trained and evaluated on their ability to follow system-role instructions — a capability that ACP clients currently cannot leverage.
+
+**ACP is an outlier.** Comparable protocols and model APIs provide a place for system-level instructions:
+
+| Protocol or API              | Field          | Type                    | Placement                                               |
+| ---------------------------- | -------------- | ----------------------- | ------------------------------------------------------- |
+| MCP `initialize` result      | `instructions` | `string`                | Per connection; hosts MAY add it to the system prompt   |
+| MCP `sampling/createMessage` | `systemPrompt` | `string`                | Per sampling request (the server asks the client's LLM) |
+| OpenAI Responses API         | `instructions` | `string`                | Per request                                             |
+| Anthropic Messages API       | `system`       | `string \| TextBlock[]` | Per request                                             |
+
+Agent frameworks follow the same pattern: AutoGen has `system_message`, CrewAI has `role`/`goal`/`backstory`, LangGraph has `prompt`. Only Google's A2A protocol is similarly silent — but A2A is agent-to-agent transport, a fundamentally different abstraction layer than ACP's client-to-agent communication.
+
+Harnesses also already distinguish delivery modes: Claude Code exposes `--system-prompt` (replace the built-in prompt) and `--append-system-prompt` (add to it), Codex has `model_instructions_file` and `developer_instructions`, and Goose has `set` and `append`. A protocol-level design needs to be able to express both.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Capability advertisement
+
+Agents that support client-provided system prompts advertise a `systemPrompt` session capability in the `initialize` response, following the established convention: omitted or `null` means unsupported, `{}` means supported. In v1 it lives under `agentCapabilities.sessionCapabilities`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "systemPrompt": {}
+      }
+    }
+  }
+}
+```
+
+In v2 it lives at `capabilities.session.systemPrompt`.
+
+Clients **MUST NOT** include `systemPrompt` in any request unless the agent advertised the capability.
+
+### Setting a system prompt
+
+Clients provide the system prompt on `session/new` as an object with a `mode` and `content`. `content` is a `ContentBlock[]`, matching the content model used by `session/prompt`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "mcpServers": [],
+    "systemPrompt": {
+      "mode": "append",
+      "content": [
+        {
+          "type": "text",
+          "text": "You are a code review specialist. Focus on security vulnerabilities, performance issues, and adherence to the team's style guide. Be thorough but concise."
+        }
+      ]
+    }
+  }
+}
+```
+
+`session/new` is the natural place for this — it already serves as the configuration point for `cwd` and `mcpServers`, and system prompts are fundamentally session-scoped (they define the agent's behavioral context for the entire interaction).
+
+`mode` is required, so every request states which behavior it asks for. The object can also carry `_meta` for agent-specific options that only make sense alongside the prompt.
+
+Text content blocks are the baseline: any agent advertising the capability **MUST** accept `ContentBlock::Text`. Other content block types are not part of the initial baseline and may be introduced later as sub-capabilities (see FAQ).
+
+### Delivery modes: append and override
+
+- **`"append"`**: the client content is added to the agent's own instructions rather than replacing them. Agents **SHOULD** give it system-level precedence — for example, in the model's system prompt or developer instructions rather than in user-turn content — but where it is placed, in what order, and how it is formatted is implementation-defined. Every agent that advertises the capability **MUST** support append mode. Existing harnesses already behave this way: Goose adds appended text under an `# Additional Instructions` heading, Claude Code's `append` adds text after its preset, and Codex delivers `developer_instructions` as a developer message alongside its base instructions.
+- **`"override"`**: the client content replaces the agent's built-in default instructions. This mode only changes the instructions the agent itself authors: it does not change tool availability, MCP servers, permissions, or session configuration. Context the agent supplies from the workspace or environment — project instruction files such as `AGENTS.md`, environment details, skill listings — **MAY** still be included; every harness surveyed keeps some of it (see FAQ), and agents **SHOULD** document what they keep. Clients that use override take responsibility for any tool guidance or safety instructions the agent's default prompt provided. This mode is opt-in on both sides: agents advertise it via the `mode.override` sub-capability, and clients **MUST NOT** request it unless advertised.
+
+```json
+{
+  "cwd": "/home/user/project",
+  "mcpServers": [],
+  "systemPrompt": {
+    "mode": "override",
+    "content": [{ "type": "text", "text": "..." }]
+  }
+}
+```
+
+Mode sub-capabilities are grouped under `mode`, mirroring the request's `mode` field. Append needs no entry because every agent advertising the capability supports it. An agent supporting both modes advertises:
+
+```json
+"sessionCapabilities": {
+  "systemPrompt": {
+    "mode": {
+      "override": {}
+    }
+  }
+}
+```
+
+### Session lifecycle
+
+The same `systemPrompt` object is accepted on the other session lifecycle requests: `session/load`, `session/resume`, and `session/fork` in v1, and `session/resume` and `session/fork` in v2. This follows the existing pattern for client-supplied session settings, which clients already re-send on these requests (`cwd`, `mcpServers`, `additionalDirectories`).
+
+- Clients **SHOULD** send the same `systemPrompt` on these requests that they used when the session was created. Agents that rebuild their prompt from request parameters depend on it.
+- When a lifecycle request omits `systemPrompt`, the resulting prompt is implementation-defined: the agent **MAY** keep using a prompt it stored with the session, or fall back to its default. Existing harnesses already persist the prompt in different ways (see FAQ), so this RFD requires agents neither to store it nor to discard a stored one.
+- When a lifecycle request supplies a `systemPrompt` that differs from the one the session was using, the agent **SHOULD** apply it. An agent **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning.
+
+Changing the prompt of a live session outside these lifecycle requests is out of scope.
+
+### Errors
+
+If an agent that advertises the capability cannot apply a supplied `systemPrompt` — for example, an unadvertised mode, a content block type it does not support, or content that exceeds its limits — it **MUST** return an error and **MUST NOT** create, load, resume, or fork the session. `invalid_params` is the RECOMMENDED error for malformed or unsupported values. This gives clients an explicit failure rather than a session running without the instructions they intended.
+
+### Design choices
+
+- **Capability-gated opt-in.** Without a capability, an "optional" field is a de facto breaking change: existing agents would silently ignore it, and the requirements below would retroactively put every existing agent in violation. The capability lets agents opt in and then be held to the behavior, and gives clients reliable feature detection — `protocolVersion` cannot serve that role since it only tracks major versions.
+- **A `systemPrompt` object with `mode` and `content`.** Keeping the mode next to the content means there is no mode without a prompt to rule out, and leaves room for prompt-scoped `_meta` (see FAQ).
+- **Content as `ContentBlock[]`.** Consistent with `session/prompt` and the rest of the protocol's content model. Text is the required baseline; richer types are future sub-capabilities (see FAQ for why they are excluded from the initial version).
+- **Both modes, append as baseline.** Append is what Claude Code, Codex, and Goose already support and is the mode every advertising agent must support. Override has real demand (Claude Code, Codex, and Goose ship it) but changes the safety posture — so it is double opt-in: agent advertises, client explicitly requests.
+- **Re-sent on lifecycle requests.** This follows the pattern for `cwd`, `mcpServers`, and `additionalDirectories`, while leaving room for harnesses that already persist the prompt (see FAQ).
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+Clients provide behavioral instructions through a standard protocol field, and agents deliver them as system-level instructions. The current landscape of fragmented workarounds — `_meta` extensions, agent-specific extension methods, user-message injection, pre-session environment configuration — is replaced by a single interoperable mechanism with explicit feature detection.
+
+Buzz's managed agent personas — role definitions, platform context, behavioral guidelines — reach the model as system-level instructions across every agent that advertises the capability (Goose, Claude Code adapters, or others). The same persona works across those agents without agent-specific plumbing. Goose's recipe system can deliver instructions through the protocol instead of relying on filesystem indirection. An IDE can provide project-specific coding guidelines as system-level instructions. A CI/CD pipeline can configure an agent's behavioral constraints for automated workflows. Adapters for harnesses that support prompt replacement (e.g., `claude-agent-acp`) can additionally expose override mode.
+
+Agents that don't support client system prompts continue working exactly as they do today — they simply don't advertise the capability, and clients never send the field.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Implemented
+
+The unstable schema landed in
+[PR #2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361),
+behind the `unstable_session_system_prompt` Cargo feature:
+
+- Both protocol versions define `SystemPrompt`, `SystemPromptMode`, and the
+  `SessionSystemPrompt*Capabilities` types, and accept `systemPrompt` on their
+  session lifecycle requests.
+- The unstable JSON schemas and the draft initialization and session setup docs
+  for both versions describe the capability and the field.
+
+The feature stays unstable until the RFD reaches Preview.
+
+### Schema changes
+
+Add a `systemPrompt` session capability (advertised in the `initialize` response):
+
+```typescript
+interface SessionCapabilities {
+  // ...existing capabilities
+  systemPrompt?: SessionSystemPromptCapabilities | null; // omitted/null = unsupported, {} = supported
+}
+
+interface SessionSystemPromptCapabilities {
+  mode?: SessionSystemPromptModeCapabilities | null; // omitted/null = append only
+  _meta?: { [key: string]: unknown } | null;
+}
+
+interface SessionSystemPromptModeCapabilities {
+  override?: SessionSystemPromptOverrideCapabilities | null; // omitted/null = unsupported, {} = override supported
+  _meta?: { [key: string]: unknown } | null;
+}
+
+interface SessionSystemPromptOverrideCapabilities {
+  _meta?: { [key: string]: unknown } | null;
+}
+```
+
+Add the `SystemPrompt` type and an optional `systemPrompt` field to the session lifecycle requests:
+
+```typescript
+interface SystemPrompt {
+  mode: SystemPromptMode;
+  content: ContentBlock[];
+  _meta?: { [key: string]: unknown } | null;
+}
+
+type SystemPromptMode = "append" | "override";
+
+interface NewSessionRequest {
+  // ...existing fields
+  systemPrompt?: SystemPrompt | null; // omitted and null are equivalent: no client prompt supplied
+}
+
+// The same optional field is added to LoadSessionRequest (v1 only),
+// ResumeSessionRequest, and ForkSessionRequest.
+```
+
+`content` is deserialized strictly, like `session/prompt`'s `prompt`: content blocks the agent cannot parse are not silently dropped, so the agent can return the error described above.
+
+This is additive — no existing fields change, no breaking modifications.
+
+### ACP v1 and v2
+
+The feature has the same shape in both protocol versions:
+
+|                             | v1                                                              | v2                                                                         |
+| --------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Capability                  | `agentCapabilities.sessionCapabilities.systemPrompt`            | `capabilities.session.systemPrompt`                                        |
+| Requests carrying it        | `session/new`, `session/load`, `session/resume`, `session/fork` | `session/new`, `session/resume`, `session/fork`                            |
+| Unknown content block types | Rejected when parsing                                           | Preserved as `ContentBlock::Other`; agents reject types they don't support |
+
+In both versions, `mode` follows the [enum variant extension](/rfds/v2/enum-variant-extension) rule, like other values that receivers act on, such as v2 MCP server transports. Values beginning with `_` are reserved for implementation-specific modes, and other unknown values for future ACP modes. Receivers parse unknown modes instead of failing, so proxies and older SDKs can store and forward them. Clients **MUST** only use a mode the agent advertised; custom modes are advertised however their extension defines, for example in `_meta`. An agent that receives a mode it does not support **MUST** return an error rather than treating it as `append` or `override`.
+
+### Agent behavior
+
+Agents that advertise the `systemPrompt` capability:
+
+- **MUST** accept `ContentBlock::Text` content
+- **MUST** support append mode, and **MUST** support override mode if they advertise the `mode.override` sub-capability
+- **MUST** apply a `systemPrompt` supplied on `session/new` in the requested mode, or return an error as described above
+
+When `systemPrompt` is absent from `session/new`, the agent uses its own default system prompt (current behavior, unchanged). Agents that do not advertise the capability are unaffected — clients never send them the field.
+
+### Client behavior
+
+- Clients **MUST NOT** include `systemPrompt` in any request unless the agent advertised the `systemPrompt` capability
+- Clients **MUST NOT** use `"mode": "override"` unless the agent advertised the `mode.override` sub-capability
+- Clients **MUST NOT** include content block types other than text unless a future sub-capability allows them
+- Clients **SHOULD** re-send the session's `systemPrompt` on `session/load`, `session/resume`, and `session/fork`
+
+### Security considerations
+
+Content delivered at system level carries more weight with the model than user turns or tool output. Clients **SHOULD** only send content they trust at that level; for example, a persona authored by another workspace member is a trust decision for the client, not just a formatting choice.
+
+Override mode removes the agent's default instructions, which can include tool guidance and safety rules. Agents that do not want to delegate their default instructions simply do not advertise `override`. Agents **MAY** reject a system prompt that violates their own policy or limits, using the error behavior above.
+
+### Backward compatibility
+
+The field is optional and capability-gated, so there is no default behavior change anywhere:
+
+- Existing clients that don't send `systemPrompt` see no difference.
+- Existing agents never receive the field, because they don't advertise the capability and clients gate on it. The unknown-param hazard — an old agent may silently ignore the field (no error, no incorporation) or, if it validates strictly, reject the request — is closed by construction, matching the approach taken by [`additionalDirectories`](/rfds/additional-directories).
+- Capability detection follows the established rule from [initialization](https://agentclientprotocol.com/protocol/v1/draft/initialization#capabilities): all capabilities omitted in the `initialize` response are treated as unsupported, and introducing a new capability is not a breaking change.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why `ContentBlock[]` and not `string`?
+
+An earlier draft proposed a plain `string`, matching MCP's `sampling/createMessage`. Review feedback pushed toward consistency with the rest of ACP, and it's the right call: `session/prompt` already uses `ContentBlock[]`, the capability object gives us a natural place to gate richer content types later, and the marginal implementation cost over a string is near zero once the capability exists. Clients that only need plain text send a single text block.
+
+### Why is text the only baseline content type?
+
+The `session/prompt` baseline requires text **and** resource links, so deviating for `systemPrompt` deserves justification. Each of the other `ContentBlock` variants is either hard to apply at session creation or has no known use case:
+
+- **`resource_link`** is a pointer, not content. The agent would have to fetch and resolve the URI to text before session creation, with unspecified failure and lifecycle semantics (missing or oversized resources, snapshot-once vs. re-read, unreachable URIs). In a user prompt the agent can address a link with its own tools mid-turn; at session creation there is no turn to do it in.
+- **`image` / `audio`** have no known use case. Model system slots are typically text-only (Anthropic's `system` accepts text blocks only, and OpenAI's `instructions` is a plain string), so an agent would have to deliver media elsewhere, such as a developer or user message at the start of the conversation, the way Claude Code delivers CLAUDE.md. The append rules allow that, but no client needs it yet.
+- **`resource`** (embedded content) is the borderline case — inline delivery, can carry text mime-types — and is the plausible first future sub-capability if a real use case emerges. It's excluded from the baseline because it adds URI/mime handling with no known consumer.
+
+Keeping the baseline at text keeps the implementation floor low — an advertising agent just concatenates strings — which maximizes adoption. Richer types can be added later as sub-capabilities without breaking changes.
+
+### Why a `systemPrompt` object instead of a separate mode field?
+
+An earlier draft used a bare `ContentBlock[]` plus a sibling `systemPromptMode` field. That allowed a mode without a prompt and needed extra client and agent rules to rule it out. An object keeps `mode` and `content` together, gives agent-specific options (such as Claude's `excludeDynamicSections`) a `_meta` slot scoped to the prompt, and is a single field to repeat on lifecycle requests.
+
+It also matches existing shapes. Elicitation selects its behavior with a `mode` field and gates each mode with a sub-capability, and both `claude-agent-acp`'s `_meta.systemPrompt` and Goose's `_goose/unstable/session/system-prompt/set` carry the mode alongside the text.
+
+### What does override replace in existing harnesses?
+
+Every surveyed harness replaces only its own default instructions. Tools stay available, and workspace context such as project instruction files is still supplied, either elsewhere in the conversation or appended after the replaced text:
+
+| Harness                 | Append                                                                                                                                                                                                                                                             | Override                                                        | Still supplied after override                                                                                                                                                                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code / Agent SDK | `--append-system-prompt`, preset `append`                                                                                                                                                                                                                          | `--system-prompt`, custom `systemPrompt` string                 | Tools, CLAUDE.md, and environment details, which Claude Code delivers in the conversation rather than the system prompt. The preset's tool guidance and safety instructions are replaced ([docs](https://code.claude.com/docs/en/agent-sdk/modifying-system-prompts#compare-the-four-approaches)). |
+| Codex                   | `developer_instructions`, delivered as a [developer message](https://github.com/openai/codex/blob/a06545b311fe01e51ce855c7aa5d8da21e9e7aaf/codex-rs/core/src/context/developer_instructions.rs#L22-L24)                                                            | `model_instructions_file` / `base_instructions`                 | AGENTS.md instructions ([separate fragment](https://github.com/openai/codex/blob/a06545b311fe01e51ce855c7aa5d8da21e9e7aaf/codex-rs/core/src/context/user_instructions.rs#L15-L24)), environment context, developer instructions, and tools.                                                        |
+| Goose                   | Session prompt extras under `# Additional Instructions`; `append` mode of [`_goose/unstable/session/system-prompt/set`](https://github.com/aaif-goose/goose/blob/cd1da62ac539451948cb38d9e4f245ddd03a3a50/crates/goose-sdk-types/src/custom_requests.rs#L189-L218) | Session `system_prompt_override`; `set` mode of the same method | Hints files and prompt extras, [appended after the override](https://github.com/aaif-goose/goose/blob/cd1da62ac539451948cb38d9e4f245ddd03a3a50/crates/goose/src/agents/prompt_manager.rs#L143-L181).                                                                                               |
+
+What each harness keeps differs in the details, so this RFD defines override by what it replaces (the agent's built-in default instructions) and what it must not change (tools, MCP servers, permissions, session configuration), and leaves the rest to the agent to document.
+
+### Why re-send the prompt on load, resume, and fork instead of having the agent restore it?
+
+An earlier draft required agents to store the prompt and restore it on load and resume, and required forks to inherit it. Existing agents don't agree on where the prompt lives:
+
+| Agent                               | Prompt persisted with the session?                                                                                                                                                                                                                                                                                          | Omitted on resume                                                         | Different prompt on resume                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `claude-agent-acp` over Claude Code | The adapter does not store it: it [reads `_meta.systemPrompt` from each request](https://github.com/agentclientprotocol/claude-agent-acp/blob/908c994901b857918c23655670468298f6bbd33b/src/acp-agent.ts#L9426-L9448). Claude Code records the prompt on the session's first request and keeps that record until compaction. | The recorded prompt is used until compaction, then the adapter's default. | The adapter [recreates the live session](https://github.com/agentclientprotocol/claude-agent-acp/blob/908c994901b857918c23655670468298f6bbd33b/src/acp-agent.ts#L9239-L9282), but Claude Code only uses the new text after compaction, or immediately with `snapshot: false` at the cost of the prompt cache ([docs](https://code.claude.com/docs/en/agent-sdk/modifying-system-prompts#change-the-prompt-of-an-existing-session)). |
+| Codex                               | Yes: base instructions are stored in the rollout's [`SessionMeta`](https://github.com/openai/codex/blob/a06545b311fe01e51ce855c7aa5d8da21e9e7aaf/codex-rs/protocol/src/protocol.rs#L3237-L3290).                                                                                                                            | Restored from the rollout; forks inherit them.                            | Configured `base_instructions` [take precedence](https://github.com/openai/codex/blob/a06545b311fe01e51ce855c7aa5d8da21e9e7aaf/codex-rs/core/src/session/session.rs#L811-L830) over the stored ones. `codex-acp` does not expose a prompt setting today.                                                                                                                                                                            |
+| Goose                               | Yes: [override and extras live on the session](https://github.com/aaif-goose/goose/blob/cd1da62ac539451948cb38d9e4f245ddd03a3a50/crates/goose/src/agents/prompt_manager.rs#L55-L58), as does the recipe.                                                                                                                    | Restored on `session/load`.                                               | Changed through `_goose/unstable/session/system-prompt/set`.                                                                                                                                                                                                                                                                                                                                                                        |
+
+No single storage rule fits all of them. Requiring agents to restore the prompt would force adapters like `claude-agent-acp` to add their own storage, because Claude Code only keeps its record until compaction. Requiring "omitted means no prompt", the rule `additionalDirectories` uses, would force Codex, Goose, and Claude Code to discard a prompt their harness already persists, which Claude Code cannot do before compaction. Asking clients to re-send the prompt, and leaving the omitted case implementation-defined, works with all of them and matches how clients already treat `cwd` and `mcpServers`.
+
+### How does this interact with session config options and modes?
+
+[Session config options](https://agentclientprotocol.com/protocol/session-config-options) (and v1 session modes) are agent-defined settings the client selects from; `systemPrompt` is client-authored content. They are independent mechanisms. Selecting a mode or config option does not remove the client-provided prompt, but how an agent combines its own mode- or config-driven instructions with it is implementation-defined — for example, an agent may add plan-mode instructions alongside an appended client prompt.
+
+### Why include both append and override in the first version?
+
+Append alone looked sufficient until we accounted for existing harness behavior: Claude Code, Codex, and Goose all ship both a replace option and an append option, so ACP adapters over them could expose override on day one — deferring override wouldn't buy simplicity, just a guaranteed second design round. The two modes have different safety postures, which the design reflects: append is the baseline (agents keep their own instructions), while override requires the agent to advertise the `override` sub-capability _and_ the client to explicitly request the mode. An agent that never wants to give up its default instructions simply advertises `systemPrompt: {}` and never sees an override request.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **`systemPrompt` on `session/prompt` (per-turn)**: Would allow mid-session updates, matching how most LLM APIs send system content per-request. But it introduces ambiguous semantics when `systemPrompt` is omitted on a turn (inherit last value? revert to default?) and moves system prompt delivery from a one-time configuration to a repeated per-turn concern. For the common case — set instructions once at session start — `session/new` is simpler and sufficient.
+- **Dedicated `session/set_system_prompt` method**: Changing the prompt of a live session is a separate feature; Goose already ships one as `_goose/unstable/session/system-prompt/set`. This RFD covers session creation and the lifecycle requests, and a dedicated method can be added later without conflicting with it.
+- **Standardize `_meta.systemPrompt`**: Violates `_meta` design intent (see Status quo).
+- **CWD file conventions** (e.g., placing instruction files in the session `cwd`): Agent-specific, not portable, and relies on the agent voluntarily reading the file. Not a protocol-level solution.
+- **Environment variables or CLI flags**: Pre-session only, not portable across agent implementations, can't be session-specific without restarting the agent.
+
+## Revision history
+
+- 2026-05-18: Initial draft
+- 2026-05-19: Upgraded to MUST with response acknowledgment per PR review feedback
+- 2026-05-21: Replaced the response acknowledgment (`systemPromptStatus`) with a JSON-RPC error when the agent cannot apply the prompt
+- 2026-07-21: Capability-gated opt-in under `sessionCapabilities`, type changed to `ContentBlock[]` with text-only baseline, explicit append/override delivery modes with `override` sub-capability, invalid-combination and load/resume/fork semantics — per maintainer review
+- 2026-10-09: Moved to Draft. Replaced the bare array and `systemPromptMode` with a `systemPrompt` object, grouped the `override` capability under `mode`, accepted it on load/resume/fork with re-send semantics based on a survey of existing agents, covered ACP v1 and v2, defined what override replaces, and relaxed requirements that agents could not observe or implement
+- 2026-10-12: Added the unstable v1 and v2 schema behind `unstable_session_system_prompt`, with draft docs. Made `mode` extensible under the enum variant extension rule

@@ -5,9 +5,65 @@ description: "Adding custom data and capabilities"
 
 The Agent Client Protocol provides built-in extension mechanisms that allow implementations to add custom functionality while maintaining compatibility with the core protocol. These mechanisms ensure that Agents and Clients can innovate without breaking interoperability.
 
+## Experimental Features and Negotiation
+
+**Stability**, **support**, and **forward compatibility** are separate:
+
+- Stability describes whether a feature is part of the baseline schema or is an experimental addition that may change or be removed.
+- Support describes whether a peer implements the feature's behavior, as advertised by its capability or another explicitly documented negotiation mechanism.
+- Forward compatibility describes whether a receiver can safely accept a field or variant without implementing its behavior.
+
+Negotiating `protocolVersion: 2` selects the v2 protocol, not all experimental
+features in `schema/v2/schema.unstable.json`. There is no connection-wide
+"unstable schema" flag. Implementations **MUST NOT** infer peer support from
+their own schema selection, generated types, or local feature flags.
+
+### When a Capability Is Required
+
+Each feature defines its negotiation requirements, whether stable or experimental:
+
+- **Optional operations requiring peer participation** need an advertised capability or another explicitly documented negotiation mechanism. Callers **MUST** follow that feature's requirements; an omitted or `null` support marker means unsupported.
+- **Informational additions with a safe fallback** may be sent without a capability when the feature explicitly permits it. A receiver may ignore or generically display them. Senders **MUST NOT** depend on feature-specific presentation, acknowledgement, or action.
+- **Local feature flags** control implementation and rollout. They neither advertise peer support nor replace a required capability.
+
+For example:
+
+| Feature                                                                                                                                 | Negotiation and receiver behavior                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Provider configuration](/protocol/v2/draft/initialization#agent-capabilities) (experimental)                                           | The Agent advertises `capabilities.providers`; Clients must not call provider configuration methods without it.                                                                    |
+| [Notices](/protocol/v2/draft/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/draft/prompt-lifecycle#session-compaction) | No Client capability is required in v2. Clients without feature-specific handling may preserve, ignore, or generically display the updates.                                        |
+| [Markdown and file-backed plans](/protocol/v2/draft/agent-plan#unstable-plan-operations) (experimental)                                 | No Client capability is required in v2. Clients without these plan representations use the unknown plan-content fallback; sending one does not establish that it will be rendered. |
+| [End-turn token usage](/protocol/v2/draft/prompt-lifecycle#end-turn-token-usage-unstable) (experimental)                                | Optional `usage` on an idle `state_update`, not on the prompt response. No capability is required; Clients may ignore it.                                                          |
+
+These rules are specific to v2. Features with capability gates in v1 retain
+those gates on v1 connections.
+
+Experimental schema revisions may disagree about a feature's shape or semantics.
+A capability advertises the behavior defined for that feature, not compatibility
+with every revision of the unstable schema. Experiments that require matching
+revisions should define feature-specific revision negotiation rather than rely
+on a global unstable-schema flag.
+
+### Validation
+
+Receivers **MUST** accept unknown fields and genuinely unknown discriminator
+values where their schema permits them. Closed discriminators remain closed.
+For open tagged unions, receivers validate the fallback's required envelope
+fields, then [preserve unknown payloads or use safe generic handling](#enum-and-tagged-union-variants).
+Accepting an unknown variant does not advertise support for its behavior.
+
+A malformed value for a discriminator recognized by the receiver **MUST NOT**
+fall through to the unknown-variant fallback. Validate recognized variants
+against their defined shapes, honoring documented field-level tolerance (for
+example, discarding malformed optional display metadata). Forward compatibility
+does not make operational request parameters permissive.
+
+Payload validation and capability checks are separate. A schema-valid request
+is not necessarily supported or permitted on the connection.
+
 ## The `_meta` Field
 
-All types in the protocol include a `_meta` field with type `{ [key: string]: unknown }` that implementations can use to attach custom information. This includes requests, responses, notifications, and even nested types like content blocks, tool calls, plan entries, and capability objects.
+Protocol object types that define a `_meta` field can use it to attach custom information. This includes requests, responses, notifications, and nested object types such as content blocks, tool calls, plan entries, and capability objects. Primitive types and object types that do not define `_meta` cannot carry it.
 
 ```json
 {
@@ -37,6 +93,63 @@ Clients may propagate fields to the agent for correlation purposes, such as `req
 - `baggage`
 
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
+
+### Metadata Patches
+
+Upsert updates carry a top-level `_meta` that the Client stores with the entity they create or update: `tool_call_update` (including the `toolCall` of a permission request's `tool_call` subject), `terminal_update`, `user_message`, `agent_message`, `agent_thought`, `session_info_update`, `compaction_update`, and the draft-only `subagent_update` and `session_message`. Clients apply this `_meta` as a patch, one top-level key at a time, using the same rule as the update's other fields:
+
+- Omit `_meta` to leave the stored metadata unchanged.
+- Set `_meta` to `null` to clear all stored metadata.
+- Send an object to patch the stored metadata:
+  - Keys the object omits keep their stored values, so `_meta: {}` changes nothing.
+  - A key set to `null` is removed. Removing a key that is not stored does nothing.
+  - Any other value replaces that key's stored value whole. Clients **MUST NOT** merge nested objects, and a `null` nested inside the value is ordinary data.
+
+For example, if a tool call's stored `_meta` is:
+
+```json
+{
+  "zed.dev/progress": 0.5,
+  "acme.dev/review": { "state": "pending" }
+}
+```
+
+and a later update sends:
+
+```json
+{
+  "sessionUpdate": "tool_call_update",
+  "toolCallId": "call_001",
+  "_meta": {
+    "zed.dev/progress": null,
+    "acme.dev/review": { "reviewer": "sam" },
+    "proxy.dev/route": "edge"
+  }
+}
+```
+
+the stored `_meta` becomes:
+
+```json
+{
+  "acme.dev/review": { "reviewer": "sam" },
+  "proxy.dev/route": "edge"
+}
+```
+
+A key set to `null` never holds stored data, including on the first update for an entity, so a key cannot store a literal JSON `null`; an extension that needs one can wrap it, for example `{ "value": null }`. Stored metadata with no keys is the same as no metadata. Because each top-level key is replaced whole, the implementation that owns a key, such as an extension using a namespaced key, can set, replace, or remove it without knowing the other keys. This does not resolve conflicts between writers: updates to the same key apply in receive order, and `_meta: null` clears every key.
+
+Replay and resynchronization apply these patches exactly as live delivery does and never reset metadata implicitly. An update that replaces another field, such as a message update with `content`, leaves the `_meta` keys it does not mention. To send the current metadata of an entity the Client may already hold, the Agent removes stale keys: it either sets each one to `null` alongside the current keys, or sends `_meta: null` and then the current object in a later update. The second form is not atomic, even within a JSON-RPC batch, so the Client may briefly hold no metadata. Send `_meta: null`, not `{}`, when the current metadata is empty. Intermediaries that combine updates **MUST** keep removals and clears.
+
+Other `_meta` fields are not patches, including the `_meta` of `plan_update`. Metadata on requests, responses, notification params, chunks, content items, snapshots, and other nested objects describes only the object that carries it, and a key set to `null` there is ordinary data. Do not copy such metadata into a patch unchanged, for example from a `session/list` entry into a `session_info_update`: its `null` key values would become removals. Put data about a single notification, rather than the entity, in the `session/update` notification's `params._meta`.
+
+## Unknown Object Fields
+
+Receivers **MUST** ignore unrecognized properties of protocol-defined objects, including properties nested within capability objects. An otherwise valid message **MUST NOT** be rejected solely because it contains unrecognized properties. Ignoring a property means not assigning protocol behavior to it. It does not imply support for the feature it describes.
+
+This rule does not relax validation of known properties or change their documented handling of malformed values. Unknown enum values, discriminator values, and method names follow their own rules. They are not unknown object fields. A malformed value for a known discriminator **MUST NOT** be treated as an unknown variant.
+
+Ignoring an unknown property means not interpreting it. Implementations are not required to remove it from the message.
 
 ## Extension Methods
 
@@ -123,7 +236,15 @@ When storing, replaying, proxying, or forwarding data, implementations **SHOULD*
 
 ## Advertising Custom Capabilities
 
-Implementations **SHOULD** use the `_meta` field in capability objects to advertise support for extensions and their methods:
+Implementations **SHOULD** advertise support for extensions and their methods using namespaced entries in capability objects' `_meta` fields:
+
+- Use `capabilities._meta` for independent extension surfaces or extensions that apply across capability groups.
+- Use a nested capability object's `_meta`, where that object defines one, for extensions scoped to that capability. For example, an extension to session prompting belongs in `capabilities.session.prompt._meta`.
+- Creating a standard capability object to carry `_meta` still advertises the standard support associated with that object. An Agent **MUST NOT** send `capabilities.session: { "_meta": ... }` unless it supports all seven baseline session methods.
+
+Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Use the same metadata location and namespaced key on both sides of an extension's negotiation.
+
+For example, an Agent can advertise an independent workspace extension without advertising session support:
 
 ```json
 {
@@ -132,15 +253,17 @@ Implementations **SHOULD** use the `_meta` field in capability objects to advert
   "result": {
     "protocolVersion": 2,
     "capabilities": {
-      "session": {
-        "load": {}
-      },
       "_meta": {
         "zed.dev": {
           "workspace": true,
           "fileNotifications": true
         }
       }
+    },
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
     }
   }
 }

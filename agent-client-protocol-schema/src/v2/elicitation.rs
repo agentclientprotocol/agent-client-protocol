@@ -15,7 +15,6 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 use super::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
 use super::{Meta, RequestId, SessionId, ToolCallId};
 use crate::IntoOption;
-use crate::SkipListener;
 
 /// Unique identifier for an elicitation.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -139,7 +138,7 @@ impl EnumOption {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
@@ -860,7 +859,7 @@ pub struct MultiSelectPropertySchema {
     /// Default selected values.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default selections are provided.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub default: Option<Vec<String>>,
@@ -1560,6 +1559,18 @@ impl From<ElicitationRequestScope> for ElicitationScope {
 /// The agent sends this to the client to request information from the user,
 /// either via a form or by directing them to a URL.
 /// Elicitations are tied to a session (optionally a tool call) or a request.
+///
+/// A session-scoped request follows the aggregate foreground-state contract:
+/// agents SHOULD report `requires_action` when the whole foreground workflow is
+/// blocked on user action. Once reported, they MUST report `running` when progress
+/// resumes, or `idle` if work ends without resuming. Independent background requests
+/// and request-scoped elicitations do not themselves change session state.
+/// Accepting a URL does not mean the external interaction completed.
+///
+/// Agents SHOULD cancel pending elicitations no longer needed by cancelled work.
+/// The request's scope alone does not establish that dependency.
+///
+/// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1647,7 +1658,7 @@ pub enum ElicitationMode {
 /// object for clients that store, replay, proxy, or forward elicitation
 /// requests.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_mode_schema))]
 #[serde(rename_all = "camelCase")]
@@ -1902,7 +1913,7 @@ pub enum ElicitationAction {
 /// response object for agents that store, replay, proxy, or forward elicitation
 /// responses.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_action_schema))]
 #[serde(rename_all = "camelCase")]
@@ -2085,6 +2096,8 @@ impl Default for ElicitationAcceptAction {
 }
 
 /// Notification sent by the agent when a URL-based elicitation is complete.
+///
+/// This notification is not a foreground state update.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

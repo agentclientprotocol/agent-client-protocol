@@ -115,6 +115,18 @@ Implementations can also [advertise custom capabilities](/protocol/v1/extensibil
 
 The Client **SHOULD** specify whether it supports the following capabilities:
 
+#### Terminal Authentication
+
+<ParamField path="auth.terminal" type="boolean">
+  The Client can reproduce the configured Agent invocation in an interactive
+  terminal. When `true`, the Agent may advertise `type: "terminal"`
+  authentication methods.
+</ParamField>
+
+<Card icon="terminal" horizontal href="/protocol/v1/authentication">
+  Learn more about Terminal Authentication
+</Card>
+
 #### File System
 
 <ParamField path="readTextFile" type="boolean">
@@ -167,6 +179,38 @@ The Client **SHOULD** specify whether it supports the following capabilities:
 
 <Card icon="sliders" horizontal href="/protocol/v1/session-config-options">
   Learn more about Session Config Options
+</Card>
+
+#### Session Compaction
+
+<ParamField path="session.compaction" type="CompactionCapabilities Object">
+  The Client supports ID-addressed `compaction_update` and
+  `compaction_summary_chunk` session updates, including their lifecycle,
+  placement, patch, and replay semantics. Omitted or `null` at either level
+  means unsupported. Supplying `{}` advertises the complete contract. Agents
+  must not send these updates to a v1 Client that does not advertise it.
+</ParamField>
+
+<Card
+  icon="compress"
+  horizontal
+  href="/protocol/v1/prompt-turn#session-compaction"
+>
+  Learn more about Session Compaction
+</Card>
+
+#### Session Notices
+
+<ParamField path="session.notices" type="NoticeCapabilities Object">
+  The Client can present live `notice` session updates to the user. This field
+  is optional and nullable. Omitting `session` or `notices`, or setting either
+  to `null`, means unsupported. Supplying `{}` advertises notice support. Agents
+  must not send notices without this capability and may instead use an agent
+  message when the information should still be surfaced to the user.
+</ParamField>
+
+<Card icon="message" horizontal href="/protocol/v1/prompt-turn#session-notices">
+  Learn more about Session Notices
 </Card>
 
 ### Agent Capabilities

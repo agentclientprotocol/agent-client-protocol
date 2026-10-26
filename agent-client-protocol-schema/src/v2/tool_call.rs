@@ -12,8 +12,8 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal};
-use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
+use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal, apply_meta_update};
+use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 /// Represents an upsert for a tool call that the language model has requested.
 ///
@@ -24,30 +24,26 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined, SkipListener};
 /// omitted fields leave the existing tool call value unchanged, `null` clears or
 /// unsets the value, and concrete values replace the previous value. For
 /// collection fields, concrete arrays replace the previous collection, and both
-/// `null` and `[]` clear the collection. When a client receives a tool call ID it
-/// has not seen before, omitted fields use client defaults.
+/// `null` and `[]` clear the collection. A concrete `_meta` object instead
+/// patches the stored metadata by top-level key. When a client receives a tool
+/// call ID it has not seen before, omitted fields use client defaults.
 ///
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallUpdate {
     /// Unique identifier for this tool call within the session.
     pub tool_call_id: ToolCallId,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
     ///
     /// This field is optional and has patch semantics. Omission means no
     /// change, `null` clears the name, and a string replaces it. For a tool
     /// call ID the client has not seen before, omission or `null` means that no
     /// tool name is available.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -69,13 +65,13 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub status: MaybeUndefined<ToolCallStatus>,
     /// Content produced by the tool call.
-    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ToolCallContent>>,
     /// File locations affected by this tool call.
     /// Enables "follow-along" features in clients.
-    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub locations: MaybeUndefined<Vec<ToolCallLocation>>,
@@ -90,10 +86,13 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_output: MaybeUndefined<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -110,7 +109,6 @@ impl ToolCallUpdate {
     pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
         Self {
             tool_call_id: tool_call_id.into(),
-            #[cfg(feature = "unstable_tool_call_name")]
             name: MaybeUndefined::Undefined,
             title: MaybeUndefined::Undefined,
             kind: MaybeUndefined::Undefined,
@@ -123,12 +121,7 @@ impl ToolCallUpdate {
         }
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Programmatic name of the tool being invoked.
-    #[cfg(feature = "unstable_tool_call_name")]
     #[must_use]
     pub fn name(mut self, name: impl IntoMaybeUndefined<String>) -> Self {
         self.name = name.into_maybe_undefined();
@@ -186,11 +179,10 @@ impl ToolCallUpdate {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// Patches, clears, or leaves unchanged tool-call metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`].
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -200,10 +192,10 @@ impl ToolCallUpdate {
     /// Applies a later tool-call patch to this stored tool-call state.
     ///
     /// Fields set to `null` are preserved as `null` so callers can decide how to
-    /// render an explicitly cleared value.
+    /// render an explicitly cleared value. A concrete `_meta` object patches the
+    /// stored metadata by top-level key, as described by [`apply_meta_update`].
     pub fn apply_update(&mut self, update: ToolCallUpdate) {
         debug_assert_eq!(self.tool_call_id, update.tool_call_id);
-        #[cfg(feature = "unstable_tool_call_name")]
         if !update.name.is_undefined() {
             self.name = update.name;
         }
@@ -228,9 +220,7 @@ impl ToolCallUpdate {
         if !update.raw_output.is_undefined() {
             self.raw_output = update.raw_output;
         }
-        if !update.meta.is_undefined() {
-            self.meta = update.meta;
-        }
+        apply_meta_update(&mut self.meta, update.meta);
     }
 }
 
@@ -243,7 +233,7 @@ impl ToolCallUpdate {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ToolCallContentChunk {
@@ -387,7 +377,7 @@ pub enum ToolCallStatus {
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ToolCallContent {
@@ -412,7 +402,7 @@ pub enum ToolCallContent {
 
 /// Custom or future tool call content payload.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_tool_call_content_schema))]
 #[serde(rename_all = "camelCase")]
@@ -500,7 +490,7 @@ impl From<Terminal> for ToolCallContent {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Content {
@@ -558,7 +548,7 @@ pub struct Diff {
     /// Structured file changes described by this diff.
     ///
     /// Clients can use this field without parsing patch text to determine affected paths.
-    #[serde_as(deserialize_as = "VecSkipError<_, SkipListener>")]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub changes: Vec<DiffChange>,
     /// Renderable patch text for some or all of the structured changes.
@@ -648,8 +638,14 @@ impl DiffPatch {
 pub enum DiffPatchFormat {
     /// One or more `diff --git` sections in Git's `--patch` (`-p`) text format.
     ///
-    /// Paths MUST be absolute. Surrounding commit metadata and email envelopes
-    /// MUST NOT be included.
+    /// Unlike Git, which writes paths relative to the repository root, every
+    /// path MUST be absolute, including in `rename from`, `rename to`,
+    /// `copy from`, and `copy to` lines, and MUST NOT have a prefix such as
+    /// Git's default `a/` and `b/`. Otherwise paths follow Git: `/dev/null`
+    /// names the missing side of an added or deleted file in the `---` and
+    /// `+++` lines, and paths with unusual characters are quoted as Git quotes
+    /// them. Surrounding commit metadata and email envelopes MUST NOT be
+    /// included.
     GitPatch,
     /// Custom or future patch format.
     ///
@@ -1007,6 +1003,7 @@ impl ToolCallLocation {
 mod tests {
     use super::*;
     use crate::MaybeUndefined;
+    use serde_json::{from_value, json, to_value};
 
     #[test]
     fn tool_call_serializes_as_upsert() {
@@ -1054,7 +1051,6 @@ mod tests {
         assert_eq!(deserialized.locations, MaybeUndefined::Value(Vec::new()));
     }
 
-    #[cfg(feature = "unstable_tool_call_name")]
     #[test]
     fn tool_call_name_patch_distinguishes_omitted_null_and_value() {
         let named = ToolCallUpdate::new("tc_1").name("read_file");
@@ -1123,6 +1119,112 @@ mod tests {
         let mut stored = ToolCallUpdate::new("tc_1").meta(meta);
         stored.apply_update(ToolCallUpdate::new("tc_1").meta(None::<Meta>));
         assert_eq!(stored.meta, MaybeUndefined::Null);
+    }
+
+    #[test]
+    fn tool_call_update_patches_meta_by_top_level_key() {
+        let mut stored: ToolCallUpdate = from_value(json!({
+            "toolCallId": "tc_1",
+            "_meta": {"zed.dev/a": 1, "acme.dev/b": {"x": 1}}
+        }))
+        .unwrap();
+
+        // A writer that only knows its own key must not erase other keys.
+        stored.apply_update(
+            from_value(json!({"toolCallId": "tc_1", "_meta": {"proxy.dev/c": true}})).unwrap(),
+        );
+        stored.apply_update(
+            from_value(json!({
+                "toolCallId": "tc_1",
+                "_meta": {"zed.dev/a": null, "acme.dev/b": {"y": 2}}
+            }))
+            .unwrap(),
+        );
+
+        assert_eq!(
+            to_value(&stored).unwrap(),
+            json!({
+                "toolCallId": "tc_1",
+                "_meta": {"acme.dev/b": {"y": 2}, "proxy.dev/c": true}
+            })
+        );
+    }
+
+    #[test]
+    fn tool_call_wire_patches_preserve_omitted_fields_and_replace_values() {
+        let initial = json!({
+            "toolCallId": "tc_1",
+            "_meta": {"source": "replay", "opaque": {"sequence": 1}}
+        });
+        let mut stored: ToolCallUpdate = from_value(initial.clone()).unwrap();
+        // A metadata-only first update must not invent content or a status.
+        assert_eq!(to_value(&stored).unwrap(), initial);
+
+        let populated = json!({
+            "toolCallId": "tc_1",
+            "name": "read_file",
+            "title": "Reading configuration",
+            "kind": "read",
+            "status": "in_progress",
+            "content": [{
+                "type": "content",
+                "content": {
+                    "type": "text",
+                    "text": "old",
+                    "_meta": {"source": "tool"}
+                }
+            }],
+            "locations": [{"path": "/workspace/config.json", "line": 3}],
+            "rawInput": {"path": "/workspace/config.json"},
+            "rawOutput": {"text": "old"}
+        });
+        stored.apply_update(from_value(populated.clone()).unwrap());
+        let mut expected = populated;
+        expected["_meta"] = initial["_meta"].clone();
+        assert_eq!(to_value(&stored).unwrap(), expected);
+
+        for (field, empty) in [
+            ("content", json!([])),
+            ("locations", json!([])),
+            ("rawInput", json!({})),
+            ("rawOutput", json!({})),
+        ] {
+            let original = expected[field].clone();
+            // Empty values replace rather than merge; null remains distinct.
+            // Restoring the value also checks that clearing is not permanent.
+            for replacement in [empty, json!(null), original] {
+                stored.apply_update(
+                    from_value(json!({"toolCallId": "tc_1", (field): replacement})).unwrap(),
+                );
+                expected[field] = replacement;
+                assert_eq!(to_value(&stored).unwrap(), expected, "patching {field}");
+
+                stored.apply_update(from_value(json!({"toolCallId": "tc_1"})).unwrap());
+                assert_eq!(to_value(&stored).unwrap(), expected, "omitting {field}");
+            }
+        }
+    }
+
+    #[test]
+    fn tool_call_wire_patches_preserve_unknown_statuses() {
+        for status in ["deferred", "_awaiting_review"] {
+            let mut stored = ToolCallUpdate::new("tc_1").status(ToolCallStatus::InProgress);
+            stored
+                .apply_update(from_value(json!({"toolCallId": "tc_1", "status": status})).unwrap());
+            let expected_status = MaybeUndefined::Value(ToolCallStatus::Other(status.to_owned()));
+            assert_eq!(stored.status, expected_status);
+
+            // An unrelated patch must not reset a future or extension status
+            // to a known value, including a success or failure state.
+            stored.apply_update(
+                from_value(json!({"toolCallId": "tc_1", "title": "Still waiting"})).unwrap(),
+            );
+            assert_eq!(stored.status, expected_status);
+            assert_eq!(
+                to_value(&stored).unwrap(),
+                json!({"toolCallId": "tc_1", "title": "Still waiting", "status": status})
+            );
+        }
     }
 
     #[test]

@@ -202,11 +202,16 @@ Clients provide the interface between users and agents. They are typically code 
   post={[<a href="/protocol/v1/schema#session%2Fupdate">Schema</a>]}
 >
   [Send session updates](/protocol/v1/prompt-turn#3-agent-reports-output) to
-  inform the Client of changes (no response expected). This includes: - [Message
-  chunks](/protocol/v1/content) (agent, user, thought) - [Tool calls and
-  updates](/protocol/v1/tool-calls) - [Plans](/protocol/v1/agent-plan) -
-  [Available commands updates](/protocol/v1/slash-commands#advertising-commands)
-  - [Mode changes](/protocol/v1/session-modes#from-the-agent)
+  inform the Client of changes (no response expected). This includes:
+
+- [Message chunks](/protocol/v1/content) (agent, user, thought)
+- [Tool calls and updates](/protocol/v1/tool-calls)
+- [Plans](/protocol/v1/agent-plan)
+- [Available commands updates](/protocol/v1/slash-commands#advertising-commands)
+- [Mode changes](/protocol/v1/session-modes#from-the-agent)
+- [User-facing notices](/protocol/v1/prompt-turn#session-notices)
+- [Context compactions](/protocol/v1/prompt-turn#session-compaction)
+
 </ResponseField>
 
 ## Argument requirements
@@ -242,3 +247,4 @@ Learn about [protocol extensibility](/protocol/v1/extensibility) to understand h
 - Understand [Session Setup](/protocol/v1/session-setup) for creating and loading sessions
 - Review the [Prompt Turn](/protocol/v1/prompt-turn) lifecycle
 - Explore [Extensibility](/protocol/v1/extensibility) to add custom features
+- Check your agent implementation with the [Test Compatibility Kit](/libraries/testing)

@@ -115,7 +115,7 @@ The Agent can also change its own mode and let the Client know by sending the `c
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "current_mode_update",
-      "modeId": "code"
+      "currentModeId": "code"
     }
   }
 }
@@ -141,8 +141,11 @@ This "switch mode" tool will usually request permission before running, which it
       "status": "pending",
       "content": [
         {
-          "type": "text",
-          "text": "## Implementation Plan..."
+          "type": "content",
+          "content": {
+            "type": "text",
+            "text": "## Implementation Plan..."
+          }
         }
       ]
     },
