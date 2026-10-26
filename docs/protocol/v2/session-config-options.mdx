@@ -206,6 +206,8 @@ Option `type` values can be custom or future variants. Custom option types **MUS
 
 The current value of a config option can be changed at any point during a session.
 
+Agents that advertise config options for a session **MUST** support `session/set_config_option` for it. Clients **MUST NOT** call it otherwise and **MUST** only send an advertised `configId`. Agents **MUST** reject an unknown `configId` or invalid value with `-32602` and leave the configuration unchanged.
+
 ### From the Client
 
 Clients can change a config option value by calling the `session/set_config_option` method:

@@ -49,7 +49,7 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 | `session/prompt`                                                                                    | Unchanged shape. **Response semantics redesigned** (see [Prompt lifecycle](#the-new-prompt-lifecycle)) |
 | `session/cancel`                                                                                    | Unchanged name. Completion now reported via `state_update` instead of the prompt response              |
 | `session/set_mode`                                                                                  | **Removed**. Use `session/set_config_option`                                                           |
-| `session/set_config_option`                                                                         | Unchanged                                                                                              |
+| `session/set_config_option`                                                                         | Required when the Agent advertises config options. No capability                                       |
 | `session/request_permission`                                                                        | Unchanged name. Params restructured (required `title`, optional `subject`)                             |
 | `session/update`                                                                                    | Unchanged name. Update variants changed (see below)                                                    |
 | `fs/read_text_file`, `fs/write_text_file`                                                           | **Removed**                                                                                            |

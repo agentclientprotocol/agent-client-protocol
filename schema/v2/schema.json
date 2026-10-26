@@ -6790,7 +6790,7 @@
       "x-method": "session/close"
     },
     "SetSessionConfigOptionRequest": {
-      "description": "Request parameters for setting a session configuration option.",
+      "description": "Request parameters for setting a session configuration option.\n\nAgents MUST support this method for any session where they advertise config options.\nAgents MUST reject an unknown `configId` or invalid value with `-32602` and leave the\nconfiguration unchanged.\n\nSee protocol docs: [Session Config Options](https://agentclientprotocol.com/protocol/v2/session-config-options#setting-a-config-option)",
       "type": "object",
       "properties": {
         "sessionId": {

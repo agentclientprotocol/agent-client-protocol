@@ -207,6 +207,9 @@ Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
 additional session methods such as `session/delete` by specifying nested
 capabilities.
 
+Agents that advertise [config options](/protocol/v2/draft/session-config-options#setting-a-config-option) **MUST** also
+support `session/set_config_option`.
+
 <ResponseField name="prompt" type="PromptCapabilities Object">
   Object indicating the different types of [content](/protocol/v2/draft/content)
   that may be included in `session/prompt` requests. Omitted or `null` means the

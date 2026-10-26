@@ -2769,6 +2769,12 @@ impl From<&str> for SessionConfigOptionValue {
 }
 
 /// Request parameters for setting a session configuration option.
+///
+/// Agents MUST support this method for any session where they advertise config options.
+/// Agents MUST reject an unknown `configId` or invalid value with `-32602` and leave the
+/// configuration unchanged.
+///
+/// See protocol docs: [Session Config Options](https://agentclientprotocol.com/protocol/session-config-options#setting-a-config-option)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
