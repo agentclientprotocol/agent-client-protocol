@@ -1795,11 +1795,16 @@ base launch configuration.
 
 ## <span class="font-mono">AvailableCommand</span>
 
-Information about a command.
+A command the agent advertises to the client.
 
-**Type:** Object
+The `type` field acts as the discriminator in the serialized JSON form.
 
-**Properties:**
+**Type:** Union
+
+<ResponseField name="command" type="object">
+A slash command the user can invoke by including it in a prompt.
+
+<Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1817,6 +1822,52 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Command name (e.g., `create_plan`, `research_codebase`).
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"command"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future command kind.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Clients that do not understand this command type should preserve the raw
+payload when storing, replaying, proxying, or forwarding command
+metadata, and otherwise ignore the command or display it as a plain
+command using its `name` and `description`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string"} required>
+  Human-readable description of what the command does.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Command name.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  Custom or future command type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">AvailableCommandInput</span>
@@ -2000,6 +2051,34 @@ Determines which elicitation modes the agent may use.
 Optional. Omitted or `null` both mean the client does not advertise
 elicitation support.
 
+</ResponseField>
+
+## <span class="font-mono">Command</span>
+
+A slash command the user can invoke by including it in a prompt.
+
+The `type` discriminator value is `command`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string"} required>
+  Human-readable description of what the command does.
+</ResponseField>
+<ResponseField name="input" type={<><span><a href="#availablecommandinput">AvailableCommandInput</a></span><span> | null</span></>} >
+  Input for the command if required
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Command name (e.g., `create_plan`, `research_codebase`).
 </ResponseField>
 
 ## <span class="font-mono">CommandPermissionSubject</span>

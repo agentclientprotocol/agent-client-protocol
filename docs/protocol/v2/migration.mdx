@@ -72,7 +72,7 @@ Nothing about v2 changes the underlying JSON-RPC framing, so a single connection
 | -                           | **New:** `terminal_output_chunk` for appending display terminal bytes                       |
 | `plan`                      | Replaced by `plan_update` with a `planId` and a `type` discriminator                        |
 | `current_mode_update`       | **Removed**. Modes are config options. Use `config_option_update`                           |
-| `available_commands_update` | Kept. Command `input` now carries a required `type` discriminator                           |
+| `available_commands_update` | Kept. Commands and their `input` now carry a required `type` discriminator                  |
 | `config_option_update`      | Unchanged                                                                                   |
 | `session_info_update`       | Unchanged                                                                                   |
 | `usage_update`              | Unchanged                                                                                   |
@@ -830,7 +830,7 @@ In setup responses, `availableCommands` is an optional array: omission or `[]` m
 
 `available_commands_update` notifications remain supported for advertising commands later or changing them. Each notification replaces the complete list previously advertised in a response or notification. `[]` clears it.
 
-A command still carries `name` and `description`, but its optional `input` specification is now a tagged union. The v1 untagged unstructured input gains an explicit `type: "text"` discriminator so richer input types can be added later:
+A command still carries `name` and `description`, but each command and its optional `input` specification are now tagged unions. Commands gain a required `type: "command"` discriminator so other kinds of commands can be added later, and the v1 untagged unstructured input gains an explicit `type: "text"` discriminator so richer input types can be added later:
 
 <CodeGroup>
 
@@ -844,6 +844,7 @@ A command still carries `name` and `description`, but its optional `input` speci
 
 ```json v2
 {
+  "type": "command",
   "name": "search",
   "description": "Search the codebase",
   "input": { "type": "text", "hint": "query to search for" }
@@ -852,7 +853,7 @@ A command still carries `name` and `description`, but its optional `input` speci
 
 </CodeGroup>
 
-As with other extensible unions, unknown input types should be preserved when proxying. A client that can't render one can fall back to plain text input or hide the command's input hint.
+As with other extensible unions, unknown command and input types should be preserved when proxying. Every command type carries `name` and `description`, so a client that doesn't understand a command type can ignore it or display it as a plain command. A client that can't render an input type can fall back to plain text input or hide the command's input hint.
 
 ## Consistent ID naming
 
@@ -898,7 +899,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, including terminal replacement snapshots rather than requiring every historical output chunk. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Remove `session/load`.
 13. **Client surface.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
 14. **MCP config.** Require and emit `type` discriminators. Drop SSE. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
-15. **Slash commands.** Add the `type: "text"` discriminator to command `input` specifications. Optionally advertise initial commands in setup responses via `availableCommands`, and use complete-replacement `available_commands_update` notifications for later changes.
+15. **Slash commands.** Add the `type: "command"` discriminator to each advertised command and the `type: "text"` discriminator to command `input` specifications. Optionally advertise initial commands in setup responses via `availableCommands`, and use complete-replacement `available_commands_update` notifications for later changes.
 16. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists, and accept batch arrays on stdio.
 
 ## Migration checklist: Clients
@@ -916,7 +917,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 11. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and plain reconnects with `session/resume` without `replayFrom`.
 12. **Client surface.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`. Do not treat display terminals as Client resources.
 13. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
-14. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read command `input` as a tagged union, and accept batch arrays on stdio. Read initial `availableCommands` from setup responses and replace the list on each `available_commands_update`, including `[]` to clear it.
+14. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read commands and their `input` as tagged unions, and accept batch arrays on stdio. Read initial `availableCommands` from setup responses and replace the list on each `available_commands_update`, including `[]` to clear it.
 
 ## Migration checklist: SDKs
 

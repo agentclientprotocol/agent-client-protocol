@@ -2270,14 +2270,194 @@ impl AvailableCommandsUpdate {
     }
 }
 
-/// Information about a command.
+/// A command the agent advertises to the client.
+///
+/// The `type` field acts as the discriminator in the serialized JSON form.
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum AvailableCommand {
+    /// A slash command the user can invoke by including it in a prompt.
+    Command(Command),
+    /// Custom or future command kind.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// Clients that do not understand this command type should preserve the raw
+    /// payload when storing, replaying, proxying, or forwarding command
+    /// metadata, and otherwise ignore the command or display it as a plain
+    /// command using its `name` and `description`.
+    #[serde(untagged)]
+    Other(OtherAvailableCommand),
+}
+
+impl AvailableCommand {
+    /// Command name (e.g., `create_plan`, `research_codebase`).
+    #[must_use]
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Command(c) => &c.name,
+            Self::Other(c) => &c.name,
+        }
+    }
+
+    /// Human-readable description of what the command does.
+    #[must_use]
+    pub fn description(&self) -> &str {
+        match self {
+            Self::Command(c) => &c.description,
+            Self::Other(c) => &c.description,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(&self) -> Option<&Meta> {
+        match self {
+            Self::Command(c) => c.meta.as_ref(),
+            Self::Other(c) => c.meta.as_ref(),
+        }
+    }
+}
+
+/// Custom or future command payload.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_available_command_schema))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherAvailableCommand {
+    /// Custom or future command type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// Command name.
+    pub name: String,
+    /// Human-readable description of what the command does.
+    pub description: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+    /// Additional fields from the unknown command payload.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherAvailableCommand {
+    /// Builds [`OtherAvailableCommand`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(
+        type_: impl Into<String>,
+        name: impl Into<String>,
+        description: impl Into<String>,
+        mut fields: BTreeMap<String, serde_json::Value>,
+    ) -> Self {
+        fields.remove("type");
+        fields.remove("name");
+        fields.remove("description");
+        fields.remove("_meta");
+        Self {
+            type_: type_.into(),
+            name: name.into(),
+            description: description.into(),
+            meta: None,
+            fields,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherAvailableCommand {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RawOtherAvailableCommand {
+            #[serde(rename = "type")]
+            type_: String,
+            name: String,
+            description: String,
+            #[serde(default, rename = "_meta")]
+            meta: Option<serde_json::Value>,
+            #[serde(flatten)]
+            fields: BTreeMap<String, serde_json::Value>,
+        }
+
+        let raw = RawOtherAvailableCommand::deserialize(deserializer)?;
+        if is_known_available_command_type(&raw.type_) {
+            return Err(serde::de::Error::custom(format!(
+                "known available command type `{}` did not match its schema",
+                raw.type_
+            )));
+        }
+
+        Ok(Self {
+            type_: raw.type_,
+            name: raw.name,
+            description: raw.description,
+            // Match the `DefaultOnError` handling of `_meta` on known commands.
+            meta: raw.meta.and_then(|meta| serde_json::from_value(meta).ok()),
+            fields: raw.fields,
+        })
+    }
+}
+
+const KNOWN_AVAILABLE_COMMAND_TYPES: &[&str] = &["command"];
+
+fn is_known_available_command_type(type_: &str) -> bool {
+    KNOWN_AVAILABLE_COMMAND_TYPES.contains(&type_)
+}
+
+#[cfg(feature = "schemars")]
+fn other_available_command_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_AVAILABLE_COMMAND_TYPES,
+    );
+}
+
+/// A slash command the user can invoke by including it in a prompt.
+///
+/// The `type` discriminator value is `command`.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct AvailableCommand {
+pub struct Command {
     /// Command name (e.g., `create_plan`, `research_codebase`).
     pub name: String,
     /// Human-readable description of what the command does.
@@ -2299,8 +2479,8 @@ pub struct AvailableCommand {
     pub meta: Option<Meta>,
 }
 
-impl AvailableCommand {
-    /// Builds [`AvailableCommand`] with the required fields set; optional fields start unset or empty.
+impl Command {
+    /// Builds [`Command`] with the required fields set; optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
         Self {
@@ -4870,6 +5050,112 @@ mod tests {
                 "sessionUpdate": "plan_removed",
                 "planId": "plan-1"
             })
+        );
+    }
+
+    #[test]
+    fn available_command_uses_type_discriminator() {
+        use serde_json::json;
+
+        let command = AvailableCommand::Command(
+            Command::new("web", "Search the web")
+                .input(AvailableCommandInput::Text(TextCommandInput::new("Query"))),
+        );
+
+        let json = serde_json::to_value(&command).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "type": "command",
+                "name": "web",
+                "description": "Search the web",
+                "input": { "type": "text", "hint": "Query" }
+            })
+        );
+
+        let roundtripped: AvailableCommand = serde_json::from_value(json).unwrap();
+        assert_eq!(roundtripped, command);
+        assert_eq!(roundtripped.name(), "web");
+        assert_eq!(roundtripped.description(), "Search the web");
+    }
+
+    #[test]
+    fn available_command_preserves_unknown_typed_variant() {
+        use serde_json::json;
+
+        let payload = json!({
+            "type": "_skill",
+            "name": "pdf-processing",
+            "description": "Extract text from PDFs",
+            "uri": "skill://pdf-processing/SKILL.md",
+            "_meta": { "example.com/source": "mcp" }
+        });
+        let command: AvailableCommand = serde_json::from_value(payload.clone()).unwrap();
+
+        assert_eq!(command.name(), "pdf-processing");
+        assert_eq!(command.description(), "Extract text from PDFs");
+        assert!(command.meta().is_some());
+
+        let AvailableCommand::Other(unknown) = &command else {
+            panic!("expected unknown command");
+        };
+        assert_eq!(unknown.type_, "_skill");
+        assert_eq!(
+            unknown.fields.get("uri"),
+            Some(&json!("skill://pdf-processing/SKILL.md"))
+        );
+        assert_eq!(serde_json::to_value(&command).unwrap(), payload);
+    }
+
+    #[test]
+    fn available_command_unknown_tolerates_invalid_meta() {
+        use serde_json::json;
+
+        let command: AvailableCommand = serde_json::from_value(json!({
+            "type": "_skill",
+            "name": "pdf-processing",
+            "description": "Extract text from PDFs",
+            "_meta": "oops"
+        }))
+        .unwrap();
+
+        assert!(matches!(command, AvailableCommand::Other(_)));
+        assert!(command.meta().is_none());
+    }
+
+    #[test]
+    fn available_command_unknown_does_not_hide_malformed_command_variant() {
+        use serde_json::json;
+
+        // A missing discriminator is rejected rather than defaulting to `command`.
+        assert!(
+            serde_json::from_value::<AvailableCommand>(json!({
+                "name": "test",
+                "description": "Run project tests"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<AvailableCommand>(json!({
+                "type": "command",
+                "name": "test"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<OtherAvailableCommand>(json!({
+                "type": "command",
+                "name": "test",
+                "description": "Run project tests"
+            }))
+            .is_err()
+        );
+        assert!(
+            serde_json::from_value::<AvailableCommand>(json!({
+                "type": "_skill",
+                "name": "pdf-processing"
+            }))
+            .is_err()
         );
     }
 

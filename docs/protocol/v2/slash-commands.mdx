@@ -21,6 +21,7 @@ For example, a `session/new` response can advertise a command with text input:
     "sessionId": "sess_abc123def456",
     "availableCommands": [
       {
+        "type": "command",
         "name": "web",
         "description": "Search the web for information",
         "input": {
@@ -55,6 +56,7 @@ After session setup, the Agent **MAY** announce commands that were not included 
       "sessionUpdate": "available_commands_update",
       "availableCommands": [
         {
+          "type": "command",
           "name": "web",
           "description": "Search the web for information",
           "input": {
@@ -63,10 +65,12 @@ After session setup, the Agent **MAY** announce commands that were not included 
           }
         },
         {
+          "type": "command",
           "name": "test",
           "description": "Run tests for the current project"
         },
         {
+          "type": "command",
           "name": "plan",
           "description": "Create a detailed implementation plan",
           "input": {
@@ -84,6 +88,12 @@ The notification's `availableCommands` array is the complete replacement list, n
 
 ### AvailableCommand
 
+Each command carries a required `type` discriminator. Currently the only type is `command`, a slash command the user invokes by including it in a prompt.
+
+<ResponseField name="type" type="string" required>
+  The kind of command. Currently always `"command"`.
+</ResponseField>
+
 <ResponseField name="name" type="string" required>
   The command name (e.g., "web", "test", "plan")
 </ResponseField>
@@ -95,6 +105,8 @@ The notification's `availableCommands` array is the complete replacement list, n
 <ResponseField name="input" type="AvailableCommandInput">
   Optional input specification for the command
 </ResponseField>
+
+Command entries can add custom or future `type` values. Custom command types **MUST** begin with `_`; unknown non-underscore command types are reserved for future ACP variants. Every command type carries `name` and `description`. Clients that don't understand a command type should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise either ignore it or display it as a plain command using its `name` and `description`. Entries without a `type`, or with a known `type` that doesn't match its schema, are invalid and are skipped like any other invalid command item.
 
 ### AvailableCommandInput
 

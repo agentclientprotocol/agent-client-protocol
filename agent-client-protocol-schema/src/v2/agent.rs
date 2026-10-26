@@ -6411,23 +6411,26 @@ mod test_serialization {
 
     #[test]
     fn test_session_response_available_commands_roundtrip_with_config_options() {
-        use super::super::{AvailableCommandInput, TextCommandInput};
+        use super::super::{AvailableCommandInput, Command, TextCommandInput};
 
         let commands = vec![
-            AvailableCommand::new("web", "Search the web")
-                .input(AvailableCommandInput::Text(TextCommandInput::new("Query"))),
-            AvailableCommand::new("test", "Run project tests"),
+            AvailableCommand::Command(
+                Command::new("web", "Search the web")
+                    .input(AvailableCommandInput::Text(TextCommandInput::new("Query"))),
+            ),
+            AvailableCommand::Command(Command::new("test", "Run project tests")),
         ];
         let mut expected = json!({
             "sessionId": "sess",
             "configOptions": [test_config_option()],
             "availableCommands": [
                 {
+                    "type": "command",
                     "name": "web",
                     "description": "Search the web",
                     "input": { "type": "text", "hint": "Query" }
                 },
-                { "name": "test", "description": "Run project tests" }
+                { "type": "command", "name": "test", "description": "Run project tests" }
             ]
         });
 
@@ -6466,7 +6469,8 @@ mod test_serialization {
 
     #[test]
     fn test_session_response_available_commands_deserialize_missing_null_and_invalid() {
-        let command = AvailableCommand::new("test", "Run project tests");
+        let command =
+            AvailableCommand::Command(super::super::Command::new("test", "Run project tests"));
         let config_options = vec![test_config_option()];
 
         for (commands, expected) in [
@@ -6476,6 +6480,10 @@ mod test_serialization {
             (Some(json!("oops")), vec![]),
             (Some(json!({})), vec![]),
             (Some(json!([null, {}, { "name": "invalid" }])), vec![]),
+            (
+                Some(json!([{ "name": "test", "description": "Run project tests" }])),
+                vec![],
+            ),
             (
                 Some(json!([null, command, { "name": "invalid" }])),
                 vec![command.clone()],
