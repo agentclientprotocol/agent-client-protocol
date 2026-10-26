@@ -19,12 +19,13 @@ mod ext;
 mod mcp;
 mod plan;
 mod protocol_level;
+mod rpc;
 #[cfg(feature = "schemars")]
 pub(crate) mod schema_util;
 mod terminal;
 mod tool_call;
 
-pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification, Request, RequestId};
+pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification};
 pub use agent::*;
 pub use client::*;
 pub use content::*;
@@ -36,12 +37,10 @@ pub use ext::*;
 pub use mcp::*;
 pub use plan::*;
 pub use protocol_level::*;
+pub use rpc::*;
 pub use serde_json::value::RawValue;
 pub use terminal::*;
 pub use tool_call::*;
-
-/// JSON-RPC response envelope using this protocol version's error type.
-pub type Response<Result> = crate::rpc::Response<Result, Error>;
 
 use serde::{Deserialize, Serialize};
 use std::{

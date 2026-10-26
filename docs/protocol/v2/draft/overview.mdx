@@ -12,6 +12,10 @@ The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) s
 - **Methods**: Request-response pairs that expect a result or error
 - **Notifications**: One-way messages that don't expect a response
 
+Unlike base JSON-RPC, request IDs **MUST** be a string or an integer, never
+`null`. An error response has `id: null` only when the request ID could not be
+determined.
+
 ACP follows JSON-RPC 2.0 batch behavior. See
 [Transports](/protocol/v2/draft/transports#json-rpc-batch-messages) for batch
 handling requirements.
