@@ -8,15 +8,17 @@ Author(s): [@lifeizhou-ap](https://github.com/lifeizhou-ap)
 
 > What are you proposing to change?
 
-Add an optional `session/set_title` request that lets a Client set the title of an Agent-owned session. The Agent persists the title as authoritative session metadata and publishes changes through the existing `session_info_update` notification.
+Add an optional `session/set_title` request that lets a Client set the title of a session. The Agent persists the title as session metadata and returns the title it actually stored, which may be a normalized form of the one the Client supplied.
 
-An Agent may generate session titles. After `session/set_title` succeeds, the Agent must not replace the Client-supplied title with a title it generates.
+An Agent may generate session titles. After `session/set_title` succeeds, the Agent must not replace the Client-supplied title with one it generates automatically.
 
 ## Status quo
 
 > How do things work today and what problems does this cause? Why would we change things?
 
-ACP allows an Agent to report a session title, but provides no operation for a Client to set one. As a result, a user-selected title cannot be stored as Agent-owned session metadata through ACP.
+ACP allows an Agent to report a session title, through `SessionInfo.title` in `session/list` and through the `session_info_update` notification, but provides no operation for a Client to set one. As a result, a title the user chooses in the Client cannot be stored with the session through ACP, and the Agent's next generated title may replace whatever the Client displays.
+
+Agents already support renaming outside ACP. Claude Code has `/rename` and a `renameSession()` SDK function, and the Codex app-server has `thread/name/set`. The claude-agent-acp adapter exposes this through a vendor-specific `_session/rename` extension, so Clients that want renaming today have to target individual adapters.
 
 [Issue #1978](https://github.com/agentclientprotocol/agent-client-protocol/issues/1978) identifies the same missing operation while also proposing semantics for Agent-generated titles and an optional initial title. This RFD addresses only the Client-to-Agent operation.
 
@@ -24,18 +26,13 @@ ACP allows an Agent to report a session title, but provides no operation for a C
 
 > What are you proposing to improve the situation?
 
-Add a capability-gated `session/set_title` request that lets a Client set the title of an Agent-owned session. The Agent persists the title and publishes the change through `session_info_update`.
+Add a capability-gated `session/set_title` request, in both ACP v1 and v2, that lets a Client set the title of a session. The Agent persists the title and returns the stored title in the response. The session does not need to be loaded, so a Client can rename sessions directly from a `session/list` view.
 
 ## Shiny future
 
 > How will things will play out once this feature exists?
 
-<!--
-    Use this section to describe the "status quo" as it will play out once
-    we have made these changes.
-
-    Note: This section is OPTIONAL when RFDs are first opened.
--->
+A user renames a session in their editor's session list, and the new title shows up wherever that session is listed, including in other Clients connected to the same Agent and in the Agent's own UI. The title stays put: the Agent's title generation no longer replaces it after the next turn. Clients no longer need per-Agent extensions or transcript parsing to keep user-chosen titles.
 
 ## Implementation details and plan
 
@@ -43,21 +40,49 @@ Add a capability-gated `session/set_title` request that lets a Client set the ti
 
 ### Protocol
 
-An Agent advertises support through `sessionCapabilities.setTitle`:
+The method is added to both ACP v1 and v2. The request, response, and resulting `session_info_update` are identical in both versions; only where the capability is advertised differs.
+
+#### Capability
+
+In v1, an Agent advertises support through `agentCapabilities.sessionCapabilities.setTitle` in the `initialize` response:
 
 ```json
 {
-  "agentCapabilities": {
-    "sessionCapabilities": {
-      "setTitle": {}
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "setTitle": {}
+      }
     }
   }
 }
 ```
 
-Clients must not call `session/set_title` unless this capability is present.
+In v2, an Agent advertises support through `capabilities.session.setTitle` in the `initialize` response:
 
-The request is:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 2,
+    "capabilities": {
+      "session": {
+        "setTitle": {}
+      }
+    }
+  }
+}
+```
+
+In both versions, omitting the field or setting it to `null` means the Agent does not support the method, and `{}` means it does. Clients must not call `session/set_title` unless this capability is present.
+
+#### Request and response
+
+The request is the same in v1 and v2:
 
 ```json
 {
@@ -71,19 +96,40 @@ The request is:
 }
 ```
 
-`sessionId` identifies the Agent-owned session and `title` is the new session title.
+<ParamField path="sessionId" type="SessionId" required>
+  The session to retitle. The session does not need to be loaded on the current
+  connection; any session the Agent would return from `session/list` can be
+  retitled.
+</ParamField>
 
-The response is empty:
+<ParamField path="title" type="string" required>
+  The new title for the session. Must be present and must not be `null`. There
+  is no way to clear a title or return to an Agent-generated title through this
+  method.
+</ParamField>
+
+The response contains the title the Agent persisted:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": {}
+  "result": {
+    "title": "Investigate OAuth timeout"
+  }
 }
 ```
 
-- Title validation rules are defined by the Agent. If a title fails validation, the Agent returns `InvalidParams` (`-32602`) with a message explaining why it was rejected. For example:
+<ResponseField name="title" type="string" required>
+  The title as persisted by the Agent. This may differ from the requested title
+  if the Agent normalized it. Clients **SHOULD** display this value rather than
+  the one they sent.
+</ResponseField>
+
+#### Validation and normalization
+
+- The Agent **MAY** normalize the title before persisting it, for example by trimming surrounding whitespace, collapsing line breaks and repeated whitespace, or truncating it to a maximum length. The response reports the normalized title.
+- Other validation rules are defined by the Agent. If a title fails validation, including a title that is empty after normalization, the Agent returns `InvalidParams` (`-32602`) with a message explaining why it was rejected. For example:
 
   ```json
   {
@@ -91,25 +137,76 @@ The response is empty:
     "id": 42,
     "error": {
       "code": -32602,
-      "message": "Title must not exceed 100 characters."
+      "message": "Title must not be empty."
     }
   }
   ```
 
-- The Agent returns success only after persisting the title exactly as supplied. If it cannot do so, it returns an error.
-- After a successful `session/set_title` request, the Agent sends a `session/update` notification containing a `session_info_update` with the persisted title. Future `session/list` calls return the same title.
-- A title set through `session/set_title` must not be overwritten by a title generated by the Agent.
-- If the Agent is generating a title when `session/set_title` succeeds, it must discard the generated title.
-- Each subsequent successful `session/set_title` request replaces the previous title.
+- The Agent returns success only after persisting the title. If it cannot do so, it returns an error.
+
+#### Errors
+
+- If `sessionId` does not identify a session the Agent knows about, the Agent returns `ResourceNotFound` (`-32002`).
+- An Agent **MAY** refuse to retitle a session it cannot safely update, such as an archived session, an ephemeral session that is not persisted, or a session currently held by another process that would overwrite the new title. In that case it returns an error with a message explaining why.
+
+#### Notifications and `session/list`
+
+- If the session is loaded, the Agent **MAY** send a `session/update` notification containing a `session_info_update` with the persisted title, for example so that other Clients viewing the session see the change. The requesting Client **SHOULD NOT** depend on this notification; the response already carries the persisted title.
+
+  The notification uses the existing `session_info_update`, which has the same shape in v1 and v2:
+
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "method": "session/update",
+    "params": {
+      "sessionId": "sess_123",
+      "update": {
+        "sessionUpdate": "session_info_update",
+        "title": "Investigate OAuth timeout"
+      }
+    }
+  }
+  ```
+
+- If the Agent supports `session/list`, later `session/list` results return the persisted title for the session. `session/set_title` does not require `session/list` support; a successful response is enough for the Client to know the title was persisted.
+
+#### Agent-generated titles
+
+- After `session/set_title` succeeds, the Agent **MUST NOT** replace the title with one it generates automatically.
+- If the Agent is generating a title when `session/set_title` succeeds, it **MUST** discard the generated title.
+- This does not restrict later user-initiated renames through other paths, such as an Agent slash command like `/rename` or another Client calling `session/set_title`. Each successful rename replaces the previous title.
+- Clients **MAY** call `session/set_title` while a prompt turn is in progress. Retitling does not affect the turn.
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
 
-<!--
-    Keep this section up-to-date as discussion proceeds. The goal is to capture major points that came up on a PR or in a discussion forum -- and if they reoccur, to point people to the FAQ so that we can start the dialog from a more informed place.
--->
+### Why `session/set_title` instead of `session/rename`?
+
+It matches the existing `session/set_mode` and `session/set_config_option` methods, and names the field being set. In SDKs it maps to `SetSessionTitleRequest` / `SetSessionTitleResponse` and a `set_session_title` method.
+
+### Why not a general `session/set_info` that mirrors `session_info_update`?
+
+`session_info_update` carries `title`, `updatedAt`, and `_meta`, but `updatedAt` is Agent-owned activity data that Clients should not set, and `_meta` already has its own extensibility rules. A dedicated method keeps the semantics narrow: required title, normalization, and protection from generated titles. If more Client-settable session metadata appears later, it can get its own method or a follow-up RFD can generalize this one.
+
+### Why does the response include the title?
+
+Agents normalize titles today. claude-agent-acp collapses whitespace and caps titles at 256 characters, and Codex trims names. Returning the persisted title lets the Client display exactly what the Agent stored without waiting for a notification, which may not be sent for sessions that are not loaded.
+
+### Why doesn't the session need to be loaded?
+
+The main use case is renaming from a session list, where most sessions are not loaded. Existing implementations already support this: Claude Code appends a custom-title record to the session transcript, and Codex updates thread metadata in its store, without resuming the session.
+
+### Why can't a Client clear a title or go back to a generated title?
+
+`title` is required and non-null to keep the method simple. Clearing a title through `session_info_update` (`title: null`) remains something only the Agent does. A reset mechanism can be added later if Clients need it.
+
+### Why is there no `title` on `session/new`?
+
+[Issue #1978](https://github.com/agentclientprotocol/agent-client-protocol/issues/1978) also proposes letting a Client supply an initial title when creating a session. This RFD leaves that out; a Client can call `session/set_title` right after `session/new`, and an initial title can be added in a follow-up if needed.
 
 ## Revision history
 
 - 2026-08-19: Initial proposal.
+- 2026-10-26: Show v1 and v2 capabilities, return the persisted title in the response, allow normalization, allow retitling sessions that are not loaded, make the notification optional, define errors, and add FAQ.

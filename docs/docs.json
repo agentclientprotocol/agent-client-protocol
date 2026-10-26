@@ -194,7 +194,8 @@
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
-              "rfds/session-status"
+              "rfds/session-status",
+              "rfds/session-set-title"
             ]
           },
           {
