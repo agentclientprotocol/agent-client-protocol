@@ -12,9 +12,9 @@ ACP v2 already separates foreground work from background activity: `state_update
 
 This RFD reuses the entities ACP already has instead of adding a new one:
 
-- **Tool calls can outlive the foreground work that started them.** A backgrounded shell, a watcher, or a scheduled wakeup is a tool call that stays `pending` or `in_progress` after the session becomes `idle`. Terminals stay attached to their tool call as usual.
-- **Tool calls can be cancelled individually.** A tool call can advertise `capabilities.cancel`, and the Client cancels it with a new `tool_call/cancel` request, without cancelling the session's foreground work.
-- **State snapshots list the background work.** Every `state_update` can carry a `background` list referencing the tool calls and subagent sessions that are running independently of foreground work. Clients use it to show that something is still running, to warn before closing, and to tell background tool calls apart from stale ones.
+- **Terminals and tool calls can outlive the foreground work that started them.** A backgrounded shell is a [terminal](./terminal-output.mdx) that keeps running after control returns to the model. A watcher or a scheduled wakeup is a tool call that stays `pending` or `in_progress` after the session becomes `idle`.
+- **Terminals and tool calls can be cancelled individually.** Either can advertise `capabilities.cancel`, and the Client cancels it with a new `terminal/cancel` or `tool_call/cancel` request, without cancelling the session's foreground work.
+- **State snapshots list the background work.** Every `state_update` can carry a `background` list referencing the terminals, tool calls, and subagent sessions that are running independently of foreground work. Clients use it to show that something is still running, to warn before closing, and to tell background work apart from stale tool calls and terminals.
 
 ## Status quo
 
@@ -42,22 +42,23 @@ ACP v2 says this activity may exist ([Foreground and Background Work](/protocol/
 - **Background work can't be stopped individually.** v2 terminals are display-only by design. `session/cancel` only targets the session's current work, and agents differ on whether it stops background work. Only subagents can be cancelled one at a time.
 - **Close and resume are underspecified.** `session/close` cancels "any ongoing work", but nothing says Clients will learn what was stopped. After `session/resume`, the Client gets a foreground snapshot but no record of background work that is still running.
 
-Adapters are working around this today. Both `claude-agent-acp` and `codex-acp` implement a private extension (`async_task_spawned`, `async_task_state_update`, `_session/async_task/stop`) that only one Client negotiates, so other Clients see nothing. That extension also adds a third entity alongside tool calls and subagents, with its own ids, statuses, and output path, for work that already has a tool call.
+Adapters are working around this today. Both `claude-agent-acp` and `codex-acp` implement a private extension (`async_task_spawned`, `async_task_state_update`, `_session/async_task/stop`) that only one Client negotiates, so other Clients see nothing. That extension also adds another entity alongside tool calls, terminals, and subagents, with its own ids, statuses, and output path, for work that already has a tool call or terminal.
 
 ## What we propose to do about it
 
 > What are you proposing to improve the situation?
 
-### Background work is tool calls and subagents
+### Background work is terminals, tool calls, and subagents
 
 Background work is session-owned work that is running independently of the session's foreground work. In v2 it is represented by entities the Client already tracks:
 
-- **Tool calls.** A tool call whose work continues after it returns control to the model, such as a backgrounded shell, a watcher, or a scheduled wakeup, keeps reporting status on the same `toolCallId`. Its output stays where it already is: tool call content and any referenced [terminal](./terminal-output.mdx).
+- **Terminals.** A process that keeps running after its tool call returns control to the model, such as a backgrounded shell or dev server, is a [terminal](./terminal-output.mdx). It is live until its `terminal_update` reports `exitStatus`. The tool call that started it keeps referencing the terminal so the Client can show its output in place, and reports status as the agent's own tool lifecycle does: it may complete once the process has been handed off, as Claude Code's Bash tool does, or stay `in_progress` until the process exits, as Codex's command items do. Either way, the terminal is what is listed.
+- **Tool calls.** Work that continues without a process of its own, such as a watcher, a workflow, or a scheduled wakeup, keeps reporting status on the same `toolCallId`. Its output stays in tool call content.
 - **Subagent sessions.** A background child keeps reporting through its [subagent](../subagents.mdx) association and `state`.
 
-Tool calls, terminals, and subagents may continue after the session reports `idle`. Their updates do not change the foreground state, as already specified.
+Terminals, tool calls, and subagents may continue after the session reports `idle`. Their updates do not change the foreground state, as already specified.
 
-No new entity type is added. Anything an agent runs in the background is either started by a tool call or is a subagent. The rare exception can be modeled as a tool call that the agent starts itself.
+No new entity type is added. Anything an agent runs in the background is a process, work started by a tool call, or a subagent. The rare exception can be modeled as a tool call that the agent starts itself.
 
 ### `pending` means not started yet, for any reason
 
@@ -66,7 +67,7 @@ Today `pending` means the tool call "hasn't started running yet because the inpu
 | Status        | Meaning                                                   | Background examples                                                     |
 | ------------- | --------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `pending`     | Live, but not running yet                                 | A scheduled wakeup waiting to fire; a cron job waiting for its next run |
-| `in_progress` | Actively running                                          | A background shell; a monitor watching a log or socket                  |
+| `in_progress` | Actively running                                          | A monitor watching a log or socket; a running workflow                  |
 | final         | `completed`, `failed`, or `cancelled`; no further changes | -                                                                       |
 
 Clients **SHOULD** show `in_progress` as active, for example with a spinner, and `pending` as waiting or scheduled.
@@ -84,10 +85,9 @@ Statuses never go back to `pending`. When a scheduled tool call fires, the work 
 {
   "sessionUpdate": "tool_call_update",
   "toolCallId": "call_012",
-  "title": "npm run dev",
-  "kind": "execute",
+  "title": "Watch deploy logs",
+  "kind": "other",
   "status": "in_progress",
-  "content": [{ "type": "terminal", "terminalId": "term_003" }],
   "capabilities": {
     "cancel": {}
   }
@@ -117,7 +117,47 @@ The Client cancels one tool call with a new `tool_call/cancel` request:
 - The Agent responds with `-32602` (Invalid params) if the tool call is unknown, already final, or not cancellable.
 - Cancelling a tool call does not change the foreground state by itself. The Agent decides what, if anything, to tell the model about it.
 
-This works for foreground tool calls too. A user can stop one long-running build without cancelling the rest of the agent's work.
+This works for foreground tool calls too. A user can stop one long-running step without cancelling the rest of the agent's work.
+
+### Cancellable terminals
+
+[Terminals](./terminal-output.mdx) are display-only today. This RFD adds one opt-in control: `terminal_update` gains an optional `capabilities` field with the same shape and patch rules as tool call capabilities.
+
+```json
+{
+  "sessionUpdate": "terminal_update",
+  "terminalId": "term_003",
+  "command": "npm run dev",
+  "cwd": "/workspace/project",
+  "capabilities": {
+    "cancel": {}
+  }
+}
+```
+
+- `capabilities` and `cancel` follow the same rules as on tool calls. A terminal has no status, so the Agent **SHOULD** clear or stop advertising `cancel` once it reports `exitStatus`.
+
+The Client stops the process with a new `terminal/cancel` request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "terminal/cancel",
+  "params": {
+    "sessionId": "sess_abc123",
+    "terminalId": "term_003"
+  }
+}
+```
+
+- The Client **MUST NOT** send it unless the terminal currently advertises `capabilities.cancel`.
+- The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the process has stopped. The Agent confirms that with a `terminal_update` that sets `exitStatus`, for example with the signal used to stop it.
+- The Agent responds with `-32602` (Invalid params) if the terminal is unknown, has already exited, or is not cancellable.
+- Cancellation stops the process. It does not release the terminal: its output remains available for display and replay.
+- Cancelling a terminal does not change the foreground state or the status of any tool call that references it. If foreground work is waiting on the process, the Agent reports the tool call's outcome as it would for any other process exit.
+
+Input, resize, and other interactive control remain out of scope.
 
 ### The `background` list on state snapshots
 
@@ -129,6 +169,7 @@ This works for foreground tool calls too. A user can stop one long-running build
   "state": "idle",
   "stopReason": "end_turn",
   "background": [
+    { "type": "terminal", "terminalId": "term_003" },
     { "type": "tool_call", "toolCallId": "call_012" },
     { "type": "tool_call", "toolCallId": "call_019" },
     { "type": "subagent", "sessionId": "sess_child_4" }
@@ -139,48 +180,51 @@ This works for foreground tool calls too. A user can stop one long-running build
 Rules for the field:
 
 - **It is a snapshot.** Each `state_update` is a complete snapshot, so `background` is too. A concrete list replaces the previous one, and `[]` means no background work is running.
-- **Omitted or `null` means the agent is not reporting background work.** It does not mean "nothing is running". An agent that reports background work **MUST** include `background` on every `state_update` for the session.
+- **Omitted or `null` means the agent is not reporting background work.** It does not mean "nothing is running". An agent that reports background work **MUST** include `background` on every `state_update` for the session. If a later snapshot omits it anyway, or it is malformed, the Client treats background work as unknown until a list is reported again: it does not keep the previous list, consider the session quiet, or treat unfinished tool calls or running terminals as abandoned.
 - **The agent re-sends the state when the list changes.** When background work starts or ends, the Agent **SHOULD** send a repeated `state_update` with the current state and the updated list. A repeated snapshot is not a state transition ([State Transitions](/protocol/v2/prompt-lifecycle#state-transitions)), and a repeated `idle` without a new stop reason is not a new completion.
-- **Items reference existing entities.** `tool_call` items reference a tool call by `toolCallId` in this session. `subagent` items reference a child session associated with this session through `subagent_update`. The list is extensible through the usual enum variant extension rules.
-- **Only background work is listed.** A tool call or child session that foreground work is currently waiting on is foreground work and is not listed. Work moves into the list when it detaches, for example when a shell is backgrounded mid-turn.
-- **Terminals are not listed separately.** A terminal is reached through the tool call that references it.
+- **Items are announced before they are listed and finalized before they are removed.** The Agent **MUST** send a `terminal_update` for a terminal, a `tool_call` or `tool_call_update` for a tool call, or a `subagent_update` for a child, before the first snapshot that lists it. When a terminal exits or a tool call ends, the Agent **MUST** send its `exitStatus` or final status before the snapshot that removes it from the list, so a Client never treats finished work as abandoned.
+- **Follow-up work is reported with the removal.** When the end of background work starts new foreground work, for example a follow-up response to a finished background task, the Agent **SHOULD** report `running` in the same snapshot that removes the item, or earlier. It **SHOULD NOT** send `idle` with an empty list followed immediately by `running`.
+- **Items reference existing entities.** `terminal` items reference a terminal by `terminalId` in this session. `tool_call` items reference a tool call by `toolCallId` in this session. `subagent` items reference a child session associated with this session through `subagent_update`. The list is extensible through the usual enum variant extension rules.
+- **Only background work is listed.** A terminal, tool call, or child session that foreground work is currently waiting on is foreground work and is not listed. Work moves into the list when it detaches, for example when a shell is backgrounded mid-turn and its terminal is listed.
+- **A background child is listed while it has anything running.** Subagent sessions are reusable, and `idle` does not end them. A detached child is listed while its state is not `idle`, or while its own `background` list is non-empty or not reported. An `idle` child with no background work of its own is not listed, even though it remains associated.
+- **Each piece of work is listed once.** Process-backed work is listed as its terminal. The Agent **MUST NOT** also list a tool call whose only live work is a listed terminal, so a Client counting items never shows one shell as two tasks.
 
 What the Client learns from the list:
 
-- **Whether the session is quiet.** The session has nothing running when the state is `idle` and `background` is `[]`. When `background` only contains `pending` tool calls, the session is idle with work scheduled.
+- **Whether the session is quiet.** The session has nothing running when the state is `idle` and `background` is `[]`. When `background` only contains `pending` tool calls, the session is idle with work scheduled. Because listed children stay listed while their own background work runs, this also covers descendants. Quiet describes the session at that snapshot, not a promise that it will stay quiet. An Agent may not know ahead of time that finished work will start a follow-up. A Client that frees resources when a session becomes quiet **SHOULD** wait a short grace period after the snapshot that empties the list.
 - **What closing will stop.** The Client can warn before `session/close`, for example "Closing will stop 2 background tasks".
-- **Which unfinished tool calls are still live.** A Client **MAY** treat a `pending` or `in_progress` tool call that is not in the latest reported `background` list as abandoned once the session is `idle`. A Client **MUST NOT** do so when `background` is not reported.
+- **Which unfinished tool calls and terminals are still live.** A Client **MAY** treat a `pending` or `in_progress` tool call, or a terminal without `exitStatus`, that is not in the latest reported `background` list as abandoned once the session is `idle`. A tool call that references a listed terminal is live, even though it is not listed itself. A Client **MUST NOT** treat anything as abandoned when `background` is not reported.
 
 ### Cancellation, close, and resume
 
 **`session/cancel` cancels foreground work only.** Work in the latest `background` list is not part of the session's current work. This matches what Claude Code and Codex already do, and what the subagents RFD specifies for background children.
 
-- When the Client preemptively marks non-finished tool calls as `cancelled` after sending `session/cancel`, it **SHOULD** skip tool calls in the latest `background` list.
+- When the Client preemptively marks non-finished tool calls as `cancelled` after sending `session/cancel`, it **SHOULD** skip tool calls in the latest `background` list and tool calls that reference a listed terminal.
 - Pending permission requests for listed work stay open. Today the Client **MUST** answer every pending permission request in the session with `cancelled` on `session/cancel`. This RFD narrows that to requests for the cancelled foreground work, which is how [elicitations](/protocol/v2/elicitation#session-cancellation) already work: the Agent cancels any other request that no longer applies with `$/cancel_request`.
-- When foreground work fails with the `error` stop reason, the unfinished tool calls the Agent gives a final status are those of the failed work. Listed background tool calls keep running.
-- Background work is stopped individually with `tool_call/cancel` or by cancelling the subagent's session, or all at once with `session/close`.
+- When foreground work fails with the `error` stop reason, the unfinished tool calls the Agent gives a final status are those of the failed work. Listed background terminals and tool calls, and tool calls that reference a listed terminal, keep running.
+- Background work is stopped individually with `terminal/cancel`, `tool_call/cancel`, or by cancelling the subagent's session, or all at once with `session/close`.
 
 **`session/close` stops all background work.** "Any ongoing work" in [Closing Active Sessions](/protocol/v2/session-setup#closing-active-sessions) includes everything in the `background` list.
 
-- After a successful close, the Client **SHOULD** treat every listed tool call that has not reported a final status as `cancelled`, and **MUST** answer any pending permission request for listed work with `cancelled`.
+- After a successful close, the Client **SHOULD** treat every listed tool call, and every tool call that references a listed terminal, that has not reported a final status as `cancelled`, and every listed terminal that has not reported `exitStatus` as exited with no known exit status. It **MUST** answer any pending permission request for listed work with `cancelled`.
 - The Agent **MAY** send final updates for listed work before responding, but doesn't have to. This matches the [subagents RFD](../subagents.mdx), where closing a parent cancels background children without requiring new notifications for them.
 - Work that is deliberately not owned by the session and survives its close, such as a durable cron job saved in the project, is out of scope and is not listed.
 
-**`session/fork` doesn't copy background work.** A forked session starts with no background work, even if the source session has some. Unfinished tool calls copied into the fork's history are not live, and the fork's state snapshots report `background: []` until the fork starts its own background work.
+**`session/fork` doesn't copy background work.** A forked session starts with no background work, even if the source session has some. Unfinished tool calls and running terminals copied into the fork's history are not live, and the fork's state snapshots report `background: []` until the fork starts its own background work.
 
 **`session/resume` restores the list.** The resume snapshot required by [Current-State Synchronization](/protocol/v2/session-setup#current-state-synchronization) carries `background` like any other snapshot.
 
-- Before that snapshot, the Agent **MUST** send a current `tool_call_update` for each listed tool call, and a current `subagent_update` for each listed child, that the requested replay did not already deliver at its current state. When no replay was requested, this means sending all of them, so a Client with no history still knows what each item is.
+- Before that snapshot, the Agent **MUST** send a current `terminal_update` for each listed terminal, a current `tool_call_update` for each listed tool call, and a current `subagent_update` for each listed child, that the requested replay did not already deliver at its current state. When no replay was requested, this means sending all of them, so a Client with no history still knows what each item is.
 
 ## Shiny future
 
 > How will things will play out once this feature exists?
 
-A user starts a dev server, asks for a long test run in the background, and schedules a check-in for later. When the agent finishes responding, the Client shows the session as idle with "1 running, 1 scheduled" next to it. The dev server's tool call stays expanded with its live terminal and a stop button. The background tests finish while the session is idle, and their tool call moves to `completed` without the session leaving `idle`.
+A user starts a dev server, asks for a long test run in the background, and schedules a check-in for later. When the agent finishes responding, the Client shows the session as idle with "1 running, 1 scheduled" next to it. The dev server's tool call shows its live terminal with a stop button. The background tests finish while the session is idle, and their terminal reports its exit status without the session leaving `idle`.
 
 When the user closes the session, the Client warns that the dev server and the scheduled check-in will be stopped. When they resume the session from another Client, the list of background work and the current state of each item come back with it.
 
-Adapters drop their private async-task extensions. Every Client sees the same background work through tool calls and subagents it already renders.
+Adapters drop their private async-task extensions. Every Client sees the same background work through terminals, tool calls, and subagents it already renders.
 
 ## Implementation details and plan
 
@@ -191,30 +235,33 @@ Adapters drop their private async-task extensions. Every Client sees the same ba
 - **`ToolCallStatus::Pending`:** update the doc comment to "hasn't started running yet", listing streaming input, pending approval, and scheduling as examples.
 - **`ToolCallUpdate.capabilities`:** add `MaybeUndefined<ToolCallCapabilities>`. `ToolCallCapabilities` has `cancel: Option<ToolCallCancelCapability>` and `_meta`, mirroring `SubagentSessionCapabilities`. It is display-only metadata, so a malformed value falls back to unsupported (`DefaultOnError`).
 - **`tool_call/cancel`:** add `CancelToolCallRequest { session_id, tool_call_id, _meta }` and `CancelToolCallResponse { _meta }`, client-to-agent. The trait method is `cancel_tool_call` and the method names entry is `tool_call_cancel`.
+- **`TerminalUpdate.capabilities`:** add `MaybeUndefined<TerminalCapabilities>`, with `cancel: Option<TerminalCancelCapability>` and `_meta`, handled like `ToolCallCapabilities`.
+- **`terminal/cancel`:** add `CancelTerminalRequest { session_id, terminal_id, _meta }` and `CancelTerminalResponse { _meta }`, client-to-agent. The trait method is `cancel_terminal` and the method names entry is `terminal_cancel`. This is separate from the v1 Client terminal methods, which v2 removes.
 - **`background` on state updates:** add `background: Option<Vec<BackgroundWork>>` to `RunningStateUpdate`, `RequiresActionStateUpdate`, and `IdleStateUpdate`, and to `UnknownStateUpdate` under `unstable_subagents`. An Agent that can't tell what its foreground work is doing may still know what is running in the background.
-  - `BackgroundWork` is an internally tagged enum on `type`: `ToolCall { tool_call_id, _meta }`, `Subagent { session_id, _meta }`, and an `Other` fallback that rejects known discriminators.
-  - The Client acts on this list when it cleans up tool calls and warns before close. Unknown item types are skipped, but a malformed known item makes the whole field malformed, which is treated as not reported. That way a damaged list never makes a running tool call look abandoned.
+  - `BackgroundWork` is an internally tagged enum on `type`: `Terminal { terminal_id, _meta }`, `ToolCall { tool_call_id, _meta }`, `Subagent { session_id, _meta }`, and an `Other` fallback that rejects known discriminators.
+  - The Client acts on this list when it cleans up tool calls and terminals and warns before close. Unknown item types are skipped, but a malformed known item makes the whole field malformed, which is treated as not reported. That way a damaged list never makes running work look abandoned.
 - **Subagents:** `SubagentUpdate.state` mirrors the child's `StateUpdate`, so the child's own `background` list shows up there too. No separate change is needed.
 
 ### Documentation
 
-- `prompt-lifecycle.mdx`: in Foreground and Background Work, describe tool calls and subagents as the representation of background work, and add the `background` list to Session States. In Cancellation, say that `session/cancel` does not stop listed work and that Clients skip it when they preemptively mark tool calls as cancelled.
-- `tool-calls.mdx`: the generalized `pending` definition, tool calls that outlive foreground work, `capabilities`, and `tool_call/cancel`.
+- `prompt-lifecycle.mdx`: in Foreground and Background Work, describe terminals, tool calls, and subagents as the representation of background work, and add the `background` list to Session States. In Cancellation, say that `session/cancel` does not stop listed work and that Clients skip it when they preemptively mark tool calls as cancelled.
+- `tool-calls.mdx`: the generalized `pending` definition, tool calls that outlive foreground work, `capabilities`, and `tool_call/cancel`. In the terminal section, terminals that outlive their tool call, terminal `capabilities`, and `terminal/cancel`.
+- [Terminal Output RFD](./terminal-output.mdx): note that terminals are display-only except for the opt-in cancellation added here.
 - `tool-calls.mdx` and `cancellation.mdx`: on `session/cancel`, Clients answer pending permission requests for the cancelled foreground work with `cancelled`, not every pending permission request in the session.
 - `session-setup.mdx`: what `session/close` does with listed work, how resume restores the list, and that `session/fork` doesn't copy it.
-- `migration.mdx`: mention the `background` list where it describes `idle` and background activity.
+- `migration.mdx`: mention the `background` list where it describes `idle` and background activity, and that `session/cancel` no longer cancels permission requests for background work.
 - [Subagents RFD](../subagents.mdx): the Client's optimistic cancellation of a cancelled session's unfinished tool calls skips tool calls in that session's `background` list.
 - Each change also goes into the matching `docs/protocol/v2/draft/` page.
 
 ### Adapters
 
-| Work                                       | `claude-agent-acp`                                                                                        | `codex-acp`                                                                                                                                |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Background shell                           | Keep the Bash tool call `in_progress` with its terminal until the SDK task ends. Cancel calls `stopTask`. | Keep the `commandExecution` tool call `in_progress` until the process leaves `thread/backgroundTerminals/list`. Cancel calls `/terminate`. |
-| Background subagent                        | Existing subagent association, listed while detached.                                                     | Existing subagent association, listed while detached.                                                                                      |
-| `Monitor`, `Workflow`, `mcp_task`          | Keep the launching tool call `in_progress` until the task ends. Cancel calls `stopTask`.                  | -                                                                                                                                          |
-| `ScheduleWakeup`, non-durable `CronCreate` | Keep the tool call `pending` until it fires or is removed.                                                | -                                                                                                                                          |
-| Building `background`                      | From `background_tasks_changed`, which already sends the full live set.                                   | From `thread/backgroundTerminals/list` and collab agent state. Codex sends no exit events for background terminals, so this has to poll.   |
+| Work                                       | `claude-agent-acp`                                                                                                                                                                                                                     | `codex-acp`                                                                                                                                                                                                    |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Background shell                           | The Bash tool call completes when the command is backgrounded, as it does today. List its terminal until the SDK task ends, then send `exitStatus`. Claude Code reports no exit code, so the status is empty. Cancel calls `stopTask`. | The `commandExecution` tool call stays `in_progress` until Codex completes the item, as it does today. List its terminal while the process is in `thread/backgroundTerminals/list`. Cancel calls `/terminate`. |
+| Background subagent                        | Existing subagent association, listed while detached.                                                                                                                                                                                  | Existing subagent association, listed while detached.                                                                                                                                                          |
+| `Monitor`, `Workflow`, `mcp_task`          | Keep the launching tool call `in_progress` until the task ends. Cancel calls `stopTask`.                                                                                                                                               | -                                                                                                                                                                                                              |
+| `ScheduleWakeup`, non-durable `CronCreate` | Keep the tool call `pending` until it fires or is removed.                                                                                                                                                                             | -                                                                                                                                                                                                              |
+| Building `background`                      | From `background_tasks_changed`, which already sends the full live set.                                                                                                                                                                | From `thread/backgroundTerminals/list` and collab agent state. Codex sends no exit events for background terminals, so this has to poll.                                                                       |
 
 Both adapters can then drop their private `async_task_*` updates in favor of this, and should send final updates for listed work on `session/close`. Neither does today.
 
@@ -230,31 +277,43 @@ Both adapters can then drop their private `async_task_*` updates in favor of thi
 
 ### Why not a single "background activity" boolean on the idle state?
 
-A boolean answers "is anything running?", but not what is running, whether it can be stopped, or which unfinished tool calls are still live. The list costs little more and answers all of those. A Client that only wants the boolean can check whether the list is empty.
+A boolean answers "is anything running?", but not what is running, whether it can be stopped, or which unfinished tool calls and terminals are still live. The list costs little more and answers all of those. A Client that only wants the boolean can check whether the list is empty.
 
 ### Why not a new background task entity?
 
-Claude's SDK and the adapters' private extension both model background work as tasks. In ACP almost every such task already has a tool call: the call that started it, with a title, kind, status, content, and possibly a terminal. A separate task entity would duplicate that status and output, and Clients would have to merge the two. Background subagents already have their own entity. Making tool calls cancellable and letting them outlive foreground work covers the same cases without a third entity.
+Claude's SDK and the adapters' private extension both model background work as tasks. In ACP almost every such task already has an entity: a terminal for a process, or the tool call that started it, with a title, kind, status, and content. A separate task entity would duplicate that status and output, and Clients would have to merge the two. Background subagents already have their own entity. Making terminals and tool calls cancellable and letting them outlive foreground work covers the same cases without another entity.
 
-### Why not keep the launching tool call `completed` and report the background process elsewhere?
+### Why list the terminal instead of the launching tool call?
 
-With Claude Code and Codex, the model receives a "started in background" result right away. ACP tool call status describes the work as the user sees it, not the model's tool result, and from the user's side the command is still running. claude-agent-acp already keeps the terminal of a backgrounded Bash call open until the process ends.
+Agents disagree on the launching tool call's status. Claude Code's Bash tool returns as soon as a command is backgrounded, and later `TaskOutput` and `TaskStop` tool calls act on the same process by task id. claude-agent-acp therefore completes the Bash tool call and keeps its terminal open until the task ends. Codex keeps the command item open until the process exits and folds later stdin into the same item, so codex-acp keeps the tool call `in_progress`. Requiring either behavior would make one adapter report a status its agent doesn't have.
+
+The terminal is the same in both: it has its own identity and is live until it reports `exitStatus`. Listing it describes the running process without asking the tool call to stand in for it, and a tool call that references a listed terminal is never treated as abandoned.
+
+Tool calls are still listed for work without a process, such as a monitor, a workflow, or a scheduled wakeup.
+
+### Why does `terminal/cancel` say "cancel" instead of "kill"?
+
+Every other per-item stop in ACP is a cancellation: `session/cancel` for a subagent, `tool_call/cancel`, and `capabilities.cancel`. Using the same word lets a Client drive one stop control from the same capability on every kind of item. "Cancel" also leaves the mechanism to the Agent, which may stop the process gracefully before forcing it, and the `exitStatus` reports what actually happened. It also avoids reusing v1's `terminal/kill`, which goes in the other direction, from Agent to Client, for a terminal the Client owns.
+
+### Doesn't this make terminals more than a display surface?
+
+Only by one opt-in control. An Agent advertises `cancel` only for terminals it can stop, and Clients that ignore the capability see the same display-only terminals as before. Input, resize, and other interactive control remain out of scope.
 
 ### Why put the list on `state_update` instead of a separate update?
 
 The state snapshot is already the session-level summary that Clients track, is already re-sent on resume, and may already be repeated with updated information. Putting the list there means a single update tells the Client both whether the agent is busy and whether anything is still running, with no extra resume rules.
 
-### Why can't Clients work out background work from tool call statuses alone?
+### Why can't Clients work out background work from tool call and terminal statuses alone?
 
-They could if every agent reliably finalized every tool call. In practice, stale `pending` and `in_progress` tool calls are common, and Clients clean them up when work ends. Once tool calls can legitimately outlive foreground work, Clients need the agent to say which unfinished tool calls are still live.
+They could if every agent reliably finalized every tool call and terminal. In practice, stale `pending` and `in_progress` tool calls are common, and Clients clean them up when work ends. Once tool calls and terminals can legitimately outlive foreground work, Clients need the agent to say which unfinished ones are still live.
 
-### Why is `tool_call/cancel` a request instead of a notification like `session/cancel`?
+### Why are `terminal/cancel` and `tool_call/cancel` requests instead of notifications like `session/cancel`?
 
-The Client needs to know whether the cancellation was accepted. For example, the tool call may already be finished, or may not be cancellable. A request lets the Agent reject it with `-32602`. The tool call's status update still confirms that the work actually stopped.
+The Client needs to know whether the cancellation was accepted. For example, the work may already be finished, or may not be cancellable. A request lets the Agent reject it with `-32602`. The terminal's `exitStatus` or the tool call's status update still confirms that the work actually stopped.
 
 ### Why doesn't `session/cancel` stop background work?
 
-Users background work so that it survives the current turn, and agents already behave this way: Claude Code background commands survive an interrupt, Codex `turn/interrupt` leaves background terminals running, and the subagents RFD lets background children continue. Stopping it is a separate, explicit action through `tool_call/cancel` or `session/close`.
+Users background work so that it survives the current turn, and agents already behave this way: Claude Code background commands survive an interrupt, Codex `turn/interrupt` leaves background terminals running, and the subagents RFD lets background children continue. Stopping it is a separate, explicit action through `terminal/cancel`, `tool_call/cancel`, or `session/close`.
 
 ### What about work that outlives the session?
 
@@ -268,6 +327,13 @@ Possibly. Agents can put it in `_meta` until there is demand for a standard `sch
 
 Claude Code, for example, starts a follow-up turn when a background task finishes. That would help a Client decide whether to keep the session open. It is left out because adapters can't reliably know it ahead of time.
 
+Instead, two ordering rules cover the race between the list emptying and a follow-up turn starting. When the Agent does know that new foreground work is starting, it reports `running` in the snapshot that removes the item, not after an empty `idle` snapshot. When it doesn't, Clients that release resources on a quiet session wait a short grace period first.
+
+### Is there a v1 form?
+
+Not in this RFD. The `background` list belongs on the session-level `state_update`, which only v2 defines. Tool call `capabilities` and `tool_call/cancel` are additive and could be proposed for v1 separately. Terminal cancellation has no v1 equivalent, because v1 terminals are owned by the Client. Until then, v1 Clients rely on adapter-specific extensions.
+
 ## Revision history
 
+- 2026-10-26: Terminals are background work in their own right. A backgrounded process is listed as its terminal, whether its launching tool call completes or stays `in_progress`, and terminals can advertise `capabilities.cancel` and be stopped with `terminal/cancel`. Added ordering rules: items are announced before they are listed, final statuses come before removal, and follow-up work reports `running` with the removal. Defined when background subagents are listed, how Clients handle a list that stops being reported, and a grace period before releasing quiet sessions. Added a v1 FAQ.
 - 2026-10-21: Initial draft.

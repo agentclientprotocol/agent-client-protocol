@@ -130,6 +130,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 - 2026-10-29: Scoped the v2 Preview to the RFDs with breaking changes. Remote Transports and other additive work no longer block v2, and transport-specific reliability requirements belong to each transport.
 - 2026-10-29: Dropped JSON-RPC batches from v2, following MCP.
 - 2026-10-29: Reconciled the v2 change list with the migration guide, adding open enums, `state_update`, `cancelled` statuses, setup-response commands, `-32022`, optional `mcpServers`, and the auth method descriptor changes. ID examples now use stable fields only.
+- 2026-10-26: The v2 Background Work RFD now lists background terminals, adds opt-in `terminal/cancel`, and defines ordering rules and background subagent listing.
 - 2026-10-21: Added the v2 Background Work RFD for tool calls that outlive foreground work, individual tool-call cancellation, and a `background` list on state snapshots.
 - 2026-10-13: Added the v2 Metadata Patches RFD so a top-level `_meta` object on an upsert patches stored metadata by key instead of replacing it.
 - 2026-10-01: Recorded that failures after prompt insertion end foreground work with an `error` stop reason that carries an optional JSON-RPC error.

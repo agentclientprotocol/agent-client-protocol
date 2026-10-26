@@ -10,7 +10,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 ACP v2 should provide a standard way for Agents to report display-only terminal output. A tool call can reference an Agent-owned terminal by `terminalId`, while separate session updates describe that terminal, replace its stored output for replay, append live output bytes, and report its exit status.
 
-This is a presentation surface, not a Client execution API. It does not let the Client write input, resize, interrupt, kill, wait on, or release the Agent's process.
+This is a presentation surface, not a Client execution API. It does not let the Client write input, resize, interrupt, wait on, or release the Agent's process. The only control is opt-in cancellation, defined by [Background Work](./background-work.mdx): an Agent may let the Client stop a terminal's process with `terminal/cancel`.
 
 ## Status quo
 
@@ -196,5 +196,6 @@ Display-only terminal output has a small safe fallback: decode the bytes, saniti
 
 - 2026-10-29: Removed the batch ordering rule, since ACP v2 no longer uses JSON-RPC batches.
 - 2026-10-27: Added an optional `size` with `cols` and `rows` to `terminal_update`.
+- 2026-10-26: Noted the opt-in `terminal/cancel` control added by [Background Work](./background-work.mdx).
 - 2026-10-13: A top-level `_meta` object now patches stored metadata by key, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-14: Initial draft.
