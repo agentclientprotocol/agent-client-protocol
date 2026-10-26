@@ -333,6 +333,12 @@ on the resume response.
 If connection loss made a pending permission request or elicitation unusable,
 the Agent **SHOULD** reestablish it or safely resolve the wait.
 
+Agents **SHOULD** also return current `configOptions` in the resume response
+and send current session info through `session_info_update` after any requested
+history replay and before responding, even when `replayFrom` is omitted or
+`null`. This synchronizes current state rather than replaying historical
+configuration or metadata changes.
+
 ## Closing Active Sessions
 
 Agents that support the `session` method surface **MUST** support
