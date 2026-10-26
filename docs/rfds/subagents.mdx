@@ -297,7 +297,9 @@ current value:
 
 Clients **SHOULD** show a reported child model next to the subagent, for
 example in its roster entry, so the user can see it without opening the child
-session.
+session. Reporting the model is optional: an Agent that does not know or does
+not report it **MAY** omit it, and the Client then shows no model for that
+child.
 
 Child configuration is not assumed to match the parent's. If the Agent cannot
 report it, the Client **MUST NOT** infer values from the parent or manufacture
