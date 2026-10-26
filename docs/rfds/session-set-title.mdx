@@ -4,13 +4,15 @@ title: "Client-Set Session Titles"
 
 Author(s): [@lifeizhou-ap](https://github.com/lifeizhou-ap)
 
+Champion: [@benbrandt](https://github.com/benbrandt)
+
 ## Elevator pitch
 
 > What are you proposing to change?
 
 Add an optional `session/set_title` request that lets a Client set the title of a session. The Agent persists the title as session metadata and returns the title it actually stored, which may be a normalized form of the one the Client supplied.
 
-An Agent may generate session titles. After `session/set_title` succeeds, the Agent must not replace the Client-supplied title with one it generates automatically.
+An Agent may generate session titles. After `session/set_title` succeeds, the Agent should not replace the Client-supplied title with one it generates automatically.
 
 ## Status quo
 
@@ -173,8 +175,8 @@ The response contains the title the Agent persisted:
 
 #### Agent-generated titles
 
-- After `session/set_title` succeeds, the Agent **MUST NOT** replace the title with one it generates automatically.
-- If the Agent is generating a title when `session/set_title` succeeds, it **MUST** discard the generated title.
+- After `session/set_title` succeeds, the Agent **SHOULD NOT** replace the title with one it generates automatically. This is a SHOULD rather than a MUST because some Agents, such as adapters around an existing CLI, do not fully control when the underlying agent generates titles.
+- If the Agent is generating a title when `session/set_title` succeeds, it **SHOULD** discard the generated title.
 - This does not restrict later user-initiated renames through other paths, such as an Agent slash command like `/rename` or another Client calling `session/set_title`. Each successful rename replaces the previous title.
 - Clients **MAY** call `session/set_title` while a prompt turn is in progress. Retitling does not affect the turn.
 
