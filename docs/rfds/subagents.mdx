@@ -263,11 +263,12 @@ shapes. No configuration fields are added to the parent association.
 When the Agent knows a child's model, it **SHOULD** include it in that child
 configuration as a select option with category `model`. It **SHOULD** send
 this snapshot right after the announcing `subagent_update`, before any other
-child event when the model is already known, and again when the model changes or the
-Agent learns a more exact value. The value can be whatever the Agent knows,
-such as an alias like `sonnet` or a full model ID; Clients show its
-human-readable name. If the Agent knows only that the child uses the parent's
-model, it reports the parent's current model as the child's value:
+child event when the model is already known, and again when the model changes.
+The reported value and name **SHOULD** match the entry for the same model in
+the parent session's `model` option, so a Client can compare the two. If the
+parent's option has no entry for the model, the Agent reports the full model
+ID. If the child uses the parent's model, the Agent reports the parent's
+current value:
 
 ```json
 {
@@ -283,8 +284,10 @@ model, it reports the parent's current model as the child's value:
           "name": "Model",
           "category": "model",
           "type": "select",
-          "currentValue": "sonnet",
-          "options": [{ "value": "sonnet", "name": "Sonnet" }]
+          "currentValue": "claude-sonnet-4-5",
+          "options": [
+            { "value": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5" }
+          ]
         }
       ]
     }
@@ -1136,11 +1139,11 @@ implementation of child routing or the replay freshness boundary.
   singleton selects and boolean options remain read-only, and reporting options
   never enables `session/set_config_option`. On reconnection, distinguish
   historical configuration from fresh snapshots.
-- Announce a child that uses a model alias, and another that uses the parent's
-  model. Verify that each child's `model` option arrives before its other
-  events, that the second child reports the parent's current model, that a
-  later snapshot with a full model ID replaces the alias, and that the Client
-  shows each model next to its subagent.
+- Announce a child that uses another model, and another that uses the
+  parent's model. Verify that each child's `model` option arrives before its
+  other events, that each value matches the parent's `model` option entry for
+  that model, that the second child reports the parent's current value, and
+  that the Client shows each model next to its subagent.
 - Send messages to a parent and a sibling from a child's stream. Verify that
   each message has the correct sender, recipient, and content, and that the
   parent-child tree does not change.
@@ -1374,9 +1377,9 @@ important difference from a user-facing session.
 ## Revision history
 
 - 2026-10-25: Agents should report each child's model, when known, as a
-  `model` config option right after announcing the child, using an alias or
-  a full ID and the parent's current model when the child uses it. Clients
-  should show it next to the subagent.
+  `model` config option right after announcing the child, with the same value
+  as the parent's `model` option uses for that model. Clients should show it
+  next to the subagent.
 - 2026-10-22: Added optional `senderMessageId` on the incoming view and
   `recipientMessageId` on the outgoing view of a session-directed message, so
   a Client can go from either view to the other without inferring a link from
