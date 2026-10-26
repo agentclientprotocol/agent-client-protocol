@@ -1467,8 +1467,11 @@ impl ElicitationUrlCapabilities {
 }
 
 /// The scope of an elicitation request, determining what context it's tied to.
+///
+/// Exactly one of `sessionId` or `requestId` MUST be present.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(transform = elicitation_scope_schema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum ElicitationScope {
@@ -1477,6 +1480,42 @@ pub enum ElicitationScope {
     /// Tied to a specific JSON-RPC request outside of a session
     /// (e.g., during auth/configuration phases before any session is started).
     Request(ElicitationRequestScope),
+}
+
+impl<'de> Deserialize<'de> for ElicitationScope {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = serde_json::Map::deserialize(deserializer)?;
+        let scope = match (fields.remove("sessionId"), fields.remove("requestId")) {
+            (Some(session_id), None) => {
+                let mut scope = serde_json::Map::new();
+                scope.insert("sessionId".into(), session_id);
+                if let Some(tool_call_id) = fields.remove("toolCallId") {
+                    scope.insert("toolCallId".into(), tool_call_id);
+                }
+                serde_json::from_value(scope.into()).map(Self::Session)
+            }
+            (None, Some(request_id)) => {
+                serde_json::from_value(serde_json::json!({ "requestId": request_id }))
+                    .map(Self::Request)
+            }
+            _ => {
+                return Err(serde::de::Error::custom(
+                    "elicitation scope must include exactly one of `sessionId` or `requestId`",
+                ));
+            }
+        };
+        scope.map_err(serde::de::Error::custom)
+    }
+}
+
+#[cfg(feature = "schemars")]
+fn elicitation_scope_schema(schema: &mut Schema) {
+    if let Some(variants) = schema.remove("anyOf") {
+        schema.insert("oneOf".into(), variants);
+    }
 }
 
 /// Session-scoped elicitation, optionally tied to a specific tool call.
@@ -1528,7 +1567,7 @@ impl ElicitationSessionScope {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationRequestScope {
-    /// The request this elicitation is tied to.
+    /// The pending Client-to-Agent request this elicitation is tied to.
     pub request_id: RequestId,
 }
 
@@ -2351,6 +2390,38 @@ mod tests {
             serde_json::from_value::<CreateElicitationRequest>(missing_requested_schema).is_err()
         );
         assert!(serde_json::from_value::<ElicitationMode>(json!({})).is_err());
+    }
+
+    #[test]
+    fn scope_requires_exactly_one_non_null_id() {
+        let request = |scope: serde_json::Value| {
+            let mut json = json!({
+                "mode": "form",
+                "message": "Enter your name",
+                "requestedSchema": { "type": "object", "properties": {} }
+            });
+            json.as_object_mut()
+                .unwrap()
+                .extend(scope.as_object().unwrap().clone());
+            serde_json::from_value::<CreateElicitationRequest>(json)
+        };
+
+        assert!(request(json!({ "sessionId": "sess_1", "requestId": 42 })).is_err());
+        assert!(request(json!({})).is_err());
+        assert!(request(json!({ "sessionId": 42, "requestId": 42 })).is_err());
+        assert!(request(json!({ "sessionId": 42 })).is_err());
+        assert_eq!(
+            *request(json!({ "sessionId": "sess_1", "toolCallId": "call_1" }))
+                .unwrap()
+                .scope(),
+            ElicitationSessionScope::new("sess_1")
+                .tool_call_id("call_1")
+                .into()
+        );
+        assert_eq!(
+            *request(json!({ "requestId": "req_1" })).unwrap().scope(),
+            ElicitationRequestScope::new("req_1".to_string()).into()
+        );
     }
 
     #[test]

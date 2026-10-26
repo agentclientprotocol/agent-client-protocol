@@ -60,11 +60,17 @@ The Agent sends an `elicitation/create` request directly over the ACP
 connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly; it does
 not apply MCP's omitted-mode form default.
 
-Scope is represented with flattened fields:
+Scope is represented with flattened fields. Exactly one of `sessionId` or
+`requestId` **MUST** be present:
 
 - `sessionId` for a session-scoped request. It can also include `toolCallId` to
   associate the request with a tool call in that session.
-- `requestId` for a request-scoped interaction outside a session.
+- `requestId` for a request-scoped interaction outside a session. It **MUST** be
+  the ID of a Client-to-Agent request on the same connection that the
+  Agent has not yet responded to.
+
+The Agent **MUST** cancel any pending request-scoped elicitations before it
+responds to their request.
 
 Agents **MUST** bind each elicitation and related state to the receiving Client
 connection and, when authentication exists, the verified user identity. A

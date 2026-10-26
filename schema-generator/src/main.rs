@@ -2958,7 +2958,7 @@ starting with '$/' it is free to ignore the notification."
                 .split_once("<ResponseField name=\"other\" type=\"object\">")
                 .unwrap();
             for mode in [form, url, other] {
-                assert_scope_alternatives(mode, "anyOf");
+                assert_scope_alternatives(mode, "oneOf");
                 assert_eq!(mode.matches("name=\"toolCallId\"").count(), 1);
             }
         }

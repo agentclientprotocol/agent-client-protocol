@@ -934,7 +934,7 @@ Form-based elicitation where the client renders a form from the provided schema.
 
 </Expandable>
 
-**Alternatives (`anyOf`):**
+**Alternatives (`oneOf`):**
 
 <ResponseField name="Session">
 Tied to a session, optionally to a specific tool call within that session.
@@ -966,7 +966,7 @@ Tied to a specific JSON-RPC request outside of a session
   type={<a href="#requestid">RequestId</a>}
   required
 >
-  The request this elicitation is tied to.
+  The pending Client-to-Agent request this elicitation is tied to.
 </ResponseField>
 
 </Expandable>
@@ -994,7 +994,7 @@ URL-based elicitation where the client directs the user to a URL.
 
 </Expandable>
 
-**Alternatives (`anyOf`):**
+**Alternatives (`oneOf`):**
 
 <ResponseField name="Session">
 Tied to a session, optionally to a specific tool call within that session.
@@ -1026,7 +1026,7 @@ Tied to a specific JSON-RPC request outside of a session
   type={<a href="#requestid">RequestId</a>}
   required
 >
-  The request this elicitation is tied to.
+  The pending Client-to-Agent request this elicitation is tied to.
 </ResponseField>
 
 </Expandable>
@@ -1058,7 +1058,7 @@ future ACP variants.
 
 </Expandable>
 
-**Alternatives (`anyOf`):**
+**Alternatives (`oneOf`):**
 
 <ResponseField name="Session">
 Tied to a session, optionally to a specific tool call within that session.
@@ -1090,7 +1090,7 @@ Tied to a specific JSON-RPC request outside of a session
   type={<a href="#requestid">RequestId</a>}
   required
 >
-  The request this elicitation is tied to.
+  The pending Client-to-Agent request this elicitation is tied to.
 </ResponseField>
 
 </Expandable>
@@ -2991,7 +2991,7 @@ Tied to a specific JSON-RPC request outside of a session
   type={<a href="#requestid">RequestId</a>}
   required
 >
-  The request this elicitation is tied to.
+  The pending Client-to-Agent request this elicitation is tied to.
 </ResponseField>
 
 </Expandable>
@@ -3337,7 +3337,7 @@ Request-scoped elicitation, tied to a specific JSON-RPC request outside of a ses
   type={<a href="#requestid">RequestId</a>}
   required
 >
-  The request this elicitation is tied to.
+  The pending Client-to-Agent request this elicitation is tied to.
 </ResponseField>
 
 ## <span class="font-mono">ElicitationSchema</span>
@@ -3496,7 +3496,7 @@ Tied to a specific JSON-RPC request outside of a session
   type={<a href="#requestid">RequestId</a>}
   required
 >
-  The request this elicitation is tied to.
+  The pending Client-to-Agent request this elicitation is tied to.
 </ResponseField>
 
 </Expandable>
