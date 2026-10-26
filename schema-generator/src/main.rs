@@ -2957,8 +2957,14 @@ starting with '$/' it is free to ignore the notification."
             let (url, other) = url
                 .split_once("<ResponseField name=\"other\" type=\"object\">")
                 .unwrap();
+            // v2 requires exactly one scope; v1 still accepts either.
+            let keyword = if cfg!(feature = "unstable_protocol_v2") {
+                "oneOf"
+            } else {
+                "anyOf"
+            };
             for mode in [form, url, other] {
-                assert_scope_alternatives(mode, "oneOf");
+                assert_scope_alternatives(mode, keyword);
                 assert_eq!(mode.matches("name=\"toolCallId\"").count(), 1);
             }
         }
