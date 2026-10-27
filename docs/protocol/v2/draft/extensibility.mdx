@@ -84,7 +84,7 @@ Protocol object types that define a `_meta` field can use it to attach custom in
     ],
     "_meta": {
       "traceparent": "00-80e1afed08e019fc1110464cfa66635c-7a085853722dc6d2-01",
-      "example.com/debugMode": true
+      "com.example/debugMode": true
     }
   }
 }
@@ -113,8 +113,8 @@ For example, if a tool call's stored `_meta` is:
 
 ```json
 {
-  "example.com/progress": 0.5,
-  "example.org/review": { "state": "pending" }
+  "com.example/progress": 0.5,
+  "org.example/review": { "state": "pending" }
 }
 ```
 
@@ -125,9 +125,9 @@ and a later update sends:
   "sessionUpdate": "tool_call_update",
   "toolCallId": "call_001",
   "_meta": {
-    "example.com/progress": null,
-    "example.org/review": { "reviewer": "sam" },
-    "example.net/route": "edge"
+    "com.example/progress": null,
+    "org.example/review": { "reviewer": "sam" },
+    "net.example/route": "edge"
   }
 }
 ```
@@ -136,8 +136,8 @@ the stored `_meta` becomes:
 
 ```json
 {
-  "example.org/review": { "reviewer": "sam" },
-  "example.net/route": "edge"
+  "org.example/review": { "reviewer": "sam" },
+  "net.example/route": "edge"
 }
 ```
 
@@ -172,7 +172,7 @@ In addition to the requests specified by the protocol, implementations **MAY** e
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "_example.com/workspace/buffers",
+  "method": "_com.example/workspace/buffers",
   "params": {
     "language": "rust"
   }
@@ -216,7 +216,7 @@ Custom notifications are regular JSON-RPC notifications that start with an under
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "_example.com/file_opened",
+  "method": "_com.example/file_opened",
   "params": {
     "path": "/home/user/project/src/editor.rs"
   }
@@ -246,7 +246,7 @@ Implementations **SHOULD** advertise support for extensions and their methods us
 - Use a nested capability object's `_meta`, where that object defines one, for extensions scoped to that capability. For example, an extension to session prompting belongs in `capabilities.session.prompt._meta`.
 - Creating a standard capability object to carry `_meta` still advertises the standard support associated with that object. An Agent **MUST NOT** send `capabilities.session: { "_meta": ... }` unless it supports all seven baseline session methods.
 
-To avoid collisions with other extensions, prefix extension names with something unique to you, such as a domain you control: for example, `example.com/<name>` for `_meta` keys, including capability entries, and `_example.com/<name>` for custom methods and custom enum values.
+To avoid collisions with other extensions, follow [MCP's naming convention](https://modelcontextprotocol.io/specification/2026-07-28/basic/index): prefix extension names with dot-separated labels in reverse-DNS order of a domain you control, followed by `/`. For example, use `com.example/<name>` for `_meta` keys, including capability entries, and `_com.example/<name>` for custom methods and custom enum values.
 
 Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Use the same metadata location and namespaced key on both sides of an extension's negotiation.
 
@@ -260,8 +260,8 @@ For example, an Agent can advertise an independent workspace extension without a
     "protocolVersion": 2,
     "capabilities": {
       "_meta": {
-        "example.com/workspace": true,
-        "example.com/fileNotifications": true
+        "com.example/workspace": true,
+        "com.example/fileNotifications": true
       }
     },
     "info": {

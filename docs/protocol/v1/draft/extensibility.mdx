@@ -28,7 +28,7 @@ example, the `Error` object does not.
     ],
     "_meta": {
       "traceparent": "00-80e1afed08e019fc1110464cfa66635c-7a085853722dc6d2-01",
-      "example.com/debugMode": true
+      "com.example/debugMode": true
     }
   }
 }
@@ -59,7 +59,7 @@ In addition to the requests specified by the protocol, implementations **MAY** e
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "_example.com/workspace/buffers",
+  "method": "_com.example/workspace/buffers",
   "params": {
     "language": "rust"
   }
@@ -103,7 +103,7 @@ Custom notifications are regular JSON-RPC notifications that start with an under
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "_example.com/file_opened",
+  "method": "_com.example/file_opened",
   "params": {
     "path": "/home/user/project/src/editor.rs"
   }
@@ -114,7 +114,7 @@ Unlike with custom requests, implementations **SHOULD** ignore unrecognized noti
 
 ## Advertising Custom Capabilities
 
-Implementations **SHOULD** use the `_meta` field in capability objects to advertise support for extensions and their methods. To avoid collisions with other extensions, prefix extension names with something unique to you, such as a domain you control: for example, `example.com/<name>` for `_meta` keys, including capability entries, and `_example.com/<name>` for custom methods. For example:
+Implementations **SHOULD** use the `_meta` field in capability objects to advertise support for extensions and their methods. To avoid collisions with other extensions, follow [MCP's naming convention](https://modelcontextprotocol.io/specification/2026-07-28/basic/index): prefix extension names with dot-separated labels in reverse-DNS order of a domain you control, followed by `/`. For example, use `com.example/<name>` for `_meta` keys, including capability entries, and `_com.example/<name>` for custom methods. For example:
 
 ```json
 {
@@ -125,8 +125,8 @@ Implementations **SHOULD** use the `_meta` field in capability objects to advert
     "agentCapabilities": {
       "loadSession": true,
       "_meta": {
-        "example.com/workspace": true,
-        "example.com/fileNotifications": true
+        "com.example/workspace": true,
+        "com.example/fileNotifications": true
       }
     }
   }
