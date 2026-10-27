@@ -4,3 +4,4 @@ allowed-duplicate-crates = [
     "schemars",
     "syn",
 ]
+doc-valid-idents = ["CommonMark", ".."]
