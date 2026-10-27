@@ -272,34 +272,48 @@ The Agent **MUST** respond with the complete list of all configuration options a
       {
         "configId": "mode",
         "name": "Session Mode",
+        "description": "Controls how the agent requests permission",
+        "category": "mode",
         "type": "select",
         "currentValue": "code",
         "options": [
           {
             "value": "ask",
-            "name": "Ask"
+            "name": "Ask",
+            "description": "Request permission before making any changes"
           },
           {
             "value": "code",
-            "name": "Code"
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
           }
         ]
       },
       {
         "configId": "model",
         "name": "Model",
+        "category": "model",
         "type": "select",
         "currentValue": "model-1",
         "options": [
           {
             "value": "model-1",
-            "name": "Model 1"
+            "name": "Model 1",
+            "description": "The fastest model"
           },
           {
             "value": "model-2",
-            "name": "Model 2"
+            "name": "Model 2",
+            "description": "The most powerful model"
           }
         ]
+      },
+      {
+        "configId": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
       }
     ]
   }
@@ -335,34 +349,48 @@ the response and notifications for subsequent changes after it.
         {
           "configId": "mode",
           "name": "Session Mode",
+          "description": "Controls how the agent requests permission",
+          "category": "mode",
           "type": "select",
           "currentValue": "code",
           "options": [
             {
               "value": "ask",
-              "name": "Ask"
+              "name": "Ask",
+              "description": "Request permission before making any changes"
             },
             {
               "value": "code",
-              "name": "Code"
+              "name": "Code",
+              "description": "Write and modify code with full tool access"
             }
           ]
         },
         {
           "configId": "model",
           "name": "Model",
+          "category": "model",
           "type": "select",
           "currentValue": "model-2",
           "options": [
             {
               "value": "model-1",
-              "name": "Model 1"
+              "name": "Model 1",
+              "description": "The fastest model"
             },
             {
               "value": "model-2",
-              "name": "Model 2"
+              "name": "Model 2",
+              "description": "The most powerful model"
             }
           ]
+        },
+        {
+          "configId": "brave_mode",
+          "name": "Brave Mode",
+          "description": "Skip confirmation prompts and act autonomously",
+          "type": "boolean",
+          "currentValue": false
         }
       ]
     }
