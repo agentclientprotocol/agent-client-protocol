@@ -197,7 +197,9 @@ content. A later `tool_call_update` with `content` replaces all content
 currently stored for that tool call, including content accumulated from earlier
 chunks. Later chunks append to that replacement content. A `tool_call_update`
 with `content: []` or `content: null` clears the tool-call content. A
-`tool_call_content_chunk`'s `_meta`, when present, is chunk-scoped.
+`tool_call_content_chunk`'s `_meta`, when present, is chunk-scoped. A chunk for
+a `toolCallId` the Client hasn't seen creates the tool call with its
+[defaults](#reporting), then appends to its content.
 
 An Agent can stream a tool's text output the way it streams message text, by
 sending each piece as a text content item in its own
@@ -499,7 +501,8 @@ that `terminalId`; they **MUST NOT** concatenate encoded strings before
 decoding. Chunk boundaries may split UTF-8 code points or terminal escape
 sequences, so decoders retain parser state across chunks. Optional nullable
 `_meta` is chunk-scoped; omission and `null` both mean no chunk metadata was
-provided.
+provided. A chunk for a `terminalId` the Client hasn't seen creates the terminal
+with unknown fields and empty output, then appends to it.
 
 Clients **SHOULD** ignore a chunk or snapshot whose `data` isn't valid base64,
 keeping the bytes they already have. Agents **SHOULD** send all output before a
