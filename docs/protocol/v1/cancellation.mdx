@@ -18,7 +18,7 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 - **MAY** cancel the corresponding request activity and all nested activities related to that request
 - **MAY** finish sending any pending notifications before responding
 - **MUST** send one of these responses for the original request:
-  - A valid response with appropriate data (such as partial results or cancellation marker)
+  - A valid response with appropriate data, such as `session/prompt` with the `cancelled` stop reason or `session/request_permission` with the `cancelled` outcome
   - An error response with code [`-32800` (Request Cancelled)](/protocol/v1/schema#errorcode)
 
 The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
