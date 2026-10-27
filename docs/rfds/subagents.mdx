@@ -260,6 +260,66 @@ the existing [v1](/protocol/v1/draft/session-config-options#from-the-agent) or
 [v2](/protocol/v2/draft/session-config-options#from-the-agent) config option
 shapes. No configuration fields are added to the parent association.
 
+When the Agent knows a child's model, it **SHOULD** include it in that child
+configuration as a select option with category `model`. When the Agent
+announces a live child whose model it already knows, it **SHOULD** send that
+snapshot after the announcing `subagent_update` and before any other event for
+that child. On reconnection, the rules in this section for historical and
+current configuration apply instead. The Agent **SHOULD** send a new snapshot
+when the child's model changes.
+
+The reported value and name **SHOULD** match the entry for the same model in
+the `model` option of the root session, the ordinary session at the top of the
+tree, so a Client can compare them. If the root session has no `model` option
+or no entry for that model, the Agent **SHOULD** report the full model ID as
+the value. It **SHOULD** use the provider's display name as `name` when it
+knows one, and otherwise the model ID. A child that uses its parent's model
+reports that parent's current value.
+
+For example, take a root session whose `model` option has the entry
+`{ "value": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5" }`, and a child
+that uses that model. In v1, the child reports:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_child_1",
+    "update": {
+      "sessionUpdate": "config_option_update",
+      "configOptions": [
+        {
+          "id": "model",
+          "name": "Model",
+          "category": "model",
+          "type": "select",
+          "currentValue": "claude-sonnet-4-5",
+          "options": [
+            { "value": "claude-sonnet-4-5", "name": "Claude Sonnet 4.5" }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+In v2, the option uses `configId` instead of `id`.
+
+A value equal to the parent's value identifies the same model entry. It does
+not mean the child follows later changes to the parent's model. If the child's
+model changes, the Agent sends a new child snapshot.
+
+Clients **SHOULD** show a reported child model next to the subagent, for
+example in its roster entry, so the user can see it without opening the child
+session. If the child reports more than one `model` option, the Client uses
+the first one, as for [option categories](/protocol/v1/draft/session-config-options#option-categories).
+After reconnection, the roster **MUST NOT** show a historical model as
+confirmed current configuration. If the Agent does not know a child's model,
+it omits the `model` option. The Client then shows no model for that child,
+and it **MUST NOT** show the parent's model in its place.
+
 Child configuration is not assumed to match the parent's. If the Agent cannot
 report it, the Client **MUST NOT** infer values from the parent or manufacture
 configuration options.
@@ -1100,6 +1160,15 @@ implementation of child routing or the replay freshness boundary.
   singleton selects and boolean options remain read-only, and reporting options
   never enables `session/set_config_option`. On reconnection, distinguish
   historical configuration from fresh snapshots.
+- Announce live children that use the root session's model, a model with no
+  entry in the root's `model` option, and the parent's model in a nested
+  child. Repeat with a root session that has no `model` option. Verify that
+  each live child's `model` option arrives before its other events, that
+  values match the root's entries or fall back to the full model ID, and that
+  the nested child reports its parent's current value. Change a child's model
+  during a run and verify that a new snapshot replaces it. Verify that a child
+  without a reported model shows no model, not the parent's. On reconnection,
+  verify that the roster does not show a historical model as current.
 - Send messages to a parent and a sibling from a child's stream. Verify that
   each message has the correct sender, recipient, and content, and that the
   parent-child tree does not change.
@@ -1332,6 +1401,12 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-25: Agents should report each child's model, when known, as a
+  `model` config option before a live child's other events. The value and name
+  match the root session's `model` option entry, or fall back to the full
+  model ID and the provider's display name. Reporting is optional: a child
+  without a known model reports none, and Clients do not show the parent's
+  model in its place. Clients should show the model next to the subagent.
 - 2026-10-22: Added optional `senderMessageId` on the incoming view and
   `recipientMessageId` on the outgoing view of a session-directed message, so
   a Client can go from either view to the other without inferring a link from
