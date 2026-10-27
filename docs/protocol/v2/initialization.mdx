@@ -240,18 +240,18 @@ support `session/set_config_option`.
 
 #### Session Prompt Capabilities
 
-As a baseline, Agents that advertise `session` **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
+As a baseline, Agents that advertise `session` **MUST** support `text` and `resource_link` content blocks in `session/prompt` requests.
 
 Optionally, they **MAY** support richer types of [content](/protocol/v2/content) by specifying the following capabilities:
 
 <ResponseField name="image" type="PromptImageCapabilities Object">
-  The prompt may include `ContentBlock::Image`. Omitted or `null` means the
+  The prompt may include `image` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   image content in prompts.
 </ResponseField>
 
 <ResponseField name="audio" type="PromptAudioCapabilities Object">
-  The prompt may include `ContentBlock::Audio`. Omitted or `null` means the
+  The prompt may include `audio` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   audio content in prompts.
 </ResponseField>
@@ -260,7 +260,7 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/content)
   name="embeddedContext"
   type="PromptEmbeddedContextCapabilities Object"
 >
-  The prompt may include `ContentBlock::Resource`. Omitted or `null` means the
+  The prompt may include `resource` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   embedded context in prompts.
 </ResponseField>
