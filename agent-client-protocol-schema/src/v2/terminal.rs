@@ -45,9 +45,8 @@ pub struct Terminal {
     /// The ID of the terminal to display.
     pub terminal_id: TerminalId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This metadata is scoped to the content reference. Omitted
-    /// and `null` are equivalent and mean no item metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -87,9 +86,8 @@ pub struct TerminalOutput {
     #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This metadata is scoped to the replacement snapshot. Omitted
-    /// and `null` are equivalent and mean no snapshot metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -144,9 +142,8 @@ pub struct TerminalExitStatus {
     #[serde(default)]
     pub signal: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This metadata is scoped to the exit information. Omitted
-    /// and `null` are equivalent and mean no exit metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -348,8 +345,8 @@ pub struct TerminalSize {
     #[cfg_attr(feature = "schemars", schemars(range(min = 1)))]
     pub rows: u16,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This metadata is scoped to the size. Omitted and `null` are equivalent.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -396,9 +393,9 @@ pub struct TerminalOutputChunk {
     #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This field is chunk-scoped. Omitted and `null` are
-    /// equivalent and mean no chunk metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// This metadata is scoped to the chunk and does not patch stored metadata.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]

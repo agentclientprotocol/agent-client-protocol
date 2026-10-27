@@ -69,6 +69,8 @@ is not necessarily supported or permitted on the connection.
 
 Protocol object types that define a `_meta` field can use it to attach custom information. This includes requests, responses, notifications, and nested object types such as content blocks, tool calls, plan entries, and capability objects. Primitive types and object types that do not define `_meta` cannot carry it.
 
+`_meta` is an object with string keys (`{ [key: string]: unknown }`). Receivers treat any other value as omitted. Except for [metadata patches](#metadata-patches), omitted and `null` are equivalent and mean no metadata. Metadata on a chunk is scoped to that chunk and does not patch stored metadata.
+
 ```json
 {
   "jsonrpc": "2.0",

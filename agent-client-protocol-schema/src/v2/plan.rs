@@ -43,8 +43,8 @@ pub struct PlanUpdate {
     /// The updated plan content.
     pub plan: PlanUpdateContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -242,8 +242,8 @@ pub struct PlanItems {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -295,8 +295,8 @@ pub struct PlanFile {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -348,8 +348,8 @@ pub struct PlanMarkdown {
     /// Markdown content for the plan.
     pub content: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -399,8 +399,8 @@ pub struct PlanRemoved {
     /// The plan ID to remove.
     pub plan_id: PlanId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -453,8 +453,8 @@ pub struct PlanEntry {
     /// Current execution status of this task.
     pub status: PlanEntryStatus,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]

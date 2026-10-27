@@ -84,13 +84,13 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
 }
 ```
 
-<ResponseField name="configOptions" type="ConfigOption[]">
+<ResponseField name="configOptions" type="SessionConfigOption[]">
   The list of configuration options available for this session. The order of
   this array represents the Agent's preferred priority. Clients **SHOULD**
   respect this ordering when displaying options.
 </ResponseField>
 
-### ConfigOption
+### SessionConfigOption
 
 <ResponseField name="id" type="string" required>
   Unique identifier for this configuration option. Used when setting values.
@@ -104,12 +104,12 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
   Optional description providing more details about what this option controls
 </ResponseField>
 
-<ResponseField name="category" type="ConfigOptionCategory">
+<ResponseField name="category" type="SessionConfigOptionCategory">
   Optional [semantic category](#option-categories) to help Clients provide
   consistent UX.
 </ResponseField>
 
-<ResponseField name="type" type="ConfigOptionType" required>
+<ResponseField name="type" type="string" required>
   The type of input control. `select` is supported by default. `boolean` is only
   supported when the Client advertises `session.configOptions.boolean: {}` in
   `clientCapabilities`.
@@ -120,13 +120,16 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
   ID. For `boolean` options this is a boolean.
 </ResponseField>
 
-<ResponseField name="options" type="ConfigOptionValue[] | ConfigOptionGroup[]">
+<ResponseField
+  name="options"
+  type="SessionConfigSelectOption[] | SessionConfigSelectGroup[]"
+>
   The available values for a `select` option. Required when `type` is `"select"`
   and omitted when `type` is `"boolean"`. This is either a flat array of values
   or an array of groups; values and groups are not mixed in the same array.
 </ResponseField>
 
-### ConfigOptionValue
+### SessionConfigSelectOption
 
 <ResponseField name="value" type="string" required>
   The value identifier used when setting this option
@@ -162,9 +165,9 @@ Select values may be organized into groups:
 }
 ```
 
-Each `ConfigOptionGroup` requires `group` (its unique string identifier),
+Each `SessionConfigSelectGroup` requires `group` (its unique string identifier),
 `name` (its human-readable label), and `options` (an array of
-`ConfigOptionValue` objects). A group may also include `_meta`. Each
+`SessionConfigSelectOption` objects). A group may also include `_meta`. Each
 option still requires `value` and `name`; its `description` and `_meta` fields
 are optional.
 
@@ -239,13 +242,13 @@ Clients **SHOULD**:
 
 ## Default Values and Graceful Degradation
 
-Agents **MUST** always provide a default value for every configuration option. This ensures the Agent can operate correctly even if:
+Every configuration option's `currentValue` is the value the Agent uses until the Client changes it. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent will continue using its default value.
+If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent keeps using its `currentValue`.
 
 ## Setting a Config Option
 

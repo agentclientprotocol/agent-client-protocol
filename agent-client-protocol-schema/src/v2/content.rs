@@ -210,8 +210,8 @@ pub struct TextContent {
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -282,8 +282,8 @@ pub struct ImageContent {
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -351,8 +351,8 @@ pub struct AudioContent {
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -408,8 +408,8 @@ pub struct EmbeddedResource {
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -480,8 +480,8 @@ pub struct TextResourceContents {
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -542,8 +542,8 @@ pub struct BlobResourceContents {
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -628,8 +628,8 @@ pub struct ResourceLink {
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -741,8 +741,8 @@ pub struct Icon {
     #[serde(default)]
     pub theme: Option<IconTheme>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -844,8 +844,8 @@ pub struct Annotations {
     #[serde(default)]
     pub priority: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]

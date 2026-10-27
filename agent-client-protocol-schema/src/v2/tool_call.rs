@@ -251,8 +251,9 @@ pub struct ToolCallContentChunk {
     /// A single item of content produced by the tool call.
     pub content: ToolCallContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This field is chunk-scoped.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// This metadata is scoped to the chunk and does not patch stored metadata.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -508,8 +509,8 @@ pub struct Content {
     /// The actual content block.
     pub content: ContentBlock,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -571,8 +572,8 @@ pub struct Diff {
     #[serde(default)]
     pub patch: Option<DiffPatch>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -631,8 +632,8 @@ pub struct DiffPatch {
     /// Patch text in the format named by `format`.
     pub text: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -743,8 +744,8 @@ pub struct DiffChange {
     #[serde(flatten)]
     pub operation: DiffChangeOperation,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -994,8 +995,8 @@ pub struct ToolCallLocation {
     #[serde(default)]
     pub line: Option<std::num::NonZeroU32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]

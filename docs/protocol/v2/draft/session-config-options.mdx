@@ -84,13 +84,13 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 }
 ```
 
-<ResponseField name="configOptions" type="ConfigOption[]">
+<ResponseField name="configOptions" type="SessionConfigOption[]">
   The list of configuration options available for this session. The order of
   this array represents the Agent's preferred priority. Clients **SHOULD**
   respect this ordering when displaying options.
 </ResponseField>
 
-### ConfigOption
+### SessionConfigOption
 
 <ResponseField name="configId" type="string" required>
   Unique identifier for this configuration option. Used when setting values.
@@ -104,12 +104,12 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
   Optional description providing more details about what this option controls
 </ResponseField>
 
-<ResponseField name="category" type="ConfigOptionCategory">
+<ResponseField name="category" type="SessionConfigOptionCategory">
   Optional [semantic category](#option-categories) to help Clients provide
   consistent UX.
 </ResponseField>
 
-<ResponseField name="type" type="ConfigOptionType" required>
+<ResponseField name="type" type="string" required>
   The type of input control. `select` and `boolean` are supported.
 </ResponseField>
 
@@ -118,13 +118,19 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
   ID. For `boolean` options this is a boolean.
 </ResponseField>
 
-<ResponseField name="options" type="ConfigOptionValue[] | ConfigOptionGroup[]">
+<ResponseField
+  name="options"
+  type="SessionConfigSelectOption[] | SessionConfigSelectGroup[]"
+>
   The available values for a `select` option. Required when `type` is `"select"`
   and omitted when `type` is `"boolean"`. This is either a flat array of values
-  or an array of groups; values and groups are not mixed in the same array.
+  or an array of groups; values and groups are not mixed in the same array. For
+  a `select` option, Agents **MUST** offer at least one value, **MUST** keep
+  each `value` unique within the option, including across groups, and
+  `currentValue` **MUST** be one of them.
 </ResponseField>
 
-### ConfigOptionValue
+### SessionConfigSelectOption
 
 <ResponseField name="value" type="string" required>
   The value identifier used when setting this option
@@ -141,8 +147,8 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 ### Grouped Select Options
 
 Select options may be grouped under labeled headers. Each
-`ConfigOptionGroup` requires `groupId`, `name`, and an `options` array containing
-the same `ConfigOptionValue` objects used by flat selects. A group's `_meta` is
+`SessionConfigSelectGroup` requires `groupId`, `name`, and an `options` array containing
+the same `SessionConfigSelectOption` objects used by flat selects. A group's `_meta` is
 optional; value descriptions and `_meta` remain optional as described above.
 
 ```json
@@ -211,13 +217,13 @@ Clients **SHOULD**:
 
 ## Default Values and Graceful Degradation
 
-Agents **MUST** always provide a default value for every configuration option. This ensures the Agent can operate correctly even if:
+Every configuration option's `currentValue` is the value the Agent uses until the Client changes it. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-Option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`; unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent will continue using its default value.
+Option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`; unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent keeps using its `currentValue`.
 
 ## Setting a Config Option
 

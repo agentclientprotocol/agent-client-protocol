@@ -9,8 +9,9 @@ use crate::MaybeUndefined;
 /// Value attached to a given ACP type on the `_meta` field.
 ///
 /// The _meta property is reserved by ACP to allow clients and agents to attach
-/// additional metadata to their interactions. Implementations MUST NOT make assumptions about
-/// values at these keys.
+/// additional metadata to their interactions. It is an object with string keys; receivers treat
+/// any other value as omitted. Implementations MUST NOT make assumptions about values at these
+/// keys.
 ///
 /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 pub type Meta = serde_json::Map<String, serde_json::Value>;

@@ -6467,23 +6467,29 @@ A non-empty array replaces all content.
   On an outgoing view, the `messageId` of the same message's incoming view in the
 recipient's transcript.
 
-Optional and nullable: omission or `null` means not supplied and retains a known
-value, so it can arrive after the message starts streaming.
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
-  Optional receiving session identity; omission or `null` retains a known value.
+  The receiving session.
+
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+
 </ResponseField>
 <ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   On an incoming view, the `messageId` of the same message's outgoing view in the
 sender's transcript.
 
-Optional and nullable: omission or `null` means not supplied and retains a known
-value, so it can arrive after the message starts streaming.
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
-  Optional sending session identity; omission or `null` retains a known value.
+  The sending session.
+
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+
 </ResponseField>
 
 ## <span class="font-mono">SessionMessageChunk</span>
@@ -7299,23 +7305,29 @@ A non-empty array replaces all content.
   On an outgoing view, the `messageId` of the same message's incoming view in the
 recipient's transcript.
 
-Optional and nullable: omission or `null` means not supplied and retains a known
-value, so it can arrive after the message starts streaming.
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
-  Optional receiving session identity; omission or `null` retains a known value.
+  The receiving session.
+
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+
 </ResponseField>
 <ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   On an incoming view, the `messageId` of the same message's outgoing view in the
 sender's transcript.
 
-Optional and nullable: omission or `null` means not supplied and retains a known
-value, so it can arrive after the message starts streaming.
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
-  Optional sending session identity; omission or `null` retains a known value.
+  The sending session.
+
+Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"session_message"`.

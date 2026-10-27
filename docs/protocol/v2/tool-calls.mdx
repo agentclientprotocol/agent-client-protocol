@@ -267,6 +267,11 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   prompt fields or decline according to policy.
 </ParamField>
 
+Clients apply a `tool_call` subject's `toolCall` to their stored tool call
+exactly like a [`tool_call_update`](#reporting) notification, in the order it was
+received relative to `session/update` notifications and before showing the
+prompt. A first-seen `toolCallId` creates the tool call.
+
 <ParamField path="options" type="PermissionOption[]" required>
   Available [permission options](#permission-options) for the user to choose
   from. Must contain at least one option.
@@ -363,6 +368,12 @@ Each permission option provided to the Client contains:
 Custom or future permission option kinds can be used as UI hints. Custom kinds **MUST** begin with `_`. Unknown non-underscore kinds are reserved for future ACP variants. Clients that do not understand a kind should preserve the value and use a generic permission option treatment.
 
 </ParamField>
+
+The Agent owns remembered decisions. When the user selects an `allow_always` or
+`reject_always` option, the Agent stores the decision, decides its scope (for
+example a tool, a command, or a directory) and how long it lasts, and applies
+it by not asking again. Clients **SHOULD NOT** infer the scope from `kind`. The
+option `name` describes it.
 
 ### Security
 

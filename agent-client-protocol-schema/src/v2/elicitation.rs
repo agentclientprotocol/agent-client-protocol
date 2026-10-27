@@ -85,10 +85,8 @@ pub struct EnumOption {
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -166,7 +164,7 @@ pub struct StringPropertySchema {
     /// Optional. Omitted and `null` are equivalent and mean there is no maximum length constraint.
     #[serde(default)]
     pub max_length: Option<u32>,
-    /// Pattern the string must match.
+    /// Pattern the string must match, in ECMA-262 regular expression syntax.
     ///
     /// Optional. Omitted and `null` are equivalent and mean there is no pattern constraint.
     #[cfg_attr(feature = "schemars", schemars(extend("format" = "regex")))]
@@ -201,10 +199,8 @@ pub struct StringPropertySchema {
     #[serde(rename = "oneOf")]
     pub one_of: Option<Vec<EnumOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -285,7 +281,7 @@ impl StringPropertySchema {
         self
     }
 
-    /// Pattern the string must match.
+    /// Pattern the string must match, in ECMA-262 regular expression syntax.
     #[must_use]
     pub fn pattern(mut self, pattern: impl IntoOption<String>) -> Self {
         self.pattern = pattern.into_option();
@@ -374,10 +370,8 @@ pub struct NumberPropertySchema {
     #[serde(default)]
     pub default: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -483,10 +477,8 @@ pub struct IntegerPropertySchema {
     #[serde(default)]
     pub default: Option<i64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -582,10 +574,8 @@ pub struct BooleanPropertySchema {
     #[serde(default)]
     pub default: Option<bool>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -649,10 +639,8 @@ pub struct StringMultiSelectItems {
     #[serde(rename = "enum")]
     pub values: Vec<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -695,10 +683,8 @@ pub struct TitledMultiSelectItems {
     #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -866,10 +852,8 @@ pub struct MultiSelectPropertySchema {
     #[serde(default)]
     pub default: Option<Vec<String>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1113,9 +1097,8 @@ fn default_object_type() -> ElicitationSchemaType {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
-    /// Type discriminator. Always `"object"`.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    /// Type discriminator. Always `"object"`. Omitted means `"object"`; any other value is
+    /// rejected.
     #[serde(rename = "type", default = "default_object_type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
@@ -1141,10 +1124,8 @@ pub struct ElicitationSchema {
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1308,10 +1289,8 @@ pub struct ElicitationCapabilities {
     #[serde(default)]
     pub url: Option<ElicitationUrlCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1389,10 +1368,8 @@ impl ElicitationCapabilities {
 #[non_exhaustive]
 pub struct ElicitationFormCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1434,10 +1411,8 @@ impl ElicitationFormCapabilities {
 #[non_exhaustive]
 pub struct ElicitationUrlCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1626,10 +1601,8 @@ pub struct CreateElicitationRequest {
     /// A human-readable message describing what input is needed.
     pub message: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1886,10 +1859,8 @@ pub struct CreateElicitationResponse {
     #[serde(flatten)]
     pub action: ElicitationAction,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -2150,10 +2121,8 @@ pub struct CompleteElicitationNotification {
     /// The ID of the elicitation that completed.
     pub elicitation_id: ElicitationId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -2611,6 +2580,22 @@ mod tests {
     }
 
     #[test]
+    fn schema_root_type_defaults_when_omitted_and_rejects_other_values() {
+        let omitted: ElicitationSchema =
+            serde_json::from_value(json!({ "properties": {} })).unwrap();
+        assert_eq!(omitted.type_, ElicitationSchemaType::Object);
+        for bad in [json!("array"), json!(42), json!(null)] {
+            assert!(
+                serde_json::from_value::<ElicitationSchema>(
+                    json!({ "type": bad, "properties": {} })
+                )
+                .is_err(),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
     fn schema_builder_serialization() {
         let schema = ElicitationSchema::new()
             .string("name", true)
@@ -2902,22 +2887,6 @@ mod tests {
         let json = serde_json::to_value(&schema).unwrap();
         assert!(json.get("required").is_none());
         assert_eq!(json["properties"]["name"]["format"], "email");
-    }
-
-    #[test]
-    fn schema_defaults_invalid_object_type() {
-        let schema = serde_json::from_value::<ElicitationSchema>(json!({
-            "type": "array",
-            "properties": {
-                "name": {
-                    "type": "string"
-                }
-            }
-        }))
-        .unwrap();
-
-        assert_eq!(schema.type_, ElicitationSchemaType::Object);
-        assert!(schema.properties.contains_key("name"));
     }
 
     #[test]

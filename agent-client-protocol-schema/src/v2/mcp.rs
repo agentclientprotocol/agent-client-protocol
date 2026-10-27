@@ -79,7 +79,12 @@ pub enum MessageMcpResponse {
         /// Required, even if JSON null.
         #[serde(deserialize_with = "Deserialize::deserialize")]
         result: Value,
-        /// Optional ACP carrier metadata.
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT make assumptions about values at these keys.
+        /// This is ACP metadata, not the inner MCP message's `_meta`.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(rename = "_meta", default, skip_serializing_if = "Option::is_none")]
@@ -89,7 +94,12 @@ pub enum MessageMcpResponse {
     Error {
         /// Required, non-null MCP error object.
         error: McpError,
-        /// Optional ACP carrier metadata.
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT make assumptions about values at these keys.
+        /// This is ACP metadata, not the inner MCP message's `_meta`.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(rename = "_meta", default, skip_serializing_if = "Option::is_none")]
@@ -162,7 +172,12 @@ pub struct MessageMcpRequest {
     /// Optional inner MCP params; null is equivalent to omission.
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
-    /// ACP extension metadata (not inner MCP params._meta); null is equivalent to omission.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// This is ACP metadata, not the inner MCP message's `_meta`.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -226,7 +241,12 @@ pub struct MessageMcpNotification {
     /// Optional inner MCP params; null is equivalent to omission.
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
-    /// ACP extension metadata (not inner MCP params._meta); null is equivalent to omission.
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// This is ACP metadata, not the inner MCP message's `_meta`.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]

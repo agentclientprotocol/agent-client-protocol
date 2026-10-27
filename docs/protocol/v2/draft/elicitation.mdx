@@ -122,9 +122,31 @@ progress actually resumes. `elicitation/complete` is not itself a state update.
 }
 ```
 
-Form schemas are flat objects whose properties use the supported primitive and
-enum schemas. Clients **SHOULD** validate submitted values before responding,
-and Agents **SHOULD** validate them again.
+`requestedSchema` is a flat object with `type: "object"`, `properties`, and
+optional `required`, `title`, and `description`. Each property is one of:
+
+| Property      | Schema                                                                                                                      | Optional keywords                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Text          | `type: "string"`                                                                                                            | `minLength`, `maxLength`, `pattern`, `format` (`email`, `uri`, `date`, `date-time`), `default` |
+| Single select | `type: "string"` with `enum` (values) or `oneOf` (`const` and `title` options)                                              | `default`                                                                                      |
+| Number        | `type: "number"` or `type: "integer"`                                                                                       | `minimum`, `maximum`, `default`                                                                |
+| Boolean       | `type: "boolean"`                                                                                                           | `default`                                                                                      |
+| Multi select  | `type: "array"` with `items` of `{ "type": "string", "enum": [...] }` or `{ "anyOf": [...] }` (`const` and `title` options) | `minItems`, `maxItems`, `default`                                                              |
+
+Every property may also have `title` and `description`. `pattern` uses
+ECMA-262 regular expression syntax, as in JSON Schema. Clients treat an unknown
+`format` as plain text. Accepted `content` maps each property name to a string,
+number, boolean, or array of strings.
+
+Clients **SHOULD** validate submitted values before responding, and Agents
+**SHOULD** validate them again.
+
+If a Client cannot render a form, it **SHOULD** respond with `-32602` (Invalid
+params), not `decline` or `cancel`, which report a user's choice. This includes
+a required property of an unknown type, a `required` entry with no matching
+property, and a property that sets both `enum` and `oneOf`. Clients **MAY** leave
+out optional properties of unknown types and render the rest. Clients **SHOULD**
+ignore a `default` that does not match its property schema.
 
 Clients that support schema defaults **SHOULD** pre-populate form fields with
 their declared default values.

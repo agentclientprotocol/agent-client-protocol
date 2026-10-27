@@ -235,6 +235,12 @@ Each permission option provided to the Client contains:
 
 </ParamField>
 
+The Agent owns remembered decisions. When the user selects an `allow_always` or
+`reject_always` option, the Agent stores the decision, decides its scope (for
+example a tool, a command, or a directory) and how long it lasts, and applies
+it by not asking again. `kind` is only a UI hint. The option `name` describes
+the scope.
+
 ### Security
 
 - Clients **SHOULD** describe the operation from the tool call's `kind`, `locations`, and content, present `title` as Agent-authored text, and show commands and paths in full.
