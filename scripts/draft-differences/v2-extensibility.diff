@@ -1,0 +1,16 @@
+--- v2/extensibility.mdx
++++ v2/draft/extensibility.mdx
+@@ -16,5 +16,6 @@
+ |---|---|
+-|[Session deletion](/protocol/v2/session-delete)|The Agent advertises `session.delete`; Clients must not call `session/delete` without it.|
+-|[Elicitation](/protocol/v2/elicitation#checking-support)|The Client advertises each supported mode under `elicitation`; Agents must not request other modes.|
++|[Provider configuration](/protocol/v2/initialization#agent-capabilities) (experimental)|The Agent advertises `capabilities.providers`; Clients must not call provider configuration methods without it.|
+ |[Notices](/protocol/v2/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/prompt-lifecycle#session-compaction)|No Client capability is required in v2. Clients without feature-specific handling may preserve, ignore, or generically display the updates.|
++|[Markdown and file-backed plans](/protocol/v2/agent-plan#unstable-plan-operations) (experimental)|No Client capability is required in v2. Clients without these plan representations use the unknown plan-content fallback; sending one does not establish that it will be rendered.|
++|[End-turn token usage](/protocol/v2/prompt-lifecycle#end-turn-token-usage-unstable) (experimental)|Optional `usage` on an idle `state_update`, not on the prompt response. No capability is required; Clients may ignore it.|
+ These rules are specific to v2. Features with capability gates in v1 retain those gates on v1 connections.
+@@ -35,3 +36,3 @@
+ ### Metadata Patches
+-Upsert updates carry a top-level `_meta` that the Client stores with the entity they create or update: `tool_call_update` (including the `toolCall` of a permission request's `tool_call` subject), `terminal_update`, `user_message`, `agent_message`, `agent_thought`, `session_info_update`, and `compaction_update`. Clients apply this `_meta` as a patch, one top-level key at a time, using the same rule as the update's other fields:
++Upsert updates carry a top-level `_meta` that the Client stores with the entity they create or update: `tool_call_update` (including the `toolCall` of a permission request's `tool_call` subject), `terminal_update`, `user_message`, `agent_message`, `agent_thought`, `session_info_update`, `compaction_update`, and the draft-only `subagent_update` and `session_message`. Clients apply this `_meta` as a patch, one top-level key at a time, using the same rule as the update's other fields:
+ - Omit `_meta` to leave the stored metadata unchanged.

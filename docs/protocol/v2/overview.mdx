@@ -28,7 +28,9 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client → Agent: `auth/login` if required by the Agent
+- Client: completes an advertised authentication flow if required; for example,
+  `auth/login` for an Agent-handled method or launch and reconnect for a
+  terminal method
 
 </Step>
 
@@ -42,7 +44,7 @@ A typical flow follows this pattern:
 <Step title="Prompt Lifecycle">
    - Client → Agent: `session/prompt` to send user message
    - Agent → Client: `session/prompt` response once the prompt is accepted
-   - Agent → Client: `session/update` notifications for accepted messages, state updates, and progress updates
+   - Agent → Client: `session/update` notifications for accepted messages, state updates, progress updates, and user-facing notices
    - Agent → Client: Permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
    - Agent → Client: An idle `state_update` with a stop reason when foreground work ends, even if background activity continues

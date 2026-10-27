@@ -20,7 +20,9 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client → Agent: `authenticate` if required by the Agent
+- Client: completes an advertised authentication flow if required; for example,
+  `authenticate` for an Agent-handled method or launch and reconnect for a
+  terminal method
 
 </Step>
 
@@ -33,7 +35,7 @@ A typical flow follows this pattern:
 
 <Step title="Prompt Turn">
    - Client → Agent: `session/prompt` to send user message
-   - Agent → Client: `session/update` notifications for progress updates
+   - Agent → Client: `session/update` notifications for progress updates and user-facing notices
    - Agent → Client: File operations or permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
    - Turn ends and the Agent sends the `session/prompt` response with a stop reason

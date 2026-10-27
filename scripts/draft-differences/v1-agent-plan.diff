@@ -1,0 +1,87 @@
+--- v1/agent-plan.mdx
++++ v1/draft/agent-plan.mdx
+@@ -3,2 +3,3 @@
+ Agents may share plans with Clients through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
++The existing `plan` update is the baseline format. Clients that advertise `plan` during [initialization](/protocol/v1/initialization#client-capabilities) can also receive identified plan operations through `plan_update` and `plan_removed`.
+ ## Creating Plans
+@@ -8,2 +9,14 @@
+ </ParamField>
++## Plan Operations
++Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client advertised `plan`. If the Client omits `plan`, the Agent **MUST** fall back to the existing `plan` update.
++`plan_update` carries a `plan` object with a `type` discriminator. Every plan format includes a required `planId` so Clients can track multiple plans independently.
++### Item-Based Plans
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "items",
+        "planId": "plan-1",
+        "entries": [
+          {
+            "content": "Analyze the existing codebase structure",
+            "priority": "high",
+            "status": "pending"
+          }
+        ]
+      }
+    }
+  }
+}
+```
++### Markdown Plans
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "markdown",
+        "planId": "implementation-plan",
+        "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests"
+      }
+    }
+  }
+}
+```
++### File Plans
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "file",
+        "planId": "design-doc",
+        "uri": "file:///tmp/plan.md"
+      }
+    }
+  }
+}
+```
++### Removing Plans
++Agents can remove a plan by sending `plan_removed` with the plan ID:
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_removed",
+      "planId": "plan-1"
+    }
+  }
+}
+```
+ ## Plan Entries

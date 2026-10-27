@@ -54,8 +54,8 @@ Images can be included for visual context or analysis.
 ```
 
 <Icon icon="asterisk" size="14" /> Requires the `image` [prompt
-capability](/protocol/v2/initialization#prompt-capabilities) when included in
-prompts.
+capability](/protocol/v2/initialization#session-prompt-capabilities) when
+included in prompts.
 
 <ParamField path="data" type="string" required>
   Base64-encoded image data
@@ -87,8 +87,8 @@ Audio data for transcription or analysis.
 ```
 
 <Icon icon="asterisk" size="14" /> Requires the `audio` [prompt
-capability](/protocol/v2/initialization#prompt-capabilities) when included in
-prompts.
+capability](/protocol/v2/initialization#session-prompt-capabilities) when
+included in prompts.
 
 <ParamField path="data" type="string" required>
   Base64-encoded audio data
@@ -123,8 +123,8 @@ This is the preferred way to include context in prompts, such as when using @-me
 By embedding the content directly in the request, Clients can include context from sources that the Agent may not have direct access to.
 
 <Icon icon="asterisk" size="14" /> Requires the `embeddedContext` [prompt
-capability](/protocol/v2/initialization#prompt-capabilities) when included in
-prompts.
+capability](/protocol/v2/initialization#session-prompt-capabilities) when
+included in prompts.
 
 <ParamField path="resource" type="EmbeddedResourceResource" required>
   The embedded resource contents, which can be either:

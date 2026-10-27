@@ -34,7 +34,11 @@ Before a Session can be created, Clients **MUST** initialize the connection by c
   "method": "initialize",
   "params": {
     "protocolVersion": 2,
-    "capabilities": {},
+    "capabilities": {
+      "auth": {
+        "terminal": {}
+      }
+    },
     "info": {
       "name": "my-client",
       "title": "My Client",

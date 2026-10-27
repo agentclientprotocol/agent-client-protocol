@@ -1,0 +1,53 @@
+--- v1/prompt-turn.mdx
++++ v1/draft/prompt-turn.mdx
+@@ -10,2 +10,5 @@
+ |`agent_thought_chunk`|A streamed chunk of the Agent's reasoning.|
++|`subagent_update`|**Draft only.** Announces an owned child session or updates its parent-owned metadata and work state. Requires the Client's `subagents` capability.|
++|`session_message`|**Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable). Requires the Client's `subagents` capability.|
++|`session_message_chunk`|**Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable). Requires the Client's `subagents` capability.|
+ |`tool_call`|A new [tool call](/protocol/v1/tool-calls#creating).|
+@@ -13,2 +16,4 @@
+ |`plan`|The Agent's [execution plan](/protocol/v1/agent-plan).|
++|`plan_update`|**Draft only.** A [content update for a plan](/protocol/v1/agent-plan#plan-operations) identified by ID. Requires the Client's `plan` capability.|
++|`plan_removed`|**Draft only.** [Removal of a plan](/protocol/v1/agent-plan#removing-plans) identified by ID. Requires the Client's `plan` capability.|
+ |`available_commands_update`|The set of [available slash commands](/protocol/v1/slash-commands) is ready or has changed.|
+@@ -21,4 +26,11 @@
+ |`compaction_summary_chunk`|Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.|
+-This is the complete set of variants defined in the current [`SessionUpdate` schema](/protocol/v1/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
++This is the complete set of variants defined in the current draft [`SessionUpdate` schema](/protocol/v1/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
+ Session updates are not limited to active prompt turns. For example, Agents may advertise commands after creating a session, and replay user and Agent messages when [loading a session](/protocol/v1/session-setup#loading-sessions).
++### Session-directed messages (unstable)
++When the Client advertises `subagents: {}`, the Agent may report outgoing and incoming messages between sessions, separately from user-facing responses and tool calls. The outer `params.sessionId` identifies the transcript being updated. Every message and chunk requires a `messageId` scoped to that transcript. Optional `senderSessionId` and `recipientSessionId` on `session_message` identify the participants; chunks carry only content. Include them on the first `session_message` when available, before the first chunk of a streamed message; later updates may omit them or add missing identities.
++For example, an incoming message in the child can name its participants, then stream its content:
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message",
+      "messageId": "received_message_1",
+      "senderSessionId": "parent_session",
+      "recipientSessionId": "child_session"
+    }
+  }
+}
+```
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message_chunk",
+      "messageId": "received_message_1",
+      "content": { "type": "text", "text": "Please investigate " }
+    }
+  }
+}
+```
++Every chunk carries one normal `ContentBlock`; later chunks append content for the same `messageId`. `session_message` can supply a whole `content` array to replace accumulated content. Its optional `content` and `_meta` fields leave prior values unchanged when omitted; `null` clears them. `content: []` also clears content. Chunk metadata is local to the chunk, not a message-level patch.
++Clients can render "To …" with a recipient link or "From …" with a sender link. Without sufficient participant metadata, use a generic inter-session presentation and add links when the metadata arrives. Omitted or `null` participant IDs mean not supplied and leave previously known identities intact. The two views have independent message IDs. Optional `senderMessageId` on the incoming view and `recipientMessageId` on the outgoing view name the other view's `messageId`, so a Client can go from either view to the other. They follow the participant-ID rules and can arrive in a later `session_message`; Clients must not link views by equal IDs alone. The Agent reports each side only when observed; Clients must not synthesize an incoming entry from an outgoing one or forward the content themselves. Neither view acknowledges completed recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages) for participant registration, history gaps, and ownership rules.
+ ## The Prompt Turn Lifecycle

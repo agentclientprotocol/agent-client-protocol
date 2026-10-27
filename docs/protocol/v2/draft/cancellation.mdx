@@ -11,7 +11,7 @@ The JSON-RPC specification doesn't define any standard mechanism for request can
 
 In order to provide a consistent approach to cancellation, ACP defines a `$/cancel_request` notification that can be sent to cancel requests.
 
-Cancellation will remain optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification.
+Cancellation remains optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification.
 
 When a `$/cancel_request` notification is received by a supporting implementation, the implementation:
 
@@ -23,7 +23,7 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 
 The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
 
-Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios (e.g., cancellation of [active session work](/protocol/v2/draft/prompt-lifecycle#cancellation)).
+Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios, such as cancellation of [active session work](/protocol/v2/draft/prompt-lifecycle#cancellation).
 
 `session/cancel` and `$/cancel_request` have different scopes. Cancelling one
 permission or elicitation request does not automatically cancel the whole

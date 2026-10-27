@@ -191,7 +191,7 @@ The Client sends a user message with `session/prompt`:
 <ParamField path="prompt" type="ContentBlock[]" required>
     The contents of the user message, e.g. text, images, files, etc.
 
-    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#prompt-capabilities) established during [initialization](/protocol/v2/initialization). Agents **MUST** reject content types they don't support with `-32602`.
+    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/initialization). Agents **MUST** reject content types they don't support with `-32602`.
 
     <Card icon="comments" horizontal href="/protocol/v2/content">
       Learn more about Content
@@ -439,6 +439,8 @@ No Client capability is required in v2. Clients that do not implement `notice`
 may preserve it through the [unknown-update
 fallback](/protocol/v2/extensibility#enum-and-tagged-union-variants) and
 ignore it or present it generically; this does not give it replay semantics.
+This is [capability-free informational delivery](/protocol/v2/extensibility#experimental-features-and-negotiation),
+not an advertisement that the Client will display the notice.
 
 At any point while a session exists, including outside prompt processing, the
 Agent **MAY** send a live user-facing notice:
@@ -492,7 +494,9 @@ Agent may emit a new notice.
 
 #### Session Compaction
 
-No Client capability is required in v2.
+No Client capability is required in v2. Clients without compaction-specific
+handling may preserve, ignore, or generically display these informational updates
+under the [v2 negotiation rules](/protocol/v2/extensibility#experimental-features-and-negotiation).
 
 The Agent **MAY** report context compaction as one persistent, ID-addressed
 timeline entity. A single `compaction_update` with `status: "completed"` is

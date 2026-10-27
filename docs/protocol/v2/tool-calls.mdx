@@ -26,8 +26,8 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
     "update": {
       "sessionUpdate": "tool_call_update",
       "toolCallId": "call_001",
-      "name": "read_file",
       "title": "Reading configuration file",
+      "name": "read_file",
       "kind": "read",
       "status": "pending"
     }
@@ -39,17 +39,19 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
   A unique identifier for this tool call within the session
 </ParamField>
 
-<ParamField path="name" type="string">
-  The optional programmatic name of the invoked tool, such as `read_file`.
-  Agents **SHOULD** include it in the first report when available and **SHOULD
-  NOT** change it later except to correct metadata. Names are opaque,
-  informational metadata: they do not advertise a capability or grant
-  authorization.
-</ParamField>
-
 <ParamField path="title" type="string">
   A human-readable title describing what the tool is doing. Agents **SHOULD**
   include the title the first time they report a `toolCallId`.
+</ParamField>
+
+<ParamField path="name" type="string">
+  The programmatic name of the invoked tool, such as `read_file`. This
+  identifies which tool is being used; `title` describes this invocation for
+  users, while `kind` provides a coarse presentation category. Agents **SHOULD**
+  include the name the first time they report a `toolCallId` when it is
+  available and **SHOULD NOT** change it later except to correct metadata. Names
+  are opaque, informational metadata and do not advertise a capability or grant
+  authorization.
 </ParamField>
 
 <ParamField path="kind" type="ToolKind">

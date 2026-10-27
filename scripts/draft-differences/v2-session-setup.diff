@@ -1,0 +1,96 @@
+--- v2/session-setup.mdx
++++ v2/draft/session-setup.mdx
+@@ -17,3 +17,3 @@
+ `session/resume` does not imply idle: an existing session may still be running or waiting for user action. See [Current-State Synchronization](#current-state-synchronization).
+-Agents **MAY** include initial [configuration options](/protocol/v2/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/slash-commands) in `availableCommands` in both `session/new` and `session/resume` responses. For example, a new session can return both:
++Agents **MAY** include initial [configuration options](/protocol/v2/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/slash-commands) in `availableCommands` in `session/new`, `session/resume`, and, when supported, `session/fork` responses. For example, a new session can return both:
+ ```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "configOptions": [
+      {
+        "configId": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
+      }
+    ],
+    "availableCommands": [
+      {
+        "type": "command",
+        "name": "test",
+        "description": "Run tests for the current project"
+      }
+    ]
+  }
+}
+```
+@@ -21,2 +21,3 @@
+ Returning commands in the response avoids requiring command notifications before the `session/new` response. Agents can still advertise commands later or update the list through `available_commands_update` notifications. Each notification replaces the complete command list, including `[]` to clear it.
++For a fork, `availableCommands` advertises commands available in the newly created session, not the source session.
+ ## Resuming Sessions
+@@ -52,3 +53,3 @@
+ ### Current-State Synchronization
+-For every successful resume, the Agent **MUST** send a current [`state_update`](/protocol/v2/prompt-lifecycle#session-states) after any requested history replay and before the resume response. This is required even when `replayFrom` is omitted or `null`. The snapshot reports the current foreground state after resuming: `idle`, `running`, or `requires_action`.
++For every successful resume, the Agent **MUST** send a current [`state_update`](/protocol/v2/prompt-lifecycle#session-states) after any requested history replay and before the resume response. This is required even when `replayFrom` is omitted or `null`. The snapshot reports the current foreground state after resuming: `idle`, `running`, or `requires_action`, or the draft `unknown` state when activity is unobservable.
+ Agents **MUST NOT** replay historical `state_update` notifications as current activity. The snapshot and subsequent live state changes **MUST** be delivered in order, without replacing a newer state with a stale snapshot. An idle snapshot may include the last stop reason for context, but does not report a new completion or cancellation. Clients **MUST NOT** reset the state to idle on the resume response.
+@@ -77,2 +78,17 @@
+ Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
++## System Prompt (unstable)
++Agents that advertise `session.systemPrompt` allow Clients to include system-level instructions on `session/new`, `session/resume`, and, when the Agent supports it, `session/fork`.
++```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "systemPrompt": {
+      "mode": "append",
+      "content": [
+        {
+          "type": "text",
+          "text": "You are a code review specialist. Focus on security issues."
+        }
+      ]
+    }
+  }
+}
+```
++`systemPrompt` has the following behavior:
++- `mode` is required and selects how the Agent combines `content` with its own instructions
++- `mode` values beginning with `_` are reserved for implementation-specific modes, and other unknown values for future ACP modes. Clients **MUST** only use a mode the Agent advertised. An Agent that receives a mode it does not support **MUST** return an error rather than treating it as `append` or `override`
++- `append` adds `content` to the Agent's own instructions rather than replacing them. The Agent **SHOULD** give it system-level precedence, for example in the model's system prompt or developer instructions rather than in user-turn content; where it is placed and how it is formatted is up to the Agent
++- `override` replaces the Agent's built-in default instructions. It does not change tool availability, MCP servers, permissions, or session configuration. Context the Agent supplies from the workspace or environment, such as `AGENTS.md` files or skill listings, **MAY** still be included, and Agents **SHOULD** document what they keep. Clients that use `override` take responsibility for any tool guidance or safety instructions the Agent's default instructions provided
++- only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them. Agents **MUST** return an error for content blocks they do not support, including unknown types
++- omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
++- on `session/resume` and `session/fork`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
++- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unadvertised mode, an unsupported content block type, or content that exceeds its limits, it **MUST** return an error and **MUST NOT** create, resume, or fork the session. JSON-RPC `-32602` (Invalid params) is the **RECOMMENDED** error for malformed or unsupported values
++Clients **MUST** only send `systemPrompt` when the Agent advertises `session.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `session.systemPrompt.mode.override`:
++```json highlight={8-10}
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 2,
+    "capabilities": {
+      "session": {
+        "systemPrompt": {
+          "mode": { "override": {} }
+        }
+      }
+    },
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
+    }
+  }
+}
+```
++Content delivered at system level carries more weight with the model than user turns or tool output. Clients **SHOULD** only send content they trust at that level.
+ ## Session ID

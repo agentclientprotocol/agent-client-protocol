@@ -1,0 +1,104 @@
+--- v2/prompt-lifecycle.mdx
++++ v2/draft/prompt-lifecycle.mdx
+@@ -14,2 +14,5 @@
+ |`agent_thought`|Creates or updates an Agent reasoning message identified by `messageId`.|
++|`subagent_update`|**Draft only.** Announces an owned child session or updates its display metadata, capabilities, and mirrored work-state snapshot.|
++|`session_message`|**Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable).|
++|`session_message_chunk`|**Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable).|
+ |`state_update`|A snapshot of the Agent's [foreground activity](#session-states).|
+@@ -20,2 +23,3 @@
+ |`plan_update`|Creates or updates the [content of a plan](/protocol/v2/agent-plan) identified by ID.|
++|`plan_removed`|**Draft only.** [Removal of a plan](/protocol/v2/agent-plan#removing-plans) identified by ID.|
+ |`available_commands_update`|The set of [available slash commands](/protocol/v2/slash-commands) is ready or has changed.|
+@@ -27,3 +31,3 @@
+ |`compaction_summary_chunk`|Appends content to a [compaction's retained summary](#session-compaction).|
+-This is the complete set of standard variants defined in the current [`SessionUpdate` schema](/protocol/v2/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
++This is the complete set of standard variants defined in the current draft [`SessionUpdate` schema](/protocol/v2/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
+ The protocol also supports [custom and future variants](/protocol/v2/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update **SHOULD** preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
+@@ -38,9 +42,17 @@
+ |Agent thought|`agent_thought`, `agent_thought_chunk`|`messageId`|
++|Session-directed message (draft only)|`session_message`, `session_message_chunk`|`messageId`|
+ |Tool call|`tool_call_update`, `tool_call_content_chunk`|`toolCallId`|
+ |Terminal|`terminal_update`, `terminal_output_chunk`|`terminalId`|
+-|Plan|`plan_update`|`planId`|
++|Plan|`plan_update`, `plan_removed`|`planId`|
+ |Compaction|`compaction_update`, `compaction_summary_chunk`|`compactionId`|
+-An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, and Agent thoughts are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`; they remain two distinct entities.
++An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, Agent thoughts, and session-directed messages are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`; they remain two distinct entities.
+ The Agent **MUST NOT** reuse an ID for a different entity of the same type within a session. Clients **MUST** key entities by both type and ID. An update applies only to the entity of its own type: an `agent_thought` whose `messageId` matches an existing Agent message creates or updates a thought and leaves the message unchanged. Likewise, a field that references an entity identifies an entity of one specific type; for example, the `messageId` returned by `session/prompt` identifies a user message.
+ An entity's first update fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks patch the entity in place without moving it, including after the session reports `idle`. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, may ignore its position.
++### Session-directed messages (unstable)
++The Agent may report outgoing and incoming messages between sessions, separately from user-facing responses and tool calls. The outer `params.sessionId` identifies the transcript being updated. Every `session_message` or `session_message_chunk` requires `messageId`, scoped to that transcript. Optional `senderSessionId` and `recipientSessionId` on `session_message` identify the participants; chunks carry only content, as `agent_message_chunk` does. Include them on the first `session_message` when available, before the first chunk of a streamed message; later updates may omit them or add missing identities.
++For example, an incoming message in the child can name its participants, then stream its content:
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message",
+      "messageId": "received_message_1",
+      "senderSessionId": "parent_session",
+      "recipientSessionId": "child_session"
+    }
+  }
+}
+```
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message_chunk",
+      "messageId": "received_message_1",
+      "content": { "type": "text", "text": "Please investigate " }
+    }
+  }
+}
+```
++Chunks append normal message content for the same IDs. A `session_message` upsert may replace the whole `content` array or patch message metadata by top-level key, as described in [Metadata Patches](/protocol/v2/extensibility#metadata-patches). Omission leaves either field unchanged; `null` clears it. `content: []` also clears accumulated content. Chunk `_meta` is scoped to that chunk and does not patch message metadata.
++Clients can render "To …" with a recipient link or "From …" with a sender link. Without sufficient participant metadata, use a generic inter-session presentation and add links when the metadata arrives. Omitted or `null` participant IDs mean not supplied and leave previously known identities intact. The two views have independent message IDs. Optional `senderMessageId` on the incoming view and `recipientMessageId` on the outgoing view name the other view's `messageId`, so a Client can go from either view to the other. They follow the participant-ID rules and can arrive in a later `session_message`; Clients must not link views by equal IDs alone. The Agent reports each side only when observed; Clients must not synthesize an incoming entry from an outgoing one or forward the content themselves. Neither view acknowledges completed recipient processing.
+ ## Foreground and Background Work
+@@ -169,2 +181,6 @@
+ Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update. They **SHOULD** include the corresponding [`StopReason`](#stop-reasons).
++#### End-Turn Token Usage (Unstable)
++The Agent **MAY** include `usage` on an idle `state_update` to report token usage for completed foreground work. It is not part of the `session/prompt` response and is distinct from the current context-window and cumulative cost information in [`usage_update`](#session-usage-updates).
++```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "idle",
+      "stopReason": "end_turn",
+      "usage": {
+        "totalTokens": 150,
+        "inputTokens": 100,
+        "outputTokens": 50
+      }
+    }
+  }
+}
+```
++`usage` is optional and nullable; omission and `null` both mean no usage was reported. No capability is required. Clients without this experimental field ignore it, and Clients that recognize it discard malformed usage rather than rejecting the idle transition. Sending usage does not establish that the Client displays it. See [Experimental Features and Negotiation](/protocol/v2/extensibility#experimental-features-and-negotiation).
+ ### 5. Tool Invocation and Status Reporting
+@@ -216,2 +232,3 @@
+ `state_update` is a snapshot of the session's aggregate foreground activity, whether or not a prompt started it. It is not an event for an individual prompt, model call, permission request, or elicitation.
++For exposed subagents, Agents **SHOULD** also mirror the same snapshot in the immediate parent's `subagent_update.state`. This keeps the parent's roster and the child's own stream informed about one logical state; duplicate snapshots do not represent additional work or usage.
+ <ResponseField name="running">Foreground work is in progress.</ResponseField>
+@@ -221,2 +238,5 @@
+ </ResponseField>
++<ResponseField name="unknown"> **Draft only.** The Agent cannot currently determine foreground activity. For example, a remote child feed may be lost while ACP remains connected.
++</ResponseField>
++Agents report `unknown` on actual loss of observability, not merely after silence. Clients must no longer present a prior `running` or `requires_action` as confirmed live activity, though they may retain the last-known state for context. A subsequent `running`, `requires_action`, or `idle` replaces `unknown` for the same session. `unknown` is neither a work outcome nor a closure or cancellation, and does not resolve pending requests or automatically revoke child mutation capabilities; the Agent updates those capabilities separately if a control becomes unavailable.
+ Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state.
+@@ -227,3 +247,3 @@
+ ### State Transitions
+-The table describes live state reporting between the three standard states. Initial or resume snapshots report the current state without implying a transition.
++The table describes live state reporting between the three standard states. Initial or resume snapshots report the current state without implying a transition. The draft `unknown` state can replace any state on loss of observability. A later current-state snapshot restores a known state without implying that work started or ended while it was unobservable.
+ |Current state|Condition|Next report|
