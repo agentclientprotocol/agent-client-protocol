@@ -65,7 +65,7 @@ impl ExtResponse {
     }
 }
 
-/// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+/// Allows either side to send an arbitrary notification that is not part of the ACP spec.
 /// Extension notifications provide a way to send one-way messages for custom functionality
 /// while maintaining protocol compatibility.
 ///
