@@ -364,6 +364,13 @@ Custom or future permission option kinds can be used as UI hints. Custom kinds *
 
 </ParamField>
 
+The Agent owns remembered decisions. When the user selects an `allow_always` or
+`reject_always` option, the Agent stores the decision, decides its scope (for
+example a tool, a command, or a directory) and how long it lasts, and applies
+it by not asking again. Clients **SHOULD NOT** infer the scope from `kind`; the
+option `name` describes it. A Client's own automatic approval settings are
+separate and apply only to requests the Agent sends.
+
 ### Security
 
 - Clients **SHOULD** describe the operation from `subject`, present `title` as Agent-authored text, and show commands and paths in full.
