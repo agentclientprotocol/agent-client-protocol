@@ -1096,7 +1096,7 @@ impl SubagentUpdate {
 #[non_exhaustive]
 pub struct SubagentSessionCapabilities {
     /// Permits the client to cancel this child's current work without ending
-    /// the session. Omitted or `null` means unsupported; an object (including
+    /// the session. Omitted and `null` are equivalent and mean unsupported; an object (including
     /// `{}`) means supported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -1463,6 +1463,8 @@ pub struct UsageUpdate {
     /// Total context window size in tokens.
     pub size: u64,
     /// Cumulative session cost (optional).
+    ///
+    /// Omitted and `null` are equivalent and mean no cost is reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1648,7 +1650,7 @@ pub struct IdleStateUpdate {
     ///
     /// Token usage for completed foreground work.
     ///
-    /// Optional. Omitted or `null` both mean the agent is not reporting token
+    /// Optional. Omitted and `null` are equivalent and mean the agent is not reporting token
     /// usage for this state update.
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1722,7 +1724,7 @@ fn idle_state_update_schema(schema: &mut Schema) {
         properties.insert(
             "stopReason".into(),
             serde_json::json!({
-                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
                 "type": ["string", "null"],
                 "x-deserialize-default-on-error": true
             }),
@@ -2475,6 +2477,8 @@ pub struct Command {
     /// Human-readable description of what the command does.
     pub description: String,
     /// Input for the command if required
+    ///
+    /// Omitted and `null` are equivalent and mean the command takes no input.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2684,7 +2688,7 @@ pub struct RequestPermissionRequest {
     /// Optional human-readable explanation of why permission is needed.
     ///
     /// This text is specific to the permission prompt and does not update any
-    /// subject's displayed content. Omitted or `null` both mean no separate
+    /// subject's displayed content. Omitted and `null` are equivalent and mean no separate
     /// permission description was provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -2692,7 +2696,7 @@ pub struct RequestPermissionRequest {
     pub description: Option<String>,
     /// Optional structured context about the operation requiring permission.
     ///
-    /// Omitted or `null` both mean no structured subject was provided.
+    /// Omitted and `null` are equivalent and mean no structured subject was provided.
     #[serde(default)]
     pub subject: Option<RequestPermissionSubject>,
     /// Available permission options for the user to choose from.
@@ -3337,7 +3341,7 @@ pub struct ClientCapabilities {
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
     ///
-    /// Optional. Omitted or `null` both mean the client does not advertise any
+    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise any
     /// authentication-method extensions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -3346,7 +3350,7 @@ pub struct ClientCapabilities {
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
     ///
-    /// Optional. Omitted or `null` both mean the client does not advertise
+    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise
     /// elicitation support.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -3415,7 +3419,7 @@ impl ClientCapabilities {
 pub struct ClientAuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
     /// The client should supply `{}` only when it can reproduce the configured
     /// agent invocation in an interactive terminal. Supplying `{}` means the
     /// agent may include `terminal` entries in its authentication methods.
@@ -3444,7 +3448,7 @@ impl ClientAuthCapabilities {
 
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// Omitted or `null` both mean the client does not advertise support.
+    /// Omitted and `null` are equivalent and mean the client does not advertise support.
     /// The client should supply `{}` only when it can reproduce the configured
     /// agent invocation in an interactive terminal. Supplying `{}` means the
     /// agent may include `AuthMethod::Terminal` entries in its authentication

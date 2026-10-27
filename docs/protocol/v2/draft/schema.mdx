@@ -736,9 +736,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="cursor" type={<><span><a href="#sessionlistcursor">SessionListCursor</a></span><span> | null</span></>} >
   Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+
+Omitted and `null` are equivalent and mean the first page is requested.
+
 </ResponseField>
 <ResponseField name="cwd" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   Filter sessions by working directory. Must be an absolute path.
+
+Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
+
 </ResponseField>
 
 #### <span class="font-mono">ListSessionsResponse</span>
@@ -1014,7 +1020,7 @@ the request `cwd` matches the session's `cwd`.
 <ResponseField name="replayFrom" type={<><span><a href="#replayfrom">ReplayFrom</a></span><span> | null</span></>} >
   Inclusive cursor describing where conversation replay should begin.
 
-Optional. Omitted or `null` both mean the Agent should resume without
+Optional. Omitted and `null` are equivalent and mean the Agent should resume without
 replaying previous conversation history. Replay cursors are inclusive:
 replay includes the position identified by the cursor. Supplying
 `\{ "type": "start" \}` means the Agent should replay all retained
@@ -1485,8 +1491,11 @@ The user accepted and provided content.
 <ResponseField name="action" type={"string"} required>
   The discriminator value. Must be `"accept"`.
 </ResponseField>
-<ResponseField name="content" type={"object | null"}>
+<ResponseField name="content" type={"object | null"} >
   The user-provided content, if any, as an object matching the requested schema.
+
+Omitted and `null` are equivalent and mean no content is provided.
+
 </ResponseField>
 
 </Expandable>
@@ -1677,7 +1686,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Optional human-readable explanation of why permission is needed.
 
 This text is specific to the permission prompt and does not update any
-subject's displayed content. Omitted or `null` both mean no separate
+subject's displayed content. Omitted and `null` are equivalent and mean no separate
 permission description was provided.
 
 </ResponseField>
@@ -1691,7 +1700,7 @@ Must contain at least one option.
 <ResponseField name="subject" type={<><span><a href="#requestpermissionsubject">RequestPermissionSubject</a></span><span> | null</span></>} >
   Optional structured context about the operation requiring permission.
 
-Omitted or `null` both mean no structured subject was provided.
+Omitted and `null` are equivalent and mean no structured subject was provided.
 
 </ResponseField>
 <ResponseField name="title" type={"string"} required>
@@ -1867,7 +1876,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="auth" type={<><span><a href="#agentauthcapabilities">AgentAuthCapabilities</a></span><span> | null</span></>} >
   Authentication-related extension capabilities supported by the agent.
 
-Optional. Omitted or `null` both mean the agent does not advertise any
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
 authentication-related extensions. This field does not advertise support
 for `auth/login` or `auth/logout`; those methods are advertised by a
 non-empty `authMethods` list in the `initialize` response.
@@ -1880,14 +1889,14 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Provider configuration capabilities supported by the agent.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports provider configuration methods.
 
 </ResponseField>
 <ResponseField name="session" type={<><span><a href="#sessioncapabilities">SessionCapabilities</a></span><span> | null</span></>} >
   Session capabilities supported by the agent.
 
-Optional. Omitted or `null` both mean the agent does not support the
+Optional. Omitted and `null` are equivalent and mean the agent does not support the
 `session/*` method surface. Supplying `\{\}` means the agent supports the
 baseline session methods: `session/new`, `session/list`,
 `session/resume`, `session/close`, `session/prompt`, `session/cancel`,
@@ -1989,17 +1998,24 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="audience" type={<><span><a href="#role">Role[]</a></span><span> | null</span></>} >
   Intended recipients for this content, such as the user or assistant.
+
+Omitted and `null` are equivalent and mean no audience is specified.
+
 </ResponseField>
 <ResponseField name="lastModified" type={"string | null"} >
   Timestamp indicating when the underlying resource was last modified.
 
 Must be an RFC 3339 formatted string (e.g., "2025-01-12T15:00:58Z").
 
+Omitted and `null` are equivalent and mean the modification time is not reported.
+
     - Format: `date-time`
 
 </ResponseField>
 <ResponseField name="priority" type={"number | null"} >
   Relative importance of this content when clients choose what to surface.
+
+Omitted and `null` are equivalent and mean no priority is specified.
 
     | Constraint | Value |
     | ---------- | ----- |
@@ -2026,6 +2042,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
   Base64-encoded media payload.
@@ -2064,6 +2083,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Additional environment variables to set on the configured agent invocation for terminal auth.
@@ -2100,6 +2122,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
@@ -2165,6 +2190,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
@@ -2206,6 +2234,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description providing more details about this authentication method.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Additional environment variables to set on the configured agent invocation for terminal auth.
@@ -2245,6 +2276,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="input" type={<><span><a href="#availablecommandinput">AvailableCommandInput</a></span><span> | null</span></>} >
   Input for the command if required
+
+Omitted and `null` are equivalent and mean the command takes no input.
+
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Command name (e.g., `create_plan`, `research_codebase`).
@@ -2387,6 +2421,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   MIME type describing the encoded media payload.
+
+Omitted and `null` are equivalent and mean the MIME type is not specified.
+
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
   URI associated with this resource or media payload.
@@ -2470,7 +2507,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="terminal" type={<><span><a href="#terminalauthcapabilities">TerminalAuthCapabilities</a></span><span> | null</span></>} >
   Whether the client supports `terminal` authentication methods.
 
-Optional. Omitted or `null` both mean the client does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
 The client should supply `\{\}` only when it can reproduce the configured
 agent invocation in an interactive terminal. Supplying `\{\}` means the
 agent may include `terminal` entries in its authentication methods.
@@ -2503,7 +2540,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Determines which authentication method types the agent may include
 in its `InitializeResponse`.
 
-Optional. Omitted or `null` both mean the client does not advertise any
+Optional. Omitted and `null` are equivalent and mean the client does not advertise any
 authentication-method extensions.
 
 </ResponseField>
@@ -2511,7 +2548,7 @@ authentication-method extensions.
   Elicitation capabilities supported by the client.
 Determines which elicitation modes the agent may use.
 
-Optional. Omitted or `null` both mean the client does not advertise
+Optional. Omitted and `null` are equivalent and mean the client does not advertise
 elicitation support.
 
 </ResponseField>
@@ -2539,6 +2576,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="input" type={<><span><a href="#availablecommandinput">AvailableCommandInput</a></span><span> | null</span></>} >
   Input for the command if required
+
+Omitted and `null` are equivalent and mean the command takes no input.
+
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Command name (e.g., `create_plan`, `research_codebase`).
@@ -2752,6 +2792,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
   Text payload carried by this content block.
@@ -2780,6 +2823,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
   Base64-encoded media payload.
@@ -2795,6 +2841,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="uri" type={"string | null"} >
   URI associated with this resource or media payload.
+
+Omitted and `null` are equivalent and mean no URI is associated with the image.
 
     - Format: `uri`
 
@@ -2820,6 +2868,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
   Base64-encoded media payload.
@@ -2854,15 +2905,27 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable details shown with this protocol object.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="icons" type={<><span><a href="#icon">Icon[]</a></span><span> | null</span></>} >
   Optional set of sized icons that the client can display in a user interface.
+
+Omitted and `null` are equivalent and mean no icons are provided.
+
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   MIME type describing the encoded media payload.
+
+Omitted and `null` are equivalent and mean the MIME type is not specified.
+
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name shown for this protocol object.
@@ -2870,11 +2933,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
 
+Omitted and `null` are equivalent and mean the size is not known.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional display title for end-user UI.
+
+Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"resource_link"`.
@@ -2908,6 +2976,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="resource" type={<a href="#embeddedresourceresource">EmbeddedResourceResource</a>} required>
   Embedded resource payload, either text or binary data.
@@ -3032,8 +3103,8 @@ Clients can use this field without parsing patch text to determine affected path
 <ResponseField name="patch" type={<><span><a href="#diffpatch">DiffPatch</a></span><span> | null</span></>} >
   Renderable patch text for some or all of the structured changes.
 
-Agents SHOULD provide patch text whenever feasible. Omitted or `null`
-means no renderable patch text was provided.
+Agents SHOULD provide patch text whenever feasible. Omitted and `null` are
+equivalent and mean no renderable patch text was provided.
 
 </ResponseField>
 
@@ -3059,13 +3130,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="fileType" type={<><span><a href="#difffiletype">DiffFileType</a></span><span> | null</span></>} >
   File content kind after the operation (for `delete`, of the deleted file).
 
-Omitted or `null` means the content kind is unknown.
+Omitted and `null` are equivalent and mean the content kind is unknown.
 
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   MIME type of the file contents after the operation (for `delete`, of the deleted file).
 
-Omitted or `null` means the MIME type is unknown.
+Omitted and `null` are equivalent and mean the MIME type is unknown.
 
 </ResponseField>
 
@@ -3331,8 +3402,11 @@ The user accepted the elicitation and provided content.
 
 **Properties:**
 
-<ResponseField name="content" type={"object | null"}>
+<ResponseField name="content" type={"object | null"} >
   The user-provided content, if any, as an object matching the requested schema.
+
+Omitted and `null` are equivalent and mean no content is provided.
+
 </ResponseField>
 
 ## <span class="font-mono">ElicitationCapabilities</span>
@@ -3361,7 +3435,7 @@ Supplying `\{\}` explicitly advertises form support.
 <ResponseField name="url" type={<><span><a href="#elicitationurlcapabilities">ElicitationUrlCapabilities</a></span><span> | null</span></>} >
   Whether the client supports URL-based elicitation.
 
-Optional. Omitted or `null` both mean the client does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
 Supplying `\{\}` means the client supports URL-based elicitation.
 
 </ResponseField>
@@ -3975,6 +4049,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="resource" type={<a href="#embeddedresourceresource">EmbeddedResourceResource</a>} required>
   Embedded resource payload, either text or binary data.
@@ -4001,6 +4078,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   MIME type describing the encoded media payload.
+
+Omitted and `null` are equivalent and mean the MIME type is not specified.
+
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
   Text payload carried by this content block.
@@ -4036,6 +4116,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   MIME type describing the encoded media payload.
+
+Omitted and `null` are equivalent and mean the MIME type is not specified.
+
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
   URI associated with this resource or media payload.
@@ -4113,17 +4196,19 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 **Properties:**
 
 <ResponseField name="code" type={<a href="#errorcode">ErrorCode</a>} required>
-  A number indicating the error type that occurred. This must be an integer as
-  defined in the JSON-RPC specification.
+  A number indicating the error type that occurred.
+This must be an integer as defined in the JSON-RPC specification.
 </ResponseField>
-<ResponseField name="data" type={"object"}>
-  Optional primitive or structured value that contains additional information
-  about the error. This may include debugging information or context-specific
-  details.
+<ResponseField name="data" type={"object"} >
+  Optional primitive or structured value that contains additional information about the error.
+This may include debugging information or context-specific details.
+
+Omitted and `null` are equivalent and mean no additional data is provided.
+
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
-  A string providing a short description of the error. The message should be
-  limited to a concise single sentence.
+  A string providing a short description of the error.
+The message should be limited to a concise single sentence.
 </ResponseField>
 
 ## <span class="font-mono">ErrorCode</span>
@@ -4193,7 +4278,7 @@ Details of a failure that ended active work.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -4263,6 +4348,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   Optional MIME type override if the source MIME type is missing or generic.
+
+Omitted and `null` are equivalent and mean the source MIME type is used.
+
 </ResponseField>
 <ResponseField name="sizes" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   Optional array of strings that specify sizes at which the icon can be used.
@@ -4270,6 +4358,8 @@ Each string should be in `WxH` format (e.g., `"48x48"`, `"96x96"`) or
 `"any"` for scalable formats like SVG.
 
 If not provided, the client should assume that the icon can be used at any size.
+
+Omitted and `null` are equivalent and mean no sizes are specified.
 
 </ResponseField>
 <ResponseField name="src" type={"string"} required>
@@ -4280,6 +4370,9 @@ If not provided, the client should assume that the icon can be used at any size.
 </ResponseField>
 <ResponseField name="theme" type={<><span><a href="#icontheme">IconTheme</a></span><span> | null</span></>} >
   Optional theme this icon is designed for.
+
+Omitted and `null` are equivalent and mean the icon is not theme-specific.
+
 </ResponseField>
 
 ## <span class="font-mono">IconTheme</span>
@@ -4331,7 +4424,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
@@ -4343,7 +4436,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Token usage for completed foreground work.
 
-Optional. Omitted or `null` both mean the agent is not reporting token
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting token
 usage for this state update.
 
 </ResponseField>
@@ -4433,7 +4526,7 @@ insertion, the prompt's response remains successful.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -4493,6 +4586,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="data" type={"string"} required>
   Base64-encoded media payload.
@@ -4505,6 +4601,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="uri" type={"string | null"} >
   URI associated with this resource or media payload.
+
+Omitted and `null` are equivalent and mean no URI is associated with the image.
 
     - Format: `uri`
 
@@ -4537,6 +4635,8 @@ name fallback if title isn’t present.
 and easily understood.
 
 If not provided, the name should be used for display.
+
+Omitted and `null` are equivalent and mean the `name` is used for display.
 
 </ResponseField>
 <ResponseField name="version" type={"string"} required>
@@ -4681,21 +4781,21 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Agent supports `acp` MCP servers.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports ACP MCP server transports.
 
 </ResponseField>
 <ResponseField name="http" type={<><span><a href="#mcphttpcapabilities">McpHttpCapabilities</a></span><span> | null</span></>} >
   Agent supports `http` MCP servers.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports HTTP MCP server transports.
 
 </ResponseField>
 <ResponseField name="stdio" type={<><span><a href="#mcpstdiocapabilities">McpStdioCapabilities</a></span><span> | null</span></>} >
   Agent supports `stdio` MCP servers.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports stdio MCP server transports.
 
 </ResponseField>
@@ -5738,7 +5838,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="audio" type={<><span><a href="#promptaudiocapabilities">PromptAudioCapabilities</a></span><span> | null</span></>} >
   Agent supports `audio` content blocks.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports audio content in prompts.
 
 </ResponseField>
@@ -5748,14 +5848,14 @@ Supplying `\{\}` means the agent supports audio content in prompts.
 When enabled, the Client is allowed to include `resource` content blocks
 in prompt requests for pieces of context that are referenced in the message.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports embedded context in prompts.
 
 </ResponseField>
 <ResponseField name="image" type={<><span><a href="#promptimagecapabilities">PromptImageCapabilities</a></span><span> | null</span></>} >
   Agent supports `image` content blocks.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports image content in prompts.
 
 </ResponseField>
@@ -6214,15 +6314,27 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable details shown with this protocol object.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="icons" type={<><span><a href="#icon">Icon[]</a></span><span> | null</span></>} >
   Optional set of sized icons that the client can display in a user interface.
+
+Omitted and `null` are equivalent and mean no icons are provided.
+
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   MIME type describing the encoded media payload.
+
+Omitted and `null` are equivalent and mean the MIME type is not specified.
+
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name shown for this protocol object.
@@ -6230,11 +6342,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
 
+Omitted and `null` are equivalent and mean the size is not known.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional display title for end-user UI.
+
+Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
   URI associated with this resource or media payload.
@@ -6377,7 +6494,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports `additionalDirectories` on
 supported session lifecycle requests.
 
@@ -6388,7 +6505,7 @@ complete ordered additional-root list associated with a listed session.
 <ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `session/delete`.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
 
 </ResponseField>
@@ -6399,21 +6516,21 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Whether the agent supports `session/fork`.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports forking sessions.
 
 </ResponseField>
 <ResponseField name="mcp" type={<><span><a href="#mcpcapabilities">McpCapabilities</a></span><span> | null</span></>} >
   MCP capabilities supported by the agent for session lifecycle requests.
 
-Optional. Omitted or `null` both mean the agent does not advertise MCP
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise MCP
 server transport support for sessions.
 
 </ResponseField>
 <ResponseField name="prompt" type={<><span><a href="#promptcapabilities">PromptCapabilities</a></span><span> | null</span></>} >
   Prompt capabilities supported by the agent in `session/prompt` requests.
 
-Optional. Omitted or `null` both mean the agent does not advertise any
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
 prompt extensions beyond the baseline text and resource-link content
 required by `session/prompt`.
 
@@ -6425,7 +6542,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Whether the agent supports `systemPrompt` on session lifecycle requests.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports `systemPrompt` in `append` mode.
 
 </ResponseField>
@@ -6472,12 +6589,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="category" type={<><span><a href="#sessionconfigoptioncategory">SessionConfigOptionCategory</a></span><span> | null</span></>} >
   Optional semantic category for this option (UX only).
+
+Omitted and `null` are equivalent and mean no category is provided.
+
 </ResponseField>
 <ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
   Unique identifier for the configuration option.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description for the Client to display to the user.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable label for the option.
@@ -6659,6 +6782,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description for this option value.
+
+Omitted and `null` are equivalent and mean no description is provided.
+
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable label for this option value.
@@ -6772,9 +6898,14 @@ reports no additional roots.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Human-readable title for the session
+
+Omitted and `null` are equivalent and mean no title is provided.
+
 </ResponseField>
 <ResponseField name="updatedAt" type={"string | null"} >
   RFC 3339 timestamp of last activity.
+
+Omitted and `null` are equivalent and mean the last activity time is not reported.
 
     - Format: `date-time`
 
@@ -6938,7 +7069,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="mode" type={<><span><a href="#sessionsystempromptmodecapabilities">SessionSystemPromptModeCapabilities</a></span><span> | null</span></>} >
   Delivery modes the agent supports in addition to `append`.
 
-Optional. Omitted or `null` both mean the agent supports only `append`.
+Optional. Omitted and `null` are equivalent and mean the agent supports only `append`.
 
 </ResponseField>
 
@@ -6968,7 +7099,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="override" type={<><span><a href="#sessionsystempromptoverridecapabilities">SessionSystemPromptOverrideCapabilities</a></span><span> | null</span></>} >
   Whether the agent supports `override` mode.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports replacing its built-in default
 instructions with the client-provided system prompt.
 
@@ -7252,7 +7383,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
@@ -7264,7 +7395,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Token usage for completed foreground work.
 
-Optional. Omitted or `null` both mean the agent is not reporting token
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting token
 usage for this state update.
 
 </ResponseField>
@@ -7356,7 +7487,7 @@ insertion, the prompt's response remains successful.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -7790,6 +7921,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
   Cumulative session cost (optional).
+
+Omitted and `null` are equivalent and mean no cost is reported.
+
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"usage_update"`.
@@ -8173,7 +8307,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
@@ -8185,7 +8319,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Token usage for completed foreground work.
 
-Optional. Omitted or `null` both mean the agent is not reporting token
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting token
 usage for this state update.
 
 </ResponseField>
@@ -8277,7 +8411,7 @@ insertion, the prompt's response remains successful.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted or `null` both mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -8548,7 +8682,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="cancel" type={<><span><a href="#sessioncancelcapabilities">SessionCancelCapabilities</a></span><span> | null</span></>} >
   Permits the client to cancel this child's current work without ending
-the session. Omitted or `null` means unsupported; an object (including
+the session. Omitted and `null` are equivalent and mean unsupported; an object (including
 `\{\}`) means supported.
 </ResponseField>
 
@@ -8979,6 +9113,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
   Optional annotations that help clients decide how to display or route this content.
+
+Omitted and `null` are equivalent and mean no annotations are provided.
+
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
   Text payload carried by this content block.
@@ -9002,6 +9139,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   MIME type describing the encoded media payload.
+
+Omitted and `null` are equivalent and mean the MIME type is not specified.
+
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
   Text payload carried by this content block.
@@ -9089,8 +9229,8 @@ Clients can use this field without parsing patch text to determine affected path
 <ResponseField name="patch" type={<><span><a href="#diffpatch">DiffPatch</a></span><span> | null</span></>} >
   Renderable patch text for some or all of the structured changes.
 
-Agents SHOULD provide patch text whenever feasible. Omitted or `null`
-means no renderable patch text was provided.
+Agents SHOULD provide patch text whenever feasible. Omitted and `null` are
+equivalent and mean no renderable patch text was provided.
 
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -9476,11 +9616,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="cachedReadTokens" type={"integer | null"} >
   Total cache read tokens.
 
+Omitted and `null` are equivalent and mean the count is not reported.
+
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="cachedWriteTokens" type={"integer | null"} >
   Total cache write tokens.
+
+Omitted and `null` are equivalent and mean the count is not reported.
 
     - Minimum: `0`
 
@@ -9499,6 +9643,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="thoughtTokens" type={"integer | null"} >
   Total thought/reasoning tokens
+
+Omitted and `null` are equivalent and mean the count is not reported.
 
     - Minimum: `0`
 
@@ -9528,6 +9674,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
   Cumulative session cost (optional).
+
+Omitted and `null` are equivalent and mean no cost is reported.
+
 </ResponseField>
 <ResponseField name="size" type={"uint64"} required>
   Total context window size in tokens.

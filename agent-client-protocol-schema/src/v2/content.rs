@@ -206,6 +206,8 @@ pub struct TextContent {
     /// Text payload carried by this content block.
     pub text: String,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -272,12 +274,16 @@ pub struct ImageContent {
     /// MIME type describing the encoded media payload.
     pub mime_type: MediaType,
     /// URI associated with this resource or media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean no URI is associated with the image.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[cfg_attr(feature = "schemars", schemars(url))]
     #[serde(default)]
     pub uri: Option<String>,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -347,6 +353,8 @@ pub struct AudioContent {
     /// MIME type describing the encoded media payload.
     pub mime_type: MediaType,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -404,6 +412,8 @@ pub struct EmbeddedResource {
     /// Embedded resource payload, either text or binary data.
     pub resource: EmbeddedResourceResource,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -476,6 +486,8 @@ pub struct TextResourceContents {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// MIME type describing the encoded media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean the MIME type is not specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -538,6 +550,8 @@ pub struct BlobResourceContents {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// MIME type describing the encoded media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean the MIME type is not specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -599,31 +613,43 @@ pub struct ResourceLink {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// Optional display title for end-user UI.
+    ///
+    /// Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Optional human-readable details shown with this protocol object.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Optional set of sized icons that the client can display in a user interface.
+    ///
+    /// Omitted and `null` are equivalent and mean no icons are provided.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub icons: Option<Vec<Icon>>,
     /// MIME type describing the encoded media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean the MIME type is not specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// Optional size of the linked resource in bytes, if known.
+    ///
+    /// Omitted and `null` are equivalent and mean the size is not known.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub size: Option<u64>,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -723,6 +749,8 @@ pub struct Icon {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub src: String,
     /// Optional MIME type override if the source MIME type is missing or generic.
+    ///
+    /// Omitted and `null` are equivalent and mean the source MIME type is used.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -732,11 +760,15 @@ pub struct Icon {
     /// `"any"` for scalable formats like SVG.
     ///
     /// If not provided, the client should assume that the icon can be used at any size.
+    ///
+    /// Omitted and `null` are equivalent and mean no sizes are specified.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub sizes: Option<Vec<String>>,
     /// Optional theme this icon is designed for.
+    ///
+    /// Omitted and `null` are equivalent and mean the icon is not theme-specific.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -827,6 +859,8 @@ pub enum IconTheme {
 #[non_exhaustive]
 pub struct Annotations {
     /// Intended recipients for this content, such as the user or assistant.
+    ///
+    /// Omitted and `null` are equivalent and mean no audience is specified.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
@@ -834,11 +868,15 @@ pub struct Annotations {
     /// Timestamp indicating when the underlying resource was last modified.
     ///
     /// Must be an RFC 3339 formatted string (e.g., "2025-01-12T15:00:58Z").
+    ///
+    /// Omitted and `null` are equivalent and mean the modification time is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
     #[serde(default)]
     pub last_modified: Option<String>,
     /// Relative importance of this content when clients choose what to surface.
+    ///
+    /// Omitted and `null` are equivalent and mean no priority is specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[cfg_attr(feature = "schemars", schemars(range(min = 0, max = 1)))]

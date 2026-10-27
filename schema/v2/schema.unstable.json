@@ -624,12 +624,12 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional human-readable explanation of why permission is needed.\n\nThis text is specific to the permission prompt and does not update any\nsubject's displayed content. Omitted or `null` both mean no separate\npermission description was provided.",
+          "description": "Optional human-readable explanation of why permission is needed.\n\nThis text is specific to the permission prompt and does not update any\nsubject's displayed content. Omitted and `null` are equivalent and mean no separate\npermission description was provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "subject": {
-          "description": "Optional structured context about the operation requiring permission.\n\nOmitted or `null` both mean no structured subject was provided.",
+          "description": "Optional structured context about the operation requiring permission.\n\nOmitted and `null` are equivalent and mean no structured subject was provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/RequestPermissionSubject"
@@ -1173,7 +1173,7 @@
       "type": "object",
       "properties": {
         "audience": {
-          "description": "Intended recipients for this content, such as the user or assistant.",
+          "description": "Intended recipients for this content, such as the user or assistant.\n\nOmitted and `null` are equivalent and mean no audience is specified.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/Role"
@@ -1182,13 +1182,13 @@
           "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
-          "description": "Timestamp indicating when the underlying resource was last modified.\n\nMust be an RFC 3339 formatted string (e.g., \"2025-01-12T15:00:58Z\").",
+          "description": "Timestamp indicating when the underlying resource was last modified.\n\nMust be an RFC 3339 formatted string (e.g., \"2025-01-12T15:00:58Z\").\n\nOmitted and `null` are equivalent and mean the modification time is not reported.",
           "type": ["string", "null"],
           "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "priority": {
-          "description": "Relative importance of this content when clients choose what to surface.",
+          "description": "Relative importance of this content when clients choose what to surface.\n\nOmitted and `null` are equivalent and mean no priority is specified.",
           "type": ["number", "null"],
           "format": "double",
           "minimum": 0,
@@ -1232,7 +1232,7 @@
           "type": "string"
         },
         "annotations": {
-          "description": "Optional annotations that help clients decide how to display or route this content.",
+          "description": "Optional annotations that help clients decide how to display or route this content.\n\nOmitted and `null` are equivalent and mean no annotations are provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -1274,13 +1274,13 @@
           ]
         },
         "uri": {
-          "description": "URI associated with this resource or media payload.",
+          "description": "URI associated with this resource or media payload.\n\nOmitted and `null` are equivalent and mean no URI is associated with the image.",
           "type": ["string", "null"],
           "format": "uri",
           "x-deserialize-default-on-error": true
         },
         "annotations": {
-          "description": "Optional annotations that help clients decide how to display or route this content.",
+          "description": "Optional annotations that help clients decide how to display or route this content.\n\nOmitted and `null` are equivalent and mean no annotations are provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -1318,7 +1318,7 @@
           ]
         },
         "annotations": {
-          "description": "Optional annotations that help clients decide how to display or route this content.",
+          "description": "Optional annotations that help clients decide how to display or route this content.\n\nOmitted and `null` are equivalent and mean no annotations are provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -1348,7 +1348,7 @@
           "format": "uri"
         },
         "mimeType": {
-          "description": "Optional MIME type override if the source MIME type is missing or generic.",
+          "description": "Optional MIME type override if the source MIME type is missing or generic.\n\nOmitted and `null` are equivalent and mean the source MIME type is used.",
           "anyOf": [
             {
               "$ref": "#/$defs/MediaType"
@@ -1360,7 +1360,7 @@
           "x-deserialize-default-on-error": true
         },
         "sizes": {
-          "description": "Optional array of strings that specify sizes at which the icon can be used.\nEach string should be in `WxH` format (e.g., `\"48x48\"`, `\"96x96\"`) or\n`\"any\"` for scalable formats like SVG.\n\nIf not provided, the client should assume that the icon can be used at any size.",
+          "description": "Optional array of strings that specify sizes at which the icon can be used.\nEach string should be in `WxH` format (e.g., `\"48x48\"`, `\"96x96\"`) or\n`\"any\"` for scalable formats like SVG.\n\nIf not provided, the client should assume that the icon can be used at any size.\n\nOmitted and `null` are equivalent and mean no sizes are specified.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
@@ -1369,7 +1369,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "theme": {
-          "description": "Optional theme this icon is designed for.",
+          "description": "Optional theme this icon is designed for.\n\nOmitted and `null` are equivalent and mean the icon is not theme-specific.",
           "anyOf": [
             {
               "$ref": "#/$defs/IconTheme"
@@ -1423,17 +1423,17 @@
           "format": "uri"
         },
         "title": {
-          "description": "Optional display title for end-user UI.",
+          "description": "Optional display title for end-user UI.\n\nOmitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Optional human-readable details shown with this protocol object.",
+          "description": "Optional human-readable details shown with this protocol object.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "icons": {
-          "description": "Optional set of sized icons that the client can display in a user interface.",
+          "description": "Optional set of sized icons that the client can display in a user interface.\n\nOmitted and `null` are equivalent and mean no icons are provided.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/Icon"
@@ -1442,7 +1442,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "mimeType": {
-          "description": "MIME type describing the encoded media payload.",
+          "description": "MIME type describing the encoded media payload.\n\nOmitted and `null` are equivalent and mean the MIME type is not specified.",
           "anyOf": [
             {
               "$ref": "#/$defs/MediaType"
@@ -1454,14 +1454,14 @@
           "x-deserialize-default-on-error": true
         },
         "size": {
-          "description": "Optional size of the linked resource in bytes, if known.",
+          "description": "Optional size of the linked resource in bytes, if known.\n\nOmitted and `null` are equivalent and mean the size is not known.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0,
           "x-deserialize-default-on-error": true
         },
         "annotations": {
-          "description": "Optional annotations that help clients decide how to display or route this content.",
+          "description": "Optional annotations that help clients decide how to display or route this content.\n\nOmitted and `null` are equivalent and mean no annotations are provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -1518,7 +1518,7 @@
           "format": "uri"
         },
         "mimeType": {
-          "description": "MIME type describing the encoded media payload.",
+          "description": "MIME type describing the encoded media payload.\n\nOmitted and `null` are equivalent and mean the MIME type is not specified.",
           "anyOf": [
             {
               "$ref": "#/$defs/MediaType"
@@ -1553,7 +1553,7 @@
           "format": "uri"
         },
         "mimeType": {
-          "description": "MIME type describing the encoded media payload.",
+          "description": "MIME type describing the encoded media payload.\n\nOmitted and `null` are equivalent and mean the MIME type is not specified.",
           "anyOf": [
             {
               "$ref": "#/$defs/MediaType"
@@ -1586,7 +1586,7 @@
           ]
         },
         "annotations": {
-          "description": "Optional annotations that help clients decide how to display or route this content.",
+          "description": "Optional annotations that help clients decide how to display or route this content.\n\nOmitted and `null` are equivalent and mean no annotations are provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/Annotations"
@@ -1632,7 +1632,7 @@
       "type": "object",
       "properties": {
         "fileType": {
-          "description": "File content kind after the operation (for `delete`, of the deleted file).\n\nOmitted or `null` means the content kind is unknown.",
+          "description": "File content kind after the operation (for `delete`, of the deleted file).\n\nOmitted and `null` are equivalent and mean the content kind is unknown.",
           "anyOf": [
             {
               "$ref": "#/$defs/DiffFileType"
@@ -1644,7 +1644,7 @@
           "x-deserialize-default-on-error": true
         },
         "mimeType": {
-          "description": "MIME type of the file contents after the operation (for `delete`, of the deleted file).\n\nOmitted or `null` means the MIME type is unknown.",
+          "description": "MIME type of the file contents after the operation (for `delete`, of the deleted file).\n\nOmitted and `null` are equivalent and mean the MIME type is unknown.",
           "anyOf": [
             {
               "$ref": "#/$defs/MediaType"
@@ -1937,7 +1937,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "patch": {
-          "description": "Renderable patch text for some or all of the structured changes.\n\nAgents SHOULD provide patch text whenever feasible. Omitted or `null`\nmeans no renderable patch text was provided.",
+          "description": "Renderable patch text for some or all of the structured changes.\n\nAgents SHOULD provide patch text whenever feasible. Omitted and `null` are\nequivalent and mean no renderable patch text was provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/DiffPatch"
@@ -3278,7 +3278,7 @@
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
+          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3300,7 +3300,7 @@
       "type": "object",
       "properties": {
         "session": {
-          "description": "Session capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not support the\n`session/*` method surface. Supplying `{}` means the agent supports the\nbaseline session methods: `session/new`, `session/list`,\n`session/resume`, `session/close`, `session/prompt`, `session/cancel`,\nand `session/update`.",
+          "description": "Session capabilities supported by the agent.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not support the\n`session/*` method surface. Supplying `{}` means the agent supports the\nbaseline session methods: `session/new`, `session/list`,\n`session/resume`, `session/close`, `session/prompt`, `session/cancel`,\nand `session/update`.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCapabilities"
@@ -3312,7 +3312,7 @@
           "x-deserialize-default-on-error": true
         },
         "auth": {
-          "description": "Authentication-related extension capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise any\nauthentication-related extensions. This field does not advertise support\nfor `auth/login` or `auth/logout`; those methods are advertised by a\nnon-empty `authMethods` list in the `initialize` response.",
+          "description": "Authentication-related extension capabilities supported by the agent.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise any\nauthentication-related extensions. This field does not advertise support\nfor `auth/login` or `auth/logout`; those methods are advertised by a\nnon-empty `authMethods` list in the `initialize` response.",
           "anyOf": [
             {
               "$ref": "#/$defs/AgentAuthCapabilities"
@@ -3324,7 +3324,7 @@
           "x-deserialize-default-on-error": true
         },
         "providers": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports provider configuration methods.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nProvider configuration capabilities supported by the agent.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports provider configuration methods.",
           "anyOf": [
             {
               "$ref": "#/$defs/ProvidersCapabilities"
@@ -3348,7 +3348,7 @@
       "type": "object",
       "properties": {
         "prompt": {
-          "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise any\nprompt extensions beyond the baseline text and resource-link content\nrequired by `session/prompt`.",
+          "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise any\nprompt extensions beyond the baseline text and resource-link content\nrequired by `session/prompt`.",
           "anyOf": [
             {
               "$ref": "#/$defs/PromptCapabilities"
@@ -3360,7 +3360,7 @@
           "x-deserialize-default-on-error": true
         },
         "mcp": {
-          "description": "MCP capabilities supported by the agent for session lifecycle requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise MCP\nserver transport support for sessions.",
+          "description": "MCP capabilities supported by the agent for session lifecycle requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise MCP\nserver transport support for sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/McpCapabilities"
@@ -3372,7 +3372,7 @@
           "x-deserialize-default-on-error": true
         },
         "delete": {
-          "description": "Whether the agent supports `session/delete`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports deleting sessions from `session/list`.",
+          "description": "Whether the agent supports `session/delete`.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports deleting sessions from `session/list`.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionDeleteCapabilities"
@@ -3384,7 +3384,7 @@
           "x-deserialize-default-on-error": true
         },
         "additionalDirectories": {
-          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports `additionalDirectories` on\nsupported session lifecycle requests.\n\nAgents may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
+          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports `additionalDirectories` on\nsupported session lifecycle requests.\n\nAgents may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionAdditionalDirectoriesCapabilities"
@@ -3396,7 +3396,7 @@
           "x-deserialize-default-on-error": true
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `systemPrompt` on session lifecycle requests.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports `systemPrompt` in `append` mode.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `systemPrompt` on session lifecycle requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports `systemPrompt` in `append` mode.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionSystemPromptCapabilities"
@@ -3408,7 +3408,7 @@
           "x-deserialize-default-on-error": true
         },
         "fork": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/fork`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports forking sessions.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/fork`.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports forking sessions.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionForkCapabilities"
@@ -3432,7 +3432,7 @@
       "type": "object",
       "properties": {
         "image": {
-          "description": "Agent supports `image` content blocks.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports image content in prompts.",
+          "description": "Agent supports `image` content blocks.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports image content in prompts.",
           "anyOf": [
             {
               "$ref": "#/$defs/PromptImageCapabilities"
@@ -3444,7 +3444,7 @@
           "x-deserialize-default-on-error": true
         },
         "audio": {
-          "description": "Agent supports `audio` content blocks.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports audio content in prompts.",
+          "description": "Agent supports `audio` content blocks.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports audio content in prompts.",
           "anyOf": [
             {
               "$ref": "#/$defs/PromptAudioCapabilities"
@@ -3456,7 +3456,7 @@
           "x-deserialize-default-on-error": true
         },
         "embeddedContext": {
-          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include `resource` content blocks\nin prompt requests for pieces of context that are referenced in the message.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports embedded context in prompts.",
+          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include `resource` content blocks\nin prompt requests for pieces of context that are referenced in the message.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports embedded context in prompts.",
           "anyOf": [
             {
               "$ref": "#/$defs/PromptEmbeddedContextCapabilities"
@@ -3516,7 +3516,7 @@
       "type": "object",
       "properties": {
         "stdio": {
-          "description": "Agent supports `stdio` MCP servers.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports stdio MCP server transports.",
+          "description": "Agent supports `stdio` MCP servers.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports stdio MCP server transports.",
           "anyOf": [
             {
               "$ref": "#/$defs/McpStdioCapabilities"
@@ -3528,7 +3528,7 @@
           "x-deserialize-default-on-error": true
         },
         "http": {
-          "description": "Agent supports `http` MCP servers.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports HTTP MCP server transports.",
+          "description": "Agent supports `http` MCP servers.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports HTTP MCP server transports.",
           "anyOf": [
             {
               "$ref": "#/$defs/McpHttpCapabilities"
@@ -3540,7 +3540,7 @@
           "x-deserialize-default-on-error": true
         },
         "acp": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAgent supports `acp` MCP servers.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports ACP MCP server transports.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAgent supports `acp` MCP servers.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports ACP MCP server transports.",
           "anyOf": [
             {
               "$ref": "#/$defs/McpAcpCapabilities"
@@ -3624,7 +3624,7 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "Delivery modes the agent supports in addition to `append`.\n\nOptional. Omitted or `null` both mean the agent supports only `append`.",
+          "description": "Delivery modes the agent supports in addition to `append`.\n\nOptional. Omitted and `null` are equivalent and mean the agent supports only `append`.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionSystemPromptModeCapabilities"
@@ -3648,7 +3648,7 @@
       "type": "object",
       "properties": {
         "override": {
-          "description": "Whether the agent supports `override` mode.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports replacing its built-in default\ninstructions with the client-provided system prompt.",
+          "description": "Whether the agent supports `override` mode.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports replacing its built-in default\ninstructions with the client-provided system prompt.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionSystemPromptOverrideCapabilities"
@@ -3843,7 +3843,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.",
+          "description": "Optional description providing more details about this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3887,7 +3887,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.",
+          "description": "Optional description providing more details about this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -4146,12 +4146,12 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description for the Client to display to the user.",
+          "description": "Optional description for the Client to display to the user.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "category": {
-          "description": "Optional semantic category for this option (UX only).",
+          "description": "Optional semantic category for this option (UX only).\n\nOmitted and `null` are equivalent and mean no category is provided.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionConfigOptionCategory"
@@ -4318,7 +4318,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description for this option value.",
+          "description": "Optional description for this option value.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -4537,7 +4537,7 @@
           "type": "string"
         },
         "input": {
-          "description": "Input for the command if required",
+          "description": "Input for the command if required\n\nOmitted and `null` are equivalent and mean the command takes no input.",
           "anyOf": [
             {
               "$ref": "#/$defs/AvailableCommandInput"
@@ -4623,12 +4623,12 @@
           "x-deserialize-skip-invalid-items": true
         },
         "title": {
-          "description": "Human-readable title for the session",
+          "description": "Human-readable title for the session\n\nOmitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "updatedAt": {
-          "description": "RFC 3339 timestamp of last activity.",
+          "description": "RFC 3339 timestamp of last activity.\n\nOmitted and `null` are equivalent and mean the last activity time is not reported.",
           "type": ["string", "null"],
           "format": "date-time",
           "x-deserialize-default-on-error": true
@@ -4818,7 +4818,7 @@
           "type": "string"
         },
         "data": {
-          "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details.",
+          "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details.\n\nOmitted and `null` are equivalent and mean no additional data is provided.",
           "x-deserialize-default-on-error": true
         }
       },
@@ -5737,7 +5737,7 @@
       "type": "object",
       "properties": {
         "error": {
-          "description": "The failure, as a JSON-RPC error object.\n\nOptional. Omitted or `null` both mean the agent is not reporting failure details.\nAgents SHOULD include it.",
+          "description": "The failure, as a JSON-RPC error object.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.\nAgents SHOULD include it.",
           "anyOf": [
             {
               "$ref": "#/$defs/Error"
@@ -5773,21 +5773,21 @@
           "minimum": 0
         },
         "thoughtTokens": {
-          "description": "Total thought/reasoning tokens",
+          "description": "Total thought/reasoning tokens\n\nOmitted and `null` are equivalent and mean the count is not reported.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0,
           "x-deserialize-default-on-error": true
         },
         "cachedReadTokens": {
-          "description": "Total cache read tokens.",
+          "description": "Total cache read tokens.\n\nOmitted and `null` are equivalent and mean the count is not reported.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0,
           "x-deserialize-default-on-error": true
         },
         "cachedWriteTokens": {
-          "description": "Total cache write tokens.",
+          "description": "Total cache write tokens.\n\nOmitted and `null` are equivalent and mean the count is not reported.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0,
@@ -5807,7 +5807,7 @@
       "type": "object",
       "properties": {
         "usage": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage for completed foreground work.\n\nOptional. Omitted or `null` both mean the agent is not reporting token\nusage for this state update.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage for completed foreground work.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting token\nusage for this state update.",
           "anyOf": [
             {
               "$ref": "#/$defs/Usage"
@@ -5825,7 +5825,7 @@
           "additionalProperties": true
         },
         "stopReason": {
-          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)",
+          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         }
@@ -6768,7 +6768,7 @@
           "minimum": 0
         },
         "cost": {
-          "description": "Cumulative session cost (optional).",
+          "description": "Cumulative session cost (optional).\n\nOmitted and `null` are equivalent and mean no cost is reported.",
           "anyOf": [
             {
               "$ref": "#/$defs/Cost"
@@ -6955,7 +6955,7 @@
       "type": "object",
       "properties": {
         "cancel": {
-          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted or `null` means unsupported; an object (including\n`{}`) means supported.",
+          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted and `null` are equivalent and mean unsupported; an object (including\n`{}`) means supported.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCancelCapabilities"
@@ -7388,7 +7388,7 @@
       "type": "object",
       "properties": {
         "auth": {
-          "description": "Authentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nauthentication-method extensions.",
+          "description": "Authentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise any\nauthentication-method extensions.",
           "anyOf": [
             {
               "$ref": "#/$defs/ClientAuthCapabilities"
@@ -7400,7 +7400,7 @@
           "x-deserialize-default-on-error": true
         },
         "elicitation": {
-          "description": "Elicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.\n\nOptional. Omitted or `null` both mean the client does not advertise\nelicitation support.",
+          "description": "Elicitation capabilities supported by the client.\nDetermines which elicitation modes the agent may use.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise\nelicitation support.",
           "anyOf": [
             {
               "$ref": "#/$defs/ElicitationCapabilities"
@@ -7424,7 +7424,7 @@
       "type": "object",
       "properties": {
         "terminal": {
-          "description": "Whether the client supports `terminal` authentication methods.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nThe client should supply `{}` only when it can reproduce the configured\nagent invocation in an interactive terminal. Supplying `{}` means the\nagent may include `terminal` entries in its authentication methods.",
+          "description": "Whether the client supports `terminal` authentication methods.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support.\nThe client should supply `{}` only when it can reproduce the configured\nagent invocation in an interactive terminal. Supplying `{}` means the\nagent may include `terminal` entries in its authentication methods.",
           "anyOf": [
             {
               "$ref": "#/$defs/TerminalAuthCapabilities"
@@ -7472,7 +7472,7 @@
           "x-deserialize-default-on-error": true
         },
         "url": {
-          "description": "Whether the client supports URL-based elicitation.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client supports URL-based elicitation.",
+          "description": "Whether the client supports URL-based elicitation.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support.\nSupplying `{}` means the client supports URL-based elicitation.",
           "anyOf": [
             {
               "$ref": "#/$defs/ElicitationUrlCapabilities"
@@ -7947,7 +7947,7 @@
       "type": "object",
       "properties": {
         "cwd": {
-          "description": "Filter sessions by working directory. Must be an absolute path.",
+          "description": "Filter sessions by working directory. Must be an absolute path.\n\nOmitted and `null` are equivalent and mean sessions are not filtered by working directory.",
           "anyOf": [
             {
               "$ref": "#/$defs/AbsolutePath"
@@ -7958,7 +7958,7 @@
           ]
         },
         "cursor": {
-          "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination",
+          "description": "Opaque cursor token from a previous response's nextCursor field for cursor-based pagination\n\nOmitted and `null` are equivalent and mean the first page is requested.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionListCursor"
@@ -8092,7 +8092,7 @@
           }
         },
         "replayFrom": {
-          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted or `null` both mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay all retained\nconversation history before responding.\n\nAgents MUST reject unsupported cursor types or malformed cursor values\nwith `-32602` (Invalid params), rather than substituting another cursor\nor resuming without replay.",
+          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted and `null` are equivalent and mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay all retained\nconversation history before responding.\n\nAgents MUST reject unsupported cursor types or malformed cursor values\nwith `-32602` (Invalid params), rather than substituting another cursor\nor resuming without replay.",
           "anyOf": [
             {
               "$ref": "#/$defs/ReplayFrom"
@@ -8710,7 +8710,7 @@
       "type": "object",
       "properties": {
         "content": {
-          "description": "The user-provided content, if any, as an object matching the requested schema.",
+          "description": "The user-provided content, if any, as an object matching the requested schema.\n\nOmitted and `null` are equivalent and mean no content is provided.",
           "type": ["object", "null"],
           "additionalProperties": {
             "$ref": "#/$defs/ElicitationContentValue"

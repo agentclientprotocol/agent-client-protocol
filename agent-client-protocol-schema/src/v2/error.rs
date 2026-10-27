@@ -42,6 +42,8 @@ pub struct Error {
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
+    ///
+    /// Omitted and `null` are equivalent and mean no additional data is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]

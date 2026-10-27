@@ -1282,7 +1282,7 @@ pub struct ElicitationCapabilities {
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
     ///
-    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
     /// Supplying `{}` means the client supports URL-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -1335,7 +1335,7 @@ impl ElicitationCapabilities {
 
     /// Whether the client supports URL-based elicitation.
     ///
-    /// Omitted or `null` both mean the client does not advertise support.
+    /// Omitted and `null` are equivalent and mean the client does not advertise support.
     /// Supplying `{}` means the client supports URL-based elicitation.
     #[must_use]
     pub fn url(mut self, url: impl IntoOption<ElicitationUrlCapabilities>) -> Self {
@@ -2013,6 +2013,8 @@ impl From<OtherElicitationAction> for ElicitationAction {
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {
     /// The user-provided content, if any, as an object matching the requested schema.
+    ///
+    /// Omitted and `null` are equivalent and mean no content is provided.
     #[serde(default)]
     pub content: Option<BTreeMap<String, ElicitationContentValue>>,
 }

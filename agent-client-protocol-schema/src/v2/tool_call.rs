@@ -565,8 +565,8 @@ pub struct Diff {
     pub changes: Vec<DiffChange>,
     /// Renderable patch text for some or all of the structured changes.
     ///
-    /// Agents SHOULD provide patch text whenever feasible. Omitted or `null`
-    /// means no renderable patch text was provided.
+    /// Agents SHOULD provide patch text whenever feasible. Omitted and `null` are
+    /// equivalent and mean no renderable patch text was provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -728,14 +728,14 @@ pub enum DiffFileType {
 pub struct DiffChange {
     /// File content kind after the operation (for `delete`, of the deleted file).
     ///
-    /// Omitted or `null` means the content kind is unknown.
+    /// Omitted and `null` are equivalent and mean the content kind is unknown.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub file_type: Option<DiffFileType>,
     /// MIME type of the file contents after the operation (for `delete`, of the deleted file).
     ///
-    /// Omitted or `null` means the MIME type is unknown.
+    /// Omitted and `null` are equivalent and mean the MIME type is unknown.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -803,7 +803,7 @@ impl DiffChange {
 
     /// File content kind.
     ///
-    /// Omitted or `null` means the content kind is unknown.
+    /// Omitted and `null` are equivalent and mean the content kind is unknown.
     #[must_use]
     pub fn file_type(mut self, file_type: impl IntoOption<DiffFileType>) -> Self {
         self.file_type = file_type.into_option();
@@ -812,7 +812,7 @@ impl DiffChange {
 
     /// MIME type of the file contents.
     ///
-    /// Omitted or `null` means the MIME type is unknown.
+    /// Omitted and `null` are equivalent and mean the MIME type is unknown.
     #[must_use]
     pub fn mime_type(mut self, mime_type: impl IntoOption<MediaType>) -> Self {
         self.mime_type = mime_type.into_option();

@@ -197,6 +197,8 @@ pub struct Implementation {
     /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
+    ///
+    /// Omitted and `null` are equivalent and mean the `name` is used for display.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -679,6 +681,8 @@ pub struct AuthMethodAgent {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -745,6 +749,8 @@ pub struct AuthMethodTerminal {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional description providing more details about this authentication method.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1245,7 +1251,7 @@ pub struct ResumeSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// Inclusive cursor describing where conversation replay should begin.
     ///
-    /// Optional. Omitted or `null` both mean the Agent should resume without
+    /// Optional. Omitted and `null` are equivalent and mean the Agent should resume without
     /// replaying previous conversation history. Replay cursors are inclusive:
     /// replay includes the position identified by the cursor. Supplying
     /// `{ "type": "start" }` means the Agent should replay all retained
@@ -1318,7 +1324,7 @@ impl ResumeSessionRequest {
 
     /// Inclusive cursor describing where conversation replay should begin.
     ///
-    /// Omitted or `null` both mean the Agent should resume without replaying
+    /// Omitted and `null` are equivalent and mean the Agent should resume without replaying
     /// previous conversation history. Replay cursors are inclusive: replay
     /// includes the position identified by the cursor. Supplying
     /// `{ "type": "start" }` means the Agent should replay all retained
@@ -1728,9 +1734,13 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct ListSessionsRequest {
         /// Filter sessions by working directory. Must be an absolute path.
+        ///
+        /// Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
         #[serde(default)]
         pub cwd: Option<AbsolutePath>,
         /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+        ///
+        /// Omitted and `null` are equivalent and mean the first page is requested.
         #[serde(default)]
         pub cursor: Option<SessionListCursor>,
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1954,11 +1964,15 @@ pub struct SessionInfo {
     pub additional_directories: Vec<AbsolutePath>,
 
     /// Human-readable title for the session
+    ///
+    /// Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// RFC 3339 timestamp of last activity.
+    ///
+    /// Omitted and `null` are equivalent and mean the last activity time is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
     #[serde(default)]
@@ -2089,6 +2103,8 @@ pub struct SessionConfigSelectOption {
     /// Human-readable label for this option value.
     pub name: String,
     /// Optional description for this option value.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2395,11 +2411,15 @@ pub struct SessionConfigOption {
     /// Human-readable label for the option.
     pub name: String,
     /// Optional description for the Client to display to the user.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
+    ///
+    /// Omitted and `null` are equivalent and mean no category is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3554,7 +3574,7 @@ impl From<ErrorStopReason> for StopReason {
 pub struct ErrorStopReason {
     /// The failure, as a JSON-RPC error object.
     ///
-    /// Optional. Omitted or `null` both mean the agent is not reporting failure details.
+    /// Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
     /// Agents SHOULD include it.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -3683,16 +3703,22 @@ pub struct Usage {
     /// Total output tokens.
     pub output_tokens: u64,
     /// Total thought/reasoning tokens
+    ///
+    /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub thought_tokens: Option<u64>,
     /// Total cache read tokens.
+    ///
+    /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cached_read_tokens: Option<u64>,
     /// Total cache write tokens.
+    ///
+    /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4282,7 +4308,7 @@ impl DisableProviderResponse {
 pub struct AgentCapabilities {
     /// Session capabilities supported by the agent.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not support the
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not support the
     /// `session/*` method surface. Supplying `{}` means the agent supports the
     /// baseline session methods: `session/new`, `session/list`,
     /// `session/resume`, `session/close`, `session/prompt`, `session/cancel`,
@@ -4293,7 +4319,7 @@ pub struct AgentCapabilities {
     pub session: Option<SessionCapabilities>,
     /// Authentication-related extension capabilities supported by the agent.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise any
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
     /// authentication-related extensions. This field does not advertise support
     /// for `auth/login` or `auth/logout`; those methods are advertised by a
     /// non-empty `authMethods` list in the `initialize` response.
@@ -4307,7 +4333,7 @@ pub struct AgentCapabilities {
     ///
     /// Provider configuration capabilities supported by the agent.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports provider configuration methods.
     #[cfg(feature = "unstable_llm_providers")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4335,7 +4361,7 @@ impl AgentCapabilities {
 
     /// Session capabilities supported by the agent.
     ///
-    /// Omitted or `null` both mean the agent does not support the `session/*`
+    /// Omitted and `null` are equivalent and mean the agent does not support the `session/*`
     /// method surface. Supplying `{}` means the agent supports the baseline
     /// session methods: `session/new`, `session/list`, `session/resume`,
     /// `session/close`, `session/prompt`, `session/cancel`, and
@@ -4445,7 +4471,7 @@ impl ProvidersCapabilities {
 pub struct SessionCapabilities {
     /// Prompt capabilities supported by the agent in `session/prompt` requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise any
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
     /// prompt extensions beyond the baseline text and resource-link content
     /// required by `session/prompt`.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4454,7 +4480,7 @@ pub struct SessionCapabilities {
     pub prompt: Option<PromptCapabilities>,
     /// MCP capabilities supported by the agent for session lifecycle requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise MCP
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise MCP
     /// server transport support for sessions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4462,7 +4488,7 @@ pub struct SessionCapabilities {
     pub mcp: Option<McpCapabilities>,
     /// Whether the agent supports `session/delete`.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4470,7 +4496,7 @@ pub struct SessionCapabilities {
     pub delete: Option<SessionDeleteCapabilities>,
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
@@ -4486,7 +4512,7 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `systemPrompt` on session lifecycle requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
     #[cfg(feature = "unstable_session_system_prompt")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4499,7 +4525,7 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `session/fork`.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports forking sessions.
     #[cfg(feature = "unstable_session_fork")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4527,7 +4553,7 @@ impl SessionCapabilities {
 
     /// Prompt capabilities supported by the agent in `session/prompt` requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise any prompt
+    /// Omitted and `null` are equivalent and mean the agent does not advertise any prompt
     /// extensions beyond the baseline text and resource-link content required by
     /// `session/prompt`.
     #[must_use]
@@ -4538,7 +4564,7 @@ impl SessionCapabilities {
 
     /// MCP capabilities supported by the agent for session lifecycle requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise MCP server
+    /// Omitted and `null` are equivalent and mean the agent does not advertise MCP server
     /// transport support for sessions.
     #[must_use]
     pub fn mcp(mut self, mcp: impl IntoOption<McpCapabilities>) -> Self {
@@ -4548,7 +4574,7 @@ impl SessionCapabilities {
 
     /// Whether the agent supports `session/delete`.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
     #[must_use]
     pub fn delete(mut self, delete: impl IntoOption<SessionDeleteCapabilities>) -> Self {
@@ -4558,7 +4584,7 @@ impl SessionCapabilities {
 
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
@@ -4579,7 +4605,7 @@ impl SessionCapabilities {
     ///
     /// Whether the agent supports `systemPrompt` on session lifecycle requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
     #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
@@ -4594,7 +4620,7 @@ impl SessionCapabilities {
     #[cfg(feature = "unstable_session_fork")]
     /// Whether the agent supports `session/fork`.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports forking sessions.
     #[must_use]
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
@@ -4715,7 +4741,7 @@ impl SessionAdditionalDirectoriesCapabilities {
 pub struct SessionSystemPromptCapabilities {
     /// Delivery modes the agent supports in addition to `append`.
     ///
-    /// Optional. Omitted or `null` both mean the agent supports only `append`.
+    /// Optional. Omitted and `null` are equivalent and mean the agent supports only `append`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4742,7 +4768,7 @@ impl SessionSystemPromptCapabilities {
 
     /// Delivery modes the agent supports in addition to `append`.
     ///
-    /// Omitted or `null` both mean the agent supports only `append`.
+    /// Omitted and `null` are equivalent and mean the agent supports only `append`.
     #[must_use]
     pub fn mode(mut self, mode: impl IntoOption<SessionSystemPromptModeCapabilities>) -> Self {
         self.mode = mode.into_option();
@@ -4779,7 +4805,7 @@ impl SessionSystemPromptCapabilities {
 pub struct SessionSystemPromptModeCapabilities {
     /// Whether the agent supports `override` mode.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports replacing its built-in default
     /// instructions with the client-provided system prompt.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4808,7 +4834,7 @@ impl SessionSystemPromptModeCapabilities {
 
     /// Whether the agent supports `override` mode.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports replacing its built-in default
     /// instructions with the client-provided system prompt.
     #[must_use]
@@ -4946,7 +4972,7 @@ impl SessionForkCapabilities {
 pub struct PromptCapabilities {
     /// Agent supports `image` content blocks.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports image content in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4954,7 +4980,7 @@ pub struct PromptCapabilities {
     pub image: Option<PromptImageCapabilities>,
     /// Agent supports `audio` content blocks.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports audio content in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4965,7 +4991,7 @@ pub struct PromptCapabilities {
     /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports embedded context in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4992,7 +5018,7 @@ impl PromptCapabilities {
 
     /// Agent supports `image` content blocks.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports image content in prompts.
     #[must_use]
     pub fn image(mut self, image: impl IntoOption<PromptImageCapabilities>) -> Self {
@@ -5002,7 +5028,7 @@ impl PromptCapabilities {
 
     /// Agent supports `audio` content blocks.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports audio content in prompts.
     #[must_use]
     pub fn audio(mut self, audio: impl IntoOption<PromptAudioCapabilities>) -> Self {
@@ -5015,7 +5041,7 @@ impl PromptCapabilities {
     /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports embedded context in prompts.
     #[must_use]
     pub fn embedded_context(
@@ -5168,7 +5194,7 @@ impl PromptEmbeddedContextCapabilities {
 pub struct McpCapabilities {
     /// Agent supports `stdio` MCP servers.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports stdio MCP server transports.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -5176,7 +5202,7 @@ pub struct McpCapabilities {
     pub stdio: Option<McpStdioCapabilities>,
     /// Agent supports `http` MCP servers.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports HTTP MCP server transports.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -5188,7 +5214,7 @@ pub struct McpCapabilities {
     ///
     /// Agent supports `acp` MCP servers.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports ACP MCP server transports.
     #[cfg(feature = "unstable_mcp_over_acp")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -5216,7 +5242,7 @@ impl McpCapabilities {
 
     /// Agent supports `stdio` MCP servers.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports stdio MCP server transports.
     #[must_use]
     pub fn stdio(mut self, stdio: impl IntoOption<McpStdioCapabilities>) -> Self {
@@ -5226,7 +5252,7 @@ impl McpCapabilities {
 
     /// Agent supports `http` MCP servers.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports HTTP MCP server transports.
     #[must_use]
     pub fn http(mut self, http: impl IntoOption<McpHttpCapabilities>) -> Self {
@@ -5241,7 +5267,7 @@ impl McpCapabilities {
     /// Agent supports `acp` MCP servers.
     #[cfg(feature = "unstable_mcp_over_acp")]
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports ACP MCP server transports.
     #[must_use]
     pub fn acp(mut self, acp: impl IntoOption<McpAcpCapabilities>) -> Self {
