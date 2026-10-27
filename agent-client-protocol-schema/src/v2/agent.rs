@@ -551,7 +551,10 @@ impl AuthMethod {
     pub fn description(&self) -> Option<&str> {
         match self {
             Self::Agent(a) => a.description.as_deref(),
-            Self::Other(a) => a.description.as_deref(),
+            Self::Other(a) => a
+                .fields
+                .get("description")
+                .and_then(serde_json::Value::as_str),
             Self::Terminal(t) => t.description.as_deref(),
         }
     }
@@ -565,7 +568,7 @@ impl AuthMethod {
     pub fn meta(&self) -> Option<&Meta> {
         match self {
             Self::Agent(a) => a.meta.as_ref(),
-            Self::Other(a) => a.meta.as_ref(),
+            Self::Other(a) => a.fields.get("_meta").and_then(serde_json::Value::as_object),
             Self::Terminal(t) => t.meta.as_ref(),
         }
     }
@@ -592,22 +595,8 @@ pub struct OtherAuthMethod {
     pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
-    /// Optional description providing more details about this authentication method.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub description: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-    /// Additional fields from the unknown authentication method payload.
+    /// The remaining fields of the unknown authentication method payload, preserved verbatim,
+    /// including `description` and `_meta`.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
 }
@@ -624,34 +613,12 @@ impl OtherAuthMethod {
         fields.remove("type");
         fields.remove("methodId");
         fields.remove("name");
-        fields.remove("description");
-        fields.remove("_meta");
         Self {
             type_: type_.into(),
             method_id: method_id.into(),
             name: name.into(),
-            description: None,
-            meta: None,
             fields,
         }
-    }
-
-    /// Optional description providing more details about this authentication method.
-    #[must_use]
-    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
-        self.description = description.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
     }
 }
 
@@ -667,9 +634,6 @@ impl<'de> Deserialize<'de> for OtherAuthMethod {
             type_: String,
             method_id: AuthMethodId,
             name: String,
-            description: Option<String>,
-            #[serde(rename = "_meta")]
-            meta: Option<Meta>,
             #[serde(flatten)]
             fields: BTreeMap<String, serde_json::Value>,
         }
@@ -686,8 +650,6 @@ impl<'de> Deserialize<'de> for OtherAuthMethod {
             type_: raw.type_,
             method_id: raw.method_id,
             name: raw.name,
-            description: raw.description,
-            meta: raw.meta,
             fields: raw.fields,
         })
     }
@@ -1477,17 +1439,8 @@ pub struct OtherReplayFrom {
     /// future ACP variants.
     #[serde(rename = "type")]
     pub type_: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-    /// Additional fields from the unknown replay cursor payload.
+    /// The remaining fields of the unknown replay cursor payload, preserved verbatim,
+    /// including `_meta`.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
 }
@@ -1497,23 +1450,10 @@ impl OtherReplayFrom {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
-        fields.remove("_meta");
         Self {
             type_: type_.into(),
-            meta: None,
             fields,
         }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
     }
 }
 
@@ -1536,15 +1476,7 @@ impl<'de> Deserialize<'de> for OtherReplayFrom {
             )));
         }
 
-        let meta = fields
-            .remove("_meta")
-            .and_then(|value| serde_json::from_value(value).ok());
-
-        Ok(Self {
-            type_,
-            meta,
-            fields,
-        })
+        Ok(Self { type_, fields })
     }
 }
 
@@ -5910,6 +5842,31 @@ mod test_serialization {
 
     fn test_meta() -> Meta {
         json!({ "source": "test" }).as_object().unwrap().clone()
+    }
+
+    #[test]
+    fn other_fallbacks_preserve_optional_fields_verbatim() {
+        let valid = json!({ "type": "_custom", "methodId": "m", "name": "M",
+            "description": "d", "_meta": { "k": 1 } });
+        let method: AuthMethod = serde_json::from_value(valid.clone()).unwrap();
+        assert_eq!(method.description(), Some("d"));
+        assert_eq!(
+            method.meta(),
+            Some(&json!({ "k": 1 }).as_object().unwrap().clone())
+        );
+        assert_eq!(serde_json::to_value(&method).unwrap(), valid);
+
+        // Malformed optional fields are kept as sent and read as absent.
+        let malformed = json!({ "type": "_custom", "methodId": "m", "name": "M",
+            "description": 42, "_meta": "bad", "extra": true });
+        let method: AuthMethod = serde_json::from_value(malformed.clone()).unwrap();
+        assert_eq!(method.description(), None);
+        assert_eq!(method.meta(), None);
+        assert_eq!(serde_json::to_value(&method).unwrap(), malformed);
+
+        let replay = json!({ "type": "_custom", "_meta": "bad", "cursor": 3 });
+        let decoded: ReplayFrom = serde_json::from_value(replay.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&decoded).unwrap(), replay);
     }
 
     fn serialized_meta_key_count(value: &impl serde::Serialize) -> usize {

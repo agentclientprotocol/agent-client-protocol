@@ -2328,7 +2328,7 @@ impl AvailableCommand {
     pub fn meta(&self) -> Option<&Meta> {
         match self {
             Self::Command(c) => c.meta.as_ref(),
-            Self::Other(c) => c.meta.as_ref(),
+            Self::Other(c) => c.fields.get("_meta").and_then(serde_json::Value::as_object),
         }
     }
 }
@@ -2354,17 +2354,8 @@ pub struct OtherAvailableCommand {
     pub name: String,
     /// Human-readable description of what the command does.
     pub description: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-    /// Additional fields from the unknown command payload.
+    /// The remaining fields of the unknown command payload, preserved verbatim, including
+    /// `_meta`.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
 }
@@ -2381,25 +2372,12 @@ impl OtherAvailableCommand {
         fields.remove("type");
         fields.remove("name");
         fields.remove("description");
-        fields.remove("_meta");
         Self {
             type_: type_.into(),
             name: name.into(),
             description: description.into(),
-            meta: None,
             fields,
         }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
     }
 }
 
@@ -2414,8 +2392,6 @@ impl<'de> Deserialize<'de> for OtherAvailableCommand {
             type_: String,
             name: String,
             description: String,
-            #[serde(default, rename = "_meta")]
-            meta: Option<serde_json::Value>,
             #[serde(flatten)]
             fields: BTreeMap<String, serde_json::Value>,
         }
@@ -2432,8 +2408,6 @@ impl<'de> Deserialize<'de> for OtherAvailableCommand {
             type_: raw.type_,
             name: raw.name,
             description: raw.description,
-            // Match the `DefaultOnError` handling of `_meta` on known commands.
-            meta: raw.meta.and_then(|meta| serde_json::from_value(meta).ok()),
             fields: raw.fields,
         })
     }
@@ -3673,6 +3647,17 @@ impl AgentNotification {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn other_available_command_preserves_meta_verbatim() {
+        for meta in [serde_json::json!({ "k": 1 }), serde_json::json!("bad")] {
+            let wire = serde_json::json!({ "type": "_custom", "name": "c",
+                "description": "d", "_meta": meta, "extra": true });
+            let command: super::AvailableCommand = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(command.meta(), meta.as_object());
+            assert_eq!(serde_json::to_value(&command).unwrap(), wire);
+        }
+    }
 
     #[test]
     fn cancelled_permission_outcome_wire_format() {

@@ -1668,17 +1668,6 @@ data, and otherwise ignore the method or display it generically.
 
 <Expandable title="Properties">
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
-</ResponseField>
 <ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
 </ResponseField>
@@ -1822,14 +1811,6 @@ command using its `name` and `description`.
 
 <Expandable title="Properties">
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
 <ResponseField name="description" type={"string"} required>
   Human-readable description of what the command does.
 </ResponseField>
@@ -5093,14 +5074,6 @@ substituting another cursor or resuming without replay.
 
 <Expandable title="Properties">
 
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
 <ResponseField name="type" type={"string"} required>
   Custom or future replay cursor type.
 

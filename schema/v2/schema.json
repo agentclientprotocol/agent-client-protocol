@@ -3489,17 +3489,6 @@
             "name": {
               "description": "Human-readable name of the authentication method.",
               "type": "string"
-            },
-            "description": {
-              "description": "Optional description providing more details about this authentication method.",
-              "type": ["string", "null"],
-              "x-deserialize-default-on-error": true
-            },
-            "_meta": {
-              "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
-              "type": ["object", "null"],
-              "x-deserialize-default-on-error": true,
-              "additionalProperties": true
             }
           },
           "required": ["type", "methodId", "name"],
@@ -4008,12 +3997,6 @@
             "description": {
               "description": "Human-readable description of what the command does.",
               "type": "string"
-            },
-            "_meta": {
-              "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
-              "type": ["object", "null"],
-              "x-deserialize-default-on-error": true,
-              "additionalProperties": true
             }
           },
           "required": ["type", "name", "description"],
@@ -6865,12 +6848,6 @@
             "type": {
               "description": "Custom or future replay cursor type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
               "type": "string"
-            },
-            "_meta": {
-              "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
-              "type": ["object", "null"],
-              "x-deserialize-default-on-error": true,
-              "additionalProperties": true
             }
           },
           "required": ["type"],
