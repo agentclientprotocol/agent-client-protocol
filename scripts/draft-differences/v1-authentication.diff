@@ -1,7 +1,0 @@
---- v1/authentication.mdx
-+++ v1/draft/authentication.mdx
-@@ -18,3 +18,3 @@
- A Client advertises this capability only when it can reproduce the configured Agent invocation in an interactive terminal. An Agent may advertise a `terminal` method only when this capability is `true`.
--See the [schema](/protocol/v1/schema#authmethod) for the full `AuthMethod` definitions and the [Terminal Authentication RFD](/rfds/auth-methods) for the design.
-+See the [draft schema](/protocol/v1/schema#authmethod) for the full `AuthMethod` definitions and the [Terminal Authentication RFD](/rfds/auth-methods) for the design.
- ## Protocol-driven authentication

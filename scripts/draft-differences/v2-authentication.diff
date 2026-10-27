@@ -1,7 +1,0 @@
---- v2/authentication.mdx
-+++ v2/draft/authentication.mdx
-@@ -20,3 +20,3 @@
- If `capabilities.auth.terminal` is omitted or `null`, the Client does not advertise support. Supplying `{}` means the Client can reproduce the configured Agent invocation in an interactive terminal. An Agent may advertise a `terminal` method only when this capability is present.
--See the [schema](/protocol/v2/schema#authmethod) for the full `AuthMethod` definitions and the [Terminal Authentication RFD](/rfds/auth-methods) for the design.
-+See the [draft schema](/protocol/v2/schema#authmethod) for the full `AuthMethod` definitions and the [Terminal Authentication RFD](/rfds/auth-methods) for the design.
- ## Agent-handled authentication

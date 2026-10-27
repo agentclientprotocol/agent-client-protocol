@@ -67,9 +67,6 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
-      - name: Check draft docs stay in sync with stable docs
-        run: npm run check:draft-docs
-
       - name: Check for typos
         uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b
         with:

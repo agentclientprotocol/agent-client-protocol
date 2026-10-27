@@ -1,8 +1,0 @@
---- v2/error.mdx
-+++ v2/draft/error.mdx
-@@ -29 +29,5 @@
- Agents **MUST** reject any request other than `initialize` that arrives before initialization completes with `-32600`.
-+## Unstable Features
-+- `session/fork` of a session that does not exist gets `-32002`, as for [unknown sessions](#unknown-sessions).
-+- A `systemPrompt` the Agent cannot apply gets an error, `-32602` recommended. See [System Prompt](/protocol/v2/session-setup#system-prompt-unstable).
-+- `providers/*` methods called without the [`providers` capability](/protocol/v2/initialization#agent-capabilities) get `-32601`.

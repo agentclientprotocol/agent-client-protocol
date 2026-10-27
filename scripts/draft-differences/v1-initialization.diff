@@ -1,7 +1,0 @@
---- v1/initialization.mdx
-+++ v1/draft/initialization.mdx
-@@ -101,2 +101,4 @@
- </ResponseField>
-+<ResponseField name="systemPrompt" type="SessionSystemPromptCapabilities Object"> **Unstable.** The Agent supports [`systemPrompt`](/protocol/v1/session-setup#system-prompt-unstable) on session lifecycle requests. Omitted or `null` both mean the Agent does not advertise support. Supplying `{}` means the Agent supports `append` mode. Supplying `{ "mode": { "override": {} } }` also advertises `override` mode.
-+</ResponseField>
- <Note> `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.

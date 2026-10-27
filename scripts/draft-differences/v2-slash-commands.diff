@@ -1,7 +1,0 @@
---- v2/slash-commands.mdx
-+++ v2/draft/slash-commands.mdx
-@@ -4,3 +4,3 @@
- ### Initial commands
--The Agent **MAY** include `availableCommands` in the `session/new` and `session/resume` responses, alongside `configOptions` when supported. This lets the Client display commands as soon as [session setup](/protocol/v2/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
-+The Agent **MAY** include `availableCommands` in the `session/new`, `session/resume`, and, when supported, `session/fork` responses, alongside `configOptions` when supported. This lets the Client display commands as soon as [session setup](/protocol/v2/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
- For example, a `session/new` response can advertise a command with text input:
