@@ -822,7 +822,7 @@
         },
         {
           "title": "unknown",
-          "description": "Custom or future tool kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "description": "Custom or future tool kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants. Clients display an unrecognized kind as `other`.",
           "type": "string"
         }
       ]
@@ -1402,7 +1402,8 @@
         "size": {
           "description": "Optional size of the linked resource in bytes, if known.",
           "type": ["integer", "null"],
-          "format": "int64",
+          "format": "uint64",
+          "minimum": 0,
           "x-deserialize-default-on-error": true
         },
         "annotations": {

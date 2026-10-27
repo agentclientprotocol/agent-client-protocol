@@ -2432,6 +2432,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
+
+    - Minimum: `0`
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional display title for end-user UI.
@@ -5366,6 +5369,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
+
+    - Minimum: `0`
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional display title for end-user UI.
@@ -7774,7 +7780,7 @@ Custom or future tool kind.
 
 Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
-future ACP variants.
+future ACP variants. Clients display an unrecognized kind as `other`.
 
 </ResponseField>
 

@@ -334,7 +334,7 @@ pub enum ToolKind {
     ///
     /// Values beginning with `_` are reserved for implementation-specific
     /// extensions. Unknown values that do not begin with `_` are reserved for
-    /// future ACP variants.
+    /// future ACP variants. Clients display an unrecognized kind as `other`.
     #[serde(untagged)]
     Unknown(String),
 }

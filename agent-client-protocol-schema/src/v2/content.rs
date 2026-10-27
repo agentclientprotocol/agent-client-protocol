@@ -621,7 +621,7 @@ pub struct ResourceLink {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub size: Option<i64>,
+    pub size: Option<u64>,
     /// Optional annotations that help clients decide how to display or route this content.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -686,7 +686,7 @@ impl ResourceLink {
 
     /// Sets or clears the optional `size` field.
     #[must_use]
-    pub fn size(mut self, size: impl IntoOption<i64>) -> Self {
+    pub fn size(mut self, size: impl IntoOption<u64>) -> Self {
         self.size = size.into_option();
         self
     }
