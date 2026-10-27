@@ -559,8 +559,7 @@ pub struct Diff {
     /// Structured file changes described by this diff.
     ///
     /// Clients can use this field without parsing patch text to determine affected paths.
-    #[serde_as(deserialize_as = "VecSkipError<_>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
+    /// A malformed change invalidates the whole diff rather than being skipped.
     pub changes: Vec<DiffChange>,
     /// Renderable patch text for some or all of the structured changes.
     ///
@@ -1444,31 +1443,15 @@ mod tests {
     }
 
     #[test]
-    fn diff_changes_skip_malformed_list_items() {
-        let patch_text = "diff --git /ok /ok\ndeleted file mode 100644\n--- /ok\n+++ /dev/null\n@@ -1 +0,0 @@\n-old\n";
-        let content: ToolCallContent = serde_json::from_value(serde_json::json!({
+    fn diff_rejects_malformed_changes() {
+        let result = serde_json::from_value::<ToolCallContent>(serde_json::json!({
             "type": "diff",
             "changes": [
-                {
-                    "operation": "modify"
-                },
-                {
-                    "operation": "delete",
-                    "path": "/ok"
-                }
-            ],
-            "patch": {
-                "format": "git_patch",
-                "text": patch_text
-            }
-        }))
-        .unwrap();
-
-        let ToolCallContent::Diff(diff) = content else {
-            panic!("expected diff content");
-        };
-        assert_eq!(diff.changes, vec![DiffChange::delete("/ok")]);
-        assert_eq!(diff.patch, Some(DiffPatch::new(patch_text)));
+                { "operation": "modify" },
+                { "operation": "delete", "path": "/ok" }
+            ]
+        }));
+        assert!(result.is_err());
     }
 
     #[test]

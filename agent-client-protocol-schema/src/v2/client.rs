@@ -18,7 +18,7 @@ use super::Usage;
 use super::{
     AbsolutePath, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate,
     SessionConfigOption, SessionId, StopReason, TerminalId, TerminalOutputChunk, TerminalUpdate,
-    ToolCallContentChunk, ToolCallId, ToolCallUpdate,
+    ToolCallContent, ToolCallContentChunk, ToolCallId, ToolCallLocation, ToolCallUpdate,
 };
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
@@ -2800,6 +2800,10 @@ impl From<CommandPermissionSubject> for RequestPermissionSubject {
 #[non_exhaustive]
 pub struct ToolCallPermissionSubject {
     /// Details about the tool call requiring permission.
+    ///
+    /// The user approves what this shows, so a malformed `content` or `locations` item fails
+    /// the request instead of being skipped.
+    #[serde(deserialize_with = "deserialize_strict_tool_call")]
     pub tool_call: ToolCallUpdate,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2811,6 +2815,37 @@ pub struct ToolCallPermissionSubject {
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+/// Parses a permission subject's tool call without skipping malformed `content` or `locations`
+/// items, which [`ToolCallUpdate`] otherwise tolerates.
+fn deserialize_strict_tool_call<'de, D>(deserializer: D) -> Result<ToolCallUpdate, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error as _;
+
+    let value = serde_json::Value::deserialize(deserializer)?;
+    for key in ["content", "locations"] {
+        match value.get(key) {
+            None | Some(serde_json::Value::Null) => {}
+            Some(serde_json::Value::Array(items)) => {
+                for item in items {
+                    if key == "content" {
+                        ToolCallContent::deserialize(item).map_err(D::Error::custom)?;
+                    } else {
+                        ToolCallLocation::deserialize(item).map_err(D::Error::custom)?;
+                    }
+                }
+            }
+            Some(_) => {
+                return Err(D::Error::custom(format!(
+                    "`{key}` must be an array or null"
+                )));
+            }
+        }
+    }
+    ToolCallUpdate::deserialize(value).map_err(D::Error::custom)
 }
 
 impl ToolCallPermissionSubject {
@@ -3673,6 +3708,28 @@ impl AgentNotification {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn permission_subject_tool_call_is_strict() {
+        let subject = |content: serde_json::Value| {
+            serde_json::from_value::<ToolCallPermissionSubject>(serde_json::json!({
+                "toolCall": { "toolCallId": "call_1", "content": content }
+            }))
+        };
+        let bad_diff =
+            serde_json::json!([{ "type": "diff", "changes": [{ "operation": "modify" }] }]);
+        assert!(subject(bad_diff.clone()).is_err());
+        assert!(subject(serde_json::json!([{ "type": "content" }])).is_err());
+        assert!(subject(serde_json::json!("not an array")).is_err());
+        assert!(subject(serde_json::json!([])).is_ok());
+
+        // Outside a permission subject, the malformed item is still skipped.
+        let update: ToolCallUpdate = serde_json::from_value(
+            serde_json::json!({ "toolCallId": "call_1", "content": bad_diff }),
+        )
+        .unwrap();
+        assert_eq!(update.content, MaybeUndefined::Value(vec![]));
+    }
 
     #[test]
     fn cancelled_permission_outcome_wire_format() {
