@@ -51,7 +51,7 @@ This applies to `uri` on images, resource links, and embedded resources, and to 
 
 ## Intermediaries
 
-- Any process attached to the Agent's stdio, including a proxy, acts with the Client's authority.
+- An intermediary between the Client and the Agent, such as a proxy, can read and change every message, and each side treats it as the other. Clients **SHOULD** only use intermediaries the user trusts.
 - Intermediaries **SHOULD NOT** answer permission requests or elicitations for the user except under user-configured policy.
 - An Agent serving more than one user **SHOULD** scope `session/list`, session loading and resumption, permission requests, and elicitations to the user that owns the session.
 
