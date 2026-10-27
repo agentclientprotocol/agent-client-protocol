@@ -89,7 +89,8 @@ pub enum ContentBlock {
     /// Text content. May be plain text or formatted with Markdown.
     ///
     /// All agents MUST support text content blocks in prompts.
-    /// Clients SHOULD render this text as Markdown.
+    /// Clients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown
+    /// extensions.
     Text(TextContent),
     /// Images for visual context or analysis.
     ///
