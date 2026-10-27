@@ -321,17 +321,11 @@ content, as `agent_message_chunk` does:
 Agents **SHOULD** include participant IDs on the first `session_message` for a
 message when available, and when streaming a message whose participants are
 known, send that upsert before its first chunk. Later upserts may omit them or
-supply previously missing identities. For these identity fields, omission and
-`null` mean not supplied: the Client retains any previously reported value.
-They do not use the null-clearing semantics of the mutable `content` and
-`_meta` fields.
+supply previously missing identities. These fields follow the same patch convention as `content`: omission leaves the stored value unchanged, `null` clears it, and a value replaces it.
 
 `senderMessageId` and `recipientMessageId` link the two views of a message so
 that a Client looking at either one can find the other, including when it has
-not yet received or rendered the other transcript's entry. They follow the
-same convention as the participant IDs: omission and `null` mean not supplied,
-the Client retains any previously reported value, and a known value does not
-change. An Agent can therefore stream a view before it knows the other one's
+not yet received or rendered the other transcript's entry. They follow the same patch convention as the participant IDs. An Agent can therefore stream a view before it knows the other one's
 ID and supply the reference later with a metadata-only upsert. For
 example, it can add `recipientMessageId` to the outgoing view once it has
 reported the incoming view. Agents **SHOULD** supply each reference once they
@@ -349,7 +343,7 @@ to sessions known through ordinary setup or a `subagent_update` announcement;
 missing participants do not prevent displaying the message.
 
 Whole-message updates use the same patch convention in both versions:
-omitted `content` and `_meta` leave the stored value unchanged, `null` clears
+omitted `content`, `_meta`, participant IDs, and message references leave the stored value unchanged, `null` clears
 the field, and concrete values replace the whole field. The exception is a
 concrete `_meta` object in v2, which patches the stored metadata by top-level
 key as defined by [v2 Metadata Patches](/rfds/v2/meta-patches). `content: []`
@@ -1332,6 +1326,9 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-27: Participant IDs and message references now follow the standard
+  patch convention: `null` clears a stored value instead of leaving it
+  unchanged.
 - 2026-10-22: Added optional `senderMessageId` on the incoming view and
   `recipientMessageId` on the outgoing view of a session-directed message, so
   a Client can go from either view to the other without inferring a link from

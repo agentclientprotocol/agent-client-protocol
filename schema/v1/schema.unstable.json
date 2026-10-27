@@ -5672,7 +5672,7 @@
           ]
         },
         "senderSessionId": {
-          "description": "Optional sending session identity; omission or `null` retains a known value.",
+          "description": "The sending session.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionId"
@@ -5684,7 +5684,7 @@
           "x-deserialize-default-on-error": true
         },
         "recipientSessionId": {
-          "description": "Optional receiving session identity; omission or `null` retains a known value.",
+          "description": "The receiving session.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionId"
@@ -5696,7 +5696,7 @@
           "x-deserialize-default-on-error": true
         },
         "senderMessageId": {
-          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOptional and nullable: omission or `null` means not supplied and retains a known\nvalue, so it can arrive after the message starts streaming.",
+          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive\nafter the message starts streaming.",
           "anyOf": [
             {
               "$ref": "#/$defs/MessageId"
@@ -5708,7 +5708,7 @@
           "x-deserialize-default-on-error": true
         },
         "recipientMessageId": {
-          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOptional and nullable: omission or `null` means not supplied and retains a known\nvalue, so it can arrive after the message starts streaming.",
+          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive\nafter the message starts streaming.",
           "anyOf": [
             {
               "$ref": "#/$defs/MessageId"

@@ -254,34 +254,38 @@ impl SessionMessageChunk {
 pub struct SessionMessage {
     /// Identifier of this message within the enclosing session's transcript.
     pub message_id: MessageId,
-    /// Optional sending session identity; omission or `null` retains a known value.
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// The sending session.
+    ///
+    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub sender_session_id: Option<SessionId>,
-    /// Optional receiving session identity; omission or `null` retains a known value.
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub sender_session_id: MaybeUndefined<SessionId>,
+    /// The receiving session.
+    ///
+    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub recipient_session_id: Option<SessionId>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub recipient_session_id: MaybeUndefined<SessionId>,
     /// On an incoming view, the `messageId` of the same message's outgoing view in the
     /// sender's transcript.
     ///
-    /// Optional and nullable: omission or `null` means not supplied and retains a known
-    /// value, so it can arrive after the message starts streaming.
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+    /// after the message starts streaming.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub sender_message_id: Option<MessageId>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub sender_message_id: MaybeUndefined<MessageId>,
     /// On an outgoing view, the `messageId` of the same message's incoming view in the
     /// recipient's transcript.
     ///
-    /// Optional and nullable: omission or `null` means not supplied and retains a known
-    /// value, so it can arrive after the message starts streaming.
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+    /// after the message starts streaming.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub recipient_message_id: Option<MessageId>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub recipient_message_id: MaybeUndefined<MessageId>,
     /// Omitted leaves content unchanged; `null` clears it; a concrete array
     /// replaces the whole content collection.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
@@ -313,36 +317,42 @@ impl SessionMessage {
     pub fn new(message_id: impl Into<MessageId>) -> Self {
         Self {
             message_id: message_id.into(),
-            sender_session_id: None,
-            recipient_session_id: None,
-            sender_message_id: None,
-            recipient_message_id: None,
+            sender_session_id: MaybeUndefined::Undefined,
+            recipient_session_id: MaybeUndefined::Undefined,
+            sender_message_id: MaybeUndefined::Undefined,
+            recipient_message_id: MaybeUndefined::Undefined,
             content: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
     }
 
-    /// Supplies the sending session identity, when known.
+    /// Sets, clears, or leaves unchanged the sending session.
     #[must_use]
-    pub fn sender_session_id(mut self, sender_session_id: impl IntoOption<SessionId>) -> Self {
-        self.sender_session_id = sender_session_id.into_option();
+    pub fn sender_session_id(
+        mut self,
+        sender_session_id: impl IntoMaybeUndefined<SessionId>,
+    ) -> Self {
+        self.sender_session_id = sender_session_id.into_maybe_undefined();
         self
     }
 
-    /// Supplies the receiving session identity, when known.
+    /// Sets, clears, or leaves unchanged the receiving session.
     #[must_use]
     pub fn recipient_session_id(
         mut self,
-        recipient_session_id: impl IntoOption<SessionId>,
+        recipient_session_id: impl IntoMaybeUndefined<SessionId>,
     ) -> Self {
-        self.recipient_session_id = recipient_session_id.into_option();
+        self.recipient_session_id = recipient_session_id.into_maybe_undefined();
         self
     }
 
     /// Links an incoming view to the outgoing view's message ID in the sender's transcript.
     #[must_use]
-    pub fn sender_message_id(mut self, sender_message_id: impl IntoOption<MessageId>) -> Self {
-        self.sender_message_id = sender_message_id.into_option();
+    pub fn sender_message_id(
+        mut self,
+        sender_message_id: impl IntoMaybeUndefined<MessageId>,
+    ) -> Self {
+        self.sender_message_id = sender_message_id.into_maybe_undefined();
         self
     }
 
@@ -350,9 +360,9 @@ impl SessionMessage {
     #[must_use]
     pub fn recipient_message_id(
         mut self,
-        recipient_message_id: impl IntoOption<MessageId>,
+        recipient_message_id: impl IntoMaybeUndefined<MessageId>,
     ) -> Self {
-        self.recipient_message_id = recipient_message_id.into_option();
+        self.recipient_message_id = recipient_message_id.into_maybe_undefined();
         self
     }
 
@@ -556,11 +566,20 @@ mod session_message_tests {
         let enriched = SessionMessage::new("m1")
             .sender_session_id(SessionId::new("parent"))
             .recipient_session_id(SessionId::new("child"));
-        assert_eq!(enriched.sender_session_id, Some(SessionId::new("parent")));
-        assert_eq!(enriched.recipient_session_id, Some(SessionId::new("child")));
+        assert_eq!(
+            enriched.sender_session_id,
+            MaybeUndefined::Value(SessionId::new("parent"))
+        );
+        assert_eq!(
+            enriched.recipient_session_id,
+            MaybeUndefined::Value(SessionId::new("child"))
+        );
         let later = SessionMessage::new("m1").sender_session_id(SessionId::new("parent"));
-        assert_eq!(later.sender_session_id, Some(SessionId::new("parent")));
-        assert_eq!(later.recipient_session_id, None);
+        assert_eq!(
+            later.sender_session_id,
+            MaybeUndefined::Value(SessionId::new("parent"))
+        );
+        assert_eq!(later.recipient_session_id, MaybeUndefined::Undefined);
         let more = SessionMessageChunk::new("m1", block);
         for update in [
             SessionUpdate::SessionMessage(minimal),
@@ -576,12 +595,11 @@ mod session_message_tests {
     }
 
     #[test]
-    fn invalid_or_null_endpoints_are_absent_but_message_id_is_required() {
+    fn null_endpoints_clear_invalid_are_absent_but_message_id_is_required() {
         let mut base = json!({"sessionUpdate": "session_message", "messageId": "m1",
             "senderSessionId": null, "recipientSessionId": 42});
         let decoded: SessionUpdate = serde_json::from_value(base.clone()).unwrap();
         let encoded = serde_json::to_value(decoded).unwrap();
-        base.as_object_mut().unwrap().remove("senderSessionId");
         base.as_object_mut().unwrap().remove("recipientSessionId");
         assert_eq!(encoded, base);
         for bad in [Value::Null, json!(42)] {
@@ -623,12 +641,11 @@ mod session_message_tests {
         let mut wire = json!({"sessionUpdate": "session_message", "messageId": "m1",
             "senderMessageId": null, "recipientMessageId": 42});
         let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
-        wire.as_object_mut().unwrap().remove("senderMessageId");
         wire.as_object_mut().unwrap().remove("recipientMessageId");
         assert_eq!(
             serde_json::to_value(decoded).unwrap(),
             wire,
-            "null or malformed references mean not supplied"
+            "null clears a reference and a malformed one is not supplied"
         );
     }
 }
