@@ -325,7 +325,7 @@ pub enum ToolKind {
     Think,
     /// Retrieving external data.
     Fetch,
-    /// Switching the current session mode.
+    /// Changing the session's mode, a [config option](https://agentclientprotocol.com/protocol/v2/session-config-options) with the `mode` category.
     SwitchMode,
     /// Other tool types (default).
     #[default]

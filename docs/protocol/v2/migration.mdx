@@ -780,6 +780,8 @@ The dedicated modes API is removed: the `modes` field on session responses, `ses
 - The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and must tolerate unknown categories.
 - Clients change values with `session/set_config_option` (`sessionId`, `configId`, `type`, `value`). The required `type` discriminator is `"id"` with a string option ID or `"boolean"` with a boolean value. The response returns the full updated `configOptions` array, since one change can affect other options. Agent-initiated changes arrive as `config_option_update` session updates, which replace the v1 `current_mode_update`.
 
+The `switch_mode` tool kind stays, and now means changing the `mode`-category config option.
+
 ## Client file system and terminal execution removed
 
 v2 removes the entire v1 Client-provided execution surface:

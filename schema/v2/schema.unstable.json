@@ -865,7 +865,7 @@
           "const": "fetch"
         },
         {
-          "description": "Switching the current session mode.",
+          "description": "Changing the session's mode, a [config option](https://agentclientprotocol.com/protocol/v2/draft/session-config-options) with the `mode` category.",
           "type": "string",
           "const": "switch_mode"
         },
