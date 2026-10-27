@@ -381,8 +381,6 @@ If the session does not exist or is not active, the Agent **MUST** respond with
 
 ## Additional Workspace Roots
 
-See [Workspace Roots](/protocol/v2/security#workspace-roots) for security guidance.
-
 Agents that advertise `session.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
 expand the session's effective workspace root set. The supported stable requests
@@ -434,6 +432,14 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 - **MUST** be part of the session's effective root set
 
 When `session.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
+
+### Workspace Root Security
+
+The root set declares the session's scope. It confines shell commands only when a sandbox enforces it.
+
+- Clients **SHOULD** only include directories the user expects the Agent to access, such as the workspace or directories the Client provides, like skills.
+- Agents **SHOULD NOT** treat model output, Agent content, or replayed history as granting access outside the root set. Access outside it goes through a permission request.
+- Implementations that enforce the root set **SHOULD** check the resolved path at the time of use, compare paths by component, and fail closed.
 
 ## MCP Servers
 

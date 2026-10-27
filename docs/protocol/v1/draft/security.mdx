@@ -34,18 +34,8 @@ This applies to `uri` on images, resource links, and embedded resources, and to 
 - Clients **SHOULD** render images from `data` and **SHOULD NOT** fetch Agent-supplied remote URIs without user action. A request can leak data through its URL.
 - Automatic fetches **SHOULD** use only `https:` or `data:` URIs, **SHOULD NOT** carry credentials, **SHOULD** refuse loopback and private-network targets, and **SHOULD** bound the response size.
 - Clients **SHOULD NOT** run scripts in SVG images from Agent content.
-- Clients **SHOULD NOT** read a `file:` URI from Agent content outside the session's workspace roots without user action.
-- Agents **SHOULD** apply the workspace roots and these fetch rules to URIs in prompts.
-
-## Workspace Roots
-
-The workspace roots are `cwd` plus any `additionalDirectories`. They declare the session's scope, and confine shell commands only when a sandbox enforces them.
-
-- Clients **SHOULD** only include directories the user expects the Agent to access, such as the workspace or directories the Client provides, like skills.
-- Agents **SHOULD NOT** treat model output, Agent content, or replayed history as granting access outside the workspace roots. Access outside them goes through a permission request.
-- Implementations that enforce the workspace roots **SHOULD** check the resolved path at the time of use, compare paths by component, and fail closed.
-- Tool-call `locations` and diff paths do not grant access. Clients **SHOULD NOT** automatically open locations outside the workspace roots.
-- Agents **SHOULD** request permission before writing files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.
+- Clients **SHOULD NOT** read a `file:` URI from Agent content outside the session's [root set](/protocol/v1/draft/session-setup#workspace-root-security) without user action.
+- Agents **SHOULD** apply the root set and these fetch rules to URIs in prompts.
 
 ## Credentials
 
@@ -56,6 +46,7 @@ The workspace roots are `cwd` plus any `additionalDirectories`. They declare the
 
 - Agents **SHOULD** treat embedded resources, files, tool results, and MCP results as data, not as user instructions.
 - Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
+- Agents **SHOULD** request permission before writing files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.
 - Clients **SHOULD NOT** open links, run commands, change settings, or send data based only on Agent-authored text.
 
 ## Intermediaries
@@ -70,6 +61,7 @@ The workspace roots are `cwd` plus any `additionalDirectories`. They declare the
 
 ## Feature Guidance
 
+- [Workspace roots](/protocol/v1/draft/session-setup#workspace-root-security)
 - [Terminal authentication](/protocol/v1/draft/authentication#launch-safety)
 - [MCP servers](/protocol/v1/draft/session-setup#security)
 - [Permission requests](/protocol/v1/draft/tool-calls#security)

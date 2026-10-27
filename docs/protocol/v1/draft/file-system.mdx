@@ -122,5 +122,5 @@ The Client responds with an empty result on success:
 
 The Client performs these operations itself, so it is responsible for checking them. A permission request from the Agent does not replace the Client's own checks.
 
-- Clients **SHOULD** check requested paths against the session's [workspace roots](/protocol/v1/draft/security#workspace-roots) at the time of use, and deny the request or ask the user outside them.
+- Clients **SHOULD** check requested paths against the session's [root set](/protocol/v1/draft/session-setup#workspace-root-security) at the time of use, and deny the request or ask the user outside them.
 - Clients **SHOULD** ask the user before `fs/write_text_file` changes files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.

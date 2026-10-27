@@ -285,5 +285,5 @@ If the terminal was added to a tool call, the client **SHOULD** continue to disp
 
 The Client runs these commands itself, so it is responsible for checking them. A permission request from the Agent does not replace the Client's own checks.
 
-- Clients **SHOULD** require `cwd` to be inside the session's [workspace roots](/protocol/v1/draft/security#workspace-roots) and apply their own permission policy to the full `command`, `args`, and `env`. Clients that approve commands automatically **SHOULD** include `env` in what the policy matches.
+- Clients **SHOULD** require `cwd` to be inside the session's [root set](/protocol/v1/draft/session-setup#workspace-root-security) and apply their own permission policy to the full `command`, `args`, and `env`. Clients that approve commands automatically **SHOULD** include `env` in what the policy matches.
 - Clients **SHOULD** display `terminal/output` with terminal control sequences neutralized, so that it cannot write the clipboard, send input or query responses, or open links without user action.

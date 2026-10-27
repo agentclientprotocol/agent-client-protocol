@@ -624,3 +624,5 @@ Tool calls can report file locations they're working with, enabling Clients to i
   integer. Omission and `null` are equivalent and mean no specific line was
   provided.
 </ParamField>
+
+Locations are display metadata and do not grant file access. Clients **SHOULD NOT** automatically open locations outside the session's [root set](/protocol/v2/session-setup#workspace-root-security).
