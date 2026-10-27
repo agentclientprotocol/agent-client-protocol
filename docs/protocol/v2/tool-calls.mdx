@@ -311,7 +311,7 @@ The Client responds with the user's decision:
 
 Clients **MAY** automatically allow or reject permission requests according to the user settings.
 
-If the current active work gets [cancelled](/protocol/v2/prompt-lifecycle#cancellation), the Client **MUST** respond with the `"cancelled"` outcome:
+When the Client sends [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation), it **MUST** answer every pending permission request in the session with the `"cancelled"` outcome:
 
 ```json
 {

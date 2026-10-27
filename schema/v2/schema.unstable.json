@@ -8433,7 +8433,7 @@
       "description": "The outcome of a permission request.",
       "anyOf": [
         {
-          "description": "Active session work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel active\nsession work, it MUST respond to all pending `session/request_permission`\nrequests in that session with this `Cancelled` outcome, without answering\nany request twice. Requests in other sessions are unaffected.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+          "description": "The session's work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification, it MUST respond to all\npending `session/request_permission` requests in that session with this\n`Cancelled` outcome, without answering any request twice. Requests in other\nsessions are unaffected. Agents treat `Cancelled` for background work as a\ndenial.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
           "type": "object",
           "properties": {
             "outcome": {
@@ -8750,7 +8750,7 @@
               "anyOf": [
                 {
                   "title": "CancelSessionNotification",
-                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason if cancellation ended active\nforeground work. No additional completion update is required if no\nforeground work was active.\n\nAfter cancellation completes, the Agent SHOULD ignore late answers rather\nthan use them to resume the cancelled work.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+                  "description": "Cancels a session's foreground work and its prompts not yet inserted.\n\nBackground work is not covered, but the Agent MAY stop it too.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason if cancellation ended active\nforeground work. No additional completion update is required if no\nforeground work was active.\n\nAfter cancellation completes, the Agent SHOULD ignore late answers rather\nthan use them to resume the cancelled work.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelSessionNotification"
@@ -8787,7 +8787,7 @@
       "x-docs-ignore": true
     },
     "CancelSessionNotification": {
-      "description": "Notification to cancel ongoing operations for a session.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+      "description": "Notification to cancel a session's foreground work and its prompts not yet inserted.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
       "type": "object",
       "properties": {
         "sessionId": {

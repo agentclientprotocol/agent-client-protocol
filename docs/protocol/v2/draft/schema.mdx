@@ -450,10 +450,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <a id="session-cancel"></a>
 ### <span class="font-mono">session/cancel</span>
 
-Cancels ongoing operations for a session.
+Cancels a session's foreground work and its prompts not yet inserted.
 
-This is a notification sent by the client to cancel active work in a
-session.
+Background work is not covered, but the Agent MAY stop it too.
 
 Upon receiving this notification, the Agent SHOULD stop all language model
 requests and all tool call invocations as soon as possible.
@@ -478,7 +477,7 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/dr
 
 #### <span class="font-mono">CancelSessionNotification</span>
 
-Notification to cancel ongoing operations for a session.
+Notification to cancel a session's foreground work and its prompts not yet inserted.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 
@@ -6025,12 +6024,13 @@ The outcome of a permission request.
 **Type:** Union
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled before the user responded.
+The session's work was cancelled before the user responded.
 
-When a client sends a `session/cancel` notification to cancel active
-session work, it MUST respond to all pending `session/request_permission`
-requests in that session with this `Cancelled` outcome, without answering
-any request twice. Requests in other sessions are unaffected.
+When a client sends a `session/cancel` notification, it MUST respond to all
+pending `session/request_permission` requests in that session with this
+`Cancelled` outcome, without answering any request twice. Requests in other
+sessions are unaffected. Agents treat `Cancelled` for background work as a
+denial.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 

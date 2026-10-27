@@ -970,7 +970,7 @@ may carry a previous stop reason without creating another completion.
 
 ## Cancellation
 
-Clients **MAY** cancel active session work at any time by sending a `session/cancel` notification:
+Clients **MAY** cancel the session's foreground work at any time by sending a `session/cancel` notification:
 
 ```json
 {
@@ -982,13 +982,15 @@ Clients **MAY** cancel active session work at any time by sending a `session/can
 }
 ```
 
-If the Agent cancels a prompt request before insertion, it answers that request with `-32800` as described in [request cancellation](/protocol/v2/cancellation). Once the message is inserted, the prompt request still succeeds with its `messageId`; cancellation does not undo that insertion.
+`session/cancel` covers foreground work and prompts the Agent has not yet inserted. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`; cancellation does not undo that insertion. Background work is not covered, but the Agent **MAY** stop it too.
 
 The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification.
 
 The Client **MUST** respond to pending `session/request_permission` requests in
 the cancelled session with the `cancelled` outcome. Requests already answered
-do not require another response. For selective cancellation of related
+do not require another response. The Client can't tell foreground requests from
+background ones, so this covers every pending request in the session; the Agent
+treats `cancelled` for background work as a denial. For selective cancellation of related
 elicitation requests, see [Elicitation Cancellation](/protocol/v2/elicitation#session-cancellation).
 
 When the Agent receives this notification, it **SHOULD** stop all language model requests and all tool call invocations as soon as possible.
@@ -1004,8 +1006,7 @@ when cancellation took effect. Cancellation can finish without receiving
 answers to abandoned user-action requests.
 
 If no foreground work was active when cancellation took effect, no additional
-completion update is required. Pending requests or background operations can
-still be cancelled without a foreground transition.
+completion update is required.
 
 <Warning>
   API client libraries and tools often throw an exception when their operation is aborted, which may otherwise be surfaced as a generic failure.

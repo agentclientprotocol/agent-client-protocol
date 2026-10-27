@@ -5453,7 +5453,7 @@ impl McpAcpCapabilities {
     }
 }
 
-/// Notification to cancel ongoing operations for a session.
+/// Notification to cancel a session's foreground work and its prompts not yet inserted.
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
 #[serde_as]
@@ -5846,10 +5846,9 @@ pub enum AgentResponse {
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum ClientNotification {
-    /// Cancels ongoing operations for a session.
+    /// Cancels a session's foreground work and its prompts not yet inserted.
     ///
-    /// This is a notification sent by the client to cancel active work in a
-    /// session.
+    /// Background work is not covered, but the Agent MAY stop it too.
     ///
     /// Upon receiving this notification, the Agent SHOULD stop all language model
     /// requests and all tool call invocations as soon as possible.

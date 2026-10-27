@@ -3086,12 +3086,13 @@ impl RequestPermissionResponse {
 #[serde(tag = "outcome", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum RequestPermissionOutcome {
-    /// Active session work was cancelled before the user responded.
+    /// The session's work was cancelled before the user responded.
     ///
-    /// When a client sends a `session/cancel` notification to cancel active
-    /// session work, it MUST respond to all pending `session/request_permission`
-    /// requests in that session with this `Cancelled` outcome, without answering
-    /// any request twice. Requests in other sessions are unaffected.
+    /// When a client sends a `session/cancel` notification, it MUST respond to all
+    /// pending `session/request_permission` requests in that session with this
+    /// `Cancelled` outcome, without answering any request twice. Requests in other
+    /// sessions are unaffected. Agents treat `Cancelled` for background work as a
+    /// denial.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
     Cancelled,
