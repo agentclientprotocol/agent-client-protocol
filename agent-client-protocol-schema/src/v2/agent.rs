@@ -1793,9 +1793,8 @@ pub struct ListSessionsResponse {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
-    /// to fetch the next page. If absent, there are no more results.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    /// to fetch the next page. Omitted and `null` are equivalent and mean there are no more
+    /// results.
     #[serde(default)]
     pub next_cursor: Option<SessionListCursor>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1946,10 +1945,9 @@ pub struct SessionInfo {
     /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
-    /// by the Agent. Omitted and empty values are equivalent: the response
+    /// by the Agent. Omitted, `null`, and empty values are equivalent: the response
     /// reports no additional roots.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
 
@@ -5843,6 +5841,27 @@ mod test_serialization {
 
     fn test_meta() -> Meta {
         json!({ "source": "test" }).as_object().unwrap().clone()
+    }
+
+    #[test]
+    fn list_sessions_cursor_and_session_directories_are_strict() {
+        for cursor in [json!(null), json!("next")] {
+            let response = json!({ "sessions": [], "nextCursor": cursor });
+            serde_json::from_value::<ListSessionsResponse>(response).unwrap();
+        }
+        let malformed = json!({ "sessions": [], "nextCursor": 42 });
+        assert!(serde_json::from_value::<ListSessionsResponse>(malformed).is_err());
+
+        let session = |dirs: serde_json::Value| json!({ "sessionId": "s", "cwd": "/w", "additionalDirectories": dirs });
+        let info: SessionInfo = serde_json::from_value(session(json!(null))).unwrap();
+        assert!(info.additional_directories.is_empty());
+        for bad in [json!(["/a", 42]), json!("/a")] {
+            assert!(serde_json::from_value::<SessionInfo>(session(bad)).is_err());
+        }
+        // A session with malformed directories is skipped, not truncated.
+        let response = json!({ "sessions": [session(json!(["/a", 42]))] });
+        let response: ListSessionsResponse = serde_json::from_value(response).unwrap();
+        assert!(response.sessions.is_empty());
     }
 
     #[test]

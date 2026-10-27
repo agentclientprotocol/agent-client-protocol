@@ -4571,7 +4571,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "nextCursor": {
-          "description": "Opaque cursor token. If present, pass this in the next request's cursor parameter\nto fetch the next page. If absent, there are no more results.",
+          "description": "Opaque cursor token. If present, pass this in the next request's cursor parameter\nto fetch the next page. Omitted and `null` are equivalent and mean there are no more\nresults.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionListCursor"
@@ -4579,8 +4579,7 @@
             {
               "type": "null"
             }
-          ],
-          "x-deserialize-default-on-error": true
+          ]
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
@@ -4614,13 +4613,11 @@
           ]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
+          "description": "Additional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted, `null`, and empty values are equivalent: the response\nreports no additional roots.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
-          },
-          "x-deserialize-default-on-error": true,
-          "x-deserialize-skip-invalid-items": true
+          }
         },
         "title": {
           "description": "Human-readable title for the session",

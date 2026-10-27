@@ -118,8 +118,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     <ResponseField name="additionalDirectories" type="string[]">
       If the Agent advertises `session.additionalDirectories`, it
       **MAY** include this field to report the complete ordered additional-root list
-      associated with the listed session. Omitted and empty values are
-      equivalent: this `SessionInfo` response reports no additional roots.
+      associated with the listed session. Omitted, `null`, and empty values are equivalent: this `SessionInfo` response reports no additional roots.
       Clients **MUST NOT** merge this field with prior values or infer additional
       roots from agent-specific state.
     </ResponseField>
@@ -139,7 +138,8 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
 
 <ResponseField name="nextCursor" type="string">
   Opaque cursor token. If present, pass this in the next request's `cursor`
-  parameter to fetch the next page. If absent, there are no more results.
+  parameter to fetch the next page. Omitted and `null` are equivalent and mean
+  there are no more results.
 </ResponseField>
 
 When no sessions match the criteria, the Agent **MUST** return an empty `sessions` array.

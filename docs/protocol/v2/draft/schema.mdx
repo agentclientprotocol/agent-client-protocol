@@ -759,7 +759,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="nextCursor" type={<><span><a href="#sessionlistcursor">SessionListCursor</a></span><span> | null</span></>} >
   Opaque cursor token. If present, pass this in the next request's cursor parameter
-to fetch the next page. If absent, there are no more results.
+to fetch the next page. Omitted and `null` are equivalent and mean there are no more
+results.
 </ResponseField>
 <ResponseField name="sessions" type={<a href="#sessioninfo">SessionInfo[]</a>} required>
   Array of session information objects.
@@ -6760,7 +6761,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Additional workspace roots reported for this session. Each path must be absolute.
 
 When present, this is the complete ordered additional-root list reported
-by the Agent. Omitted and empty values are equivalent: the response
+by the Agent. Omitted, `null`, and empty values are equivalent: the response
 reports no additional roots.
 
 </ResponseField>
