@@ -992,6 +992,14 @@ Advertise only what each adapter implements. Negotiating v2 does not enable unst
 
 General-purpose v1↔v2 struct conversions cannot implement these lifecycle differences or represent every state. Prefer adapters over blanket conversions. Any shared conversion helper should have a narrow contract and report unsupported or lossy mappings explicitly rather than silently dropping behavior.
 
+### Bridging v1 and v2
+
+When an adapter does translate between versions, use these mappings:
+
+- **Plans.** Map a v1 `plan` update to an item-based `plan_update` with the synthetic plan ID `main`. In the other direction, a v1 Client shows one plan: send the most recently updated v2 plan as the v1 `plan` update, dropping its ID. Plan content other than items can't be represented without the unstable v1 plan operations.
+- **Tool calls.** Map v1 `tool_call` and `tool_call_update` to v2 `tool_call_update`, dropping `null` fields, which v1 treats as omitted but v2 treats as a clear. In the other direction, collection clears become empty arrays; a strict adapter rejects other clears, and a lossy one omits them. `tool_call_content_chunk` needs a stateful bridge that accumulates chunks and sends v1 replacement arrays.
+- **Failures.** A v1 error response for a prompt the bridge already reported as inserted becomes an idle `state_update` with the `error` stop reason and the same error object. In the other direction, that update becomes an error response to the pending v1 prompt, using `-32603` (internal error) when `error` is absent.
+
 ### Validate the dual-stack endpoint
 
 Exercise the same published endpoint with both v1 and v2 Clients:
