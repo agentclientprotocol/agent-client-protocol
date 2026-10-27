@@ -2250,8 +2250,7 @@
       "type": "object",
       "properties": {
         "type": {
-          "description": "Type discriminator. Always `\"object\"`.",
-          "x-deserialize-default-on-error": true,
+          "description": "Type discriminator. Always `\"object\"`. Omitted means `\"object\"`; any other value is\nrejected.",
           "default": "object",
           "allOf": [
             {

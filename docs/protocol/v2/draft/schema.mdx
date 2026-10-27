@@ -3879,7 +3879,8 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
 <ResponseField name="type" type={<a href="#elicitationschematype">ElicitationSchemaType</a>} >
-  Type discriminator. Always `"object"`.
+  Type discriminator. Always `"object"`. Omitted means `"object"`; any other value is
+rejected.
 
     - Default: `"object"`
 

@@ -1113,9 +1113,8 @@ fn default_object_type() -> ElicitationSchemaType {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
-    /// Type discriminator. Always `"object"`.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    /// Type discriminator. Always `"object"`. Omitted means `"object"`; any other value is
+    /// rejected.
     #[serde(rename = "type", default = "default_object_type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
@@ -2611,6 +2610,22 @@ mod tests {
     }
 
     #[test]
+    fn schema_root_type_defaults_when_omitted_and_rejects_other_values() {
+        let omitted: ElicitationSchema =
+            serde_json::from_value(json!({ "properties": {} })).unwrap();
+        assert_eq!(omitted.type_, ElicitationSchemaType::Object);
+        for bad in [json!("array"), json!(42), json!(null)] {
+            assert!(
+                serde_json::from_value::<ElicitationSchema>(
+                    json!({ "type": bad, "properties": {} })
+                )
+                .is_err(),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
     fn schema_builder_serialization() {
         let schema = ElicitationSchema::new()
             .string("name", true)
@@ -2902,22 +2917,6 @@ mod tests {
         let json = serde_json::to_value(&schema).unwrap();
         assert!(json.get("required").is_none());
         assert_eq!(json["properties"]["name"]["format"], "email");
-    }
-
-    #[test]
-    fn schema_defaults_invalid_object_type() {
-        let schema = serde_json::from_value::<ElicitationSchema>(json!({
-            "type": "array",
-            "properties": {
-                "name": {
-                    "type": "string"
-                }
-            }
-        }))
-        .unwrap();
-
-        assert_eq!(schema.type_, ElicitationSchemaType::Object);
-        assert!(schema.properties.contains_key("name"));
     }
 
     #[test]
