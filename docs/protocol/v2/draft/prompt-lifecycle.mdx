@@ -67,6 +67,8 @@ An ID is unique among entities of the same type within a session, not across all
 
 The Agent **MUST NOT** reuse an ID for a different entity of the same type within a session. Clients **MUST** key entities by both type and ID. An update applies only to the entity of its own type: an `agent_thought` whose `messageId` matches an existing Agent message creates or updates a thought and leaves the message unchanged. Likewise, a field that references an entity identifies an entity of one specific type; for example, the `messageId` returned by `session/prompt` identifies a user message.
 
+An entity's first update fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks patch the entity in place without moving it, including after the session reports `idle`. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, may ignore its position.
+
 ### Session-directed messages (unstable)
 
 The Agent may report outgoing and incoming messages between sessions,
@@ -426,7 +428,7 @@ The Agent can report the model's text response as an `agent_message` update with
 
 The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
 
-User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged, `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content; a changed `messageId` indicates a new message.
+User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged, `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content.
 
 Clients apply message updates and chunks in the order they are received for each `messageId`:
 
@@ -596,10 +598,9 @@ session, and **MUST NOT** be reused for another compaction.
 Clients initialize a first-seen compaction ID with status `in_progress` and unset
 optional fields, then apply the notification.
 
-The first notification fixes the entity's timeline position in receive
-order: it follows previously received timeline content and precedes content
-first received later. Later updates and chunks for an ID-addressed entity patch
-it in place; they do not move or split it around the compaction.
+As for every [entity](#entity-ids), the first notification fixes the
+compaction's timeline position. Later updates and chunks for other entities
+patch them in place; they do not move or split them around the compaction.
 
 | `status`      | Meaning                                      |
 | ------------- | -------------------------------------------- |

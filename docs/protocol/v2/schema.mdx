@@ -2513,7 +2513,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 
@@ -5875,7 +5875,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -5938,7 +5938,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -6001,7 +6001,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>

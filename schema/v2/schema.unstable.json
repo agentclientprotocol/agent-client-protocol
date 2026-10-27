@@ -5605,7 +5605,7 @@
       "type": "object",
       "properties": {
         "messageId": {
-          "description": "A unique identifier for the message this chunk belongs to.\n\nAll chunks belonging to the same message share the same `messageId`.\nA change in `messageId` indicates a new message has started.",
+          "description": "A unique identifier for the message this chunk belongs to.\n\nAll chunks belonging to the same message share the same `messageId`.\nChunks for different messages can interleave.",
           "allOf": [
             {
               "$ref": "#/$defs/MessageId"
