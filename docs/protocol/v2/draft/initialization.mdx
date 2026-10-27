@@ -305,17 +305,18 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
 
 Both Clients and Agents **MUST** provide information about their implementation in the `info` field. It takes the following three fields:
 
-<ParamField path="name" type="string">
+<ParamField path="name" type="string" required>
   Intended for programmatic or logical use, but can be used as a display name
   fallback if title isn’t present.
 </ParamField>
 
 <ParamField path="title" type="string">
   Intended for UI and end-user contexts — optimized to be human-readable and
-  easily understood. If not provided, the name should be used for display.
+  easily understood. Optional; omitted and `null` are equivalent. If not
+  provided, the name should be used for display.
 </ParamField>
 
-<ParamField path="version" type="string">
+<ParamField path="version" type="string" required>
   Version of the implementation. Can be displayed to the user or used for
   debugging or metrics purposes.
 </ParamField>

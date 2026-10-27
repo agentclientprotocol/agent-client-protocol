@@ -185,10 +185,10 @@ The Client sends a user message with `session/prompt`:
 }
 ```
 
-<ParamField path="sessionId" type="SessionId">
+<ParamField path="sessionId" type="SessionId" required>
     The [ID](/protocol/v2/session-setup#session-id) of the session to send this message to.
 </ParamField>
-<ParamField path="prompt" type="ContentBlock[]">
+<ParamField path="prompt" type="ContentBlock[]" required>
     The contents of the user message, e.g. text, images, files, etc.
 
     Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#prompt-capabilities) established during [initialization](/protocol/v2/initialization). Agents **MUST** reject content types they don't support with `-32602`.

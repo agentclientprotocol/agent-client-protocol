@@ -1578,36 +1578,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   MIME type describing the encoded media payload.
 </ResponseField>
 
-## <span class="font-mono">AuthCapabilities</span>
-
-Authentication capabilities supported by the client.
-
-Advertised during initialization to inform the agent which authentication
-method types the client can handle. This governs opt-in types that require
-additional client-side support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="terminal" type={<><span><a href="#terminalauthcapabilities">TerminalAuthCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports `terminal` authentication methods.
-
-Optional. Omitted or `null` both mean the client does not advertise support.
-The client should supply `\{\}` only when it can reproduce the configured
-agent invocation in an interactive terminal. Supplying `\{\}` means the
-agent may include `terminal` entries in its authentication methods.
-
-</ResponseField>
-
 ## <span class="font-mono">AuthMethod</span>
 
 Describes an available authentication method.
@@ -2039,6 +2009,36 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 
+## <span class="font-mono">ClientAuthCapabilities</span>
+
+Authentication capabilities supported by the client.
+
+Advertised during initialization to inform the agent which authentication
+method types the client can handle. This governs opt-in types that require
+additional client-side support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="terminal" type={<><span><a href="#terminalauthcapabilities">TerminalAuthCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports `terminal` authentication methods.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+The client should supply `\{\}` only when it can reproduce the configured
+agent invocation in an interactive terminal. Supplying `\{\}` means the
+agent may include `terminal` entries in its authentication methods.
+
+</ResponseField>
+
 ## <span class="font-mono">ClientCapabilities</span>
 
 Capabilities supported by the client.
@@ -2060,7 +2060,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="auth" type={<><span><a href="#authcapabilities">AuthCapabilities</a></span><span> | null</span></>} >
+<ResponseField name="auth" type={<><span><a href="#clientauthcapabilities">ClientAuthCapabilities</a></span><span> | null</span></>} >
   Authentication capabilities supported by the client.
 Determines which authentication method types the agent may include
 in its `InitializeResponse`.

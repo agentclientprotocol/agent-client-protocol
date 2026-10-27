@@ -3332,7 +3332,7 @@ pub struct ClientCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub auth: Option<AuthCapabilities>,
+    pub auth: Option<ClientAuthCapabilities>,
     /// Elicitation capabilities supported by the client.
     /// Determines which elicitation modes the agent may use.
     ///
@@ -3366,7 +3366,7 @@ impl ClientCapabilities {
     /// Determines which authentication method types the agent may include
     /// in its `InitializeResponse`.
     #[must_use]
-    pub fn auth(mut self, auth: impl IntoOption<AuthCapabilities>) -> Self {
+    pub fn auth(mut self, auth: impl IntoOption<ClientAuthCapabilities>) -> Self {
         self.auth = auth.into_option();
         self
     }
@@ -3402,7 +3402,7 @@ impl ClientCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct AuthCapabilities {
+pub struct ClientAuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// Optional. Omitted or `null` both mean the client does not advertise support.
@@ -3425,8 +3425,8 @@ pub struct AuthCapabilities {
     pub meta: Option<Meta>,
 }
 
-impl AuthCapabilities {
-    /// Builds an empty [`AuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
+impl ClientAuthCapabilities {
+    /// Builds an empty [`ClientAuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5675,7 +5675,7 @@ mod tests {
     fn test_auth_capabilities_serialize_terminal_support_as_object() {
         use serde_json::json;
 
-        let capabilities = AuthCapabilities::new().terminal(TerminalAuthCapabilities::new());
+        let capabilities = ClientAuthCapabilities::new().terminal(TerminalAuthCapabilities::new());
 
         assert_eq!(
             serde_json::to_value(&capabilities).unwrap(),
@@ -5684,7 +5684,7 @@ mod tests {
             })
         );
 
-        let deserialized: AuthCapabilities = serde_json::from_value(json!({
+        let deserialized: ClientAuthCapabilities = serde_json::from_value(json!({
             "terminal": false
         }))
         .unwrap();

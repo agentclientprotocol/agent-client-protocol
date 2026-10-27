@@ -469,10 +469,10 @@ When the Agent supports `session.mcp.stdio`, Clients can specify MCP servers con
   values are equivalent.
 
   <Expandable title="EnvVariable">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the environment variable.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value of the environment variable.
       </ParamField>
   </Expandable>
@@ -516,10 +516,10 @@ When the Agent supports `session.mcp.http`, Clients can specify MCP servers conf
   equivalent.
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
