@@ -35,26 +35,26 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 
 ### Method changes
 
-| v1 method                                                                                           | v2                                                                                                     |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `initialize`                                                                                        | Unchanged name. Params and result restructured                                                         |
-| `authenticate`                                                                                      | Renamed to `auth/login` for protocol-driven authentication methods                                     |
-| `logout` (gated by `agentCapabilities.auth.logout`)                                                 | Renamed to `auth/logout`. Required when `authMethods` is non-empty. No logout capability marker        |
-| `session/new`                                                                                       | `mcpServers` now optional. Response no longer includes `modes`                                         |
-| `session/load`                                                                                      | **Removed**. Use `session/resume` with `"replayFrom": { "type": "start" }`                             |
-| `session/resume`                                                                                    | Gains optional `replayFrom`. Required (no capability marker)                                           |
-| `session/list`                                                                                      | Required. No capability                                                                                |
-| `session/close`                                                                                     | Required. No capability                                                                                |
-| `session/delete`                                                                                    | Unchanged. Still optional via `session.delete` capability                                              |
-| `session/prompt`                                                                                    | Unchanged shape. **Response semantics redesigned** (see [Prompt lifecycle](#the-new-prompt-lifecycle)) |
-| `session/cancel`                                                                                    | Unchanged name. Completion now reported via `state_update` instead of the prompt response              |
-| `session/set_mode`                                                                                  | **Removed**. Use `session/set_config_option`                                                           |
-| `session/set_config_option`                                                                         | Required when the Agent advertises config options. No capability                                       |
-| `session/request_permission`                                                                        | Unchanged name. Params restructured (required `title`, optional `subject`)                             |
-| `session/update`                                                                                    | Unchanged name. Update variants changed (see below)                                                    |
-| `fs/read_text_file`, `fs/write_text_file`                                                           | **Removed**                                                                                            |
-| `terminal/create`, `terminal/output`, `terminal/release`, `terminal/wait_for_exit`, `terminal/kill` | **Removed**                                                                                            |
-| `$/cancel_request`                                                                                  | Unchanged, except for an inserted `session/prompt` (see Cancellation)                                  |
+| v1 method                                                                                           | v2                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize`                                                                                        | Unchanged name. Params and result restructured                                                                                                                                              |
+| `authenticate`                                                                                      | Renamed to `auth/login` for protocol-driven authentication methods                                                                                                                          |
+| `logout` (gated by `agentCapabilities.auth.logout`)                                                 | Renamed to `auth/logout`. Required when `authMethods` is non-empty. No logout capability marker                                                                                             |
+| `session/new`                                                                                       | `mcpServers` now optional. Response no longer includes `modes`                                                                                                                              |
+| `session/load`                                                                                      | **Removed**. Use `session/resume` with `"replayFrom": { "type": "start" }`                                                                                                                  |
+| `session/resume`                                                                                    | Gains optional `replayFrom`. Required (no capability marker)                                                                                                                                |
+| `session/list`                                                                                      | Required. No capability                                                                                                                                                                     |
+| `session/close`                                                                                     | Required. No capability. Cancels ongoing work like `session/cancel`: the final updates and idle `cancelled` state come before the close response, and prompts not yet inserted get `-32800` |
+| `session/delete`                                                                                    | Unchanged. Still optional via `session.delete` capability                                                                                                                                   |
+| `session/prompt`                                                                                    | Unchanged shape. **Response semantics redesigned** (see [Prompt lifecycle](#the-new-prompt-lifecycle))                                                                                      |
+| `session/cancel`                                                                                    | Unchanged name. Completion now reported via `state_update` instead of the prompt response                                                                                                   |
+| `session/set_mode`                                                                                  | **Removed**. Use `session/set_config_option`                                                                                                                                                |
+| `session/set_config_option`                                                                         | Required when the Agent advertises config options. No capability                                                                                                                            |
+| `session/request_permission`                                                                        | Unchanged name. Params restructured (required `title`, optional `subject`)                                                                                                                  |
+| `session/update`                                                                                    | Unchanged name. Update variants changed (see below)                                                                                                                                         |
+| `fs/read_text_file`, `fs/write_text_file`                                                           | **Removed**                                                                                                                                                                                 |
+| `terminal/create`, `terminal/output`, `terminal/release`, `terminal/wait_for_exit`, `terminal/kill` | **Removed**                                                                                                                                                                                 |
+| `$/cancel_request`                                                                                  | Unchanged, except for an inserted `session/prompt` (see Cancellation)                                                                                                                       |
 
 ### `session/update` variant changes
 
@@ -339,7 +339,7 @@ In v2, acceptance means insertion of the user message into the ACP conversation.
 { "jsonrpc": "2.0", "id": 2, "result": { "messageId": "msg_user_8f7a1" } }
 ```
 
-`messageId` is a required, non-null string identifying the inserted user message. The request is unchanged. Clients do not generate this ID.
+`messageId` is a required, non-null string identifying the inserted user message. The request is unchanged. Clients do not generate this ID. The unstable v1 `usage` field on the prompt response has moved: in the unstable v2 schema, end-turn usage is an optional `usage` on the idle `state_update`.
 
 Insertion adds a logical user message with an ID and a position relative to other messages. See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted) for adapter examples.
 
@@ -432,6 +432,8 @@ v2 adds the `error` stop reason. v1 reported a failure during the turn as an err
 `$/cancel_request` and internal request cancellation can no longer answer an inserted `session/prompt` with `-32800`: once the user message is inserted, the Agent responds with its `messageId`, so an error response always means the message was not inserted. Stop the work it started with `session/cancel`.
 
 `session/cancel` is unchanged as a notification, but confirmation moved with the rest of the lifecycle: when active foreground work is cancelled, the Agent **MUST** finish sending any pending updates and then send an idle `state_update` with the `cancelled` stop reason. Clients respond to pending `session/request_permission` requests in that session with the `cancelled` outcome. Agents **SHOULD** cancel individual pending elicitations that the affected work no longer needs rather than cancel every elicitation with that session ID. Clients **SHOULD** accept tool-call updates that arrive after sending `session/cancel`.
+
+`session/close` cancels ongoing work the same way. When it cancels active foreground work, the Agent sends the final updates and the idle `cancelled` state before responding to `session/close`, and answers prompts it never inserted with `-32800`.
 
 After cancellation completes, Agents **SHOULD** ignore late answers and
 external completions rather than use them to resume the cancelled work.
@@ -882,7 +884,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 ## Migration checklist: Agents
 
 1. **Initialization.** Read `params.capabilities` / `params.info`. Return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers.
-2. **Implement the baseline.** If you advertise `session`, implement `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
+2. **Implement the baseline.** If you advertise `session`, implement `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`. On `session/close`, finish cancelled foreground work (final updates and the idle `cancelled` state) before responding.
 3. **Auth.** Rename `authenticate` → `auth/login` for method types that define protocol-driven login. If you return one or more valid `authMethods`, implement both `auth/login` and `auth/logout`. If you omit the field or return an empty array, Clients **MUST NOT** call either method. Do not add a logout support marker: `capabilities.auth` is only for authentication-related extensions. Add `type` and `methodId` to your auth method descriptors, and send terminal method `env` as `{ "name", "value" }` entries.
 4. **Prompt lifecycle.** Respond to an accepted `session/prompt` with `{ "messageId": "…" }`, carrying the agent-generated ID of the inserted user message. Emit a `user_message` acknowledgment with the same `messageId`, a `running` state update when foreground work starts, and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Report a failure after insertion as an idle `state_update` with `stopReason: "error"` and the JSON-RPC error in `error`, never as an error response to the prompt. Background updates may continue while idle.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
