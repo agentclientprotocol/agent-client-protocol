@@ -5854,14 +5854,14 @@ mod test_serialization {
 
         let session = |dirs: serde_json::Value| json!({ "sessionId": "s", "cwd": "/w", "additionalDirectories": dirs });
         let info: SessionInfo = serde_json::from_value(session(json!(null))).unwrap();
-        assert!(info.additional_directories.is_empty());
+        assert_eq!(info.additional_directories, Vec::<AbsolutePath>::new());
         for bad in [json!(["/a", 42]), json!("/a")] {
             assert!(serde_json::from_value::<SessionInfo>(session(bad)).is_err());
         }
         // A session with malformed directories is skipped, not truncated.
         let response = json!({ "sessions": [session(json!(["/a", 42]))] });
         let response: ListSessionsResponse = serde_json::from_value(response).unwrap();
-        assert!(response.sessions.is_empty());
+        assert_eq!(response.sessions, Vec::<SessionInfo>::new());
     }
 
     #[test]
