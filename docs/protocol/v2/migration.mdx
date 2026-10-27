@@ -221,25 +221,21 @@ Convert a boolean support marker from `true` to `{}` and from `false` to an omit
 | `auth.logout`                                                 | Marker removed. A non-empty `authMethods` list requires both `auth/login` and `auth/logout`. |
 | `auth`                                                        | `auth` remains a group for authentication-related extensions, not method availability.       |
 | `providers`                                                   | **Draft only.** `providers`. Object marker unchanged.                                        |
-| `nes` and its nested `events` and `context` fields            | Removed from both v1 and v2 with Next Edit Suggestions. No replacement.                      |
-| `positionEncoding`                                            | Removed from both v1 and v2 with Next Edit Suggestions. No replacement.                      |
 
 #### Client capability fields
 
-| v1 Client field                                  | v2 Client field or behavior                                                                                                          |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `fs.readTextFile`, `fs.writeTextFile`            | Removed with Client file-system methods. Expose Client-provided file tools through MCP if needed.                                    |
-| `terminal`                                       | Removed with Client terminal-control methods. Agent-owned terminal display does not require a Client capability.                     |
-| `auth.terminal`                                  | `auth.terminal`. Boolean → object marker. This is distinct from the removed execution `terminal` capability.                         |
-| `elicitation.form`, `elicitation.url`            | `elicitation.form`, `elicitation.url`. Object markers unchanged. An empty `elicitation` object advertises no modes.                  |
-| `session.configOptions.boolean`                  | Marker removed. v2 supports boolean config options without Client capability negotiation.                                            |
-| `session.notices`                                | Marker removed. v2 notices require no Client capability and may be ignored.                                                          |
-| `session.compaction`                             | Marker removed. v2 compaction updates require no Client capability.                                                                  |
-| `session`                                        | Group removed. Its standard children have the behavior described above.                                                              |
-| `plan`                                           | Marker removed. `plan_update` is stable in v2 without Client capability negotiation. `plan_removed` remains **Draft only**.          |
-| `subagents`                                      | Marker removed. Subagent updates and session-directed messages remain **Draft only** in v2 but require no Client `subagents` marker. |
-| `nes.jump`, `nes.rename`, `nes.searchAndReplace` | Removed from both v1 and v2 with Next Edit Suggestions. No replacement.                                                              |
-| `positionEncodings`                              | Removed from both v1 and v2 with Next Edit Suggestions. No replacement.                                                              |
+| v1 Client field                       | v2 Client field or behavior                                                                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `fs.readTextFile`, `fs.writeTextFile` | Removed with Client file-system methods. Expose Client-provided file tools through MCP if needed.                                    |
+| `terminal`                            | Removed with Client terminal-control methods. Agent-owned terminal display does not require a Client capability.                     |
+| `auth.terminal`                       | `auth.terminal`. Boolean → object marker. This is distinct from the removed execution `terminal` capability.                         |
+| `elicitation.form`, `elicitation.url` | `elicitation.form`, `elicitation.url`. Object markers unchanged. An empty `elicitation` object advertises no modes.                  |
+| `session.configOptions.boolean`       | Marker removed. v2 supports boolean config options without Client capability negotiation.                                            |
+| `session.notices`                     | Marker removed. v2 notices require no Client capability and may be ignored.                                                          |
+| `session.compaction`                  | Marker removed. v2 compaction updates require no Client capability.                                                                  |
+| `session`                             | Group removed. Its standard children have the behavior described above.                                                              |
+| `plan`                                | Marker removed. `plan_update` is stable in v2 without Client capability negotiation. `plan_removed` remains **Draft only**.          |
+| `subagents`                           | Marker removed. Subagent updates and session-directed messages remain **Draft only** in v2 but require no Client `subagents` marker. |
 
 The draft per-child-session `capabilities.cancel` marker in `subagent_update` is unchanged. It is not an initialize capability.
 
