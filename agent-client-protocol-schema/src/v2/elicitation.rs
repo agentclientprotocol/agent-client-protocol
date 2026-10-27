@@ -818,6 +818,8 @@ pub enum MultiSelectItems {
     #[serde(untagged)]
     Other(OtherMultiSelectItems),
     /// Titled multi-select items with human-readable labels.
+    ///
+    /// As in MCP, titled items omit `type` and are identified by `anyOf`.
     #[serde(untagged)]
     Titled(TitledMultiSelectItems),
 }

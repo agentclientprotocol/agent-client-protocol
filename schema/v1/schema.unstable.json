@@ -1987,7 +1987,7 @@
         },
         {
           "title": "titled",
-          "description": "Titled multi-select items with human-readable labels.",
+          "description": "Titled multi-select items with human-readable labels.\n\nAs in MCP, titled items omit `type` and are identified by `anyOf`.",
           "allOf": [
             {
               "$ref": "#/$defs/TitledMultiSelectItems"
