@@ -623,9 +623,9 @@ Tool calls can report file locations they're working with, enabling Clients to i
 </ParamField>
 
 <ParamField path="line" type="integer | null">
-  Optional line number within the file, represented as an unsigned 32-bit
-  integer. Omission and `null` are equivalent and mean no specific line was
-  provided.
+  Optional 1-based line number within the file, represented as an unsigned
+  32-bit integer; `0` is invalid. Omission and `null` are equivalent and mean no
+  specific line was provided.
 </ParamField>
 
 Locations are display metadata and do not grant file access. Clients **SHOULD NOT** automatically open locations outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security).

@@ -987,11 +987,12 @@ fn other_diff_change_schema(schema: &mut Schema) {
 pub struct ToolCallLocation {
     /// The absolute file path being accessed or modified.
     pub path: AbsolutePath,
-    /// Optional line number within the file.
+    /// Optional 1-based line number within the file. Omitted and `null` are equivalent and
+    /// mean no specific line; `0` is invalid.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub line: Option<u32>,
+    pub line: Option<std::num::NonZeroU32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1016,9 +1017,11 @@ impl ToolCallLocation {
     }
 
     /// Optional line number within the file.
+    ///
+    /// Line numbers are 1-based; `0` means no specific line.
     #[must_use]
     pub fn line(mut self, line: impl IntoOption<u32>) -> Self {
-        self.line = line.into_option();
+        self.line = line.into_option().and_then(std::num::NonZeroU32::new);
         self
     }
 
@@ -1036,6 +1039,18 @@ impl ToolCallLocation {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn location_line_is_one_based() {
+        let location: ToolCallLocation =
+            serde_json::from_value(serde_json::json!({ "path": "/a.rs", "line": 0 })).unwrap();
+        assert_eq!(location.line, None);
+        let location: ToolCallLocation =
+            serde_json::from_value(serde_json::json!({ "path": "/a.rs", "line": 3 })).unwrap();
+        assert_eq!(location.line.map(std::num::NonZeroU32::get), Some(3));
+        assert_eq!(ToolCallLocation::new("/a.rs").line(0).line, None);
+    }
+
     use super::*;
     use crate::MaybeUndefined;
     use serde_json::{from_value, json, to_value};

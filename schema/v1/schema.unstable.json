@@ -1083,7 +1083,7 @@
           "type": "string"
         },
         "line": {
-          "description": "Optional line number within the file.",
+          "description": "Optional 1-based line number within the file.",
           "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 0,

@@ -1995,10 +1995,10 @@
           ]
         },
         "line": {
-          "description": "Optional line number within the file.",
+          "description": "Optional 1-based line number within the file. Omitted and `null` are equivalent and\nmean no specific line; `0` is invalid.",
           "type": ["integer", "null"],
           "format": "uint32",
-          "minimum": 0,
+          "minimum": 1,
           "x-deserialize-default-on-error": true
         },
         "_meta": {

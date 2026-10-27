@@ -7605,9 +7605,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="line" type={"integer | null"} >
-  Optional line number within the file.
+  Optional 1-based line number within the file. Omitted and `null` are equivalent and
+mean no specific line; `0` is invalid.
 
-    - Minimum: `0`
+    - Minimum: `1`
 
 </ResponseField>
 <ResponseField name="path" type={<a href="#absolutepath">AbsolutePath</a>} required>

@@ -739,7 +739,7 @@ impl Diff {
 pub struct ToolCallLocation {
     /// The absolute file path being accessed or modified.
     pub path: PathBuf,
-    /// Optional line number within the file.
+    /// Optional 1-based line number within the file.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
