@@ -189,8 +189,10 @@ On success, the Agent returns an empty result:
 }
 ```
 
-After successful authentication, the Client can create new sessions without
-receiving an `auth_required` error for authentication-gated requests.
+When the Agent requires authentication, any request except `initialize` and
+`auth/login` may fail with `auth_required` (`-32000`). After successful
+authentication, the Client can create new sessions without receiving an
+`auth_required` error for authentication-gated requests.
 
 ## Terminal authentication
 
