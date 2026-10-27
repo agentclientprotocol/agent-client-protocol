@@ -8891,6 +8891,14 @@ The size of an agent-owned terminal in character cells.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys. This metadata is scoped to the size. Omitted and `null` are equivalent.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
 <ResponseField name="cols" type={"uint16"} required>
   Number of columns.
 

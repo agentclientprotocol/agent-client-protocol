@@ -6246,6 +6246,12 @@
           "format": "uint16",
           "minimum": 1,
           "maximum": 65535
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys. This metadata is scoped to the size. Omitted and `null` are equivalent.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
         }
       },
       "required": ["cols", "rows"]
