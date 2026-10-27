@@ -114,7 +114,7 @@ Unlike with custom requests, implementations **SHOULD** ignore unrecognized noti
 
 ## Advertising Custom Capabilities
 
-Implementations **SHOULD** use the `_meta` field in capability objects to advertise support for extensions and their methods. Name extensions with a domain you control: `example.com/<name>` for `_meta` keys, including capability entries, and `_example.com/<name>` for custom methods. For example:
+Implementations **SHOULD** use the `_meta` field in capability objects to advertise support for extensions and their methods. To avoid collisions with other extensions, prefix extension names with something unique to you, such as a domain you control: for example, `example.com/<name>` for `_meta` keys, including capability entries, and `_example.com/<name>` for custom methods. For example:
 
 ```json
 {

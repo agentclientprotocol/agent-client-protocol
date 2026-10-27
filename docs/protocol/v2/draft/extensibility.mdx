@@ -246,7 +246,7 @@ Implementations **SHOULD** advertise support for extensions and their methods us
 - Use a nested capability object's `_meta`, where that object defines one, for extensions scoped to that capability. For example, an extension to session prompting belongs in `capabilities.session.prompt._meta`.
 - Creating a standard capability object to carry `_meta` still advertises the standard support associated with that object. An Agent **MUST NOT** send `capabilities.session: { "_meta": ... }` unless it supports all seven baseline session methods.
 
-Name extensions with a domain you control: `example.com/<name>` for `_meta` keys, including capability entries, and `_example.com/<name>` for custom methods and custom enum values.
+To avoid collisions with other extensions, prefix extension names with something unique to you, such as a domain you control: for example, `example.com/<name>` for `_meta` keys, including capability entries, and `_example.com/<name>` for custom methods and custom enum values.
 
 Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Use the same metadata location and namespaced key on both sides of an extension's negotiation.
 
