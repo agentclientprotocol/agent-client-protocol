@@ -408,10 +408,10 @@ All Agents **MUST** support connecting to MCP servers via stdio (standard input/
   Environment variables to set when launching the server
 
   <Expandable title="EnvVariable">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the environment variable.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value of the environment variable.
       </ParamField>
   </Expandable>
@@ -453,10 +453,10 @@ When the Agent supports `mcpCapabilities.http`, Clients can specify MCP servers 
   HTTP headers to include in requests to the server
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -504,10 +504,10 @@ When the Agent supports `mcpCapabilities.sse`, Clients can specify MCP servers c
   HTTP headers to include when establishing the SSE connection
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
