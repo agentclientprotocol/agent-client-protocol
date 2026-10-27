@@ -25,7 +25,7 @@ The unstable schema (`schema/v2/schema.unstable.json`) layers experimental featu
 
 The Client sends the latest protocol version it supports in `initialize`. An Agent implementing v2 selects the highest supported version at or below the requested version, or rejects initialization with `-32022` (`Unsupported protocol version`) and structured `requested` and `supported` data if none exists. To use v2, send `"protocolVersion": 2`.
 
-A legacy v1-only Agent can return `"protocolVersion": 1` to a Client requesting v2. The Client continues only if it supports v1, otherwise it disconnects. Conversely, a v1 Client talking to a v2-only Agent receives an ordinary initialization error. It does not need to understand the new error code to report that initialization failed.
+A legacy v1-only Agent can return `"protocolVersion": 1` to a Client requesting v2. The Client continues only if it supports v1, otherwise it disconnects. A v1 Agent reads a v2 request without the v1 `clientCapabilities` and `clientInfo`, so file system, terminal, and terminal authentication support are lost on that connection. A Client that needs them reconnects with a v1 `initialize`. Conversely, a v1 Client talking to a v2-only Agent receives an ordinary initialization error. It does not need to understand the new error code to report that initialization failed.
 
 Treat v2 support as additive. Keep serving `protocolVersion: 1` peers when you add v2: an Agent that drops v1 cuts itself off from existing Clients, and a Client that drops v1 loses access to existing Agents. Each side selects its v1 or v2 surface per connection based on the negotiated version.
 
