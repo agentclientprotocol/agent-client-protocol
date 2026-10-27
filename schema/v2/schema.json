@@ -1961,7 +1961,7 @@
       "type": "object",
       "properties": {
         "toolCall": {
-          "description": "Details about the tool call requiring permission.",
+          "description": "Details about the tool call requiring permission.\n\nClients apply this to their stored tool call exactly like a `tool_call_update`\nnotification, in the order it was received, before showing the prompt. A first-seen\n`toolCallId` creates the tool call.",
           "allOf": [
             {
               "$ref": "#/$defs/ToolCallUpdate"

@@ -2800,6 +2800,10 @@ impl From<CommandPermissionSubject> for RequestPermissionSubject {
 #[non_exhaustive]
 pub struct ToolCallPermissionSubject {
     /// Details about the tool call requiring permission.
+    ///
+    /// Clients apply this to their stored tool call exactly like a `tool_call_update`
+    /// notification, in the order it was received, before showing the prompt. A first-seen
+    /// `toolCallId` creates the tool call.
     pub tool_call: ToolCallUpdate,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

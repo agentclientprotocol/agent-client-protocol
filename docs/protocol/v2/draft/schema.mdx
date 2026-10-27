@@ -6157,6 +6157,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
+
+Clients apply this to their stored tool call exactly like a `tool_call_update`
+notification, in the order it was received, before showing the prompt. A first-seen
+`toolCallId` creates the tool call.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"tool_call"`.
@@ -9260,6 +9265,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
+
+Clients apply this to their stored tool call exactly like a `tool_call_update`
+notification, in the order it was received, before showing the prompt. A first-seen
+`toolCallId` creates the tool call.
+
 </ResponseField>
 
 ## <span class="font-mono">ToolCallStatus</span>
