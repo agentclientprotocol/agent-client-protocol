@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.26.0...schema-v1.27.0) - 2026-10-27
+
+### Added
+
+- *(unstable)* link session message views and keep identity off chunks ([#2465](https://github.com/agentclientprotocol/agent-client-protocol/pull/2465))
+
+### Fixed
+
+- *(unstable)* null clears session_message participant IDs and message references ([#2555](https://github.com/agentclientprotocol/agent-client-protocol/pull/2555))
+- *(unstable-v2)* make ToolCallLocation.line 1-based ([#2546](https://github.com/agentclientprotocol/agent-client-protocol/pull/2546))
+
+### Other
+
+- *(schema)* mark DefaultOnNull lists with an x-deserialize hint ([#2569](https://github.com/agentclientprotocol/agent-client-protocol/pull/2569))
+- *(schema)* note that titled multi-select items omit type, as in MCP ([#2538](https://github.com/agentclientprotocol/agent-client-protocol/pull/2538))
+- *(schema)* ExtNotification can be sent by either side ([#2534](https://github.com/agentclientprotocol/agent-client-protocol/pull/2534))
+- *(schema)* include -32800's range in the reserved error codes ([#2531](https://github.com/agentclientprotocol/agent-client-protocol/pull/2531))
+- *(schema)* write versioned doc links in source and drop the generator's link rewriting ([#2525](https://github.com/agentclientprotocol/agent-client-protocol/pull/2525))
+- *(schema)* use wire names instead of Rust identifiers in schema descriptions ([#2520](https://github.com/agentclientprotocol/agent-client-protocol/pull/2520))
+- *(schema)* write the error pages for v1 and v2 ([#2504](https://github.com/agentclientprotocol/agent-client-protocol/pull/2504))
+- *(deps)* bump the minor group with 9 updates ([#2437](https://github.com/agentclientprotocol/agent-client-protocol/pull/2437))
+
 ## [1.26.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.25.0...schema-v1.26.0) - 2026-10-16
 
 ### Added
