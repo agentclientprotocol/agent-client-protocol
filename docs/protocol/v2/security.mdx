@@ -18,7 +18,7 @@ Out of scope: a malicious Agent binary, detecting prompt injection, and operatin
 
 This applies to all Agent-authored display text, including messages, thoughts, tool calls, plans, commands, config options, notices, session titles, authentication methods, permission requests, and elicitations.
 
-- Clients **SHOULD NOT** execute script from Agent content, and **SHOULD** disable or sanitize raw HTML when rendering Markdown.
+- Clients **SHOULD NOT** run scripts from Agent content, and **SHOULD** disable or sanitize raw HTML when rendering Markdown.
 - Clients **SHOULD NOT** automatically run active content, such as diagram renderers, that can fetch resources or execute code.
 - Clients **SHOULD NOT** open links from Agent content without user action, and **SHOULD** show the full target and get user confirmation before handing a link with a scheme other than `http` or `https` to the operating system or another handler.
 - Clients **SHOULD** show the full link target when it differs from the link text.
@@ -33,7 +33,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 
 - Clients **SHOULD** render images from `data` and **SHOULD NOT** fetch Agent-supplied remote URIs without user action. A request can leak data through its URL.
 - Automatic fetches **SHOULD** use only `https:` or `data:` URIs, **SHOULD NOT** carry credentials, **SHOULD** refuse loopback and private-network targets, and **SHOULD** bound the response size.
-- Clients **SHOULD NOT** execute script in SVG from Agent content.
+- Clients **SHOULD NOT** run scripts in SVG images from Agent content.
 - Clients **SHOULD NOT** read a `file:` URI from Agent content outside the session's workspace roots without user action.
 - Agents **SHOULD** apply the workspace roots and these fetch rules to URIs in prompts.
 
