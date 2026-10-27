@@ -7635,6 +7635,13 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"terminal_update"`.
 </ResponseField>
+<ResponseField name="size" type={<><span><a href="#terminalsize">TerminalSize</a></span><span> | null</span></>} >
+  The terminal size the command runs with, when known.
+
+Clients can render output at this size so that column layouts, progress bars,
+and cursor-positioned output display as the program wrote them.
+
+</ResponseField>
 <ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   Unique identifier for this terminal within the session.
 </ResponseField>
@@ -8876,6 +8883,33 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The terminal receiving these bytes.
 </ResponseField>
 
+## <span class="font-mono">TerminalSize</span>
+
+The size of an agent-owned terminal in character cells.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="cols" type={"uint16"} required>
+  Number of columns.
+
+    | Constraint | Value |
+    | ---------- | ----- |
+    | Minimum | `1` |
+    | Maximum | `65535` |
+
+</ResponseField>
+<ResponseField name="rows" type={"uint16"} required>
+  Number of rows.
+
+    | Constraint | Value |
+    | ---------- | ----- |
+    | Minimum | `1` |
+    | Maximum | `65535` |
+
+</ResponseField>
+
 ## <span class="font-mono">TerminalUpdate</span>
 
 An upsert for the stored state of an agent-owned terminal.
@@ -8912,6 +8946,13 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 </ResponseField>
 <ResponseField name="output" type={<><span><a href="#terminaloutput">TerminalOutput</a></span><span> | null</span></>} >
   An authoritative replacement snapshot of terminal output bytes.
+</ResponseField>
+<ResponseField name="size" type={<><span><a href="#terminalsize">TerminalSize</a></span><span> | null</span></>} >
+  The terminal size the command runs with, when known.
+
+Clients can render output at this size so that column layouts, progress bars,
+and cursor-positioned output display as the program wrote them.
+
 </ResponseField>
 <ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
   Unique identifier for this terminal within the session.

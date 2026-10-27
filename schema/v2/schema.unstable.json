@@ -6229,6 +6229,27 @@
         }
       }
     },
+    "TerminalSize": {
+      "description": "The size of an agent-owned terminal in character cells.",
+      "type": "object",
+      "properties": {
+        "cols": {
+          "description": "Number of columns.",
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "rows": {
+          "description": "Number of rows.",
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "required": ["cols", "rows"]
+    },
     "TerminalUpdate": {
       "description": "An upsert for the stored state of an agent-owned terminal.\n\nOnly `terminalId` is required. Other fields have patch\nsemantics: omitted fields leave the stored value unchanged, `null` clears\nit, and concrete values replace it. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When the terminal ID is new,\nomitted fields start unknown.",
       "type": "object",
@@ -6275,6 +6296,18 @@
           "anyOf": [
             {
               "$ref": "#/$defs/TerminalExitStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "size": {
+          "description": "The terminal size the command runs with, when known.\n\nClients can render output at this size so that column layouts, progress bars,\nand cursor-positioned output display as the program wrote them.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TerminalSize"
             },
             {
               "type": "null"

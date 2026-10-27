@@ -220,6 +220,14 @@ pub struct TerminalUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub exit_status: MaybeUndefined<TerminalExitStatus>,
+    /// The terminal size the command runs with, when known.
+    ///
+    /// Clients can render output at this size so that column layouts, progress bars,
+    /// and cursor-positioned output display as the program wrote them.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub size: MaybeUndefined<TerminalSize>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
@@ -248,6 +256,7 @@ impl TerminalUpdate {
             cwd: MaybeUndefined::Undefined,
             output: MaybeUndefined::Undefined,
             exit_status: MaybeUndefined::Undefined,
+            size: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
     }
@@ -277,6 +286,13 @@ impl TerminalUpdate {
     #[must_use]
     pub fn exit_status(mut self, exit_status: impl IntoMaybeUndefined<TerminalExitStatus>) -> Self {
         self.exit_status = exit_status.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or leaves unchanged the terminal size.
+    #[must_use]
+    pub fn size(mut self, size: impl IntoMaybeUndefined<TerminalSize>) -> Self {
+        self.size = size.into_maybe_undefined();
         self
     }
 
@@ -310,7 +326,34 @@ impl TerminalUpdate {
         if !update.exit_status.is_undefined() {
             self.exit_status = update.exit_status;
         }
+        if !update.size.is_undefined() {
+            self.size = update.size;
+        }
         apply_meta_update(&mut self.meta, update.meta);
+    }
+}
+
+/// The size of an agent-owned terminal in character cells.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct TerminalSize {
+    /// Number of columns.
+    #[cfg_attr(feature = "schemars", schemars(range(min = 1)))]
+    pub cols: u16,
+    /// Number of rows.
+    #[cfg_attr(feature = "schemars", schemars(range(min = 1)))]
+    pub rows: u16,
+}
+
+impl TerminalSize {
+    /// Builds a terminal size from its columns and rows.
+    #[must_use]
+    pub fn new(cols: u16, rows: u16) -> Self {
+        Self { cols, rows }
     }
 }
 
@@ -361,6 +404,24 @@ impl TerminalOutputChunk {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn terminal_size_is_an_optional_patch_field() {
+        let update = TerminalUpdate::new("term_1").size(TerminalSize::new(120, 40));
+        assert_eq!(
+            serde_json::to_value(&update).unwrap(),
+            serde_json::json!({ "terminalId": "term_1", "size": { "cols": 120, "rows": 40 } })
+        );
+
+        let mut stored = update;
+        stored.apply_update(TerminalUpdate::new("term_1").command("ls"));
+        assert_eq!(
+            stored.size,
+            MaybeUndefined::Value(TerminalSize::new(120, 40))
+        );
+        stored.apply_update(TerminalUpdate::new("term_1").size(None));
+        assert_eq!(stored.size, MaybeUndefined::Null);
+    }
 
     #[test]
     fn exit_code_accepts_negative_values() {

@@ -443,6 +443,10 @@ Agents create and update stored terminal state with `terminal_update`:
   "terminalId": "term_001",
   "command": "cargo test",
   "cwd": "/home/user/project",
+  "size": {
+    "cols": 120,
+    "rows": 40
+  },
   "output": {
     "data": "cnVubmluZyB0ZXN0cw0K"
   },
@@ -462,6 +466,11 @@ empty.
   first update when applicable.
 - `cwd` is the command's working directory and **MUST** be absolute when
   supplied.
+- `size` is the terminal size the command runs with, in character cells, with
+  required `cols` and `rows`. It is optional; when present, Clients **SHOULD**
+  render output at this size so that column layouts, progress bars, and
+  cursor-positioned output display as the program wrote them. Without it,
+  Clients choose a size.
 - `output` is an authoritative replacement snapshot. Its required `data` is
   RFC 4648 base64-encoded bytes with JSON Schema `contentEncoding: "base64"`. A concrete
   snapshot is the complete byte sequence the Agent wants the Client to retain
