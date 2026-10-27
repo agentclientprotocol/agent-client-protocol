@@ -2778,8 +2778,8 @@ impl SetSessionConfigOptionRequest {
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.

@@ -238,8 +238,8 @@ pub struct PlanItems {
     ///
     /// When updating an item-based plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces that plan with each update.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.

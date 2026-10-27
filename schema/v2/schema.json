@@ -4274,7 +4274,6 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
@@ -5815,7 +5814,6 @@
           "items": {
             "$ref": "#/$defs/PlanEntry"
           },
-          "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
@@ -5858,7 +5856,6 @@
           "items": {
             "$ref": "#/$defs/AvailableCommand"
           },
-          "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
@@ -5880,7 +5877,6 @@
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
           },
-          "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {

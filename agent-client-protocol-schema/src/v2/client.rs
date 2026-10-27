@@ -1338,8 +1338,8 @@ fn other_session_update_schema(schema: &mut Schema) {
 #[non_exhaustive]
 pub struct ConfigOptionUpdate {
     /// The full set of configuration options and their current values.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -2271,8 +2271,8 @@ impl MessageId {
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
     /// Commands the agent can execute.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -3683,6 +3683,43 @@ impl AgentNotification {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn replacement_lists_reject_non_arrays_instead_of_clearing() {
+        use serde_json::json;
+        for (update, key) in [
+            ("config_option_update", "configOptions"),
+            ("available_commands_update", "availableCommands"),
+        ] {
+            let empty = json!({ "sessionUpdate": update, key: [] });
+            serde_json::from_value::<super::SessionUpdate>(empty).unwrap();
+            for bad in [json!("oops"), json!(null), json!({})] {
+                let wire = json!({ "sessionUpdate": update, key: bad });
+                assert!(
+                    serde_json::from_value::<super::SessionUpdate>(wire).is_err(),
+                    "{update} {bad}"
+                );
+            }
+        }
+        let plan = |entries: serde_json::Value| {
+            json!({ "sessionUpdate": "plan_update",
+                "plan": { "type": "items", "planId": "p", "entries": entries } })
+        };
+        serde_json::from_value::<super::SessionUpdate>(plan(json!([]))).unwrap();
+        assert!(serde_json::from_value::<super::SessionUpdate>(plan(json!("oops"))).is_err());
+        // Invalid items are still skipped.
+        let skipped =
+            plan(json!([42, { "content": "a", "priority": "high", "status": "pending" }]));
+        let super::SessionUpdate::PlanUpdate(update) =
+            serde_json::from_value::<super::SessionUpdate>(skipped).unwrap()
+        else {
+            panic!("expected plan_update");
+        };
+        let crate::v2::PlanUpdateContent::Items(items) = update.plan else {
+            panic!("expected items");
+        };
+        assert_eq!(items.entries.len(), 1);
+    }
 
     #[test]
     fn other_available_command_preserves_meta_verbatim() {
