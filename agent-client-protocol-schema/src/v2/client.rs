@@ -3127,7 +3127,7 @@ pub enum RequestPermissionOutcome {
     /// denial.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
-    Cancelled,
+    Cancelled(CancelledPermissionOutcome),
     /// The user selected one of the provided options.
     #[serde(rename_all = "camelCase")]
     Selected(SelectedPermissionOutcome),
@@ -3217,6 +3217,51 @@ fn other_request_permission_outcome_schema(schema: &mut Schema) {
         "outcome",
         &["cancelled", "selected"],
     );
+}
+
+/// The session's work was cancelled before the user responded.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CancelledPermissionOutcome {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CancelledPermissionOutcome {
+    /// Builds an empty [`CancelledPermissionOutcome`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+impl From<CancelledPermissionOutcome> for RequestPermissionOutcome {
+    fn from(outcome: CancelledPermissionOutcome) -> Self {
+        Self::Cancelled(outcome)
+    }
 }
 
 /// The user selected one of the provided options.
@@ -3628,6 +3673,34 @@ impl AgentNotification {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn cancelled_permission_outcome_wire_format() {
+        let outcome: RequestPermissionOutcome =
+            serde_json::from_value(serde_json::json!({ "outcome": "cancelled" })).unwrap();
+        assert_eq!(outcome, CancelledPermissionOutcome::new().into());
+        assert_eq!(
+            serde_json::to_value(&outcome).unwrap(),
+            serde_json::json!({ "outcome": "cancelled" })
+        );
+
+        let with_meta: RequestPermissionOutcome = CancelledPermissionOutcome::new()
+            .meta(serde_json::Map::from_iter([(
+                "k".to_string(),
+                serde_json::json!(1),
+            )]))
+            .into();
+        let json = serde_json::to_value(&with_meta).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({ "outcome": "cancelled", "_meta": { "k": 1 } })
+        );
+        assert_eq!(
+            serde_json::from_value::<RequestPermissionOutcome>(json).unwrap(),
+            with_meta
+        );
+    }
+
     use super::*;
 
     #[cfg(feature = "unstable_subagents")]
