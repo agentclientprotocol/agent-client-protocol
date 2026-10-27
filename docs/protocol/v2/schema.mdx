@@ -3973,7 +3973,9 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled by the client via `session/cancel`.
+The client cancelled the work, via `session/cancel` or by closing the
+session. Work the agent stops on its own uses another reason, such as
+`error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
@@ -6206,7 +6208,9 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled by the client via `session/cancel`.
+The client cancelled the work, via `session/cancel` or by closing the
+session. Work the agent stops on its own uses another reason, such as
+`error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
@@ -6888,7 +6892,9 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled by the client via `session/cancel`.
+The client cancelled the work, via `session/cancel` or by closing the
+session. Work the agent stops on its own uses another reason, such as
+`error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes

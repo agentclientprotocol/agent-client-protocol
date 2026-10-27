@@ -3581,7 +3581,9 @@ pub enum StopReason {
     /// prompt and everything that comes after it won't be included in the next
     /// prompt, so this should be reflected in the UI.
     Refusal,
-    /// Active session work was cancelled by the client via `session/cancel`.
+    /// The client cancelled the work, via `session/cancel` or by closing the
+    /// session. Work the agent stops on its own uses another reason, such as
+    /// `error` for an internal timeout.
     ///
     /// Agents MUST report this stop reason on an idle `state_update` when
     /// cancellation ends active foreground work, even if aborting causes

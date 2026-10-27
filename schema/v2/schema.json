@@ -5243,7 +5243,7 @@
           "required": ["stopReason"]
         },
         {
-          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents MUST report this stop reason on an idle `state_update` when\ncancellation ends active foreground work, even if aborting causes\nexceptions. Agents MUST catch these errors and report `cancelled`, not\n`error`.",
+          "description": "The client cancelled the work, via `session/cancel` or by closing the\nsession. Work the agent stops on its own uses another reason, such as\n`error` for an internal timeout.\n\nAgents MUST report this stop reason on an idle `state_update` when\ncancellation ends active foreground work, even if aborting causes\nexceptions. Agents MUST catch these errors and report `cancelled`, not\n`error`.",
           "type": "object",
           "properties": {
             "stopReason": {

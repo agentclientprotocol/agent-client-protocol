@@ -902,11 +902,15 @@ When an Agent stops foreground work, it **SHOULD** specify the corresponding `St
 
 <ResponseField name="refusal">The Agent refuses to continue</ResponseField>
 
-<ResponseField name="cancelled">The Client cancels active work</ResponseField>
+<ResponseField name="cancelled">
+  The Client cancelled the work, with `session/cancel` or by closing the session
+</ResponseField>
 
 <ResponseField name="error">
   Foreground work ended because something failed. See [Failures](#failures).
 </ResponseField>
+
+When the Agent stops foreground work on its own, it uses the matching reason: `max_tokens` or `max_turn_requests` for limits, `refusal` for a refusal, and `error` for anything else, such as an internal timeout. `cancelled` is only for work the Client cancelled.
 
 Custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`; unknown non-underscore stop reasons are reserved for future ACP variants.
 
