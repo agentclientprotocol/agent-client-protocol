@@ -61,7 +61,7 @@ Messages, tool calls, terminals, plans, and compactions are entities that the Ag
 | Tool call                             | `tool_call_update`, `tool_call_content_chunk`   | `toolCallId`   |
 | Terminal                              | `terminal_update`, `terminal_output_chunk`      | `terminalId`   |
 | Plan                                  | `plan_update`, `plan_removed`                   | `planId`       |
-| Compaction (draft only)               | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
+| Compaction                            | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
 
 An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, Agent thoughts, and session-directed messages are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`; they remain two distinct entities.
 
@@ -425,6 +425,8 @@ The Agent can report the model's text response as an `agent_message` update with
   }
 }
 ```
+
+#### Message IDs
 
 The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
 

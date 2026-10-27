@@ -46,16 +46,17 @@ Session updates are not limited to prompt-driven foreground work. For example, A
 
 ### Entity IDs
 
-Messages, tool calls, terminals, and plans are entities that the Agent creates and then updates by ID across multiple session updates. An entity is identified by its type together with its ID, not by its ID alone:
+Messages, tool calls, terminals, plans, and compactions are entities that the Agent creates and then updates by ID across multiple session updates. An entity is identified by its type together with its ID, not by its ID alone:
 
-| Entity type   | Session updates                               | ID field     |
-| ------------- | --------------------------------------------- | ------------ |
-| User message  | `user_message`, `user_message_chunk`          | `messageId`  |
-| Agent message | `agent_message`, `agent_message_chunk`        | `messageId`  |
-| Agent thought | `agent_thought`, `agent_thought_chunk`        | `messageId`  |
-| Tool call     | `tool_call_update`, `tool_call_content_chunk` | `toolCallId` |
-| Terminal      | `terminal_update`, `terminal_output_chunk`    | `terminalId` |
-| Plan          | `plan_update`                                 | `planId`     |
+| Entity type   | Session updates                                 | ID field       |
+| ------------- | ----------------------------------------------- | -------------- |
+| User message  | `user_message`, `user_message_chunk`            | `messageId`    |
+| Agent message | `agent_message`, `agent_message_chunk`          | `messageId`    |
+| Agent thought | `agent_thought`, `agent_thought_chunk`          | `messageId`    |
+| Tool call     | `tool_call_update`, `tool_call_content_chunk`   | `toolCallId`   |
+| Terminal      | `terminal_update`, `terminal_output_chunk`      | `terminalId`   |
+| Plan          | `plan_update`                                   | `planId`       |
+| Compaction    | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
 
 An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, and Agent thoughts are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`; they remain two distinct entities.
 
