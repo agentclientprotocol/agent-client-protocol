@@ -47,7 +47,7 @@ ACP v2 should remove `sessionUpdate: "tool_call"` and make `sessionUpdate: "tool
 The v2 `ToolCallUpdate` payload has the following semantics:
 
 - `toolCallId` is required.
-- `title`, `kind`, `status`, `content`, `locations`, `rawInput`, and `rawOutput` are patch fields.
+- `name`, `title`, `kind`, `status`, `content`, `locations`, `rawInput`, and `rawOutput` are patch fields.
 - An omitted patch field leaves the previous value unchanged.
 - `null` explicitly clears or unsets the field.
 - Any concrete value replaces the previous value.
