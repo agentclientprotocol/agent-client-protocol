@@ -2619,13 +2619,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="fileType" type={<><span><a href="#difffiletype">DiffFileType</a></span><span> | null</span></>} >
-  File content kind.
+  File content kind after the operation (for `delete`, of the deleted file).
 
 Omitted or `null` means the content kind is unknown.
 
 </ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
-  MIME type of the file contents.
+  MIME type of the file contents after the operation (for `delete`, of the deleted file).
 
 Omitted or `null` means the MIME type is unknown.
 

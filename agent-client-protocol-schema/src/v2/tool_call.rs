@@ -725,14 +725,14 @@ pub enum DiffFileType {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct DiffChange {
-    /// File content kind.
+    /// File content kind after the operation (for `delete`, of the deleted file).
     ///
     /// Omitted or `null` means the content kind is unknown.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub file_type: Option<DiffFileType>,
-    /// MIME type of the file contents.
+    /// MIME type of the file contents after the operation (for `delete`, of the deleted file).
     ///
     /// Omitted or `null` means the MIME type is unknown.
     #[serde_as(deserialize_as = "DefaultOnError")]

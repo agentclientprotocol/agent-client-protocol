@@ -1578,7 +1578,7 @@
       "type": "object",
       "properties": {
         "fileType": {
-          "description": "File content kind.\n\nOmitted or `null` means the content kind is unknown.",
+          "description": "File content kind after the operation (for `delete`, of the deleted file).\n\nOmitted or `null` means the content kind is unknown.",
           "anyOf": [
             {
               "$ref": "#/$defs/DiffFileType"
@@ -1590,7 +1590,7 @@
           "x-deserialize-default-on-error": true
         },
         "mimeType": {
-          "description": "MIME type of the file contents.\n\nOmitted or `null` means the MIME type is unknown.",
+          "description": "MIME type of the file contents after the operation (for `delete`, of the deleted file).\n\nOmitted or `null` means the MIME type is unknown.",
           "anyOf": [
             {
               "$ref": "#/$defs/MediaType"
