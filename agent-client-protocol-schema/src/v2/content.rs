@@ -7,7 +7,7 @@
 //! The content block structure is designed to be compatible with the Model Context Protocol (MCP),
 //! allowing seamless integration between ACP and MCP-based tools.
 //!
-//! See: [Content](https://agentclientprotocol.com/protocol/content)
+//! See: [Content](https://agentclientprotocol.com/protocol/v2/content)
 
 use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 
@@ -80,7 +80,7 @@ impl_media_type_option_conversion!(Cow<'_, str>);
 /// This structure is compatible with the Model Context Protocol (MCP), enabling
 /// agents to seamlessly forward content from MCP tool outputs without transformation.
 ///
-/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
+/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -213,7 +213,7 @@ pub struct TextContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -243,7 +243,7 @@ impl TextContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -285,7 +285,7 @@ pub struct ImageContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -324,7 +324,7 @@ impl ImageContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -354,7 +354,7 @@ pub struct AudioContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -385,7 +385,7 @@ impl AudioContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -411,7 +411,7 @@ pub struct EmbeddedResource {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -441,7 +441,7 @@ impl EmbeddedResource {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -483,7 +483,7 @@ pub struct TextResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -514,7 +514,7 @@ impl TextResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -545,7 +545,7 @@ pub struct BlobResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -576,7 +576,7 @@ impl BlobResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -631,7 +631,7 @@ pub struct ResourceLink {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -702,7 +702,7 @@ impl ResourceLink {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -744,7 +744,7 @@ pub struct Icon {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -769,7 +769,7 @@ impl Icon {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -847,7 +847,7 @@ pub struct Annotations {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -916,7 +916,7 @@ impl Annotations {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();

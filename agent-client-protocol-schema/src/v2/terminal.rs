@@ -49,7 +49,7 @@ pub struct Terminal {
     /// these keys. This metadata is scoped to the content reference. Omitted
     /// and `null` are equivalent and mean no item metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -91,7 +91,7 @@ pub struct TerminalOutput {
     /// these keys. This metadata is scoped to the replacement snapshot. Omitted
     /// and `null` are equivalent and mean no snapshot metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -147,7 +147,7 @@ pub struct TerminalExitStatus {
     /// these keys. This metadata is scoped to the exit information. Omitted
     /// and `null` are equivalent and mean no exit metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -226,7 +226,7 @@ pub struct TerminalUpdate {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -331,7 +331,7 @@ pub struct TerminalOutputChunk {
     /// these keys. This field is chunk-scoped. Omitted and `null` are
     /// equivalent and mean no chunk metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]

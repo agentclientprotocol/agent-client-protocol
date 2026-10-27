@@ -5450,8 +5450,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Capabilities for additional session directories support.
 
 Supplying `\{\}` means the agent supports the `additionalDirectories` field on
-supported session lifecycle requests. Agents that also support
-`session/list` may return `SessionInfo.additionalDirectories` to report the
+supported session lifecycle requests. Agents may return
+`SessionInfo.additionalDirectories` in `session/list` to report the
 complete ordered additional-root list associated with a listed session.
 
 **Type:** Object

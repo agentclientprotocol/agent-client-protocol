@@ -26,28 +26,30 @@ use std::{
 
 use markdown_generator::MarkdownGenerator;
 
-#[cfg(feature = "unstable_protocol_v2")]
 const PROTOCOL_DOC_BASE: &str = "https://agentclientprotocol.com/protocol";
 
-#[cfg(feature = "unstable_protocol_v2")]
-const VERSIONED_PROTOCOL_DOC_PATHS: &[&str] = &[
-    "agent-plan",
-    "authentication",
-    "cancellation",
-    "content",
-    "elicitation",
-    "error",
-    "extensibility",
-    "initialization",
-    "prompt-lifecycle",
-    "session-config-options",
-    "session-delete",
-    "session-list",
-    "session-setup",
-    "slash-commands",
-    "tool-calls",
-    "transports",
-];
+/// Protocol version directory the schema's doc links point into.
+const PROTOCOL_VERSION_DIR: &str = if cfg!(feature = "unstable_protocol_v2") {
+    "v2"
+} else {
+    "v1"
+};
+
+/// Rewrites stable doc links to the draft pages when generating the unstable schema.
+///
+/// Source doc comments link to the stable versioned pages
+/// (`https://agentclientprotocol.com/protocol/v2/...`). The unstable schema documents draft
+/// features, so its links point at the matching `draft/` pages instead.
+fn publication_doc_links(text: &str) -> String {
+    if cfg!(feature = "unstable") {
+        text.replace(
+            &format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/"),
+            &format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/draft/"),
+        )
+    } else {
+        text.to_string()
+    }
+}
 
 /// All messages that an agent can send to a client.
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -232,19 +234,7 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
     let mut markdown_gen = MarkdownGenerator::new(schema_file);
     let mut markdown_doc = markdown_gen.generate(schema_value);
 
-    let protocol_doc_base = match (
-        cfg!(feature = "unstable_protocol_v2"),
-        cfg!(feature = "unstable"),
-    ) {
-        (true, true) => "https://agentclientprotocol.com/protocol/v2/draft/",
-        (true, false) => "https://agentclientprotocol.com/protocol/v2/",
-        (false, true) => "https://agentclientprotocol.com/protocol/v1/draft/",
-        (false, false) => "https://agentclientprotocol.com/protocol/v1/",
-    };
-    markdown_doc = markdown_doc.replace(
-        "https://agentclientprotocol.com/protocol/",
-        protocol_doc_base,
-    );
+    markdown_doc = publication_doc_links(&markdown_doc);
 
     let doc_file: &str = match (
         cfg!(feature = "unstable_protocol_v2"),
@@ -270,55 +260,23 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
 }
 
 fn schema_value_for_publication(schema_value: &serde_json::Value) -> serde_json::Value {
-    #[cfg(feature = "unstable_protocol_v2")]
-    {
-        let mut schema_value = schema_value.clone();
-        let protocol_doc_base = if cfg!(feature = "unstable") {
-            format!("{PROTOCOL_DOC_BASE}/v2/draft")
-        } else {
-            format!("{PROTOCOL_DOC_BASE}/v2")
-        };
-
-        for path in VERSIONED_PROTOCOL_DOC_PATHS {
-            replace_string_values(
-                &mut schema_value,
-                &format!("{PROTOCOL_DOC_BASE}/{path}"),
-                &format!("{protocol_doc_base}/{path}"),
-            );
-        }
-        schema_value
-    }
-
-    #[cfg(not(feature = "unstable_protocol_v2"))]
-    {
-        schema_value.clone()
-    }
+    let mut schema_value = schema_value.clone();
+    replace_string_values(&mut schema_value);
+    schema_value
 }
 
-#[cfg(feature = "unstable_protocol_v2")]
-fn replace_string_values(value: &mut serde_json::Value, from: &str, to: &str) {
+fn replace_string_values(value: &mut serde_json::Value) {
     match value {
-        serde_json::Value::String(string) => {
-            *string = string.replace(from, to);
-        }
-        serde_json::Value::Array(array) => {
-            for value in array {
-                replace_string_values(value, from, to);
-            }
-        }
-        serde_json::Value::Object(object) => {
-            for value in object.values_mut() {
-                replace_string_values(value, from, to);
-            }
-        }
+        serde_json::Value::String(string) => *string = publication_doc_links(string),
+        serde_json::Value::Array(array) => array.iter_mut().for_each(replace_string_values),
+        serde_json::Value::Object(object) => object.values_mut().for_each(replace_string_values),
         serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
     }
 }
 
 #[cfg(test)]
 mod schema_annotation_tests {
-    #[cfg(feature = "unstable_protocol_v2")]
-    use super::{PROTOCOL_DOC_BASE, VERSIONED_PROTOCOL_DOC_PATHS, schema_value_for_publication};
+    use super::{PROTOCOL_DOC_BASE, PROTOCOL_VERSION_DIR, schema_value_for_publication};
     use super::{root_schema_value, schema_crate_dir};
     use serde_json::Value;
     use std::fs;
@@ -945,34 +903,33 @@ mod schema_annotation_tests {
         }
     }
 
-    #[cfg(feature = "unstable_protocol_v2")]
     #[test]
-    fn published_v2_schema_links_to_versioned_v2_protocol_docs() {
+    fn published_schema_links_to_its_own_versioned_protocol_docs() {
         let schema = schema_value_for_publication(&root_schema_value());
         let schema_json = serde_json::to_string(&schema).unwrap();
 
-        let protocol_doc_base = if cfg!(feature = "unstable") {
-            format!("{PROTOCOL_DOC_BASE}/v2/draft")
+        let expected = if cfg!(feature = "unstable") {
+            format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/draft/")
         } else {
-            format!("{PROTOCOL_DOC_BASE}/v2")
+            format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/")
         };
+        let links: Vec<&str> = schema_json
+            .match_indices(PROTOCOL_DOC_BASE)
+            .map(|(i, _)| &schema_json[i..])
+            .collect();
 
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/prompt-lifecycle")));
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/tool-calls")));
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/initialization")));
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/elicitation")));
-
-        for path in VERSIONED_PROTOCOL_DOC_PATHS {
+        assert!(!links.is_empty(), "schema should link to the protocol docs");
+        for link in links {
             assert!(
-                !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/{path}")),
-                "found unversioned v2 schema docs link for {path}"
+                link.starts_with(&expected),
+                "doc link should start with {expected}: {}",
+                &link[..link.len().min(80)]
+            );
+            assert!(
+                !link.starts_with(&format!("{expected}draft/")),
+                "doc link should not be double-drafted"
             );
         }
-
-        assert!(
-            !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/v2/v2/")),
-            "v2 docs links should not be double-versioned"
-        );
     }
 
     #[test]

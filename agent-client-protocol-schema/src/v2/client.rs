@@ -35,7 +35,7 @@ use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpRequest, MessageMcpResponse}
 ///
 /// Agents can send session updates at any point while the session exists.
 ///
-/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
+/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -52,7 +52,7 @@ pub struct UpdateSessionNotification {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -75,7 +75,7 @@ impl UpdateSessionNotification {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -87,7 +87,7 @@ impl UpdateSessionNotification {
 ///
 /// These updates report messages, progress, and other session activity.
 ///
-/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
+/// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "sessionUpdate", rename_all = "snake_case")]
@@ -128,7 +128,7 @@ pub enum SessionUpdate {
     /// A chunk of bytes appended to an agent-owned terminal's output.
     TerminalOutputChunk(TerminalOutputChunk),
     /// A content update for a plan identified by ID.
-    /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
+    /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
     PlanUpdate(PlanUpdate),
     /// **UNSTABLE**
     ///
@@ -295,7 +295,7 @@ pub struct SessionMessage {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -812,7 +812,7 @@ pub struct CompactionUpdate {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -984,7 +984,7 @@ pub struct SubagentUpdate {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -1128,7 +1128,7 @@ pub struct SessionCancelCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1148,7 +1148,7 @@ impl SessionCancelCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1316,7 +1316,7 @@ pub struct ConfigOptionUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1338,7 +1338,7 @@ impl ConfigOptionUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1378,7 +1378,7 @@ pub struct SessionInfoUpdate {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -1442,7 +1442,7 @@ pub struct UsageUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1473,7 +1473,7 @@ impl UsageUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1520,7 +1520,7 @@ impl UsageUpdate {
 /// an individual activity while other foreground work continues does not require
 /// an idle boundary. Local commands use the same lifecycle even without model work.
 ///
-/// See protocol docs: [Session States](https://agentclientprotocol.com/protocol/prompt-lifecycle#session-states)
+/// See protocol docs: [Session States](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#session-states)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "state", rename_all = "snake_case")]
@@ -1567,7 +1567,7 @@ pub struct RunningStateUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1586,7 +1586,7 @@ impl RunningStateUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1630,7 +1630,7 @@ pub struct IdleStateUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1668,7 +1668,7 @@ impl IdleStateUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1693,7 +1693,7 @@ fn idle_state_update_schema(schema: &mut Schema) {
         properties.insert(
             "stopReason".into(),
             serde_json::json!({
-                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-lifecycle#stop-reasons)",
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
                 "type": ["string", "null"],
                 "x-deserialize-default-on-error": true
             }),
@@ -1738,7 +1738,7 @@ pub struct RequiresActionStateUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1757,7 +1757,7 @@ impl RequiresActionStateUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1907,7 +1907,7 @@ pub struct Cost {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1930,7 +1930,7 @@ impl Cost {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1957,7 +1957,7 @@ pub struct ContentChunk {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys. This field is chunk-scoped.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1980,7 +1980,7 @@ impl ContentChunk {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys. This field is chunk-scoped.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2022,7 +2022,7 @@ pub struct UserMessage {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -2096,7 +2096,7 @@ pub struct AgentMessage {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -2170,7 +2170,7 @@ pub struct AgentThought {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -2246,7 +2246,7 @@ pub struct AvailableCommandsUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2268,7 +2268,7 @@ impl AvailableCommandsUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2323,7 +2323,7 @@ impl AvailableCommand {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(&self) -> Option<&Meta> {
         match self {
@@ -2358,7 +2358,7 @@ pub struct OtherAvailableCommand {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2395,7 +2395,7 @@ impl OtherAvailableCommand {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2477,7 +2477,7 @@ pub struct Command {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2508,7 +2508,7 @@ impl Command {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2623,7 +2623,7 @@ pub struct TextCommandInput {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2645,7 +2645,7 @@ impl TextCommandInput {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2659,7 +2659,7 @@ impl TextCommandInput {
 ///
 /// Sent when the agent needs authorization before performing a sensitive operation.
 ///
-/// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
+/// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2697,7 +2697,7 @@ pub struct RequestPermissionRequest {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2741,7 +2741,7 @@ impl RequestPermissionRequest {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2805,7 +2805,7 @@ pub struct ToolCallPermissionSubject {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2827,7 +2827,7 @@ impl ToolCallPermissionSubject {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2861,7 +2861,7 @@ pub struct CommandPermissionSubject {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys. Omitted and `null` are equivalent and mean no subject metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2990,7 +2990,7 @@ pub struct PermissionOption {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3018,7 +3018,7 @@ impl PermissionOption {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3082,7 +3082,7 @@ pub struct RequestPermissionResponse {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3104,7 +3104,7 @@ impl RequestPermissionResponse {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3126,7 +3126,7 @@ pub enum RequestPermissionOutcome {
     /// sessions are unaffected. Agents treat `cancelled` for background work as a
     /// denial.
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
     Cancelled(CancelledPermissionOutcome),
     /// The user selected one of the provided options.
     #[serde(rename_all = "camelCase")]
@@ -3231,7 +3231,7 @@ pub struct CancelledPermissionOutcome {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3250,7 +3250,7 @@ impl CancelledPermissionOutcome {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3278,7 +3278,7 @@ pub struct SelectedPermissionOutcome {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3300,7 +3300,7 @@ impl SelectedPermissionOutcome {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3315,7 +3315,7 @@ impl SelectedPermissionOutcome {
 /// Advertised during initialization to inform the agent about
 /// available features and methods.
 ///
-/// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/initialization#client-capabilities)
+/// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#client-capabilities)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3347,7 +3347,7 @@ pub struct ClientCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3383,7 +3383,7 @@ impl ClientCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3417,7 +3417,7 @@ pub struct ClientAuthCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3449,7 +3449,7 @@ impl ClientAuthCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3472,7 +3472,7 @@ pub struct TerminalAuthCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3491,7 +3491,7 @@ impl TerminalAuthCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3560,11 +3560,11 @@ pub enum AgentRequest {
     /// If the client cancels active session work via `session/cancel`, it MUST
     /// respond to this request with the `cancelled` outcome.
     ///
-    /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
+    /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
     RequestPermissionRequest(Box<RequestPermissionRequest>),
     /// Requests structured user input via a form or URL.
     ///
-    /// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
+    /// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/elicitation)
     CreateElicitationRequest(Box<CreateElicitationRequest>),
     /// **UNSTABLE**
     ///
@@ -3579,7 +3579,7 @@ pub enum AgentRequest {
     /// Extension methods provide a way to add custom functionality while maintaining
     /// protocol compatibility.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtMethodRequest(Box<ExtRequest>),
 }
 
@@ -3643,11 +3643,11 @@ pub enum AgentNotification {
     /// updates before reporting an idle `state_update` with the cancelled
     /// stop reason.
     ///
-    /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/prompt-lifecycle#3-agent-reports-output)
+    /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)
     UpdateSessionNotification(Box<UpdateSessionNotification>),
     /// Notification that a URL-based elicitation has completed.
     ///
-    /// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation#url-completion)
+    /// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/elicitation#url-completion)
     CompleteElicitationNotification(Box<CompleteElicitationNotification>),
     /// Handles extension notifications from the agent.
     ///
@@ -3655,7 +3655,7 @@ pub enum AgentNotification {
     /// Extension notifications provide a way to send one-way messages for custom functionality
     /// while maintaining protocol compatibility.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtNotification(Box<ExtNotification>),
 }
 

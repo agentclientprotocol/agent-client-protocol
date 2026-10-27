@@ -7,7 +7,7 @@ use super::{Meta, RequestId};
 
 /// Notification to cancel an ongoing request.
 ///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -22,7 +22,7 @@ pub struct CancelRequestNotification {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -44,7 +44,7 @@ impl CancelRequestNotification {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -101,7 +101,7 @@ pub enum ProtocolLevelNotification {
     ///   - Valid response with appropriate data (partial results or cancellation marker)
     ///   - Error response with code `-32800` (Cancelled)
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
     CancelRequestNotification(CancelRequestNotification),
 }
 

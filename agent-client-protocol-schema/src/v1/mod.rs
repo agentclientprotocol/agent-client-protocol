@@ -37,7 +37,7 @@ use std::sync::Arc;
 /// Sessions maintain their own context, conversation history, and state,
 /// allowing multiple independent interactions with the same agent.
 ///
-/// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
+/// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v1/session-setup#session-id)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]

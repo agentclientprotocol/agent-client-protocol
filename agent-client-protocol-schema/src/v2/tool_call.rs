@@ -3,7 +3,7 @@
 //! When an LLM determines it needs to interact with external systems—like reading files,
 //! running code, or fetching data—it generates tool calls that the agent executes on its behalf.
 //!
-/// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
+/// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
 use std::{collections::BTreeMap, sync::Arc};
 
 use derive_more::{Display, From};
@@ -28,7 +28,7 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 /// patches the stored metadata by top-level key. When a client receives a tool
 /// call ID it has not seen before, omitted fields use client defaults.
 ///
-/// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/tool-calls)
+/// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -92,7 +92,7 @@ pub struct ToolCallUpdate {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -245,7 +245,7 @@ pub struct ToolCallContentChunk {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys. This field is chunk-scoped.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -268,7 +268,7 @@ impl ToolCallContentChunk {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys. This field is chunk-scoped.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -303,7 +303,7 @@ impl IntoOption<ToolCallId> for &str {
 /// Tool kinds help clients choose appropriate icons and optimize how they
 /// display tool execution progress.
 ///
-/// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/tool-calls#creating)
+/// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/v2/tool-calls#creating)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -343,7 +343,7 @@ pub enum ToolKind {
 ///
 /// Tool calls progress through different statuses during their lifecycle.
 ///
-/// See protocol docs: [Status](https://agentclientprotocol.com/protocol/tool-calls#status)
+/// See protocol docs: [Status](https://agentclientprotocol.com/protocol/v2/tool-calls#status)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -377,7 +377,7 @@ pub enum ToolCallStatus {
 /// Tool calls can produce different types of content including standard
 /// content blocks (text, images), file diffs, or display-only terminals.
 ///
-/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
+/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/tool-calls#content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -502,7 +502,7 @@ pub struct Content {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -524,7 +524,7 @@ impl Content {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -539,7 +539,7 @@ impl Content {
 /// and MUST be consistent with `changes`. Agents SHOULD provide `patch` whenever
 /// feasible. Clients MUST handle diffs where `patch` is omitted or `null`.
 ///
-/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/tool-calls#content)
+/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/tool-calls#content)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -565,7 +565,7 @@ pub struct Diff {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -601,7 +601,7 @@ impl Diff {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -625,7 +625,7 @@ pub struct DiffPatch {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -648,7 +648,7 @@ impl DiffPatch {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -737,7 +737,7 @@ pub struct DiffChange {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -813,7 +813,7 @@ impl DiffChange {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -968,7 +968,7 @@ fn other_diff_change_schema(schema: &mut Schema) {
 /// Enables clients to implement "follow-along" features that track
 /// which files the agent is working with in real-time.
 ///
-/// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/tool-calls#following-the-agent)
+/// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/v2/tool-calls#following-the-agent)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -987,7 +987,7 @@ pub struct ToolCallLocation {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1017,7 +1017,7 @@ impl ToolCallLocation {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();

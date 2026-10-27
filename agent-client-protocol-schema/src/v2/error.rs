@@ -8,7 +8,7 @@
 //! - Errors include an `error` object with `code` and `message`
 //! - Notifications never receive responses (success or error)
 //!
-//! See: [Error Handling](https://agentclientprotocol.com/protocol/overview#error-handling)
+//! See: [Error Handling](https://agentclientprotocol.com/protocol/v2/overview#error-handling)
 
 use std::{fmt::Display, str};
 
