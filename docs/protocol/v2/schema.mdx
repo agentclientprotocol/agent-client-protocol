@@ -5594,14 +5594,15 @@ Single-value selector (dropdown).
   type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
   required
 >
-  The currently selected value.
+  The currently selected value. MUST be one of the `value`s in `options`.
 </ResponseField>
 <ResponseField
   name="options"
   type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
   required
 >
-  The set of selectable options.
+  The set of selectable options. MUST contain at least one value, and each
+  `value` MUST be unique within the option, including across groups.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"select"`.
@@ -5702,14 +5703,15 @@ A single-value selector (dropdown) session configuration option payload.
   type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
   required
 >
-  The currently selected value.
+  The currently selected value. MUST be one of the `value`s in `options`.
 </ResponseField>
 <ResponseField
   name="options"
   type={<a href="#sessionconfigselectoptions">SessionConfigSelectOptions</a>}
   required
 >
-  The set of selectable options.
+  The set of selectable options. MUST contain at least one value, and each
+  `value` MUST be unique within the option, including across groups.
 </ResponseField>
 
 ## <span class="font-mono">SessionConfigSelectGroup</span>

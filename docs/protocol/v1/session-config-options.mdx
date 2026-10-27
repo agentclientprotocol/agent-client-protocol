@@ -239,13 +239,13 @@ Clients **SHOULD**:
 
 ## Default Values and Graceful Degradation
 
-Agents **MUST** always provide a default value for every configuration option. This ensures the Agent can operate correctly even if:
+Every configuration option's `currentValue` is the value the Agent uses until the Client changes it. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent will continue using its default value.
+If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent keeps using its `currentValue`.
 
 ## Setting a Config Option
 

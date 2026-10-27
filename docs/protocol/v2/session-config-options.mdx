@@ -121,7 +121,10 @@ During [Session Setup](/protocol/v2/session-setup) the Agent **MAY** return a li
 <ResponseField name="options" type="ConfigOptionValue[] | ConfigOptionGroup[]">
   The available values for a `select` option. Required when `type` is `"select"`
   and omitted when `type` is `"boolean"`. This is either a flat array of values
-  or an array of groups; values and groups are not mixed in the same array.
+  or an array of groups; values and groups are not mixed in the same array. For
+  a `select` option, Agents **MUST** offer at least one value, **MUST** keep
+  each `value` unique within the option, including across groups, and
+  `currentValue` **MUST** be one of them.
 </ResponseField>
 
 ### ConfigOptionValue
@@ -211,13 +214,13 @@ Clients **SHOULD**:
 
 ## Default Values and Graceful Degradation
 
-Agents **MUST** always provide a default value for every configuration option. This ensures the Agent can operate correctly even if:
+Every configuration option's `currentValue` is the value the Agent uses until the Client changes it. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-Option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`; unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent will continue using its default value.
+Option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`; unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent keeps using its `currentValue`.
 
 ## Setting a Config Option
 

@@ -3944,7 +3944,7 @@
       "type": "object",
       "properties": {
         "currentValue": {
-          "description": "The currently selected value.",
+          "description": "The currently selected value. MUST be one of the `value`s in `options`.",
           "allOf": [
             {
               "$ref": "#/$defs/SessionConfigValueId"
@@ -3952,7 +3952,7 @@
           ]
         },
         "options": {
-          "description": "The set of selectable options.",
+          "description": "The set of selectable options. MUST contain at least one value, and each `value` MUST be\nunique within the option, including across groups.",
           "allOf": [
             {
               "$ref": "#/$defs/SessionConfigSelectOptions"

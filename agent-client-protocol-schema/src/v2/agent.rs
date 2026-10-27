@@ -2291,9 +2291,10 @@ impl From<Vec<SessionConfigSelectGroup>> for SessionConfigSelectOptions {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigSelect {
-    /// The currently selected value.
+    /// The currently selected value. MUST be one of the `value`s in `options`.
     pub current_value: SessionConfigValueId,
-    /// The set of selectable options.
+    /// The set of selectable options. MUST contain at least one value, and each `value` MUST be
+    /// unique within the option, including across groups.
     pub options: SessionConfigSelectOptions,
 }
 
