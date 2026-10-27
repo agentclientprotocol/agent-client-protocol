@@ -283,6 +283,7 @@ mod schema_annotation_tests {
 
     const DEFAULT_ON_ERROR_EXTENSION: &str = "x-deserialize-default-on-error";
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
+    const DEFAULT_ON_NULL_EXTENSION: &str = "x-deserialize-default-on-null";
 
     #[test]
     fn generated_notice_schema_is_available_without_unstable_features() {
@@ -965,6 +966,35 @@ mod schema_annotation_tests {
                             line_index + 1
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn source_default_on_null_fields_are_schema_annotated() {
+        let root = schema_crate_dir();
+        for module_dir in ["src/v1", "src/v2"] {
+            for entry in fs::read_dir(root.join(module_dir)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+
+                let source = fs::read_to_string(&path).unwrap();
+                let lines: Vec<_> = source.lines().collect();
+                for (line_index, line) in lines.iter().enumerate() {
+                    if !line.contains(r#"#[serde_as(deserialize_as = "DefaultOnNull"#) {
+                        continue;
+                    }
+
+                    let annotation = lines.get(line_index + 1).copied().unwrap_or_default();
+                    assert!(
+                        annotation.contains(r#""x-deserialize-default-on-null" = true"#),
+                        "{}:{} missing {DEFAULT_ON_NULL_EXTENSION}",
+                        path.display(),
+                        line_index + 1
+                    );
                 }
             }
         }

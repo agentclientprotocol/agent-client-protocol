@@ -4177,7 +4177,8 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "title": {
           "description": "Human-readable title for the session\n\nOmitted and `null` are equivalent and mean no title is provided.",

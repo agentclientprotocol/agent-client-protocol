@@ -1966,6 +1966,7 @@ pub struct SessionInfo {
     /// by the Agent. Omitted, `null`, and empty values are equivalent: the response
     /// reports no additional roots.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
 
