@@ -3570,14 +3570,16 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "env": {
           "description": "Additional environment variables to set on the configured agent invocation for terminal auth.\nNames MUST be unique. These values override same-named variables in the\nbase launch configuration.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -6522,14 +6524,16 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "mcpServers": {
           "description": "List of MCP (Model Context Protocol) servers the agent should connect to.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -6655,7 +6659,8 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/HttpHeader"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -6687,14 +6692,16 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "env": {
           "description": "Environment variables to set when launching the MCP server.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
@@ -6789,14 +6796,16 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "mcpServers": {
           "description": "List of MCP servers to connect to for this session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
-          }
+          },
+          "x-deserialize-default-on-null": true
         },
         "replayFrom": {
           "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted or `null` both mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay all retained\nconversation history before responding.\n\nAgents MUST reject unsupported cursor types or malformed cursor values\nwith `-32602` (Invalid params), rather than substituting another cursor\nor resuming without replay.",

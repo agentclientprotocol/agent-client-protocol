@@ -2702,10 +2702,12 @@ pub struct CreateTerminalRequest {
     pub command: String,
     /// Array of command arguments.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Environment variables for the command.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// Working directory for the command. Must be an absolute path.

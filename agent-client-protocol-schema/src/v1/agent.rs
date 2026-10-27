@@ -719,11 +719,13 @@ pub struct AuthMethodTerminal {
     pub description: Option<String>,
     /// Additional arguments to append to the configured agent invocation for terminal auth.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Additional environment variables to set on the configured agent invocation for terminal auth.
     /// These values override same-named variables in the base launch configuration.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub env: HashMap<String, String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -807,10 +809,12 @@ pub struct NewSessionRequest {
     /// remains the base for relative paths. When omitted or empty, no
     /// additional roots are activated for the new session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     pub mcp_servers: Vec<McpServer>,
     /// **UNSTABLE**
     ///
@@ -987,6 +991,7 @@ impl NewSessionResponse {
 pub struct LoadSessionRequest {
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     pub mcp_servers: Vec<McpServer>,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
@@ -997,6 +1002,7 @@ pub struct LoadSessionRequest {
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// The ID of the session to load.
@@ -1184,10 +1190,12 @@ pub struct ForkSessionRequest {
     /// this is the complete resulting additional-root list for the forked
     /// session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// **UNSTABLE**
@@ -1381,10 +1389,12 @@ pub struct ResumeSessionRequest {
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// **UNSTABLE**
@@ -2790,6 +2800,7 @@ pub struct McpServerHttp {
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     pub headers: Vec<HttpHeader>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2848,6 +2859,7 @@ pub struct McpServerSse {
     pub url: String,
     /// HTTP headers to set when making requests to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     pub headers: Vec<HttpHeader>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2990,9 +3002,11 @@ pub struct McpServerStdio {
     pub command: PathBuf,
     /// Command-line arguments to pass to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     pub args: Vec<String>,
     /// Environment variables to set when launching the MCP server.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
