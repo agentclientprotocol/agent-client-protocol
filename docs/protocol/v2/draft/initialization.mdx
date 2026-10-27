@@ -95,6 +95,8 @@ See [Capabilities](#capabilities) to learn how non-breaking features are introdu
 
 The `initialize` request **MUST** include the latest protocol version the Client supports.
 
+The Agent **MUST** read `protocolVersion` before validating any other parameter. Missing, non-integer, or out-of-range values are malformed parameters and **MUST** receive `-32602` (`Invalid params`).
+
 The Agent **MUST** select the highest protocol version it supports that is less than or equal to the requested version. If it supports the requested version, this selects that version. A successful `initialize` response **MUST NOT** select a version higher than the requested version and **MUST** use the selected version's initialization response shape.
 
 If no supported version is less than or equal to the requested version, the Agent **MUST** reject `initialize` with error code `-32022` (`Unsupported protocol version`). The error's `data` **MUST** be an object containing the required, non-null fields `requested` (the requested protocol version) and `supported` (an array of the protocol versions the Agent supports). An empty `supported` array means the endpoint has no protocol implementations configured.
@@ -114,9 +116,17 @@ If no supported version is less than or equal to the requested version, the Agen
 }
 ```
 
-A version-mismatch error does not initialize the connection. The Agent **MUST NOT** begin version-specific operations on that connection, and the Client **SHOULD** close it and inform the user. Missing, non-integer, or out-of-range `protocolVersion` values are malformed parameters and **MUST** receive `-32602` (`Invalid params`) instead.
+A version-mismatch error does not initialize the connection. The Agent **MUST NOT** begin version-specific operations on that connection, and the Client **SHOULD** close it and inform the user.
+
+The Agent validates the remaining parameters against the selected version. If the requested version is newer than the selected one, the request was written for a version the Agent doesn't know, so the Agent **MUST** ignore parameters it can't parse under the selected version instead of rejecting the request.
 
 The Client **MUST** check that it supports the version in a successful response. Advertising a latest version does not imply support for every earlier version. If the Client does not support the selected version, it **SHOULD** close the connection and inform the user.
+
+#### Repeating Initialization
+
+When the Agent selects a lower version than requested, it may have ignored parts of the Client's request, such as capabilities. The Client **MAY** then send `initialize` again with the selected version and that version's parameters. It **MUST** wait for the first response and send the repeat before any other request. The Agent **MUST** accept it and treat the latest `initialize` as authoritative. `initialize` **MUST NOT** be repeated after any other request.
+
+Agents that implement only v1 may not accept a repeated `initialize`. To change its parameters with such an Agent, the Client opens a new connection.
 
 ## Capabilities
 

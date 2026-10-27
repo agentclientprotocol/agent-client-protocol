@@ -944,7 +944,7 @@ For an Agent supporting both v1 and v2, a v1 request selects v1, a v2 request se
 
 Keep initialization separate from session setup. Prepare handlers for both versions before connecting, but dispatch subsequent traffic through only the selected surface. Inspect the selected version before sending `session/new` or interpreting capabilities. The request uses the Client's requested-version initialization shape, while the response uses the Agent's selected-version shape. For example, a v2 request carries `info` and `capabilities`, while a v1 response carries `agentInfo` and `agentCapabilities`.
 
-A version-specific SDK Client API is not necessarily a dual-stack Client: it may reject a response selecting the other version. Use the SDK's negotiation support where available. If falling back requires a new SDK connection, close the first connection and initialize the replacement with the selected version's API. Do not send a second `initialize` on an already initialized connection.
+A version-specific SDK Client API is not necessarily a dual-stack Client: it may reject a response selecting the other version. Use the SDK's negotiation support where available. If falling back requires a new SDK connection, close the first connection and initialize the replacement with the selected version's API. An Agent implementing v2 also accepts one [repeated `initialize`](/protocol/v2/initialization#repeating-initialization) before any other request; a legacy v1-only Agent may not.
 
 ### Agent routing in the SDKs
 
@@ -982,7 +982,7 @@ A v2-only endpoint rejects a v1 request with `-32022` and `data: { "requested": 
 
 A request for a newer version can still select v2. A v1-only endpoint can select v1 for a v2 request. In either case, the Client must check whether it supports the selected version before proceeding. The latest-version integer does not advertise a complete set of supported versions.
 
-Do not confuse version mismatch with malformed initialization parameters. A missing, non-integer, or out-of-range `protocolVersion`, or malformed parameters for a supported version, remains `-32602` (`Invalid params`). Use the SDK routers to negotiate before dispatching to a version-specific implementation.
+Do not confuse version mismatch with malformed initialization parameters. A missing, non-integer, or out-of-range `protocolVersion`, or malformed parameters for a supported version, remains `-32602` (`Invalid params`). Agents read `protocolVersion` first, so a version mismatch is never reported as `-32602`, and parameters written for a newer version are not rejected. Use the SDK routers to negotiate before dispatching to a version-specific implementation.
 
 ### Share application logic, not wire shapes
 
@@ -1002,7 +1002,7 @@ Exercise the same published endpoint with both v1 and v2 Clients:
 
 1. Check that each Client reaches the matching implementation and receives that version's capabilities.
 2. Check fallback from a v2 Client to a v1-only Agent, including whether the Client continues with v1 or disconnects.
-3. Send a higher requested version with compatible initialization parameters and check that the Agent selects its latest supported version.
+3. Send a higher requested version, including parameters the Agent can't parse, and check that the Agent selects its latest supported version.
 4. Run prompt completion and cancellation through both surfaces, and assert each version's completion signal, not just successful initialization.
 5. Check that disabling draft v2 support leaves the v1 endpoint working.
 6. Send a v1 request without Client identity to a v2-only endpoint. Check for `-32022` with `requested: 1` and `supported: [2]`, and check that no v2 session work starts.
