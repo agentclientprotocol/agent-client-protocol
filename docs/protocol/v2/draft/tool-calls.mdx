@@ -543,10 +543,10 @@ Git can produce most of this. With `$ROOT` set to the repository root,
 `rename to`, `copy from`, or `copy to` paths, so those still need the
 repository root prepended, with Git's quoting applied to the full path.
 
-Clients that apply or parse the patch with existing tools **MUST NOT** strip
-leading path components (for example, use `patch -p0` or `git apply -p0`). Take
-paths from `changes` or from the `---`, `+++`, rename, and copy lines rather
-than by splitting the `diff --git` header.
+Many diff parsers strip one leading path component by default to remove Git's
+`a/` and `b/` prefixes, so configure them not to strip any. Take paths from
+`changes`, or from the `---`, `+++`, rename, and copy lines, rather than by
+splitting the `diff --git` header, which is ambiguous when paths contain spaces.
 
 </ParamField>
 
