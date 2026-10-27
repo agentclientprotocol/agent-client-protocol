@@ -49,17 +49,26 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub name: MaybeUndefined<String>,
     /// Human-readable title describing what the tool is doing.
+    ///
+    /// Omission leaves the title unchanged, `null` unsets it, and a string replaces it.
+    /// A new tool call starts without a title.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// The category of tool being invoked.
     /// Helps clients choose appropriate icons and UI treatment.
+    ///
+    /// Omission leaves the kind unchanged, `null` resets it to `other`, and a value replaces it.
+    /// A new tool call starts as `other`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub kind: MaybeUndefined<ToolKind>,
     /// Current execution status of the tool call.
+    ///
+    /// Omission leaves the status unchanged, `null` resets it to `pending`, and a value
+    /// replaces it. A new tool call starts as `pending`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]

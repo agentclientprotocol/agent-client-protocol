@@ -754,12 +754,12 @@
           "x-deserialize-default-on-error": true
         },
         "title": {
-          "description": "Human-readable title describing what the tool is doing.",
+          "description": "Human-readable title describing what the tool is doing.\n\nOmission leaves the title unchanged, `null` unsets it, and a string replaces it.\nA new tool call starts without a title.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "kind": {
-          "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment.",
+          "description": "The category of tool being invoked.\nHelps clients choose appropriate icons and UI treatment.\n\nOmission leaves the kind unchanged, `null` resets it to `other`, and a value replaces it.\nA new tool call starts as `other`.",
           "anyOf": [
             {
               "$ref": "#/$defs/ToolKind"
@@ -771,7 +771,7 @@
           "x-deserialize-default-on-error": true
         },
         "status": {
-          "description": "Current execution status of the tool call.",
+          "description": "Current execution status of the tool call.\n\nOmission leaves the status unchanged, `null` resets it to `pending`, and a value\nreplaces it. A new tool call starts as `pending`.",
           "anyOf": [
             {
               "$ref": "#/$defs/ToolCallStatus"

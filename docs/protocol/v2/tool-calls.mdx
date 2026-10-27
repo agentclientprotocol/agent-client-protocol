@@ -102,9 +102,12 @@ Custom or future tool kinds can be used when Clients can fall back to generic to
 
 The `tool_call_update` notification is an upsert keyed by `toolCallId`. For
 existing tool calls, fields other than `_meta` leave the previous value
-unchanged when omitted, explicitly clear or unset the value when `null`, and
-replace the previous value when concrete values are sent. For a new
-`toolCallId`, omitted fields use Client defaults. `content` and `locations` are
+unchanged when omitted, reset the field to its default when `null`, and
+replace the previous value when concrete values are sent. A new `toolCallId`
+starts with every field at its default: `status` is `pending`, `kind` is
+`other`, `content` and `locations` are empty, and `title`, `name`, `rawInput`,
+and `rawOutput` are unset. Clients can show a generic title when `title` is
+unset. `content` and `locations` are
 replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
 the field to leave it unchanged or set it to `null` to clear it. An object
 patches the stored metadata by top-level key: a key set to `null` is removed,
