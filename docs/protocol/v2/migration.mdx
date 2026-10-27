@@ -49,7 +49,7 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 | `session/prompt`                                                                                    | Unchanged shape. **Response semantics redesigned** (see [Prompt lifecycle](#the-new-prompt-lifecycle))                                                                                             |
 | `session/cancel`                                                                                    | Unchanged name. Completion now reported via `state_update` instead of the prompt response                                                                                                          |
 | `session/set_mode`                                                                                  | **Removed**. Use `session/set_config_option`                                                                                                                                                       |
-| `session/set_config_option`                                                                         | Required when the Agent advertises config options. No capability                                                                                                                                   |
+| `session/set_config_option`                                                                         | Required when the Agent advertises config options. No capability. Params use `configId` and a required `type` discriminator (see [Config options](#session-modes-become-config-options))           |
 | `session/request_permission`                                                                        | Unchanged name. Params restructured (required `title`, optional `subject`)                                                                                                                         |
 | `session/update`                                                                                    | Unchanged name. Update variants changed (see below)                                                                                                                                                |
 | `elicitation/create`                                                                                | Unchanged shape. Exactly one of `sessionId` or `requestId` is required; session-scoped requests follow the foreground-state contract (`requires_action`); an unknown action is handled as `cancel` |
@@ -60,24 +60,26 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 
 ### `session/update` variant changes
 
-| v1 `sessionUpdate`          | v2                                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------------- |
-| `user_message_chunk`        | Kept. `messageId` now required                                                              |
-| `agent_message_chunk`       | Kept. `messageId` now required                                                              |
-| `agent_thought_chunk`       | Kept. `messageId` now required                                                              |
-| -                           | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts             |
-| -                           | **New:** foreground `state_update` (`running`, `idle`, `requires_action`) with stop reasons |
-| `tool_call`                 | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call          |
-| `tool_call_update`          | Kept. Now an explicit upsert with omit/`null`/value patch semantics                         |
-| -                           | **New:** `tool_call_content_chunk` for streaming individual content items                   |
-| -                           | **New:** `terminal_update` for Agent-owned display terminal state and replay                |
-| -                           | **New:** `terminal_output_chunk` for appending display terminal bytes                       |
-| `plan`                      | Replaced by `plan_update` with a `planId` and a `type` discriminator                        |
-| `current_mode_update`       | **Removed**. Modes are config options. Use `config_option_update`                           |
-| `available_commands_update` | Kept. Commands and their `input` now carry a required `type` discriminator                  |
-| `config_option_update`      | Unchanged                                                                                   |
-| `session_info_update`       | Unchanged                                                                                   |
-| `usage_update`              | Unchanged                                                                                   |
+| v1 `sessionUpdate`                              | v2                                                                                                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`                            | Kept. `messageId` now required                                                                                                                    |
+| `agent_message_chunk`                           | Kept. `messageId` now required                                                                                                                    |
+| `agent_thought_chunk`                           | Kept. `messageId` now required                                                                                                                    |
+| -                                               | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts                                                                   |
+| -                                               | **New:** foreground `state_update` (`running`, `idle`, `requires_action`) with stop reasons                                                       |
+| `tool_call`                                     | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call                                                                |
+| `tool_call_update`                              | Kept. Now an explicit upsert with omit/`null`/value patch semantics                                                                               |
+| -                                               | **New:** `tool_call_content_chunk` for streaming individual content items                                                                         |
+| -                                               | **New:** `terminal_update` for Agent-owned display terminal state and replay                                                                      |
+| -                                               | **New:** `terminal_output_chunk` for appending display terminal bytes                                                                             |
+| `plan`                                          | Replaced by `plan_update` with a `planId` and a `type` discriminator                                                                              |
+| `current_mode_update`                           | **Removed**. Modes are config options. Use `config_option_update`                                                                                 |
+| `available_commands_update`                     | Kept. Commands and their `input` now carry a required `type` discriminator                                                                        |
+| `config_option_update`                          | Kept. Options use `configId` instead of `id`                                                                                                      |
+| `session_info_update`                           | Kept. Top-level `_meta` is now a key-level [patch](/protocol/v2/extensibility#metadata-patches)                                                   |
+| `usage_update`                                  | Unchanged                                                                                                                                         |
+| `notice`                                        | Kept. No Client capability required                                                                                                               |
+| `compaction_update`, `compaction_summary_chunk` | Kept. No Client capability required; top-level `_meta` on `compaction_update` is a key-level [patch](/protocol/v2/extensibility#metadata-patches) |
 
 ## Initialization
 
