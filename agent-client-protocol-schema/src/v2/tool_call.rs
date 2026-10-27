@@ -366,6 +366,8 @@ pub enum ToolCallStatus {
     /// Values beginning with `_` are reserved for implementation-specific
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
+    ///
+    /// Clients treat a tool call with an unrecognized status as still in progress.
     #[serde(untagged)]
     Other(String),
 }

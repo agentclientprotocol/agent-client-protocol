@@ -380,7 +380,7 @@ Tool calls progress through different statuses during their lifecycle:
   The tool call was cancelled before it completed
 </ResponseField>
 
-Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants. Clients treat a tool call with an unrecognized status as still in progress.
 
 ## Content
 

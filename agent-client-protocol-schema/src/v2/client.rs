@@ -1545,6 +1545,11 @@ pub enum StateUpdate {
     /// Values beginning with `_` are reserved for implementation-specific
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
+    ///
+    /// These do not replace the standard states, which Agents MUST still report.
+    /// Clients MUST NOT treat an unrecognized state as `idle` or present the
+    /// previous state as confirmed, and show a generic busy state until a known
+    /// state arrives.
     #[serde(untagged)]
     Other(OtherStateUpdate),
 }
