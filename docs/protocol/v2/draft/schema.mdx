@@ -3241,11 +3241,15 @@ Renderable patch text and its format.
 
 **Properties:**
 
-<ResponseField
-  name="format"
-  type={<a href="#diffpatchformat">DiffPatchFormat</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="format" type={<a href="#diffpatchformat">DiffPatchFormat</a>} required>
   Patch format. The only ACP-defined value is `git_patch`.
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
@@ -6103,11 +6107,15 @@ Permission is requested before executing a tool call.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="toolCall"
-  type={<a href="#toolcallupdate">ToolCallUpdate</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -9136,11 +9144,15 @@ Permission request details for a tool call.
 
 **Properties:**
 
-<ResponseField
-  name="toolCall"
-  type={<a href="#toolcallupdate">ToolCallUpdate</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
 </ResponseField>
 

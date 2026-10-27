@@ -610,6 +610,8 @@ impl Diff {
 }
 
 /// Renderable patch text and its format.
+#[serde_as]
+#[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -619,6 +621,16 @@ pub struct DiffPatch {
     pub format: DiffPatchFormat,
     /// Patch text in the format named by `format`.
     pub text: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl DiffPatch {
@@ -628,7 +640,19 @@ impl DiffPatch {
         Self {
             format: DiffPatchFormat::GitPatch,
             text: text.into(),
+            meta: None,
         }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 

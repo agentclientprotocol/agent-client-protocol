@@ -2792,6 +2792,8 @@ impl From<CommandPermissionSubject> for RequestPermissionSubject {
 }
 
 /// Permission request details for a tool call.
+#[serde_as]
+#[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -2799,13 +2801,37 @@ impl From<CommandPermissionSubject> for RequestPermissionSubject {
 pub struct ToolCallPermissionSubject {
     /// Details about the tool call requiring permission.
     pub tool_call: ToolCallUpdate,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl ToolCallPermissionSubject {
     /// Builds [`ToolCallPermissionSubject`] with the required fields set.
     #[must_use]
     pub fn new(tool_call: ToolCallUpdate) -> Self {
-        Self { tool_call }
+        Self {
+            tool_call,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
