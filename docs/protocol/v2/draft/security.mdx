@@ -1,0 +1,123 @@
+---
+title: "Security Considerations"
+description: "Trust boundaries and security requirements for Agents and Clients"
+---
+
+This page collects security requirements that span ACP methods. Requirements on feature pages still apply.
+
+## Trust Model
+
+- The Agent runs with the user's privileges. ACP does not sandbox it.
+- Files, web pages, tool results, and MCP servers can influence Agent output. Treat every Agent-authored string, URI, and path as untrusted, including replayed content.
+- Permission requests are advisory: the Agent performs operations and enforces the user's decision.
+- `info` in `initialize` is self-reported. Implementations **SHOULD NOT** use it for security decisions, and Clients **SHOULD** identify the Agent from their own launch configuration.
+
+Out of scope: a malicious Agent binary, detecting prompt injection, and operating-system sandboxing.
+
+## Rendering Agent Content
+
+This applies to all Agent-authored display text, including messages, thoughts, tool calls, plans, commands, config options, notices, session titles, authentication methods, permission requests, and elicitations.
+
+- Clients **MUST NOT** execute script from Agent content. Clients rendering Markdown **MUST** disable or sanitize raw HTML.
+- Clients **SHOULD NOT** automatically run active content, such as diagram renderers, that can fetch resources or execute code.
+- Clients **MUST NOT** open links from Agent content without user action. They **MUST NOT** hand a link with a scheme other than `http` or `https` to the operating system or another handler without showing the full target and getting user confirmation.
+- Clients **SHOULD** show the full link target when it differs from the link text.
+- Clients **SHOULD** reveal or remove bidirectional, zero-width, and tag characters in commands, paths, URLs, diffs, and permission requests.
+- Clients that print Agent text to a terminal **MUST** neutralize terminal control sequences in it.
+- Clients **SHOULD** keep Agent [slash commands](/protocol/v2/draft/slash-commands) distinguishable from their own commands.
+- Clients **MAY** bound or throttle permission requests, elicitations, and output.
+
+### Terminal Output
+
+For [display-only terminals](/protocol/v2/draft/tool-calls#display-only-terminals), Clients **MUST** render output so that it cannot write the clipboard, send input or query responses, or open links without user action. Sanitizers **MUST** keep state across chunks.
+
+### Diffs
+
+Clients **SHOULD** show affected paths from a diff's `changes`, not from `patch` headers.
+
+## URIs and Remote Resources
+
+This applies to `uri` on images, resource links, and embedded resources, to icon `src`, and to URLs in Markdown.
+
+- Clients **SHOULD** render images from `data` and **SHOULD NOT** fetch Agent-supplied remote URIs without user action. A request can leak data through its URL.
+- Automatic fetches **MUST** use only `https:` or `data:` URIs and **MUST NOT** carry credentials. They **SHOULD** refuse loopback and private-network targets and bound the response size.
+- Clients **MUST NOT** execute script in SVG from Agent content.
+- Clients **MUST NOT** read a `file:` URI from Agent content outside the session's root set without user action.
+- Agents **SHOULD** apply the root set and these fetch rules to URIs in prompts.
+
+## Workspace Roots
+
+The root set is `[cwd, ...additionalDirectories]`. It declares the session's scope. It confines shell commands only when a sandbox enforces it.
+
+- Clients **MUST NOT** include directories the user has not granted to the session.
+- Agents **MUST NOT** treat model output, Agent content, or replayed history as granting access outside the root set. Access outside it goes through a permission request.
+- Implementations that enforce the root set **MUST** check the resolved path at the time of use, compare paths by component, and fail closed.
+- Tool-call `locations` and diff paths do not grant access. Clients **SHOULD NOT** automatically open locations outside the root set.
+- Agents **SHOULD** request permission before writing files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.
+
+## Launching Processes
+
+### Terminal Authentication
+
+For [terminal authentication](/protocol/v2/draft/authentication#terminal-authentication):
+
+- Clients **MUST** pass `args` as separate arguments and **MUST NOT** build a shell command line from them. Clients **SHOULD NOT** offer terminal authentication when the launch target re-parses arguments, such as a remote shell or a Windows batch file.
+- Clients **MUST NOT** apply `env` entries that change program lookup, dynamic loading, interpreter or shell startup, or proxy and TLS trust without user approval. Examples include `PATH`, `LD_*`, `DYLD_*`, `NODE_OPTIONS`, `PYTHONPATH`, `BASH_ENV`, `HTTPS_PROXY`, and `SSL_CERT_FILE`. This list is not exhaustive.
+- Clients **SHOULD** show the appended `args` and `env` before launch. `env` values **MUST NOT** contain secrets.
+
+### MCP stdio Servers
+
+- Agents **MUST** launch `command` with `args` as separate arguments, without a shell.
+- Clients **SHOULD NOT** send a stdio server from workspace files or Agent output until the user has approved its exact command, arguments, and environment variable names.
+
+## Secrets
+
+`env` and `headers` values in `mcpServers` are credentials.
+
+- Agents **MUST NOT** include them in session updates, errors, `_meta`, `session/list` results, replayed history, model context, or command lines. Agents **SHOULD NOT** log or persist them; `session/resume` supplies them again.
+- Agents **SHOULD** send `headers` only to the configured origin.
+- Clients that persist `mcpServers` **SHOULD** keep credentials in operating-system secret storage and **SHOULD NOT** log them.
+- Implementations **SHOULD NOT** put credentials in `_meta` and **MUST NOT** put them in `traceparent`, `tracestate`, or `baggage`. [Preserving unknown values](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants) does not require storing or replaying credentials.
+- Session, message, tool-call, and terminal IDs are not credentials.
+
+## Permission Requests
+
+For [permission requests](/protocol/v2/draft/tool-calls#requesting-permission):
+
+- Clients **SHOULD** describe the operation from `subject`, present `title` as Agent-authored text, and show commands and paths in full.
+- Agents **MUST NOT** give an option a `name` that contradicts its `kind`, and **MUST** act on a selected option according to its known `kind`.
+- Automatic approval **MUST NOT** rely only on `title`, `description`, or option `name`. Unless the user's policy allows all requests, it **MUST NOT** allow a request with an absent or unknown subject.
+- Agents **MUST** perform only the operation the approved request described, and **MUST** request again if the command or resolved target changes.
+- Agents **SHOULD** state the scope of a remembered decision (`allow_always`, `reject_always`) in the option `name` and **MUST NOT** apply it beyond that scope.
+- Agents **SHOULD NOT** switch to a configuration that reduces user oversight without user action.
+
+## Elicitation
+
+Elicitation `message` and field text are Agent content. See [User interaction requirements](/protocol/v2/draft/elicitation#user-interaction-requirements) and [URL security](/protocol/v2/draft/elicitation#url-security).
+
+## Prompt Injection
+
+- Agents **SHOULD** treat embedded resources, files, tool results, and MCP results as data, not as user instructions.
+- Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
+- Clients **MUST NOT** open links, run commands, change settings, or send data based only on Agent-authored text.
+
+## Intermediaries
+
+- Any process attached to the Agent's stdio, including a proxy, acts with the Client's authority.
+- Intermediaries **MUST NOT** answer permission requests or elicitations for the user except under user-configured policy, and **MUST** forward `subject` unchanged.
+- An Agent serving more than one user **MUST** scope `session/list`, `session/resume`, permission requests, and elicitations to the user that owns the session.
+
+## Transports
+
+[Custom transports](/protocol/v2/draft/transports#custom-transports) **MUST** document their security considerations, including how peers authenticate.
+
+## Residual Risk
+
+A user can approve a harmful operation, prompt injection can steer operations the user allowed, and an Agent can act without asking.
+
+## Unstable Features
+
+- A [system prompt](/protocol/v2/draft/session-setup#system-prompt-unstable) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.
+- Clients **MUST NOT** read a plan file `uri` outside the session's root set without user action.
+- [Session-directed messages](/protocol/v2/draft/prompt-lifecycle#session-directed-messages-unstable) are Agent content. Clients **SHOULD** attribute them to the sending session and **SHOULD NOT** present them as user messages.
+- Provider `headers` are credentials under [Secrets](#secrets). Agents **MUST NOT** return them from `providers/list`.

@@ -324,6 +324,8 @@ If the session does not exist or is not active, the Agent **SHOULD** respond wit
 
 ## Additional Workspace Roots
 
+See [Workspace Roots](/protocol/v1/security#workspace-roots) for security requirements.
+
 Agents that advertise `sessionCapabilities.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
 expand the session's effective filesystem root set. Supported stable lifecycle
@@ -379,6 +381,8 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 When `sessionCapabilities.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
 ## MCP Servers
+
+MCP server configurations can launch processes and carry credentials. See [MCP stdio Servers](/protocol/v1/security#mcp-stdio-servers) and [Secrets](/protocol/v1/security#secrets).
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agents to access external tools and data sources. When creating a session, Clients **MAY** include connection details for MCP servers that the Agent should connect to.
 

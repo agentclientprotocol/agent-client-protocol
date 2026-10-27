@@ -5,6 +5,8 @@ description: "Executing and managing terminal commands"
 
 The terminal methods allow Agents to execute shell commands within the Client's environment. These methods enable Agents to run build processes, execute scripts, and interact with command-line tools while providing real-time output streaming and process control.
 
+The Client performs these operations itself. See [Client-Executed Operations](/protocol/v1/security#client-executed-operations) for security requirements.
+
 ## Checking Support
 
 Before attempting to use terminal methods, Agents **MUST** verify that the Client supports this capability by checking the [Client Capabilities](/protocol/v1/initialization#client-capabilities) field in the Client's `initialize` request:
