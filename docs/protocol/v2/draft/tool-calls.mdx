@@ -543,6 +543,11 @@ Git can produce most of this. With `$ROOT` set to the repository root,
 `rename to`, `copy from`, or `copy to` paths, so those still need the
 repository root prepended, with Git's quoting applied to the full path.
 
+Clients that apply or parse the patch with existing tools **MUST NOT** strip
+leading path components (for example, use `patch -p0` or `git apply -p0`). Take
+paths from `changes` or from the `---`, `+++`, rename, and copy lines rather
+than by splitting the `diff --git` header.
+
 </ParamField>
 
 <ParamField path="patch.text" type="string" required>
