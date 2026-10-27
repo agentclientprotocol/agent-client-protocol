@@ -34,7 +34,7 @@ Failed requests return a [JSON-RPC 2.0 error object](https://www.jsonrpc.org/spe
 | `-32000` | Authentication required | The request requires [authentication](/protocol/v1/draft/authentication) first.                                |
 | `-32002` | Resource not found      | A referenced resource, such as a session or file, does not exist.                                              |
 
-Receivers **MUST** treat an unrecognized code as a generic failure. Implementation-specific errors **SHOULD** use codes outside `-32768` to `-32000`, which is reserved for JSON-RPC and ACP.
+Receivers **MUST** treat an unrecognized code as a generic failure. Implementation-specific errors **SHOULD** use codes outside `-32768` to `-32000` and `-32899` to `-32800`, which are reserved for JSON-RPC and ACP. ACP takes `-32800` (Request cancelled) from the second range, which LSP also reserves.
 
 ## Common Cases
 

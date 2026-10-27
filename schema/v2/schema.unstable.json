@@ -4843,7 +4843,7 @@
       "required": ["code", "message"]
     },
     "ErrorCode": {
-      "description": "Predefined error codes for common JSON-RPC and ACP-specific errors.\n\nThese codes follow the JSON-RPC 2.0 specification for standard errors\nand use the reserved range (-32000 to -32099) for protocol-specific errors.",
+      "description": "Predefined error codes for common JSON-RPC and ACP-specific errors.\n\nStandard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC\nserver-error range (-32000 to -32099), and request cancellation uses -32800 from the\nrange LSP reserves (-32899 to -32800).",
       "anyOf": [
         {
           "title": "Parse error",
@@ -4875,7 +4875,7 @@
         },
         {
           "title": "Internal error",
-          "description": "**Internal error**: Internal JSON-RPC error.\nReserved for implementation-defined server errors.",
+          "description": "**Internal error**: Internal JSON-RPC error.",
           "type": "integer",
           "format": "int32",
           "const": -32603
