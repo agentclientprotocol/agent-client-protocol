@@ -2572,7 +2572,7 @@ impl SessionConfigOption {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SessionConfigOptionValue {
-    /// A [`SessionConfigValueId`] string value (`type: "id"`).
+    /// A `SessionConfigValueId` string value (`type: "id"`).
     Id {
         /// The value ID.
         value: SessionConfigValueId,
@@ -3337,17 +3337,16 @@ pub struct SystemPrompt {
     /// How the Agent combines `content` with its own instructions.
     ///
     /// Required on the wire, so every request states its mode. In Rust,
-    /// [`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown
-    /// values parse as [`SystemPromptMode::Other`]; Agents MUST return an error
+    /// Unknown
+    /// values are preserved; Agents MUST return an error
     /// for modes they do not support.
     pub mode: SystemPromptMode,
     /// The system prompt content.
     ///
-    /// Agents advertising the capability MUST accept [`ContentBlock::Text`].
+    /// Agents advertising the capability MUST accept `text` content blocks.
     /// Clients MUST NOT send other content block types until a future
     /// capability allows them, and Agents MUST return an error for content
-    /// blocks they do not support, including unknown types preserved as
-    /// [`ContentBlock::Other`].
+    /// blocks they do not support, including unknown types.
     pub content: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -3401,7 +3400,7 @@ impl SystemPrompt {
 ///
 /// How the Agent combines a client-provided system prompt with its own instructions.
 ///
-/// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+/// Unknown modes are preserved so they can be stored,
 /// proxied, or forwarded. An Agent MUST return an error for a mode it does not
 /// support rather than treating it as `append` or `override`.
 #[cfg(feature = "unstable_session_system_prompt")]
@@ -3455,15 +3454,15 @@ pub struct PromptRequest {
     pub session_id: SessionId,
     /// The blocks of content that compose the user's message.
     ///
-    /// As a baseline, the Agent MUST support [`ContentBlock::Text`] and [`ContentBlock::ResourceLink`],
-    /// while other variants are optionally enabled via [`PromptCapabilities`].
+    /// As a baseline, the Agent MUST support `text` and `resource_link` content blocks,
+    /// while other variants are optionally enabled via `PromptCapabilities`.
     ///
-    /// The Client MUST adapt its interface according to [`PromptCapabilities`].
+    /// The Client MUST adapt its interface according to `PromptCapabilities`.
     ///
     /// The client MAY include referenced pieces of context as either
-    /// [`ContentBlock::Resource`] or [`ContentBlock::ResourceLink`].
+    /// `resource` or `resource_link` content blocks.
     ///
-    /// When available, [`ContentBlock::Resource`] is preferred
+    /// When available, `resource` is preferred
     /// as it avoids extra round-trips and allows the message to include
     /// pieces of context from sources the agent may not have access to.
     pub prompt: Vec<ContentBlock>,
@@ -4993,8 +4992,8 @@ impl SessionForkCapabilities {
 
 /// Prompt capabilities supported by the agent in `session/prompt` requests.
 ///
-/// Baseline agent functionality requires support for [`ContentBlock::Text`]
-/// and [`ContentBlock::ResourceLink`] in prompt requests.
+/// Baseline agent functionality requires support for `text`
+/// and `resource_link` content blocks in prompt requests.
 ///
 /// Other variants must be explicitly opted in to.
 /// Capabilities for different types of content in prompt requests.
@@ -5010,7 +5009,7 @@ impl SessionForkCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptCapabilities {
-    /// Agent supports [`ContentBlock::Image`].
+    /// Agent supports `image` content blocks.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports image content in prompts.
@@ -5018,7 +5017,7 @@ pub struct PromptCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub image: Option<PromptImageCapabilities>,
-    /// Agent supports [`ContentBlock::Audio`].
+    /// Agent supports `audio` content blocks.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports audio content in prompts.
@@ -5028,7 +5027,7 @@ pub struct PromptCapabilities {
     pub audio: Option<PromptAudioCapabilities>,
     /// Agent supports embedded context in `session/prompt` requests.
     ///
-    /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
+    /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -5056,7 +5055,7 @@ impl PromptCapabilities {
         Self::default()
     }
 
-    /// Agent supports [`ContentBlock::Image`].
+    /// Agent supports `image` content blocks.
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports image content in prompts.
@@ -5066,7 +5065,7 @@ impl PromptCapabilities {
         self
     }
 
-    /// Agent supports [`ContentBlock::Audio`].
+    /// Agent supports `audio` content blocks.
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports audio content in prompts.
@@ -5078,7 +5077,7 @@ impl PromptCapabilities {
 
     /// Agent supports embedded context in `session/prompt` requests.
     ///
-    /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
+    /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
@@ -5232,7 +5231,7 @@ impl PromptEmbeddedContextCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpCapabilities {
-    /// Agent supports [`McpServer::Stdio`].
+    /// Agent supports `stdio` MCP servers.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports stdio MCP server transports.
@@ -5240,7 +5239,7 @@ pub struct McpCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub stdio: Option<McpStdioCapabilities>,
-    /// Agent supports [`McpServer::Http`].
+    /// Agent supports `http` MCP servers.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports HTTP MCP server transports.
@@ -5252,7 +5251,7 @@ pub struct McpCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Agent supports [`McpServer::Acp`].
+    /// Agent supports `acp` MCP servers.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports ACP MCP server transports.
@@ -5280,7 +5279,7 @@ impl McpCapabilities {
         Self::default()
     }
 
-    /// Agent supports [`McpServer::Stdio`].
+    /// Agent supports `stdio` MCP servers.
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports stdio MCP server transports.
@@ -5290,7 +5289,7 @@ impl McpCapabilities {
         self
     }
 
-    /// Agent supports [`McpServer::Http`].
+    /// Agent supports `http` MCP servers.
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports HTTP MCP server transports.
@@ -5304,7 +5303,7 @@ impl McpCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Agent supports [`McpServer::Acp`].
+    /// Agent supports `acp` MCP servers.
     #[cfg(feature = "unstable_mcp_over_acp")]
     ///
     /// Omitted or `null` both mean the agent does not advertise support.
@@ -5641,7 +5640,7 @@ pub enum ClientRequest {
     /// The client provides the authentication method ID that was advertised during initialization.
     ///
     /// After successful authentication, the client can proceed to create sessions with
-    /// `new_session` without receiving an `auth_required` error.
+    /// `session/new` without receiving an `auth_required` (`-32000`) error.
     ///
     /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
     LoginAuthRequest(Box<LoginAuthRequest>),
@@ -5685,7 +5684,7 @@ pub enum ClientRequest {
     /// - Connect to any specified MCP servers
     /// - Return a unique session ID for future requests
     ///
-    /// May return an `auth_required` error if the agent requires authentication.
+    /// May return an `auth_required` (`-32000`) error if the agent requires authentication.
     ///
     /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
     NewSessionRequest(Box<NewSessionRequest>),

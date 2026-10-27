@@ -674,7 +674,7 @@ impl Terminal {
 pub struct Diff {
     /// The absolute file path being modified.
     pub path: PathBuf,
-    /// The original content (None for new files).
+    /// The original content (omitted or `null` for new files).
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -705,7 +705,7 @@ impl Diff {
         }
     }
 
-    /// The original content (None for new files).
+    /// The original content (omitted or `null` for new files).
     #[must_use]
     pub fn old_text(mut self, old_text: impl IntoOption<String>) -> Self {
         self.old_text = old_text.into_option();

@@ -44,7 +44,7 @@ impl ExtRequest {
     }
 }
 
-/// Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.
+/// Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
 /// Extension methods provide a way to add custom functionality while maintaining
 /// protocol compatibility.
 ///

@@ -143,17 +143,17 @@ pub enum SessionUpdate {
     /// Information for the user that is not part of session history.
     ///
     /// Agents MUST only send this update when the Client advertised
-    /// [`ClientSessionCapabilities::notices`].
+    /// the `session.notices` Client capability.
     Notice(Notice),
     /// A context compaction has been created or updated.
     ///
     /// Agents MUST only send this update when the Client advertised
-    /// [`ClientSessionCapabilities::compaction`].
+    /// the `session.compaction` Client capability.
     CompactionUpdate(CompactionUpdate),
     /// A content block appended to a context compaction's retained summary.
     ///
     /// Agents MUST only send this update when the Client advertised
-    /// [`ClientSessionCapabilities::compaction`].
+    /// the `session.compaction` Client capability.
     CompactionSummaryChunk(CompactionSummaryChunk),
     /// **UNSTABLE**
     ///
@@ -696,7 +696,7 @@ pub enum NoticeSeverity {
 /// Notices are live events rather than session history. Agents must not rely on
 /// a notice being received, displayed, or seen by the user.
 /// Agents MUST only send notices when the Client advertised
-/// [`ClientSessionCapabilities::notices`]. Otherwise, Agents may use an agent
+/// the `session.notices` Client capability. Otherwise, Agents may use an agent
 /// message when the information should still be surfaced to the user.
 ///
 /// See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
@@ -797,7 +797,7 @@ pub enum CompactionStatus {
 /// A context compaction upsert. The first notification fixes the compaction's
 /// timeline position. Later updates with the same ID patch that entity in place.
 /// Agents MUST only send this update when the Client advertised
-/// [`ClientSessionCapabilities::compaction`].
+/// the `session.compaction` Client capability.
 ///
 /// `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 /// stored value unchanged, `null` clears it, and a concrete value replaces it.
@@ -872,7 +872,7 @@ impl CompactionUpdate {
 /// A content block appended to a compaction's summary. A first-seen ID creates
 /// an in-progress compaction. Chunks append in receive order.
 /// Agents MUST only send this update when the Client advertised
-/// [`ClientSessionCapabilities::compaction`].
+/// the `session.compaction` Client capability.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -919,7 +919,7 @@ impl CompactionSummaryChunk {
 /// Later updates modify the existing association's metadata, not its ownership.
 ///
 /// Sent on the immediate parent session. The first update for an unknown
-/// [`SubagentUpdate::session_id`] announces the child and MUST be sent
+/// `sessionId` announces the child and MUST be sent
 /// before any live child traffic or live message naming the child as sender
 /// or recipient. Parents may message and reuse an announced child across
 /// multiple operations.
@@ -2379,7 +2379,7 @@ pub enum RequestPermissionOutcome {
     ///
     /// When a client sends a `session/cancel` notification to cancel an ongoing
     /// prompt turn, it MUST respond to all pending `session/request_permission`
-    /// requests with this `Cancelled` outcome.
+    /// requests with this `cancelled` outcome.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
     Cancelled,
@@ -3948,7 +3948,7 @@ pub enum AgentRequest {
     /// to the user and return their decision.
     ///
     /// If the client cancels the prompt turn via `session/cancel`, it MUST
-    /// respond to this request with `RequestPermissionOutcome::Cancelled`.
+    /// respond to this request with the `cancelled` outcome.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
     RequestPermissionRequest(RequestPermissionRequest),
@@ -3960,7 +3960,7 @@ pub enum AgentRequest {
     /// to get the current output, wait for exit, and kill the command.
     ///
     /// The `TerminalId` can also be used to embed the terminal in a tool call
-    /// by using the `ToolCallContent::Terminal` variant.
+    /// by using `terminal` tool call content.
     ///
     /// The Agent is responsible for releasing the terminal by using the `terminal/release`
     /// method.

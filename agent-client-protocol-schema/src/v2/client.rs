@@ -909,7 +909,7 @@ impl CompactionSummaryChunk {
 /// Later updates modify the existing association's metadata, not its ownership.
 ///
 /// Sent on the immediate parent session. The first update for an unknown
-/// [`SubagentUpdate::session_id`] announces the child and MUST be sent
+/// `sessionId` announces the child and MUST be sent
 /// before any live request or notification bearing the child's session ID,
 /// including messages naming it as sender or recipient. Child events are
 /// delivered automatically; no separate child load, resume, or subscription is needed.
@@ -917,7 +917,7 @@ impl CompactionSummaryChunk {
 /// operation restrictions are baseline v2 requirements; no Client capability
 /// is required.
 ///
-/// Only [`SubagentUpdate::session_id`] is required. Other fields have
+/// Only `sessionId` is required. Other fields have
 /// patch semantics: omitted fields leave the stored value unchanged, `null`
 /// clears or unsets the value, and concrete values replace it. A concrete
 /// `_meta` object instead patches the stored metadata by top-level key. For
@@ -927,7 +927,7 @@ impl CompactionSummaryChunk {
 ///
 /// The title and description provide the parent's display metadata for the
 /// child. Agents SHOULD mirror known child state changes in the parent's
-/// [`SubagentUpdate::state`] using the same [`StateUpdate`] snapshot as the
+/// `state` using the same `StateUpdate` snapshot as the
 /// ordinary `state_update` notification on the child session. This reports
 /// child state, not a separate parent-owned lifecycle. Consumers should
 /// treat duplicate reports idempotently.
@@ -972,7 +972,7 @@ pub struct SubagentUpdate {
     ///
     /// Optional and nullable. Omitted means unchanged; `null` removes the
     /// current report and leaves activity unconfirmed (not idle or cancelled).
-    /// A concrete [`StateUpdate`] replaces the entire previous snapshot.
+    /// A concrete `StateUpdate` replaces the entire previous snapshot.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -1990,7 +1990,7 @@ impl ContentChunk {
 
 /// A user message upsert.
 ///
-/// Only [`UserMessage::message_id`] is required. `content` has patch semantics:
+/// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing message content unchanged, `null` clears the
 /// value, and a concrete array replaces the previous value. For a new
 /// `messageId`, omitted fields use client defaults. `content` is replaced as a
@@ -2064,7 +2064,7 @@ impl UserMessage {
 
 /// An agent message upsert.
 ///
-/// Only [`AgentMessage::message_id`] is required. `content` has patch semantics:
+/// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing message content unchanged, `null` clears the
 /// value, and a concrete array replaces the previous value. For a new
 /// `messageId`, omitted fields use client defaults. `content` is replaced as a
@@ -2138,7 +2138,7 @@ impl AgentMessage {
 
 /// An agent thought or reasoning message upsert.
 ///
-/// Only [`AgentThought::message_id`] is required. `content` has patch semantics:
+/// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing thought content unchanged, `null` clears the
 /// value, and a concrete array replaces the previous value. For a new
 /// `messageId`, omitted fields use client defaults. `content` is replaced as a
@@ -3122,8 +3122,8 @@ pub enum RequestPermissionOutcome {
     ///
     /// When a client sends a `session/cancel` notification, it MUST respond to all
     /// pending `session/request_permission` requests in that session with this
-    /// `Cancelled` outcome, without answering any request twice. Requests in other
-    /// sessions are unaffected. Agents treat `Cancelled` for background work as a
+    /// `cancelled` outcome, without answering any request twice. Requests in other
+    /// sessions are unaffected. Agents treat `cancelled` for background work as a
     /// denial.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
@@ -3558,7 +3558,7 @@ pub enum AgentRequest {
     /// to the user and return their decision.
     ///
     /// If the client cancels active session work via `session/cancel`, it MUST
-    /// respond to this request with `RequestPermissionOutcome::Cancelled`.
+    /// respond to this request with the `cancelled` outcome.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)
     RequestPermissionRequest(Box<RequestPermissionRequest>),

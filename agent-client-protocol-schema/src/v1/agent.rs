@@ -2567,7 +2567,7 @@ pub enum SessionConfigOptionValue {
         /// The boolean value.
         value: bool,
     },
-    /// A [`SessionConfigValueId`] string value.
+    /// A `SessionConfigValueId` string value.
     ///
     /// This is the default when `type` is absent on the wire. Unknown `type`
     /// values with string payloads also gracefully deserialize into this
@@ -3163,13 +3163,13 @@ pub struct SystemPrompt {
     /// How the Agent combines `content` with its own instructions.
     ///
     /// Required on the wire, so every request states its mode. In Rust,
-    /// [`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown
-    /// values parse as [`SystemPromptMode::Other`]; Agents MUST return an error
+    /// Unknown
+    /// values are preserved; Agents MUST return an error
     /// for modes they do not support.
     pub mode: SystemPromptMode,
     /// The system prompt content.
     ///
-    /// Agents advertising the capability MUST accept [`ContentBlock::Text`].
+    /// Agents advertising the capability MUST accept `text` content blocks.
     /// Clients MUST NOT send other content block types until a future
     /// capability allows them, and Agents MUST return an error for content
     /// blocks they do not support.
@@ -3226,7 +3226,7 @@ impl SystemPrompt {
 ///
 /// How the Agent combines a client-provided system prompt with its own instructions.
 ///
-/// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+/// Unknown modes are preserved so they can be stored,
 /// proxied, or forwarded. An Agent MUST return an error for a mode it does not
 /// support rather than treating it as `append` or `override`.
 #[cfg(feature = "unstable_session_system_prompt")]
@@ -3280,15 +3280,15 @@ pub struct PromptRequest {
     pub session_id: SessionId,
     /// The blocks of content that compose the user's message.
     ///
-    /// As a baseline, the Agent MUST support [`ContentBlock::Text`] and [`ContentBlock::ResourceLink`],
-    /// while other variants are optionally enabled via [`PromptCapabilities`].
+    /// As a baseline, the Agent MUST support `text` and `resource_link` content blocks,
+    /// while other variants are optionally enabled via `PromptCapabilities`.
     ///
-    /// The Client MUST adapt its interface according to [`PromptCapabilities`].
+    /// The Client MUST adapt its interface according to `PromptCapabilities`.
     ///
     /// The client MAY include referenced pieces of context as either
-    /// [`ContentBlock::Resource`] or [`ContentBlock::ResourceLink`].
+    /// `resource` or `resource_link` content blocks.
     ///
-    /// When available, [`ContentBlock::Resource`] is preferred
+    /// When available, `resource` is preferred
     /// as it avoids extra round-trips and allows the message to include
     /// pieces of context from sources the agent may not have access to.
     pub prompt: Vec<ContentBlock>,
@@ -4205,7 +4205,7 @@ impl ProvidersCapabilities {
 ///
 /// Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
 ///
-/// Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
+/// Note: `session/load` is still handled by the top-level `loadSession` capability. This will be unified in future versions of the protocol.
 ///
 /// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
 #[serde_as]
@@ -4837,8 +4837,8 @@ impl SessionCloseCapabilities {
 
 /// Prompt capabilities supported by the agent in `session/prompt` requests.
 ///
-/// Baseline agent functionality requires support for [`ContentBlock::Text`]
-/// and [`ContentBlock::ResourceLink`] in prompt requests.
+/// Baseline agent functionality requires support for `text`
+/// and `resource_link` content blocks in prompt requests.
 ///
 /// Other variants must be explicitly opted in to.
 /// Capabilities for different types of content in prompt requests.
@@ -4854,19 +4854,19 @@ impl SessionCloseCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptCapabilities {
-    /// Agent supports [`ContentBlock::Image`].
+    /// Agent supports `image` content blocks.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub image: bool,
-    /// Agent supports [`ContentBlock::Audio`].
+    /// Agent supports `audio` content blocks.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub audio: bool,
     /// Agent supports embedded context in `session/prompt` requests.
     ///
-    /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
+    /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4891,14 +4891,14 @@ impl PromptCapabilities {
         Self::default()
     }
 
-    /// Agent supports [`ContentBlock::Image`].
+    /// Agent supports `image` content blocks.
     #[must_use]
     pub fn image(mut self, image: bool) -> Self {
         self.image = image;
         self
     }
 
-    /// Agent supports [`ContentBlock::Audio`].
+    /// Agent supports `audio` content blocks.
     #[must_use]
     pub fn audio(mut self, audio: bool) -> Self {
         self.audio = audio;
@@ -4907,7 +4907,7 @@ impl PromptCapabilities {
 
     /// Agent supports embedded context in `session/prompt` requests.
     ///
-    /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
+    /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     #[must_use]
     pub fn embedded_context(mut self, embedded_context: bool) -> Self {
@@ -4935,12 +4935,12 @@ impl PromptCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpCapabilities {
-    /// Agent supports [`McpServer::Http`].
+    /// Agent supports `http` MCP servers.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub http: bool,
-    /// Agent supports [`McpServer::Sse`].
+    /// Agent supports `sse` MCP servers.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4949,7 +4949,7 @@ pub struct McpCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Agent supports [`McpServer::Acp`].
+    /// Agent supports `acp` MCP servers.
     #[cfg(feature = "unstable_mcp_over_acp")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4974,14 +4974,14 @@ impl McpCapabilities {
         Self::default()
     }
 
-    /// Agent supports [`McpServer::Http`].
+    /// Agent supports `http` MCP servers.
     #[must_use]
     pub fn http(mut self, http: bool) -> Self {
         self.http = http;
         self
     }
 
-    /// Agent supports [`McpServer::Sse`].
+    /// Agent supports `sse` MCP servers.
     #[must_use]
     pub fn sse(mut self, sse: bool) -> Self {
         self.sse = sse;
@@ -4992,7 +4992,7 @@ impl McpCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Agent supports [`McpServer::Acp`].
+    /// Agent supports `acp` MCP servers.
     #[cfg(feature = "unstable_mcp_over_acp")]
     #[must_use]
     pub fn acp(mut self, acp: bool) -> Self {
@@ -5160,7 +5160,7 @@ pub enum ClientRequest {
     /// initialization and whose type defines the `authenticate` flow.
     ///
     /// After successful authentication, the client can proceed to create sessions with
-    /// `new_session` without receiving an `auth_required` error.
+    /// `session/new` without receiving an `auth_required` (`-32000`) error.
     ///
     /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
     AuthenticateRequest(AuthenticateRequest),
@@ -5199,7 +5199,7 @@ pub enum ClientRequest {
     /// - Connect to any specified MCP servers
     /// - Return a unique session ID for future requests
     ///
-    /// May return an `auth_required` error if the agent requires authentication.
+    /// May return an `auth_required` (`-32000`) error if the agent requires authentication.
     ///
     /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
     NewSessionRequest(NewSessionRequest),
@@ -5396,7 +5396,7 @@ pub enum ClientNotification {
     /// - Stop all language model requests as soon as possible
     /// - Abort all tool call invocations in progress
     /// - Send any pending `session/update` notifications
-    /// - Respond to the original `session/prompt` request with `StopReason::Cancelled`
+    /// - Respond to the original `session/prompt` request with the `cancelled` stop reason
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)
     CancelNotification(CancelNotification),

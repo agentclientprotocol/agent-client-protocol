@@ -958,8 +958,8 @@ impl MultiSelectPropertySchema {
 /// Property schema for elicitation form fields.
 ///
 /// Each variant corresponds to a JSON Schema `"type"` value.
-/// Single-select enums use the `String` variant with `enum` or `oneOf` set.
-/// Multi-select enums use the `Array` variant.
+/// Single-select enums use `type: "string"` with `enum` or `oneOf` set.
+/// Multi-select enums use `type: "array"`.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -1495,7 +1495,7 @@ pub enum ElicitationScope {
 
 /// Session-scoped elicitation, optionally tied to a specific tool call.
 ///
-/// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+/// When `toolCallId` is set, the elicitation is tied to a specific tool call.
 /// This is useful when an agent receives an elicitation from an MCP server
 /// during a tool call and needs to redirect it to the user.
 #[serde_as]
@@ -2063,7 +2063,7 @@ impl ElicitationAcceptAction {
     }
 }
 
-/// Allowed wire representations for [`ElicitationContentValue`].
+/// Allowed wire representations for `ElicitationContentValue`.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]

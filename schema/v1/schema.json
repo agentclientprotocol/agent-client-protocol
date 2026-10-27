@@ -161,7 +161,7 @@
                 },
                 {
                   "title": "RequestPermissionRequest",
-                  "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels the prompt turn via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)",
+                  "description": "Requests permission from the user for a tool call operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels the prompt turn via `session/cancel`, it MUST\nrespond to this request with the `cancelled` outcome.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/tool-calls#requesting-permission)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RequestPermissionRequest"
@@ -170,7 +170,7 @@
                 },
                 {
                   "title": "CreateTerminalRequest",
-                  "description": "Executes a command in a new terminal\n\nOnly available if the `terminal` Client capability is set to `true`.\n\nReturns a `TerminalId` that can be used with other terminal methods\nto get the current output, wait for exit, and kill the command.\n\nThe `TerminalId` can also be used to embed the terminal in a tool call\nby using the `ToolCallContent::Terminal` variant.\n\nThe Agent is responsible for releasing the terminal by using the `terminal/release`\nmethod.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
+                  "description": "Executes a command in a new terminal\n\nOnly available if the `terminal` Client capability is set to `true`.\n\nReturns a `TerminalId` that can be used with other terminal methods\nto get the current output, wait for exit, and kill the command.\n\nThe `TerminalId` can also be used to embed the terminal in a tool call\nby using `terminal` tool call content.\n\nThe Agent is responsible for releasing the terminal by using the `terminal/release`\nmethod.\n\nSee protocol docs: [Terminals](https://agentclientprotocol.com/protocol/terminals)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CreateTerminalRequest"
@@ -1023,7 +1023,7 @@
           "type": "string"
         },
         "oldText": {
-          "description": "The original content (None for new files).",
+          "description": "The original content (omitted or `null` for new files).",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -1458,7 +1458,7 @@
       "x-method": "elicitation/create"
     },
     "ElicitationSessionScope": {
-      "description": "Session-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
+      "description": "Session-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `toolCallId` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -1557,7 +1557,7 @@
       ]
     },
     "ElicitationPropertySchema": {
-      "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use the `String` variant with `enum` or `oneOf` set.\nMulti-select enums use the `Array` variant.",
+      "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use `type: \"string\"` with `enum` or `oneOf` set.\nMulti-select enums use `type: \"array\"`.",
       "anyOf": [
         {
           "description": "String property (or single-select enum when `enum`/`oneOf` is set).",
@@ -2470,23 +2470,23 @@
       }
     },
     "PromptCapabilities": {
-      "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for [`ContentBlock::Text`]\nand [`ContentBlock::ResourceLink`] in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)",
+      "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for `text`\nand `resource_link` content blocks in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)",
       "type": "object",
       "properties": {
         "image": {
-          "description": "Agent supports [`ContentBlock::Image`].",
+          "description": "Agent supports `image` content blocks.",
           "type": "boolean",
           "default": false,
           "x-deserialize-default-on-error": true
         },
         "audio": {
-          "description": "Agent supports [`ContentBlock::Audio`].",
+          "description": "Agent supports `audio` content blocks.",
           "type": "boolean",
           "default": false,
           "x-deserialize-default-on-error": true
         },
         "embeddedContext": {
-          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include [`ContentBlock::Resource`]\nin prompt requests for pieces of context that are referenced in the message.",
+          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include `resource` content blocks\nin prompt requests for pieces of context that are referenced in the message.",
           "type": "boolean",
           "default": false,
           "x-deserialize-default-on-error": true
@@ -2504,13 +2504,13 @@
       "type": "object",
       "properties": {
         "http": {
-          "description": "Agent supports [`McpServer::Http`].",
+          "description": "Agent supports `http` MCP servers.",
           "type": "boolean",
           "default": false,
           "x-deserialize-default-on-error": true
         },
         "sse": {
-          "description": "Agent supports [`McpServer::Sse`].",
+          "description": "Agent supports `sse` MCP servers.",
           "type": "boolean",
           "default": false,
           "x-deserialize-default-on-error": true
@@ -2524,7 +2524,7 @@
       }
     },
     "SessionCapabilities": {
-      "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nNote: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
+      "description": "Session capabilities supported by the agent.\n\nAs a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.\n\nOptionally, they **MAY** support other session methods and notifications by specifying additional capabilities.\n\nNote: `session/load` is still handled by the top-level `loadSession` capability. This will be unified in future versions of the protocol.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)",
       "type": "object",
       "properties": {
         "list": {
@@ -3464,7 +3464,7 @@
       ]
     },
     "ExtResponse": {
-      "description": "Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
+      "description": "Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)"
     },
     "Error": {
       "description": "JSON-RPC error object.\n\nRepresents an error that occurred during method execution, following the\nJSON-RPC 2.0 error object specification with optional additional data.\n\nSee protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)",
@@ -3819,7 +3819,7 @@
           ]
         },
         {
-          "description": "Information for the user that is not part of session history.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::notices`].",
+          "description": "Information for the user that is not part of session history.\n\nAgents MUST only send this update when the Client advertised\nthe `session.notices` Client capability.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -3835,7 +3835,7 @@
           ]
         },
         {
-          "description": "A context compaction has been created or updated.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+          "description": "A context compaction has been created or updated.\n\nAgents MUST only send this update when the Client advertised\nthe `session.compaction` Client capability.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -3851,7 +3851,7 @@
           ]
         },
         {
-          "description": "A content block appended to a context compaction's retained summary.\n\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+          "description": "A content block appended to a context compaction's retained summary.\n\nAgents MUST only send this update when the Client advertised\nthe `session.compaction` Client capability.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -4313,7 +4313,7 @@
       ]
     },
     "Notice": {
-      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nAgents MUST only send notices when the Client advertised\n[`ClientSessionCapabilities::notices`]. Otherwise, Agents may use an agent\nmessage when the information should still be surfaced to the user.\n\nSee RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)",
+      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nAgents MUST only send notices when the Client advertised\nthe `session.notices` Client capability. Otherwise, Agents may use an agent\nmessage when the information should still be surfaced to the user.\n\nSee RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)",
       "type": "object",
       "properties": {
         "severity": {
@@ -4378,7 +4378,7 @@
       ]
     },
     "CompactionUpdate": {
-      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary.",
+      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\nAgents MUST only send this update when the Client advertised\nthe `session.compaction` Client capability.\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary.",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -4421,7 +4421,7 @@
       "required": ["compactionId", "status"]
     },
     "CompactionSummaryChunk": {
-      "description": "A content block appended to a compaction's summary. A first-seen ID creates\nan in-progress compaction. Chunks append in receive order.\nAgents MUST only send this update when the Client advertised\n[`ClientSessionCapabilities::compaction`].",
+      "description": "A content block appended to a compaction's summary. A first-seen ID creates\nan in-progress compaction. Chunks append in receive order.\nAgents MUST only send this update when the Client advertised\nthe `session.compaction` Client capability.",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -4508,7 +4508,7 @@
                 },
                 {
                   "title": "AuthenticateRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides an authentication method ID that was advertised during\ninitialization and whose type defines the `authenticate` flow.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides an authentication method ID that was advertised during\ninitialization and whose type defines the `authenticate` flow.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving an `auth_required` (`-32000`) error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/AuthenticateRequest"
@@ -4526,7 +4526,7 @@
                 },
                 {
                   "title": "NewSessionRequest",
-                  "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return an `auth_required` error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)",
+                  "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return an `auth_required` (`-32000`) error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/NewSessionRequest"
@@ -5395,7 +5395,7 @@
         },
         {
           "title": "value_id",
-          "description": "A [`SessionConfigValueId`] string value.\n\nThis is the default when `type` is absent on the wire. Unknown `type`\nvalues with string payloads also gracefully deserialize into this\nvariant.",
+          "description": "A `SessionConfigValueId` string value.\n\nThis is the default when `type` is absent on the wire. Unknown `type`\nvalues with string payloads also gracefully deserialize into this\nvariant.",
           "type": "object",
           "properties": {
             "value": {
@@ -5426,7 +5426,7 @@
           ]
         },
         "prompt": {
-          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support [`ContentBlock::Text`] and [`ContentBlock::ResourceLink`],\nwhile other variants are optionally enabled via [`PromptCapabilities`].\n\nThe Client MUST adapt its interface according to [`PromptCapabilities`].\n\nThe client MAY include referenced pieces of context as either\n[`ContentBlock::Resource`] or [`ContentBlock::ResourceLink`].\n\nWhen available, [`ContentBlock::Resource`] is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent may not have access to.",
+          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support `text` and `resource_link` content blocks,\nwhile other variants are optionally enabled via `PromptCapabilities`.\n\nThe Client MUST adapt its interface according to `PromptCapabilities`.\n\nThe client MAY include referenced pieces of context as either\n`resource` or `resource_link` content blocks.\n\nWhen available, `resource` is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent may not have access to.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -5644,7 +5644,7 @@
       "description": "The outcome of a permission request.",
       "oneOf": [
         {
-          "description": "The prompt turn was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel an ongoing\nprompt turn, it MUST respond to all pending `session/request_permission`\nrequests with this `Cancelled` outcome.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
+          "description": "The prompt turn was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel an ongoing\nprompt turn, it MUST respond to all pending `session/request_permission`\nrequests with this `cancelled` outcome.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
           "type": "object",
           "properties": {
             "outcome": {
@@ -5934,7 +5934,7 @@
       "x-method": "elicitation/create"
     },
     "ElicitationContentValue": {
-      "description": "Allowed wire representations for [`ElicitationContentValue`].",
+      "description": "Allowed wire representations for `ElicitationContentValue`.",
       "anyOf": [
         {
           "title": "String",
@@ -5997,7 +5997,7 @@
               "anyOf": [
                 {
                   "title": "CancelNotification",
-                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with `StopReason::Cancelled`\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
+                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel an ongoing prompt turn.\n\nUpon receiving this notification, the Agent SHOULD:\n- Stop all language model requests as soon as possible\n- Abort all tool call invocations in progress\n- Send any pending `session/update` notifications\n- Respond to the original `session/prompt` request with the `cancelled` stop reason\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-turn#cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelNotification"

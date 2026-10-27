@@ -34,7 +34,7 @@ impl IntoOption<TerminalId> for &str {
 /// A display-only reference to an agent-owned terminal.
 ///
 /// Terminal state and output are delivered separately through
-/// [`TerminalUpdate`] and [`TerminalOutputChunk`].
+/// `terminal_update` and `terminal_output_chunk` session updates.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -186,7 +186,7 @@ impl TerminalExitStatus {
 
 /// An upsert for the stored state of an agent-owned terminal.
 ///
-/// Only [`TerminalUpdate::terminal_id`] is required. Other fields have patch
+/// Only `terminalId` is required. Other fields have patch
 /// semantics: omitted fields leave the stored value unchanged, `null` clears
 /// it, and concrete values replace it. A concrete `_meta` object instead
 /// patches the stored metadata by top-level key. When the terminal ID is new,

@@ -30,7 +30,7 @@ Called when the agent requires authentication before allowing session creation.
 The client provides the authentication method ID that was advertised during initialization.
 
 After successful authentication, the client can proceed to create sessions with
-`new_session` without receiving an `auth_required` error.
+`session/new` without receiving an `auth_required` (`-32000`) error.
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 
@@ -448,7 +448,7 @@ The agent should:
 - Connect to any specified MCP servers
 - Return a unique session ID for future requests
 
-May return an `auth_required` error if the agent requires authentication.
+May return an `auth_required` (`-32000`) error if the agent requires authentication.
 
 See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/session-setup)
 
@@ -573,15 +573,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="prompt" type={<a href="#contentblock">ContentBlock[]</a>} required>
   The blocks of content that compose the user's message.
 
-As a baseline, the Agent MUST support `ContentBlock::Text` and `ContentBlock::ResourceLink`,
+As a baseline, the Agent MUST support `text` and `resource_link` content blocks,
 while other variants are optionally enabled via `PromptCapabilities`.
 
 The Client MUST adapt its interface according to `PromptCapabilities`.
 
 The client MAY include referenced pieces of context as either
-`ContentBlock::Resource` or `ContentBlock::ResourceLink`.
+`resource` or `resource_link` content blocks.
 
-When available, `ContentBlock::Resource` is preferred
+When available, `resource` is preferred
 as it avoids extra round-trips and allows the message to include
 pieces of context from sources the agent may not have access to.
 
@@ -1201,7 +1201,7 @@ a potentially sensitive operation. The client should present the options
 to the user and return their decision.
 
 If the client cancels active session work via `session/cancel`, it MUST
-respond to this request with `RequestPermissionOutcome::Cancelled`.
+respond to this request with the `cancelled` outcome.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
 
@@ -1440,7 +1440,7 @@ and `session/update`.
 
 An agent message upsert.
 
-Only `AgentMessage::message_id` is required. `content` has patch semantics:
+Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted fields use client defaults. `content` is replaced as a
@@ -1478,7 +1478,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 
 An agent thought or reasoning message upsert.
 
-Only `AgentThought::message_id` is required. `content` has patch semantics:
+Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing thought content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted fields use client defaults. `content` is replaced as a
@@ -3039,8 +3039,8 @@ Unique identifier for an elicitation.
 Property schema for elicitation form fields.
 
 Each variant corresponds to a JSON Schema `"type"` value.
-Single-select enums use the `String` variant with `enum` or `oneOf` set.
-Multi-select enums use the `Array` variant.
+Single-select enums use `type: "string"` with `enum` or `oneOf` set.
+Multi-select enums use `type: "array"`.
 
 **Type:** Union
 
@@ -3437,7 +3437,7 @@ Type discriminator for elicitation schemas.
 
 Session-scoped elicitation, optionally tied to a specific tool call.
 
-When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+When `toolCallId` is set, the elicitation is tied to a specific tool call.
 This is useful when an agent receives an elicitation from an MCP server
 during a tool call and needs to redirect it to the user.
 
@@ -3794,7 +3794,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">ExtResponse</span>
 
-Allows for sending an arbitrary response to an `ExtRequest` that is not part of the ACP spec.
+Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
 Extension methods provide a way to add custom functionality while maintaining
 protocol compatibility.
 
@@ -4175,14 +4175,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="http" type={<><span><a href="#mcphttpcapabilities">McpHttpCapabilities</a></span><span> | null</span></>} >
-  Agent supports `McpServer::Http`.
+  Agent supports `http` MCP servers.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports HTTP MCP server transports.
 
 </ResponseField>
 <ResponseField name="stdio" type={<><span><a href="#mcpstdiocapabilities">McpStdioCapabilities</a></span><span> | null</span></>} >
-  Agent supports `McpServer::Stdio`.
+  Agent supports `stdio` MCP servers.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports stdio MCP server transports.
@@ -4944,8 +4944,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Prompt capabilities supported by the agent in `session/prompt` requests.
 
-Baseline agent functionality requires support for `ContentBlock::Text`
-and `ContentBlock::ResourceLink` in prompt requests.
+Baseline agent functionality requires support for `text`
+and `resource_link` content blocks in prompt requests.
 
 Other variants must be explicitly opted in to.
 Capabilities for different types of content in prompt requests.
@@ -4968,7 +4968,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="audio" type={<><span><a href="#promptaudiocapabilities">PromptAudioCapabilities</a></span><span> | null</span></>} >
-  Agent supports `ContentBlock::Audio`.
+  Agent supports `audio` content blocks.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports audio content in prompts.
@@ -4977,7 +4977,7 @@ Supplying `\{\}` means the agent supports audio content in prompts.
 <ResponseField name="embeddedContext" type={<><span><a href="#promptembeddedcontextcapabilities">PromptEmbeddedContextCapabilities</a></span><span> | null</span></>} >
   Agent supports embedded context in `session/prompt` requests.
 
-When enabled, the Client is allowed to include `ContentBlock::Resource`
+When enabled, the Client is allowed to include `resource` content blocks
 in prompt requests for pieces of context that are referenced in the message.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -4985,7 +4985,7 @@ Supplying `\{\}` means the agent supports embedded context in prompts.
 
 </ResponseField>
 <ResponseField name="image" type={<><span><a href="#promptimagecapabilities">PromptImageCapabilities</a></span><span> | null</span></>} >
-  Agent supports `ContentBlock::Image`.
+  Agent supports `image` content blocks.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports image content in prompts.
@@ -5150,8 +5150,8 @@ The session's work was cancelled before the user responded.
 
 When a client sends a `session/cancel` notification, it MUST respond to all
 pending `session/request_permission` requests in that session with this
-`Cancelled` outcome, without answering any request twice. Requests in other
-sessions are unaffected. Agents treat `Cancelled` for background work as a
+`cancelled` outcome, without answering any request twice. Requests in other
+sessions are unaffected. Agents treat `cancelled` for background work as a
 denial.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
@@ -7140,7 +7140,7 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 A display-only reference to an agent-owned terminal.
 
 Terminal state and output are delivered separately through
-`TerminalUpdate` and `TerminalOutputChunk`.
+`terminal_update` and `terminal_output_chunk` session updates.
 
 **Type:** Object
 
@@ -7276,7 +7276,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 An upsert for the stored state of an agent-owned terminal.
 
-Only `TerminalUpdate::terminal_id` is required. Other fields have patch
+Only `terminalId` is required. Other fields have patch
 semantics: omitted fields leave the stored value unchanged, `null` clears
 it, and concrete values replace it. A concrete `_meta` object instead
 patches the stored metadata by top-level key. When the terminal ID is new,
@@ -7528,9 +7528,9 @@ future ACP variants.
 A streamed item of tool-call content.
 
 Tool-call content chunks append one `ToolCallContent` item to the current
-content for the matching `ToolCallId`. Agents can use
-`ToolCallUpdate::content` when they need to replace the whole content
-collection instead.
+content for the matching `toolCallId`. Agents can send a `tool_call_update`
+with `content` when they need to replace the whole content collection
+instead.
 
 **Type:** Object
 
@@ -7657,7 +7657,7 @@ Represents an upsert for a tool call that the language model has requested.
 Tool calls are actions that the agent executes on behalf of the language model,
 such as reading files, executing code, or fetching data from external sources.
 
-Only `ToolCallUpdate::tool_call_id` is required. Other fields have patch semantics:
+Only `toolCallId` is required. Other fields have patch semantics:
 omitted fields leave the existing tool call value unchanged, `null` clears or
 unsets the value, and concrete values replace the previous value. For
 collection fields, concrete arrays replace the previous collection, and both
@@ -7814,7 +7814,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 A user message upsert.
 
-Only `UserMessage::message_id` is required. `content` has patch semantics:
+Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted fields use client defaults. `content` is replaced as a

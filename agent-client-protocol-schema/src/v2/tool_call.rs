@@ -20,7 +20,7 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 /// Tool calls are actions that the agent executes on behalf of the language model,
 /// such as reading files, executing code, or fetching data from external sources.
 ///
-/// Only [`ToolCallUpdate::tool_call_id`] is required. Other fields have patch semantics:
+/// Only `toolCallId` is required. Other fields have patch semantics:
 /// omitted fields leave the existing tool call value unchanged, `null` clears or
 /// unsets the value, and concrete values replace the previous value. For
 /// collection fields, concrete arrays replace the previous collection, and both
@@ -226,10 +226,10 @@ impl ToolCallUpdate {
 
 /// A streamed item of tool-call content.
 ///
-/// Tool-call content chunks append one [`ToolCallContent`] item to the current
-/// content for the matching [`ToolCallId`]. Agents can use
-/// [`ToolCallUpdate::content`] when they need to replace the whole content
-/// collection instead.
+/// Tool-call content chunks append one `ToolCallContent` item to the current
+/// content for the matching `toolCallId`. Agents can send a `tool_call_update`
+/// with `content` when they need to replace the whole content collection
+/// instead.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -656,7 +656,7 @@ impl DiffPatch {
     }
 }
 
-/// Text patch format used by [`DiffPatch`].
+/// Text patch format used by `DiffPatch`.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -705,7 +705,7 @@ pub enum DiffFileType {
     Other(String),
 }
 
-/// One file-level change described by a [`Diff`].
+/// One file-level change described by a `Diff`.
 ///
 /// Structured change metadata lets clients identify affected files and
 /// operations without parsing the text patch.
