@@ -80,9 +80,8 @@ Clients that only understand item-based plans can still preserve or display unkn
 2. Remove `PlanCapabilities` from the v2 Rust schema source.
 3. Leave `PlanFile`, `PlanMarkdown`, and `PlanRemoved` behind `unstable_plan_operations`.
 4. Remove `SessionUpdate::Plan` from the v2 schema and make `SessionUpdate::PlanUpdate` the default plan variant.
-5. Keep the removed `sessionUpdate: "plan"` discriminator rejected so it cannot be accepted as an unknown v2 update.
-6. Require `planId` on unknown `PlanUpdateContent` fallback payloads.
-7. Regenerate v2 schema docs so the default v2 surface shows only the item-based tagged plan shape.
+5. Require `planId` on unknown `PlanUpdateContent` fallback payloads.
+6. Regenerate v2 schema docs so the default v2 surface shows only the item-based tagged plan shape.
 
 ## Frequently asked questions
 
@@ -98,4 +97,5 @@ The v1 shape represents exactly one plan and has no plan ID. A stable synthetic 
 
 ## Revision history
 
-2026-06-02: Initial draft
+- 2026-10-27: Dropped the step that kept `sessionUpdate: "plan"` rejected. Like other removed v1 variants, it is treated as an unknown v2 update.
+- 2026-06-02: Initial draft
