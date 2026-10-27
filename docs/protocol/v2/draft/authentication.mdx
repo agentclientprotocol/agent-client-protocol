@@ -81,13 +81,13 @@ authentication-related extensions, not the availability of the baseline
 }
 ```
 
-Because this response contains an `agent` authentication method, the Agent must
+Because this response contains an `agent` authentication method, the Agent **MUST**
 support both `auth/login` and `auth/logout`.
 
 ### Authentication method types
 
 The standard authentication method type is `agent`, where the Agent handles
-authentication through `auth/login`. Every authentication method must include a
+authentication through `auth/login`. Every authentication method **MUST** include a
 `type` discriminator:
 
 ```json
@@ -120,7 +120,7 @@ interactively:
 Authentication method `type` values can be custom or future variants. Custom
 method types **MUST** begin with `_`. Unknown non-underscore method types are
 reserved for future ACP variants. Clients that do not understand a method type
-should preserve the raw method payload when storing, replaying, proxying, or
+**SHOULD** preserve the raw method payload when storing, replaying, proxying, or
 forwarding initialization data, and otherwise ignore the method or display it
 generically.
 
@@ -176,7 +176,7 @@ method's ID:
 
 <ParamField path="methodId" type="string" required>
   The ID of an advertised authentication method whose type defines the
-  `auth/login` flow. Clients MUST NOT pass a `terminal` method.
+  `auth/login` flow. Clients **MUST NOT** pass a `terminal` method.
 </ParamField>
 
 On success, the Agent returns an empty result:
@@ -273,5 +273,5 @@ The protocol does not guarantee what happens to already-running sessions after
 `auth_required` errors for future session activity.
 
 Clients **SHOULD** be prepared for active session operations to fail with
-authentication-related errors after logout and should prompt the user to
+authentication-related errors after logout and **SHOULD** prompt the user to
 authenticate again when appropriate.

@@ -87,7 +87,7 @@ When receiving a batch call:
 - Response objects **MAY** appear in any order within the response array. The
   sender **SHOULD** match responses to requests by `id`.
 - If there are no Response objects to send, such as for an all-notification
-  batch, the receiver **MUST NOT** return an empty array and should return
+  batch, the receiver **MUST NOT** return an empty array and **SHOULD** return
   nothing.
 - Invalid entries in a non-empty batch produce their own `Invalid Request`
   responses (`code: -32600`) with `id: null`; they do not make the entire batch

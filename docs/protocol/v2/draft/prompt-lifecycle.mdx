@@ -41,7 +41,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 
 This is the complete set of standard variants defined in the current draft [`SessionUpdate` schema](/protocol/v2/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 
-The protocol also supports [custom and future variants](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update should preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
+The protocol also supports [custom and future variants](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update **SHOULD** preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
 
 Live-only [notices](#session-notices) **SHOULD NOT** be replayed, even when
 preserved as unknown updates.
@@ -547,8 +547,8 @@ nullable object scoped to this event; omission and `null` both mean no event
 metadata. Unlike compaction patch fields, these fields do not update or clear
 an earlier notice.
 
-Clients may ignore them, and Agents must behave as though a
-notice may not have been received, displayed, or seen. A notice must not carry
+Clients **MAY** ignore them, and Agents **MUST** behave as though a
+notice may not have been received, displayed, or seen. A notice **MUST NOT** carry
 information required for protocol correctness, authorization, user action,
 task completion, or fatal-error reporting.
 
@@ -690,9 +690,9 @@ accumulated content, and any subsequent chunks append to that replacement.
 output before failure or cancellation.
 
 The summary is not the Agent's complete replacement history or generic status
-text such as "Compaction completed". It should faithfully represent the
+text such as "Compaction completed". It **SHOULD** faithfully represent the
 retained, user-displayable summary without internal prompt framing or hidden
-instructions. Text blocks may contain Markdown. Agents should omit it when no
+instructions. Text blocks may contain Markdown. Agents **SHOULD** omit it when no
 unencrypted summary is available or when disclosure would reveal context that
 was not otherwise user-visible.
 
