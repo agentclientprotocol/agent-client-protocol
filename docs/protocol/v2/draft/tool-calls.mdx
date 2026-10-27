@@ -501,6 +501,12 @@ sequences, so decoders retain parser state across chunks. Optional nullable
 `_meta` is chunk-scoped; omission and `null` both mean no chunk metadata was
 provided.
 
+Clients **SHOULD** ignore a chunk or snapshot whose `data` isn't valid base64,
+keeping the bytes they already have. Agents **SHOULD** send all output before a
+concrete `exitStatus`, but Clients still append output that arrives after it.
+Clients **MAY** bound how much output they keep, for example by dropping the
+oldest bytes; a later `output` snapshot replaces whatever they kept.
+
 Terminal output is Agent content. Clients **SHOULD** render it so that it cannot write the clipboard, send input or query responses, or open links without user action, and sanitizers **SHOULD** keep state across chunks.
 
 ### Diffs
