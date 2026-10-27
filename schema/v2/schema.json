@@ -768,7 +768,7 @@
       "type": "string"
     },
     "ToolKind": {
-      "description": "Categories of tools that can be invoked.\n\nTool kinds help clients choose appropriate icons and optimize how they\ndisplay tool execution progress.\n\nSee protocol docs: [Creating](https://agentclientprotocol.com/protocol/v2/tool-calls#creating)",
+      "description": "Categories of tools that can be invoked.\n\nTool kinds help clients choose appropriate icons and optimize how they\ndisplay tool execution progress.\n\nSee protocol docs: [Reporting](https://agentclientprotocol.com/protocol/v2/tool-calls#reporting)",
       "anyOf": [
         {
           "description": "Reading files or data.",
@@ -3254,7 +3254,7 @@
       }
     },
     "PromptCapabilities": {
-      "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for `text`\nand `resource_link` content blocks in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#prompt-capabilities)",
+      "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for `text`\nand `resource_link` content blocks in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Session Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-prompt-capabilities)",
       "type": "object",
       "properties": {
         "image": {
@@ -6001,7 +6001,7 @@
       ]
     },
     "Notice": {
-      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nNo Client capability is required, and unsupported Clients may ignore notices.\n\nSee RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)",
+      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nNo Client capability is required, and unsupported Clients may ignore notices.\n\nSee protocol docs: [Session Notices](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#session-notices)",
       "type": "object",
       "properties": {
         "severity": {

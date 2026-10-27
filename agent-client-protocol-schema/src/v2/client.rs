@@ -702,7 +702,7 @@ pub enum NoticeSeverity {
 /// a notice being received, displayed, or seen by the user.
 /// No Client capability is required, and unsupported Clients may ignore notices.
 ///
-/// See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
+/// See protocol docs: [Session Notices](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#session-notices)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

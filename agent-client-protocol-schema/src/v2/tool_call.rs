@@ -313,7 +313,7 @@ impl IntoOption<ToolCallId> for &str {
 /// Tool kinds help clients choose appropriate icons and optimize how they
 /// display tool execution progress.
 ///
-/// See protocol docs: [Creating](https://agentclientprotocol.com/protocol/v2/tool-calls#creating)
+/// See protocol docs: [Reporting](https://agentclientprotocol.com/protocol/v2/tool-calls#reporting)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

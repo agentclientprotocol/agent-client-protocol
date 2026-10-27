@@ -4936,7 +4936,7 @@ impl SessionForkCapabilities {
 /// Indicates which content types beyond the baseline (text and resource links)
 /// the agent can process.
 ///
-/// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#prompt-capabilities)
+/// See protocol docs: [Session Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-prompt-capabilities)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
