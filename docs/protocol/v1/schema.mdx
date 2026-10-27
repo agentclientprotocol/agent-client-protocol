@@ -24,7 +24,7 @@ The client provides an authentication method ID that was advertised during
 initialization and whose type defines the `authenticate` flow.
 
 After successful authentication, the client can proceed to create sessions with
-`new_session` without receiving an `auth_required` error.
+`session/new` without receiving an `auth_required` (`-32000`) error.
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v1/initialization)
 
@@ -219,7 +219,7 @@ Upon receiving this notification, the Agent SHOULD:
 - Stop all language model requests as soon as possible
 - Abort all tool call invocations in progress
 - Send any pending `session/update` notifications
-- Respond to the original `session/prompt` request with `StopReason::Cancelled`
+- Respond to the original `session/prompt` request with the `cancelled` stop reason
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/prompt-turn#cancellation)
 
@@ -495,7 +495,7 @@ The agent should:
 - Connect to any specified MCP servers
 - Return a unique session ID for future requests
 
-May return an `auth_required` error if the agent requires authentication.
+May return an `auth_required` (`-32000`) error if the agent requires authentication.
 
 See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v1/session-setup)
 
@@ -605,15 +605,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="prompt" type={<a href="#contentblock">ContentBlock[]</a>} required>
   The blocks of content that compose the user's message.
 
-As a baseline, the Agent MUST support `ContentBlock::Text` and `ContentBlock::ResourceLink`,
+As a baseline, the Agent MUST support `text` and `resource_link` content blocks,
 while other variants are optionally enabled via `PromptCapabilities`.
 
 The Client MUST adapt its interface according to `PromptCapabilities`.
 
 The client MAY include referenced pieces of context as either
-`ContentBlock::Resource` or `ContentBlock::ResourceLink`.
+`resource` or `resource_link` content blocks.
 
-When available, `ContentBlock::Resource` is preferred
+When available, `resource` is preferred
 as it avoids extra round-trips and allows the message to include
 pieces of context from sources the agent may not have access to.
 
@@ -1333,7 +1333,7 @@ a potentially sensitive operation. The client should present the options
 to the user and return their decision.
 
 If the client cancels the prompt turn via `session/cancel`, it MUST
-respond to this request with `RequestPermissionOutcome::Cancelled`.
+respond to this request with the `cancelled` outcome.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v1/tool-calls#requesting-permission)
 
@@ -1440,7 +1440,7 @@ Returns a `TerminalId` that can be used with other terminal methods
 to get the current output, wait for exit, and kill the command.
 
 The `TerminalId` can also be used to embed the terminal in a tool call
-by using the `ToolCallContent::Terminal` variant.
+by using `terminal` tool call content.
 
 The Agent is responsible for releasing the terminal by using the `terminal/release`
 method.
@@ -2386,7 +2386,7 @@ extensions. Other unknown values are reserved for future ACP statuses.
 A content block appended to a compaction's summary. A first-seen ID creates
 an in-progress compaction. Chunks append in receive order.
 Agents MUST only send this update when the Client advertised
-`ClientSessionCapabilities::compaction`.
+the `session.compaction` Client capability.
 
 **Type:** Object
 
@@ -2415,7 +2415,7 @@ Agents MUST only send this update when the Client advertised
 A context compaction upsert. The first notification fixes the compaction's
 timeline position. Later updates with the same ID patch that entity in place.
 Agents MUST only send this update when the Client advertised
-`ClientSessionCapabilities::compaction`.
+the `session.compaction` Client capability.
 
 `summary`, `error`, and `_meta` have patch semantics: omission leaves the
 stored value unchanged, `null` clears it, and a concrete value replaces it.
@@ -2782,7 +2782,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   The new content after modification.
 </ResponseField>
 <ResponseField name="oldText" type={"string | null"} >
-  The original content (None for new files).
+  The original content (omitted or `null` for new files).
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
   The absolute file path being modified.
@@ -2945,8 +2945,8 @@ Unique identifier for an elicitation.
 Property schema for elicitation form fields.
 
 Each variant corresponds to a JSON Schema `"type"` value.
-Single-select enums use the `String` variant with `enum` or `oneOf` set.
-Multi-select enums use the `Array` variant.
+Single-select enums use `type: "string"` with `enum` or `oneOf` set.
+Multi-select enums use `type: "array"`.
 
 **Type:** Union
 
@@ -3339,7 +3339,7 @@ Type discriminator for elicitation schemas.
 
 Session-scoped elicitation, optionally tied to a specific tool call.
 
-When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+When `toolCallId` is set, the elicitation is tied to a specific tool call.
 This is useful when an agent receives an elicitation from an MCP server
 during a tool call and needs to redirect it to the user.
 
@@ -3601,8 +3601,9 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 
 Predefined error codes for common JSON-RPC and ACP-specific errors.
 
-These codes follow the JSON-RPC 2.0 specification for standard errors
-and use the reserved range (-32000 to -32099) for protocol-specific errors.
+Standard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC
+server-error range (-32000 to -32099), and request cancellation uses -32800 from the
+range LSP reserves (-32899 to -32800).
 
 **Type:** Union
 
@@ -3624,8 +3625,7 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
 </ResponseField>
 
 <ResponseField name="-32603" type="int32">
-  **Internal error**: Internal JSON-RPC error. Reserved for
-  implementation-defined server errors.
+  **Internal error**: Internal JSON-RPC error.
 </ResponseField>
 
 <ResponseField name="-32800" type="int32">
@@ -3650,7 +3650,7 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
 
 ## <span class="font-mono">ExtNotification</span>
 
-Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+Allows either side to send an arbitrary notification that is not part of the ACP spec.
 Extension notifications provide a way to send one-way messages for custom functionality
 while maintaining protocol compatibility.
 
@@ -3666,7 +3666,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 ## <span class="font-mono">ExtResponse</span>
 
-Allows for sending an arbitrary response to an `ExtRequest` that is not part of the ACP spec.
+Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
 Extension methods provide a way to add custom functionality while maintaining
 protocol compatibility.
 
@@ -3874,13 +3874,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 <ResponseField name="http" type={"boolean"} >
-  Agent supports `McpServer::Http`.
+  Agent supports `http` MCP servers.
 
     - Default: `false`
 
 </ResponseField>
 <ResponseField name="sse" type={"boolean"} >
-  Agent supports `McpServer::Sse`.
+  Agent supports `sse` MCP servers.
 
     - Default: `false`
 
@@ -4128,6 +4128,8 @@ future ACP variants.
 <ResponseField name="titled">
 Titled multi-select items with human-readable labels.
 
+As in MCP, titled items omit `type` and are identified by `anyOf`.
+
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
@@ -4210,7 +4212,7 @@ Fire-and-forget information for the user.
 Notices are live events rather than session history. Agents must not rely on
 a notice being received, displayed, or seen by the user.
 Agents MUST only send notices when the Client advertised
-`ClientSessionCapabilities::notices`. Otherwise, Agents may use an agent
+the `session.notices` Client capability. Otherwise, Agents may use an agent
 message when the information should still be surfaced to the user.
 
 See RFD: [Session Notices](https://agentclientprotocol.com/rfds/session-notices)
@@ -4486,8 +4488,8 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/ag
 
 Prompt capabilities supported by the agent in `session/prompt` requests.
 
-Baseline agent functionality requires support for `ContentBlock::Text`
-and `ContentBlock::ResourceLink` in prompt requests.
+Baseline agent functionality requires support for `text`
+and `resource_link` content blocks in prompt requests.
 
 Other variants must be explicitly opted in to.
 Capabilities for different types of content in prompt requests.
@@ -4510,7 +4512,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 <ResponseField name="audio" type={"boolean"} >
-  Agent supports `ContentBlock::Audio`.
+  Agent supports `audio` content blocks.
 
     - Default: `false`
 
@@ -4518,14 +4520,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="embeddedContext" type={"boolean"} >
   Agent supports embedded context in `session/prompt` requests.
 
-When enabled, the Client is allowed to include `ContentBlock::Resource`
+When enabled, the Client is allowed to include `resource` content blocks
 in prompt requests for pieces of context that are referenced in the message.
 
     - Default: `false`
 
 </ResponseField>
 <ResponseField name="image" type={"boolean"} >
-  Agent supports `ContentBlock::Image`.
+  Agent supports `image` content blocks.
 
     - Default: `false`
 
@@ -4582,7 +4584,7 @@ The prompt turn was cancelled before the user responded.
 
 When a client sends a `session/cancel` notification to cancel an ongoing
 prompt turn, it MUST respond to all pending `session/request_permission`
-requests with this `Cancelled` outcome.
+requests with this `cancelled` outcome.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/prompt-turn#cancellation)
 
@@ -4720,7 +4722,7 @@ As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `ses
 
 Optionally, they **MAY** support other session methods and notifications by specifying additional capabilities.
 
-Note: `session/load` is still handled by the top-level `load_session` capability. This will be unified in future versions of the protocol.
+Note: `session/load` is still handled by the top-level `loadSession` capability. This will be unified in future versions of the protocol.
 
 See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v1/initialization#session-capabilities)
 
@@ -5603,7 +5605,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 Information for the user that is not part of session history.
 
 Agents MUST only send this update when the Client advertised
-`ClientSessionCapabilities::notices`.
+the `session.notices` Client capability.
 
 <Expandable title="Properties">
 
@@ -5639,7 +5641,7 @@ Omitted and `null` are equivalent and mean no description was supplied.
 A context compaction has been created or updated.
 
 Agents MUST only send this update when the Client advertised
-`ClientSessionCapabilities::compaction`.
+the `session.compaction` Client capability.
 
 <Expandable title="Properties">
 
@@ -5687,7 +5689,7 @@ Agents MUST only send this update when the Client advertised
 A content block appended to a context compaction's retained summary.
 
 Agents MUST only send this update when the Client advertised
-`ClientSessionCapabilities::compaction`.
+the `session.compaction` Client capability.
 
 <Expandable title="Properties">
 
@@ -6107,7 +6109,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
   The new content after modification.
 </ResponseField>
 <ResponseField name="oldText" type={"string | null"} >
-  The original content (None for new files).
+  The original content (omitted or `null` for new files).
 </ResponseField>
 <ResponseField name="path" type={"string"} required>
   The absolute file path being modified.

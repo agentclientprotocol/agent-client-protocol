@@ -30,7 +30,7 @@ Called when the agent requires authentication before allowing session creation.
 The client provides the authentication method ID that was advertised during initialization.
 
 After successful authentication, the client can proceed to create sessions with
-`new_session` without receiving an `auth_required` error.
+`session/new` without receiving an `auth_required` (`-32000`) error.
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 
@@ -228,10 +228,9 @@ if it does not.
 <a id="session-cancel"></a>
 ### <span class="font-mono">session/cancel</span>
 
-Cancels ongoing operations for a session.
+Cancels a session's foreground work and its prompts not yet inserted.
 
-This is a notification sent by the client to cancel active work in a
-session.
+Background work is not covered, but the Agent MAY stop it too.
 
 Upon receiving this notification, the Agent SHOULD stop all language model
 requests and all tool call invocations as soon as possible.
@@ -256,7 +255,7 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/pr
 
 #### <span class="font-mono">CancelSessionNotification</span>
 
-Notification to cancel ongoing operations for a session.
+Notification to cancel a session's foreground work and its prompts not yet inserted.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
 
@@ -449,7 +448,7 @@ The agent should:
 - Connect to any specified MCP servers
 - Return a unique session ID for future requests
 
-May return an `auth_required` error if the agent requires authentication.
+May return an `auth_required` (`-32000`) error if the agent requires authentication.
 
 See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/session-setup)
 
@@ -574,15 +573,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="prompt" type={<a href="#contentblock">ContentBlock[]</a>} required>
   The blocks of content that compose the user's message.
 
-As a baseline, the Agent MUST support `ContentBlock::Text` and `ContentBlock::ResourceLink`,
+As a baseline, the Agent MUST support `text` and `resource_link` content blocks,
 while other variants are optionally enabled via `PromptCapabilities`.
 
 The Client MUST adapt its interface according to `PromptCapabilities`.
 
 The client MAY include referenced pieces of context as either
-`ContentBlock::Resource` or `ContentBlock::ResourceLink`.
+`resource` or `resource_link` content blocks.
 
-When available, `ContentBlock::Resource` is preferred
+When available, `resource` is preferred
 as it avoids extra round-trips and allows the message to include
 pieces of context from sources the agent may not have access to.
 
@@ -1202,7 +1201,7 @@ a potentially sensitive operation. The client should present the options
 to the user and return their decision.
 
 If the client cancels active session work via `session/cancel`, it MUST
-respond to this request with `RequestPermissionOutcome::Cancelled`.
+respond to this request with the `cancelled` outcome.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
 
@@ -1441,7 +1440,7 @@ and `session/update`.
 
 An agent message upsert.
 
-Only `AgentMessage::message_id` is required. `content` has patch semantics:
+Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted fields use client defaults. `content` is replaced as a
@@ -1479,7 +1478,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 
 An agent thought or reasoning message upsert.
 
-Only `AgentThought::message_id` is required. `content` has patch semantics:
+Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing thought content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted fields use client defaults. `content` is replaced as a
@@ -1577,36 +1576,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="mimeType" type={<a href="#mediatype">MediaType</a>} required>
   MIME type describing the encoded media payload.
-</ResponseField>
-
-## <span class="font-mono">AuthCapabilities</span>
-
-Authentication capabilities supported by the client.
-
-Advertised during initialization to inform the agent which authentication
-method types the client can handle. This governs opt-in types that require
-additional client-side support.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-
-</ResponseField>
-<ResponseField name="terminal" type={<><span><a href="#terminalauthcapabilities">TerminalAuthCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports `terminal` authentication methods.
-
-Optional. Omitted or `null` both mean the client does not advertise support.
-The client should supply `\{\}` only when it can reproduce the configured
-agent invocation in an interactive terminal. Supplying `\{\}` means the
-agent may include `terminal` entries in its authentication methods.
-
 </ResponseField>
 
 ## <span class="font-mono">AuthMethod</span>
@@ -2023,6 +1992,53 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
 
+## <span class="font-mono">CancelledPermissionOutcome</span>
+
+The session's work was cancelled before the user responded.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">ClientAuthCapabilities</span>
+
+Authentication capabilities supported by the client.
+
+Advertised during initialization to inform the agent which authentication
+method types the client can handle. This governs opt-in types that require
+additional client-side support.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="terminal" type={<><span><a href="#terminalauthcapabilities">TerminalAuthCapabilities</a></span><span> | null</span></>} >
+  Whether the client supports `terminal` authentication methods.
+
+Optional. Omitted or `null` both mean the client does not advertise support.
+The client should supply `\{\}` only when it can reproduce the configured
+agent invocation in an interactive terminal. Supplying `\{\}` means the
+agent may include `terminal` entries in its authentication methods.
+
+</ResponseField>
+
 ## <span class="font-mono">ClientCapabilities</span>
 
 Capabilities supported by the client.
@@ -2044,7 +2060,7 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="auth" type={<><span><a href="#authcapabilities">AuthCapabilities</a></span><span> | null</span></>} >
+<ResponseField name="auth" type={<><span><a href="#clientauthcapabilities">ClientAuthCapabilities</a></span><span> | null</span></>} >
   Authentication capabilities supported by the client.
 Determines which authentication method types the agent may include
 in its `InitializeResponse`.
@@ -2416,6 +2432,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
+
+    - Minimum: `0`
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional display title for end-user UI.
@@ -2513,7 +2532,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 
@@ -2783,11 +2802,15 @@ Renderable patch text and its format.
 
 **Properties:**
 
-<ResponseField
-  name="format"
-  type={<a href="#diffpatchformat">DiffPatchFormat</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="format" type={<a href="#diffpatchformat">DiffPatchFormat</a>} required>
   Patch format. The only ACP-defined value is `git_patch`.
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
@@ -3019,8 +3042,8 @@ Unique identifier for an elicitation.
 Property schema for elicitation form fields.
 
 Each variant corresponds to a JSON Schema `"type"` value.
-Single-select enums use the `String` variant with `enum` or `oneOf` set.
-Multi-select enums use the `Array` variant.
+Single-select enums use `type: "string"` with `enum` or `oneOf` set.
+Multi-select enums use `type: "array"`.
 
 **Type:** Union
 
@@ -3417,7 +3440,7 @@ Type discriminator for elicitation schemas.
 
 Session-scoped elicitation, optionally tied to a specific tool call.
 
-When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+When `toolCallId` is set, the elicitation is tied to a specific tool call.
 This is useful when an agent receives an elicitation from an MCP server
 during a tool call and needs to redirect it to the user.
 
@@ -3688,8 +3711,9 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 
 Predefined error codes for common JSON-RPC and ACP-specific errors.
 
-These codes follow the JSON-RPC 2.0 specification for standard errors
-and use the reserved range (-32000 to -32099) for protocol-specific errors.
+Standard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC
+server-error range (-32000 to -32099), and request cancellation uses -32800 from the
+range LSP reserves (-32899 to -32800).
 
 **Type:** Union
 
@@ -3711,8 +3735,7 @@ and use the reserved range (-32000 to -32099) for protocol-specific errors.
 </ResponseField>
 
 <ResponseField name="-32603" type="int32">
-  **Internal error**: Internal JSON-RPC error. Reserved for
-  implementation-defined server errors.
+  **Internal error**: Internal JSON-RPC error.
 </ResponseField>
 
 <ResponseField name="-32800" type="int32">
@@ -3758,7 +3781,7 @@ Agents SHOULD include it.
 
 ## <span class="font-mono">ExtNotification</span>
 
-Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+Allows either side to send an arbitrary notification that is not part of the ACP spec.
 Extension notifications provide a way to send one-way messages for custom functionality
 while maintaining protocol compatibility.
 
@@ -3774,7 +3797,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">ExtResponse</span>
 
-Allows for sending an arbitrary response to an `ExtRequest` that is not part of the ACP spec.
+Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
 Extension methods provide a way to add custom functionality while maintaining
 protocol compatibility.
 
@@ -3811,6 +3834,14 @@ An optionally-sized icon that can be displayed in a user interface.
 
 **Properties:**
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
 <ResponseField name="mimeType" type={<><span><a href="#mediatype">MediaType</a></span><span> | null</span></>} >
   Optional MIME type override if the source MIME type is missing or generic.
 </ResponseField>
@@ -3942,7 +3973,9 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled by the client via `session/cancel`.
+The client cancelled the work, via `session/cancel` or by closing the
+session. Work the agent stops on its own uses another reason, such as
+`error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
@@ -4147,14 +4180,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="http" type={<><span><a href="#mcphttpcapabilities">McpHttpCapabilities</a></span><span> | null</span></>} >
-  Agent supports `McpServer::Http`.
+  Agent supports `http` MCP servers.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports HTTP MCP server transports.
 
 </ResponseField>
 <ResponseField name="stdio" type={<><span><a href="#mcpstdiocapabilities">McpStdioCapabilities</a></span><span> | null</span></>} >
-  Agent supports `McpServer::Stdio`.
+  Agent supports `stdio` MCP servers.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports stdio MCP server transports.
@@ -4428,6 +4461,8 @@ future ACP variants.
 
 <ResponseField name="titled">
 Titled multi-select items with human-readable labels.
+
+As in MCP, titled items omit `type` and are identified by `anyOf`.
 
 <Expandable title="Properties">
 
@@ -4916,8 +4951,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Prompt capabilities supported by the agent in `session/prompt` requests.
 
-Baseline agent functionality requires support for `ContentBlock::Text`
-and `ContentBlock::ResourceLink` in prompt requests.
+Baseline agent functionality requires support for `text`
+and `resource_link` content blocks in prompt requests.
 
 Other variants must be explicitly opted in to.
 Capabilities for different types of content in prompt requests.
@@ -4940,7 +4975,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="audio" type={<><span><a href="#promptaudiocapabilities">PromptAudioCapabilities</a></span><span> | null</span></>} >
-  Agent supports `ContentBlock::Audio`.
+  Agent supports `audio` content blocks.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports audio content in prompts.
@@ -4949,7 +4984,7 @@ Supplying `\{\}` means the agent supports audio content in prompts.
 <ResponseField name="embeddedContext" type={<><span><a href="#promptembeddedcontextcapabilities">PromptEmbeddedContextCapabilities</a></span><span> | null</span></>} >
   Agent supports embedded context in `session/prompt` requests.
 
-When enabled, the Client is allowed to include `ContentBlock::Resource`
+When enabled, the Client is allowed to include `resource` content blocks
 in prompt requests for pieces of context that are referenced in the message.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -4957,7 +4992,7 @@ Supplying `\{\}` means the agent supports embedded context in prompts.
 
 </ResponseField>
 <ResponseField name="image" type={<><span><a href="#promptimagecapabilities">PromptImageCapabilities</a></span><span> | null</span></>} >
-  Agent supports `ContentBlock::Image`.
+  Agent supports `image` content blocks.
 
 Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports image content in prompts.
@@ -5118,17 +5153,26 @@ The outcome of a permission request.
 **Type:** Union
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled before the user responded.
+The session's work was cancelled before the user responded.
 
-When a client sends a `session/cancel` notification to cancel active
-session work, it MUST respond to all pending `session/request_permission`
-requests in that session with this `Cancelled` outcome, without answering
-any request twice. Requests in other sessions are unaffected.
+When a client sends a `session/cancel` notification, it MUST respond to all
+pending `session/request_permission` requests in that session with this
+`cancelled` outcome, without answering any request twice. Requests in other
+sessions are unaffected. Agents treat `cancelled` for background work as a
+denial.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
 
 <Expandable title="Properties">
 
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
 <ResponseField name="outcome" type={"string"} required>
   The discriminator value. Must be `"cancelled"`.
 </ResponseField>
@@ -5196,11 +5240,15 @@ Permission is requested before executing a tool call.
 
 <Expandable title="Properties">
 
-<ResponseField
-  name="toolCall"
-  type={<a href="#toolcallupdate">ToolCallUpdate</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -5325,6 +5373,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
+
+    - Minimum: `0`
+
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
   Optional display title for end-user UI.
@@ -5401,8 +5452,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Capabilities for additional session directories support.
 
 Supplying `\{\}` means the agent supports the `additionalDirectories` field on
-supported session lifecycle requests. Agents that also support
-`session/list` may return `SessionInfo.additionalDirectories` to report the
+supported session lifecycle requests. Agents may return
+`SessionInfo.additionalDirectories` in `session/list` to report the
 complete ordered additional-root list associated with a listed session.
 
 **Type:** Object
@@ -5875,7 +5926,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -5938,7 +5989,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -6001,7 +6052,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   A unique identifier for the message this chunk belongs to.
 
 All chunks belonging to the same message share the same `messageId`.
-A change in `messageId` indicates a new message has started.
+Chunks for different messages can interleave.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -6159,7 +6210,9 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled by the client via `session/cancel`.
+The client cancelled the work, via `session/cancel` or by closing the
+session. Work the agent stops on its own uses another reason, such as
+`error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
@@ -6257,6 +6310,12 @@ Custom or future session state.
 Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
+
+Unless the Client advertised support for this state, Agents MUST still
+report the standard states.
+Clients MUST NOT treat an unrecognized state as `idle` or present the
+previous state as confirmed, and show a generic busy state until a known
+state arrives.
 
 <Expandable title="Properties">
 
@@ -6835,7 +6894,9 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-Active session work was cancelled by the client via `session/cancel`.
+The client cancelled the work, via `session/cancel` or by closing the
+session. Work the agent stops on its own uses another reason, such as
+`error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
@@ -6933,6 +6994,12 @@ Custom or future session state.
 Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
+
+Unless the Client advertised support for this state, Agents MUST still
+report the standard states.
+Clients MUST NOT treat an unrecognized state as `idle` or present the
+previous state as confirmed, and show a generic busy state until a known
+state arrives.
 
 <Expandable title="Properties">
 
@@ -7087,7 +7154,7 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 A display-only reference to an agent-owned terminal.
 
 Terminal state and output are delivered separately through
-`TerminalUpdate` and `TerminalOutputChunk`.
+`terminal_update` and `terminal_output_chunk` session updates.
 
 **Type:** Object
 
@@ -7223,7 +7290,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 An upsert for the stored state of an agent-owned terminal.
 
-Only `TerminalUpdate::terminal_id` is required. Other fields have patch
+Only `terminalId` is required. Other fields have patch
 semantics: omitted fields leave the stored value unchanged, `null` clears
 it, and concrete values replace it. A concrete `_meta` object instead
 patches the stored metadata by top-level key. When the terminal ID is new,
@@ -7475,9 +7542,9 @@ future ACP variants.
 A streamed item of tool-call content.
 
 Tool-call content chunks append one `ToolCallContent` item to the current
-content for the matching `ToolCallId`. Agents can use
-`ToolCallUpdate::content` when they need to replace the whole content
-collection instead.
+content for the matching `toolCallId`. Agents can send a `tool_call_update`
+with `content` when they need to replace the whole content collection
+instead.
 
 **Type:** Object
 
@@ -7543,11 +7610,15 @@ Permission request details for a tool call.
 
 **Properties:**
 
-<ResponseField
-  name="toolCall"
-  type={<a href="#toolcallupdate">ToolCallUpdate</a>}
-  required
->
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+
+</ResponseField>
+<ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
 </ResponseField>
 
@@ -7589,6 +7660,8 @@ Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
+Clients treat a tool call with an unrecognized status as still in progress.
+
 </ResponseField>
 
 ## <span class="font-mono">ToolCallUpdate</span>
@@ -7598,7 +7671,7 @@ Represents an upsert for a tool call that the language model has requested.
 Tool calls are actions that the agent executes on behalf of the language model,
 such as reading files, executing code, or fetching data from external sources.
 
-Only `ToolCallUpdate::tool_call_id` is required. Other fields have patch semantics:
+Only `toolCallId` is required. Other fields have patch semantics:
 omitted fields leave the existing tool call value unchanged, `null` clears or
 unsets the value, and concrete values replace the previous value. For
 collection fields, concrete arrays replace the previous collection, and both
@@ -7715,7 +7788,7 @@ Custom or future tool kind.
 
 Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
-future ACP variants.
+future ACP variants. Clients display an unrecognized kind as `other`.
 
 </ResponseField>
 
@@ -7755,7 +7828,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 A user message upsert.
 
-Only `UserMessage::message_id` is required. `content` has patch semantics:
+Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted fields use client defaults. `content` is replaced as a

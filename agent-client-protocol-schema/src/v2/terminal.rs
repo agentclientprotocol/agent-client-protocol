@@ -34,7 +34,7 @@ impl IntoOption<TerminalId> for &str {
 /// A display-only reference to an agent-owned terminal.
 ///
 /// Terminal state and output are delivered separately through
-/// [`TerminalUpdate`] and [`TerminalOutputChunk`].
+/// `terminal_update` and `terminal_output_chunk` session updates.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -49,7 +49,7 @@ pub struct Terminal {
     /// these keys. This metadata is scoped to the content reference. Omitted
     /// and `null` are equivalent and mean no item metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -91,7 +91,7 @@ pub struct TerminalOutput {
     /// these keys. This metadata is scoped to the replacement snapshot. Omitted
     /// and `null` are equivalent and mean no snapshot metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -147,7 +147,7 @@ pub struct TerminalExitStatus {
     /// these keys. This metadata is scoped to the exit information. Omitted
     /// and `null` are equivalent and mean no exit metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -186,7 +186,7 @@ impl TerminalExitStatus {
 
 /// An upsert for the stored state of an agent-owned terminal.
 ///
-/// Only [`TerminalUpdate::terminal_id`] is required. Other fields have patch
+/// Only `terminalId` is required. Other fields have patch
 /// semantics: omitted fields leave the stored value unchanged, `null` clears
 /// it, and concrete values replace it. A concrete `_meta` object instead
 /// patches the stored metadata by top-level key. When the terminal ID is new,
@@ -226,7 +226,7 @@ pub struct TerminalUpdate {
     /// stored value without merging nested objects. Beyond this patch rule, implementations
     /// MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -331,7 +331,7 @@ pub struct TerminalOutputChunk {
     /// these keys. This field is chunk-scoped. Omitted and `null` are
     /// equivalent and mean no chunk metadata was provided.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]

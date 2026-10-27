@@ -3,7 +3,7 @@ title: "Session Config Options"
 description: "Flexible configuration selectors for agent sessions"
 ---
 
-Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like models, modes, reasoning levels, and more.
+Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like models, model parameters, modes, reasoning levels, and more.
 
 <Info>
   Session Config Options are the preferred way to expose session-level
@@ -59,6 +59,23 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
             "value": "model-2",
             "name": "Model 2",
             "description": "The most powerful model"
+          }
+        ]
+      },
+      {
+        "id": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
           }
         ]
       }
@@ -292,16 +309,58 @@ The Agent **MUST** respond with the complete list of all configuration options a
       {
         "id": "mode",
         "name": "Session Mode",
+        "description": "Controls how the agent requests permission",
+        "category": "mode",
         "type": "select",
         "currentValue": "code",
-        "options": [...]
+        "options": [
+          {
+            "value": "ask",
+            "name": "Ask",
+            "description": "Request permission before making any changes"
+          },
+          {
+            "value": "code",
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
+          }
+        ]
       },
       {
         "id": "model",
         "name": "Model",
+        "category": "model",
         "type": "select",
         "currentValue": "model-1",
-        "options": [...]
+        "options": [
+          {
+            "value": "model-1",
+            "name": "Model 1",
+            "description": "The fastest model"
+          },
+          {
+            "value": "model-2",
+            "name": "Model 2",
+            "description": "The most powerful model"
+          }
+        ]
+      },
+      {
+        "id": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
+          }
+        ]
       }
     ]
   }
@@ -331,16 +390,58 @@ The Agent can also change configuration options and notify the Client by sending
         {
           "id": "mode",
           "name": "Session Mode",
+          "description": "Controls how the agent requests permission",
+          "category": "mode",
           "type": "select",
           "currentValue": "code",
-          "options": [...]
+          "options": [
+            {
+              "value": "ask",
+              "name": "Ask",
+              "description": "Request permission before making any changes"
+            },
+            {
+              "value": "code",
+              "name": "Code",
+              "description": "Write and modify code with full tool access"
+            }
+          ]
         },
         {
           "id": "model",
           "name": "Model",
+          "category": "model",
           "type": "select",
           "currentValue": "model-2",
-          "options": [...]
+          "options": [
+            {
+              "value": "model-1",
+              "name": "Model 1",
+              "description": "The fastest model"
+            },
+            {
+              "value": "model-2",
+              "name": "Model 2",
+              "description": "The most powerful model"
+            }
+          ]
+        },
+        {
+          "id": "context_size",
+          "name": "Context Size",
+          "category": "model_config",
+          "type": "select",
+          "currentValue": "200k",
+          "options": [
+            {
+              "value": "200k",
+              "name": "200K"
+            },
+            {
+              "value": "1m",
+              "name": "1M"
+            }
+          ]
         }
       ]
     }

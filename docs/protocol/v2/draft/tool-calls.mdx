@@ -74,7 +74,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 Tool kinds help Clients choose appropriate icons and optimize how they display tool execution progress.
 
-Custom or future tool kinds can be used when Clients can fall back to generic tool display behavior. Custom tool kinds **MUST** begin with `_`. Unknown non-underscore tool kinds are reserved for future ACP variants.
+Custom or future tool kinds can be used when Clients can fall back to generic tool display behavior. Custom tool kinds **MUST** begin with `_`. Unknown non-underscore tool kinds are reserved for future ACP variants. Clients display a tool kind they don't recognize as `other`.
 
 </ParamField>
 
@@ -260,7 +260,7 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   calls, use `type: "tool_call"` with a `toolCall` update containing details
   about the operation. Omitted or `null` means no structured subject was
   provided. Custom or future subject types may appear. Clients that do not
-  understand a subject should preserve it when proxying and use the common
+  understand a subject **SHOULD** preserve it when proxying and use the common
   prompt fields or decline according to policy.
 </ParamField>
 
@@ -315,7 +315,7 @@ The Client responds with the user's decision:
 
 Clients **MAY** automatically allow or reject permission requests according to the user settings.
 
-If the current active work gets [cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), the Client **MUST** respond with the `"cancelled"` outcome:
+When the Client sends [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation), it **MUST** answer every pending permission request in the session with the `"cancelled"` outcome:
 
 ```json
 {
@@ -333,8 +333,8 @@ If the current active work gets [cancelled](/protocol/v2/draft/prompt-lifecycle#
   The user's decision. Known outcomes are `cancelled` when the [active work was
   cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), and `selected`
   with an `optionId` for the selected permission option. Custom or future
-  outcomes may appear; agents that do not understand the outcome MUST NOT treat
-  it as approval.
+  outcomes may appear; agents that do not understand the outcome **MUST NOT**
+  treat it as approval.
 </ResponseField>
 
 ### Permission Options
@@ -384,13 +384,13 @@ Tool calls progress through different statuses during their lifecycle:
   The tool call was cancelled before it completed
 </ResponseField>
 
-Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants. Clients treat a tool call with an unrecognized status as still in progress.
 
 ## Content
 
 Tool calls can produce different types of content:
 
-Tool call content `type` values can also be custom or future variants. Implementations should preserve unknown content payloads when storing, replaying, proxying, or forwarding tool calls, and otherwise render a generic content item or ignore the item if no safe display is available.
+Tool call content `type` values can also be custom or future variants. Implementations **SHOULD** preserve unknown content payloads when storing, replaying, proxying, or forwarding tool calls, and otherwise render a generic content item or ignore the item if no safe display is available.
 
 ### Regular Content
 
@@ -497,9 +497,9 @@ File modifications shown as diffs. A diff always includes structured file
 changes and can optionally include renderable patch text.
 
 `changes` is authoritative for affected absolute paths and operations. `patch`,
-when present, provides renderable text for some or all of those changes and MUST
-be consistent with `changes`. Agents SHOULD provide `patch` whenever feasible.
-Clients MUST handle diffs where `patch` is omitted or `null`.
+when present, provides renderable text for some or all of those changes and **MUST**
+be consistent with `changes`. Agents **SHOULD** provide `patch` whenever feasible.
+Clients **MUST** handle diffs where `patch` is omitted or `null`.
 
 ```json
 {
@@ -524,26 +524,31 @@ Clients MUST handle diffs where `patch` is omitted or `null`.
 </ParamField>
 
 <ParamField path="patch" type="DiffPatch">
-  Optional renderable patch text. Agents SHOULD provide this whenever feasible.
-  Omitted or `null` means no patch text was provided.
+  Optional renderable patch text. Agents **SHOULD** provide this whenever
+  feasible. Omitted or `null` means no patch text was provided.
 </ParamField>
 
 <ParamField path="patch.format" type="string" required>
   Patch format. `git_patch`, the only ACP-defined value, is one or more `diff
   --git` sections in Git's `--patch` (`-p`) text format. Unlike Git, which
-  writes paths relative to the repository root, every path MUST be absolute,
+  writes paths relative to the repository root, every path **MUST** be absolute,
   including in `rename from`, `rename to`, `copy from`, and `copy to` lines, and
-  MUST NOT have a prefix such as Git's default `a/` and `b/`. Otherwise paths
+  **MUST NOT** have a prefix such as Git's default `a/` and `b/`. Otherwise paths
   follow Git: `/dev/null` names the missing side of an added or deleted file in
   the `---` and `+++` lines, and paths with unusual characters are [quoted as Git
   quotes them](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath).
-  Surrounding commit metadata and email envelopes MUST NOT be included.
+  Surrounding commit metadata and email envelopes **MUST NOT** be included.
 
 Git can produce most of this. With `$ROOT` set to the repository root,
 `git diff --src-prefix="$ROOT/" --dst-prefix="$ROOT/"` writes absolute
 `diff --git`, `---`, and `+++` lines. Git never prefixes `rename from`,
 `rename to`, `copy from`, or `copy to` paths, so those still need the
 repository root prepended, with Git's quoting applied to the full path.
+
+Many diff parsers strip one leading path component by default to remove Git's
+`a/` and `b/` prefixes, so configure them not to strip any. Take paths from
+`changes`, or from the `---`, `+++`, rename, and copy lines, rather than by
+splitting the `diff --git` header, which is ambiguous when paths contain spaces.
 
 </ParamField>
 

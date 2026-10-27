@@ -15,9 +15,7 @@ Content blocks appear in:
 
 Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v1/draft/security#rendering-agent-content) and [URIs and Remote Resources](/protocol/v1/draft/security#uris-and-remote-resources).
 
-The Agent Client Protocol uses the same `ContentBlock` structure as the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/specification/2025-06-18/schema#contentblock).
-
-This design choice enables Agents to seamlessly forward content from MCP tool outputs without transformation.
+ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2025-06-18 `ContentBlock`](https://modelcontextprotocol.io/specification/2025-06-18/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content.
 
 ### Text Content
 
@@ -168,6 +166,8 @@ in prompts.
 ### Resource Link
 
 References to resources that the Agent can access.
+
+All Agents **MUST** support resource links when included in prompts.
 
 ```json
 {

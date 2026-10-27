@@ -136,15 +136,16 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
 The Agent **MUST** replay the entire conversation to the Client in the form of
 `session/update` notifications (like `session/prompt`).
 
-- [Session compactions](/protocol/v1/draft/prompt-turn#session-compaction) are
-  replayed using the same update, chunk, and patch semantics as live delivery.
-  The Client's `session.compaction` capability is required for replay as well as
-  live delivery.
-- Live-only [notices](/protocol/v1/draft/prompt-turn#session-notices) are not
-  conversation history and **SHOULD NOT** be replayed. If the underlying
-  condition is still relevant after loading finishes, the Agent may emit a new
-  notice as a new live event, subject to the Client's `session.notices`
-  capability.
+[Session compactions](/protocol/v1/draft/prompt-turn#session-compaction) are
+replayed using the same update, chunk, and patch semantics as live delivery.
+The Client's `session.compaction` capability is required for replay as well as
+live delivery.
+
+Live-only [notices](/protocol/v1/draft/prompt-turn#session-notices) are not
+conversation history and **SHOULD NOT** be replayed. If the underlying
+condition is still relevant after loading finishes, the Agent may emit a new
+notice as a new live event, subject to the Client's `session.notices`
+capability.
 
 For example, a user message from the conversation history:
 
@@ -495,10 +496,10 @@ All Agents **MUST** support connecting to MCP servers via stdio (standard input/
   Environment variables to set when launching the server
 
   <Expandable title="EnvVariable">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the environment variable.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value of the environment variable.
       </ParamField>
   </Expandable>
@@ -540,10 +541,10 @@ When the Agent supports `mcpCapabilities.http`, Clients can specify MCP servers 
   HTTP headers to include in requests to the server
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -591,10 +592,10 @@ When the Agent supports `mcpCapabilities.sse`, Clients can specify MCP servers c
   HTTP headers to include when establishing the SSE connection
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>

@@ -15,9 +15,9 @@ Content blocks appear in:
 
 Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v2/draft/security#rendering-agent-content) and [URIs and Remote Resources](/protocol/v2/draft/security#uris-and-remote-resources).
 
-The Agent Client Protocol uses the same `ContentBlock` structure as the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock).
+ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2026-07-28 `ContentBlock`](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content, `_meta` on icons, and the open `type` fallback described below.
 
-This design choice enables Agents to seamlessly forward content from MCP tool outputs without transformation.
+A content type from a later MCP revision that ACP doesn't define isn't forwarded as is. Agents convert it to a supported type, such as an embedded resource, or omit it.
 
 Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants.
 
@@ -56,8 +56,8 @@ Images can be included for visual context or analysis.
 ```
 
 <Icon icon="asterisk" size="14" /> Requires the `image` [prompt
-capability](/protocol/v2/draft/initialization#prompt-capabilities) when included
-in prompts.
+capability](/protocol/v2/draft/initialization#session-prompt-capabilities) when
+included in prompts.
 
 <ParamField path="data" type="string" required>
   Base64-encoded image data
@@ -89,8 +89,8 @@ Audio data for transcription or analysis.
 ```
 
 <Icon icon="asterisk" size="14" /> Requires the `audio` [prompt
-capability](/protocol/v2/draft/initialization#prompt-capabilities) when included
-in prompts.
+capability](/protocol/v2/draft/initialization#session-prompt-capabilities) when
+included in prompts.
 
 <ParamField path="data" type="string" required>
   Base64-encoded audio data
@@ -125,8 +125,8 @@ This is the preferred way to include context in prompts, such as when using @-me
 By embedding the content directly in the request, Clients can include context from sources that the Agent may not have direct access to.
 
 <Icon icon="asterisk" size="14" /> Requires the `embeddedContext` [prompt
-capability](/protocol/v2/draft/initialization#prompt-capabilities) when included
-in prompts.
+capability](/protocol/v2/draft/initialization#session-prompt-capabilities) when
+included in prompts.
 
 <ParamField path="resource" type="EmbeddedResourceResource" required>
   The embedded resource contents, which can be either:
@@ -170,6 +170,8 @@ in prompts.
 ### Resource Link
 
 References to resources that the Agent can access.
+
+All Agents **MUST** support resource links when included in prompts.
 
 ```json
 {

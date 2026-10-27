@@ -334,7 +334,7 @@ The `error` stop reason is only for failures that end foreground work:
 
 A v2 Client that predates the `error` stop reason handles it like any unknown stop reason: foreground work has ended, and it shows a generic stopped state. It does not need `error` to know that the work ended. Because the error is part of the idle snapshot, anything that carries that snapshot carries the failure too, including an exposed subagent's `subagent_update.state` and any later mechanism for synchronizing current state on resume.
 
-v1's `session/prompt` is unchanged; it already reports these failures as an error response. The one v1 surface that carries this idle snapshot, the draft [subagent](/rfds/subagents#current-work-state) `subagent_update.state`, gains the same `error` stop reason, because a v1 child has no prompt response that could report its failure. A bridge from a v1 Agent to a v2 Client maps an error response that arrives after the bridge reported the message inserted to an idle `state_update` with the `error` stop reason and the same error object. A bridge from a v2 Agent to a v1 Client maps that update to an error response for the pending v1 prompt, using `-32603` (internal error) when `error` is absent.
+v1's `session/prompt` is unchanged; it already reports these failures as an error response. The one v1 surface that carries this idle snapshot, the draft [subagent](/rfds/subagents#current-work-state) `subagent_update.state`, gains the same `error` stop reason, because a v1 child has no prompt response that could report its failure.
 
 ## Shiny future
 

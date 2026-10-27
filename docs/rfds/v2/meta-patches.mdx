@@ -16,7 +16,7 @@ ACP v2 upsert updates should apply their top-level `_meta` as a patch one level 
 
 v2 upserts such as [`tool_call_update`](./tool-call-updates.mdx), [`terminal_update`](./terminal-output.mdx), and [message updates](./message-updates.mdx) treat `_meta` like every other patch field: omission leaves it unchanged, `null` clears it, and a concrete object replaces the whole stored object.
 
-Unlike the other patch fields, `_meta` has more than one writer. Its keys are usually namespaced by the extension that owns them, such as `zed.dev/debugMode`, and some are shared conventions such as W3C trace context. Replacing the whole object makes every writer responsible for every other writer's keys:
+Unlike the other patch fields, `_meta` has more than one writer. Its keys are usually namespaced by the extension that owns them, such as `com.example/debugMode`, and some are shared conventions such as W3C trace context. Replacing the whole object makes every writer responsible for every other writer's keys:
 
 - An Agent that sends different keys on different reports loses the earlier keys at each later report. v1 gave no rule for keeping a `tool_call_update`'s `_meta`, so v1 Agents that do this lose data after migrating, and the v2 migration guide had to tell them to resend every key on every report.
 - An intermediary, such as a proxy, that adds its own key to an update the Agent sent without `_meta` turns "unchanged" into "replace" and erases the Agent's stored metadata. To avoid that, it must track the stored metadata of every entity it forwards and resend the merged object.
@@ -54,8 +54,8 @@ For example, if a tool call's stored `_meta` is:
 
 ```json
 {
-  "zed.dev/progress": 0.5,
-  "acme.dev/review": { "state": "pending" }
+  "com.example/progress": 0.5,
+  "org.example/review": { "state": "pending" }
 }
 ```
 
@@ -66,9 +66,9 @@ and a later update sends:
   "sessionUpdate": "tool_call_update",
   "toolCallId": "call_001",
   "_meta": {
-    "zed.dev/progress": null,
-    "acme.dev/review": { "reviewer": "sam" },
-    "proxy.dev/route": "edge"
+    "com.example/progress": null,
+    "org.example/review": { "reviewer": "sam" },
+    "net.example/route": "edge"
   }
 }
 ```
@@ -77,8 +77,8 @@ the stored `_meta` becomes:
 
 ```json
 {
-  "acme.dev/review": { "reviewer": "sam" },
-  "proxy.dev/route": "edge"
+  "org.example/review": { "reviewer": "sam" },
+  "net.example/route": "edge"
 }
 ```
 

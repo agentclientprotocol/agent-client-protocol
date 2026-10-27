@@ -47,7 +47,7 @@ A typical flow follows this pattern:
    - Agent → Client: `session/update` notifications for accepted messages, state updates, progress updates, and user-facing notices
    - Agent → Client: Permission requests as needed
    - Client → Agent: `session/cancel` to interrupt processing if needed
-   - Agent → Client: An idle `state_update` with a stop reason when foreground work ends, even if background activity continues.
+   - Agent → Client: An idle `state_update` with a stop reason when foreground work ends, even if background activity continues
 </Step>
 </Steps>
 
@@ -247,7 +247,7 @@ Learn about [protocol extensibility](/protocol/v2/draft/extensibility) to unders
 
 - Read the [Security Considerations](/protocol/v2/draft/security) before shipping an Agent or Client
 - Learn about [Initialization](/protocol/v2/draft/initialization) to understand version and capability negotiation
-- Understand [Session Setup](/protocol/v2/draft/session-setup) for creating and loading sessions
+- Understand [Session Setup](/protocol/v2/draft/session-setup) for creating, resuming, and closing sessions
 - Review the [Prompt Lifecycle](/protocol/v2/draft/prompt-lifecycle)
 - Explore [Extensibility](/protocol/v2/draft/extensibility) to add custom features
 - Check your agent implementation with the [Test Compatibility Kit](/libraries/testing)

@@ -33,6 +33,7 @@ All paths in the protocol should be absolute
 ## Updating existing methods, their params, or output
 
 - Update the mintlify docs and guides in the `docs` directory
+- Make the same change in both the stable page and its `draft/` copy, unless the change is draft-only
 - Run `npm run check` to make sure the json and zod schemas gets generated properly
 
 Never write readme files related to the conversation unless explicitly asked to.

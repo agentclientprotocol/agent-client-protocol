@@ -47,7 +47,7 @@ ACP v2 should remove `sessionUpdate: "tool_call"` and make `sessionUpdate: "tool
 The v2 `ToolCallUpdate` payload has the following semantics:
 
 - `toolCallId` is required.
-- `title`, `kind`, `status`, `content`, `locations`, `rawInput`, and `rawOutput` are patch fields.
+- `name`, `title`, `kind`, `status`, `content`, `locations`, `rawInput`, and `rawOutput` are patch fields.
 - An omitted patch field leaves the previous value unchanged.
 - `null` explicitly clears or unsets the field.
 - Any concrete value replaces the previous value.
@@ -92,11 +92,7 @@ There is a single way to update a tool call, removing lots of confusion from how
 
 ### Compatibility
 
-When converting v1 to v2, both v1 `tool_call` and v1 `tool_call_update` should map to v2 `tool_call_update`. Because v1 treats a `null` field like omission, the adapter must drop `null` fields instead of forwarding them; a forwarded `null` would clear the v2 field rather than leave it unchanged.
-
-When converting v2 back to v1, adapters can represent compatible v2 updates as a v1 `ToolCallUpdate`. Some explicit clear operations are not representable because v1 update fields cannot preserve every distinction between omitted and `null`. Collection clears can be represented as empty arrays. A strict adapter must reject unrepresentable scalar or raw-field clears; an explicitly lossy bridge may instead omit them and document that the previous v1 value remains.
-
-`tool_call_content_chunk` cannot be represented by a stateless v2-to-v1 adapter because v1 tool-call content updates replace the whole content array rather than appending one item. A stateful bridge can choose to accumulate chunks and emit replacement arrays to v1 clients.
+This RFD doesn't define v1↔v2 conversions. Implementations that bridge versions follow the migration guide's advice on [adapters](/protocol/v2/migration#share-application-logic-not-wire-shapes).
 
 ## Frequently asked questions
 

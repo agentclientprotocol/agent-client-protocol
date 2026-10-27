@@ -309,16 +309,58 @@ The Agent **MUST** respond with the complete list of all configuration options a
       {
         "id": "mode",
         "name": "Session Mode",
+        "description": "Controls how the agent requests permission",
+        "category": "mode",
         "type": "select",
         "currentValue": "code",
-        "options": [...]
+        "options": [
+          {
+            "value": "ask",
+            "name": "Ask",
+            "description": "Request permission before making any changes"
+          },
+          {
+            "value": "code",
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
+          }
+        ]
       },
       {
         "id": "model",
         "name": "Model",
+        "category": "model",
         "type": "select",
         "currentValue": "model-1",
-        "options": [...]
+        "options": [
+          {
+            "value": "model-1",
+            "name": "Model 1",
+            "description": "The fastest model"
+          },
+          {
+            "value": "model-2",
+            "name": "Model 2",
+            "description": "The most powerful model"
+          }
+        ]
+      },
+      {
+        "id": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
+          }
+        ]
       }
     ]
   }
@@ -348,16 +390,58 @@ The Agent can also change configuration options and notify the Client by sending
         {
           "id": "mode",
           "name": "Session Mode",
+          "description": "Controls how the agent requests permission",
+          "category": "mode",
           "type": "select",
           "currentValue": "code",
-          "options": [...]
+          "options": [
+            {
+              "value": "ask",
+              "name": "Ask",
+              "description": "Request permission before making any changes"
+            },
+            {
+              "value": "code",
+              "name": "Code",
+              "description": "Write and modify code with full tool access"
+            }
+          ]
         },
         {
           "id": "model",
           "name": "Model",
+          "category": "model",
           "type": "select",
           "currentValue": "model-2",
-          "options": [...]
+          "options": [
+            {
+              "value": "model-1",
+              "name": "Model 1",
+              "description": "The fastest model"
+            },
+            {
+              "value": "model-2",
+              "name": "Model 2",
+              "description": "The most powerful model"
+            }
+          ]
+        },
+        {
+          "id": "context_size",
+          "name": "Context Size",
+          "category": "model_config",
+          "type": "select",
+          "currentValue": "200k",
+          "options": [
+            {
+              "value": "200k",
+              "name": "200K"
+            },
+            {
+              "value": "1m",
+              "name": "1M"
+            }
+          ]
         }
       ]
     }

@@ -154,7 +154,8 @@ informational additions.
 ### Client Capabilities
 
 Clients **MAY** include defined capability fields in `capabilities`.
-Omitted fields mean unsupported.
+Omitted fields mean unsupported. Extension-specific capabilities belong in
+`_meta`.
 
 #### Terminal Authentication
 
@@ -258,18 +259,18 @@ support `session/set_config_option`.
 
 #### Session Prompt Capabilities
 
-As a baseline, Agents that advertise `session` **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
+As a baseline, Agents that advertise `session` **MUST** support `text` and `resource_link` content blocks in `session/prompt` requests.
 
 Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/content) by specifying the following capabilities:
 
 <ResponseField name="image" type="PromptImageCapabilities Object">
-  The prompt may include `ContentBlock::Image`. Omitted or `null` means the
+  The prompt may include `image` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   image content in prompts.
 </ResponseField>
 
 <ResponseField name="audio" type="PromptAudioCapabilities Object">
-  The prompt may include `ContentBlock::Audio`. Omitted or `null` means the
+  The prompt may include `audio` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   audio content in prompts.
 </ResponseField>
@@ -278,7 +279,7 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
   name="embeddedContext"
   type="PromptEmbeddedContextCapabilities Object"
 >
-  The prompt may include `ContentBlock::Resource`. Omitted or `null` means the
+  The prompt may include `resource` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   embedded context in prompts.
 </ResponseField>
@@ -305,17 +306,18 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
 
 Both Clients and Agents **MUST** provide information about their implementation in the `info` field. It takes the following three fields:
 
-<ParamField path="name" type="string">
+<ParamField path="name" type="string" required>
   Intended for programmatic or logical use, but can be used as a display name
   fallback if title isn’t present.
 </ParamField>
 
 <ParamField path="title" type="string">
   Intended for UI and end-user contexts — optimized to be human-readable and
-  easily understood. If not provided, the name should be used for display.
+  easily understood. Optional; omitted and `null` are equivalent. If not
+  provided, the name **SHOULD** be used for display.
 </ParamField>
 
-<ParamField path="version" type="string">
+<ParamField path="version" type="string" required>
   Version of the implementation. Can be displayed to the user or used for
   debugging or metrics purposes.
 </ParamField>

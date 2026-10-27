@@ -10,14 +10,14 @@ use std::sync::Arc;
 /// additional metadata to their interactions. Implementations MUST NOT make assumptions about
 /// values at these keys.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 pub type Meta = serde_json::Map<String, serde_json::Value>;
 
 /// Allows for sending an arbitrary request that is not part of the ACP spec.
 /// Extension methods provide a way to add custom functionality while maintaining
 /// protocol compatibility.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -44,11 +44,11 @@ impl ExtRequest {
     }
 }
 
-/// Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.
+/// Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
 /// Extension methods provide a way to add custom functionality while maintaining
 /// protocol compatibility.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, From)]
 #[serde(transparent)]
@@ -65,11 +65,11 @@ impl ExtResponse {
     }
 }
 
-/// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+/// Allows either side to send an arbitrary notification that is not part of the ACP spec.
 /// Extension notifications provide a way to send one-way messages for custom functionality
 /// while maintaining protocol compatibility.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]

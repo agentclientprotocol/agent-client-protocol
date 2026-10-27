@@ -7,6 +7,8 @@ Sessions represent a specific conversation or thread between the [Client](/proto
 
 Before creating a session, Clients **MUST** first complete the [initialization](/protocol/v1/initialization) phase to establish protocol compatibility and capabilities.
 
+If the Agent requires authentication, `session/new` may fail with an `auth_required` error until the Client completes the [authentication flow](/protocol/v1/authentication).
+
 <br />
 
 ```mermaid
@@ -82,7 +84,7 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 
 ## Loading Sessions
 
-Agents that support the `loadSession` capability allow Clients to resume previous conversations. This feature enables persistence across restarts and sharing sessions between different Client instances.
+Agents that support the `loadSession` capability allow Clients to resume previous conversations with history replay. This feature enables persistence across restarts and sharing sessions between different Client instances.
 
 ### Checking Support
 
@@ -195,6 +197,8 @@ When **all** the conversation entries have been streamed to the Client, the Agen
   "result": {}
 }
 ```
+
+The response **MAY** also include initial mode, model, or session configuration state when those features are supported by the Agent.
 
 The Client can then continue sending prompts as if the session was never interrupted.
 
@@ -412,10 +416,10 @@ All Agents **MUST** support connecting to MCP servers via stdio (standard input/
   Environment variables to set when launching the server
 
   <Expandable title="EnvVariable">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the environment variable.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value of the environment variable.
       </ParamField>
   </Expandable>
@@ -457,10 +461,10 @@ When the Agent supports `mcpCapabilities.http`, Clients can specify MCP servers 
   HTTP headers to include in requests to the server
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -508,10 +512,10 @@ When the Agent supports `mcpCapabilities.sse`, Clients can specify MCP servers c
   HTTP headers to include when establishing the SSE connection
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>

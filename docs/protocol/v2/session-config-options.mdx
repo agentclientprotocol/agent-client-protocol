@@ -3,7 +3,7 @@ title: "Session Config Options"
 description: "Flexible configuration selectors for agent sessions"
 ---
 
-Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like modes, models, reasoning levels, and more.
+Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like modes, models, model parameters, reasoning levels, and more.
 
 ## Initial State
 
@@ -52,6 +52,23 @@ During [Session Setup](/protocol/v2/session-setup) the Agent **MAY** return a li
             "value": "model-2",
             "name": "Model 2",
             "description": "The most powerful model"
+          }
+        ]
+      },
+      {
+        "configId": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
           }
         ]
       },
@@ -240,9 +257,9 @@ Clients can change a config option value by calling the `session/set_config_opti
 </ParamField>
 
 <ParamField path="value" type="string | boolean" required>
-  The new value to set. For `select` options, this must be one of the values
-  listed in the option's `options` array. For `boolean` options, this must be a
-  boolean.
+  The new value to set. For `select` options, this **MUST** be one of the values
+  listed in the option's `options` array. For `boolean` options, this **MUST**
+  be a boolean.
 </ParamField>
 
 For boolean options, Clients send `type: "boolean"` with a boolean `value`:
@@ -272,34 +289,65 @@ The Agent **MUST** respond with the complete list of all configuration options a
       {
         "configId": "mode",
         "name": "Session Mode",
+        "description": "Controls how the agent requests permission",
+        "category": "mode",
         "type": "select",
         "currentValue": "code",
         "options": [
           {
             "value": "ask",
-            "name": "Ask"
+            "name": "Ask",
+            "description": "Request permission before making any changes"
           },
           {
             "value": "code",
-            "name": "Code"
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
           }
         ]
       },
       {
         "configId": "model",
         "name": "Model",
+        "category": "model",
         "type": "select",
         "currentValue": "model-1",
         "options": [
           {
             "value": "model-1",
-            "name": "Model 1"
+            "name": "Model 1",
+            "description": "The fastest model"
           },
           {
             "value": "model-2",
-            "name": "Model 2"
+            "name": "Model 2",
+            "description": "The most powerful model"
           }
         ]
+      },
+      {
+        "configId": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
+          }
+        ]
+      },
+      {
+        "configId": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
       }
     ]
   }
@@ -320,7 +368,7 @@ Clients whenever configuration state changes, including changes requested by a
 Client through `session/set_config_option`, to keep observers in sync.
 
 The response remains the source of truth for the requesting Client, which may
-also receive a duplicate notification. Agents should send that duplicate before
+also receive a duplicate notification. Agents **SHOULD** send that duplicate before
 the response and notifications for subsequent changes after it.
 
 ```json
@@ -335,34 +383,65 @@ the response and notifications for subsequent changes after it.
         {
           "configId": "mode",
           "name": "Session Mode",
+          "description": "Controls how the agent requests permission",
+          "category": "mode",
           "type": "select",
           "currentValue": "code",
           "options": [
             {
               "value": "ask",
-              "name": "Ask"
+              "name": "Ask",
+              "description": "Request permission before making any changes"
             },
             {
               "value": "code",
-              "name": "Code"
+              "name": "Code",
+              "description": "Write and modify code with full tool access"
             }
           ]
         },
         {
           "configId": "model",
           "name": "Model",
+          "category": "model",
           "type": "select",
           "currentValue": "model-2",
           "options": [
             {
               "value": "model-1",
-              "name": "Model 1"
+              "name": "Model 1",
+              "description": "The fastest model"
             },
             {
               "value": "model-2",
-              "name": "Model 2"
+              "name": "Model 2",
+              "description": "The most powerful model"
             }
           ]
+        },
+        {
+          "configId": "context_size",
+          "name": "Context Size",
+          "category": "model_config",
+          "type": "select",
+          "currentValue": "200k",
+          "options": [
+            {
+              "value": "200k",
+              "name": "200K"
+            },
+            {
+              "value": "1m",
+              "name": "1M"
+            }
+          ]
+        },
+        {
+          "configId": "brave_mode",
+          "name": "Brave Mode",
+          "description": "Skip confirmation prompts and act autonomously",
+          "type": "boolean",
+          "currentValue": false
         }
       ]
     }

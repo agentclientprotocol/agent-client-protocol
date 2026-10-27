@@ -546,7 +546,7 @@
               "anyOf": [
                 {
                   "title": "RequestPermissionRequest",
-                  "description": "Requests permission from the user for an operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels active session work via `session/cancel`, it MUST\nrespond to this request with `RequestPermissionOutcome::Cancelled`.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)",
+                  "description": "Requests permission from the user for an operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels active session work via `session/cancel`, it MUST\nrespond to this request with the `cancelled` outcome.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RequestPermissionRequest"
@@ -737,7 +737,7 @@
       ]
     },
     "ToolCallUpdate": {
-      "description": "Represents an upsert for a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nOnly [`ToolCallUpdate::tool_call_id`] is required. Other fields have patch semantics:\nomitted fields leave the existing tool call value unchanged, `null` clears or\nunsets the value, and concrete values replace the previous value. For\ncollection fields, concrete arrays replace the previous collection, and both\n`null` and `[]` clear the collection. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When a client receives a tool\ncall ID it has not seen before, omitted fields use client defaults.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls)",
+      "description": "Represents an upsert for a tool call that the language model has requested.\n\nTool calls are actions that the agent executes on behalf of the language model,\nsuch as reading files, executing code, or fetching data from external sources.\n\nOnly `toolCallId` is required. Other fields have patch semantics:\nomitted fields leave the existing tool call value unchanged, `null` clears or\nunsets the value, and concrete values replace the previous value. For\ncollection fields, concrete arrays replace the previous collection, and both\n`null` and `[]` clear the collection. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When a client receives a tool\ncall ID it has not seen before, omitted fields use client defaults.\n\nSee protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls)",
       "type": "object",
       "properties": {
         "toolCallId": {
@@ -876,7 +876,7 @@
         },
         {
           "title": "unknown",
-          "description": "Custom or future tool kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "description": "Custom or future tool kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants. Clients display an unrecognized kind as `other`.",
           "type": "string"
         }
       ]
@@ -911,7 +911,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future tool call status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "description": "Custom or future tool call status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients treat a tool call with an unrecognized status as still in progress.",
           "type": "string"
         }
       ]
@@ -1379,6 +1379,12 @@
             }
           ],
           "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
         }
       },
       "required": ["src"]
@@ -1450,7 +1456,8 @@
         "size": {
           "description": "Optional size of the linked resource in bytes, if known.",
           "type": ["integer", "null"],
-          "format": "int64",
+          "format": "uint64",
+          "minimum": 0,
           "x-deserialize-default-on-error": true
         },
         "annotations": {
@@ -1621,7 +1628,7 @@
       "required": ["content"]
     },
     "DiffChange": {
-      "description": "One file-level change described by a [`Diff`].\n\nStructured change metadata lets clients identify affected files and\noperations without parsing the text patch.",
+      "description": "One file-level change described by a `Diff`.\n\nStructured change metadata lets clients identify affected files and\noperations without parsing the text patch.",
       "type": "object",
       "properties": {
         "fileType": {
@@ -1892,12 +1899,18 @@
         "text": {
           "description": "Patch text in the format named by `format`.",
           "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
         }
       },
       "required": ["format", "text"]
     },
     "DiffPatchFormat": {
-      "description": "Text patch format used by [`DiffPatch`].",
+      "description": "Text patch format used by `DiffPatch`.",
       "anyOf": [
         {
           "description": "One or more `diff --git` sections in Git's `--patch` (`-p`) text format.\n\nUnlike Git, which writes paths relative to the repository root, every\npath MUST be absolute, including in `rename from`, `rename to`,\n`copy from`, and `copy to` lines, and MUST NOT have a prefix such as\nGit's default `a/` and `b/`. Otherwise paths follow Git: `/dev/null`\nnames the missing side of an added or deleted file in the `---` and\n`+++` lines, and paths with unusual characters are quoted as Git quotes\nthem. Surrounding commit metadata and email envelopes MUST NOT be\nincluded.",
@@ -1949,7 +1962,7 @@
       "type": "string"
     },
     "Terminal": {
-      "description": "A display-only reference to an agent-owned terminal.\n\nTerminal state and output are delivered separately through\n[`TerminalUpdate`] and [`TerminalOutputChunk`].",
+      "description": "A display-only reference to an agent-owned terminal.\n\nTerminal state and output are delivered separately through\n`terminal_update` and `terminal_output_chunk` session updates.",
       "type": "object",
       "properties": {
         "terminalId": {
@@ -2008,6 +2021,12 @@
               "$ref": "#/$defs/ToolCallUpdate"
             }
           ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
         }
       },
       "required": ["toolCall"]
@@ -2239,7 +2258,7 @@
       "x-method": "elicitation/create"
     },
     "ElicitationSessionScope": {
-      "description": "Session-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `tool_call_id` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
+      "description": "Session-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `toolCallId` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -2338,7 +2357,7 @@
       ]
     },
     "ElicitationPropertySchema": {
-      "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use the `String` variant with `enum` or `oneOf` set.\nMulti-select enums use the `Array` variant.",
+      "description": "Property schema for elicitation form fields.\n\nEach variant corresponds to a JSON Schema `\"type\"` value.\nSingle-select enums use `type: \"string\"` with `enum` or `oneOf` set.\nMulti-select enums use `type: \"array\"`.",
       "anyOf": [
         {
           "description": "String property (or single-select enum when `enum`/`oneOf` is set).",
@@ -2767,7 +2786,7 @@
         },
         {
           "title": "titled",
-          "description": "Titled multi-select items with human-readable labels.",
+          "description": "Titled multi-select items with human-readable labels.\n\nAs in MCP, titled items omit `type` and are identified by `anyOf`.",
           "allOf": [
             {
               "$ref": "#/$defs/TitledMultiSelectItems"
@@ -3410,11 +3429,11 @@
       }
     },
     "PromptCapabilities": {
-      "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for [`ContentBlock::Text`]\nand [`ContentBlock::ResourceLink`] in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/draft/initialization#prompt-capabilities)",
+      "description": "Prompt capabilities supported by the agent in `session/prompt` requests.\n\nBaseline agent functionality requires support for `text`\nand `resource_link` content blocks in prompt requests.\n\nOther variants must be explicitly opted in to.\nCapabilities for different types of content in prompt requests.\n\nIndicates which content types beyond the baseline (text and resource links)\nthe agent can process.\n\nSee protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/draft/initialization#prompt-capabilities)",
       "type": "object",
       "properties": {
         "image": {
-          "description": "Agent supports [`ContentBlock::Image`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports image content in prompts.",
+          "description": "Agent supports `image` content blocks.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports image content in prompts.",
           "anyOf": [
             {
               "$ref": "#/$defs/PromptImageCapabilities"
@@ -3426,7 +3445,7 @@
           "x-deserialize-default-on-error": true
         },
         "audio": {
-          "description": "Agent supports [`ContentBlock::Audio`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports audio content in prompts.",
+          "description": "Agent supports `audio` content blocks.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports audio content in prompts.",
           "anyOf": [
             {
               "$ref": "#/$defs/PromptAudioCapabilities"
@@ -3438,7 +3457,7 @@
           "x-deserialize-default-on-error": true
         },
         "embeddedContext": {
-          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include [`ContentBlock::Resource`]\nin prompt requests for pieces of context that are referenced in the message.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports embedded context in prompts.",
+          "description": "Agent supports embedded context in `session/prompt` requests.\n\nWhen enabled, the Client is allowed to include `resource` content blocks\nin prompt requests for pieces of context that are referenced in the message.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports embedded context in prompts.",
           "anyOf": [
             {
               "$ref": "#/$defs/PromptEmbeddedContextCapabilities"
@@ -3498,7 +3517,7 @@
       "type": "object",
       "properties": {
         "stdio": {
-          "description": "Agent supports [`McpServer::Stdio`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports stdio MCP server transports.",
+          "description": "Agent supports `stdio` MCP servers.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports stdio MCP server transports.",
           "anyOf": [
             {
               "$ref": "#/$defs/McpStdioCapabilities"
@@ -3510,7 +3529,7 @@
           "x-deserialize-default-on-error": true
         },
         "http": {
-          "description": "Agent supports [`McpServer::Http`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports HTTP MCP server transports.",
+          "description": "Agent supports `http` MCP servers.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports HTTP MCP server transports.",
           "anyOf": [
             {
               "$ref": "#/$defs/McpHttpCapabilities"
@@ -3522,7 +3541,7 @@
           "x-deserialize-default-on-error": true
         },
         "acp": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAgent supports [`McpServer::Acp`].\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports ACP MCP server transports.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAgent supports `acp` MCP servers.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports ACP MCP server transports.",
           "anyOf": [
             {
               "$ref": "#/$defs/McpAcpCapabilities"
@@ -3590,7 +3609,7 @@
       }
     },
     "SessionAdditionalDirectoriesCapabilities": {
-      "description": "Capabilities for additional session directories support.\n\nSupplying `{}` means the agent supports the `additionalDirectories` field on\nsupported session lifecycle requests. Agents that also support\n`session/list` may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
+      "description": "Capabilities for additional session directories support.\n\nSupplying `{}` means the agent supports the `additionalDirectories` field on\nsupported session lifecycle requests. Agents may return\n`SessionInfo.additionalDirectories` in `session/list` to report the\ncomplete ordered additional-root list associated with a listed session.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -4798,7 +4817,7 @@
       "type": "string"
     },
     "ExtResponse": {
-      "description": "Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)"
+      "description": "Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)"
     },
     "Error": {
       "description": "JSON-RPC error object.\n\nRepresents an error that occurred during method execution, following the\nJSON-RPC 2.0 error object specification with optional additional data.\n\nSee protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)",
@@ -4824,7 +4843,7 @@
       "required": ["code", "message"]
     },
     "ErrorCode": {
-      "description": "Predefined error codes for common JSON-RPC and ACP-specific errors.\n\nThese codes follow the JSON-RPC 2.0 specification for standard errors\nand use the reserved range (-32000 to -32099) for protocol-specific errors.",
+      "description": "Predefined error codes for common JSON-RPC and ACP-specific errors.\n\nStandard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC\nserver-error range (-32000 to -32099), and request cancellation uses -32800 from the\nrange LSP reserves (-32899 to -32800).",
       "anyOf": [
         {
           "title": "Parse error",
@@ -4856,7 +4875,7 @@
         },
         {
           "title": "Internal error",
-          "description": "**Internal error**: Internal JSON-RPC error.\nReserved for implementation-defined server errors.",
+          "description": "**Internal error**: Internal JSON-RPC error.",
           "type": "integer",
           "format": "int32",
           "const": -32603
@@ -5605,7 +5624,7 @@
       "type": "object",
       "properties": {
         "messageId": {
-          "description": "A unique identifier for the message this chunk belongs to.\n\nAll chunks belonging to the same message share the same `messageId`.\nA change in `messageId` indicates a new message has started.",
+          "description": "A unique identifier for the message this chunk belongs to.\n\nAll chunks belonging to the same message share the same `messageId`.\nChunks for different messages can interleave.",
           "allOf": [
             {
               "$ref": "#/$defs/MessageId"
@@ -5630,7 +5649,7 @@
       "required": ["messageId", "content"]
     },
     "UserMessage": {
-      "description": "A user message upsert.\n\nOnly [`UserMessage::message_id`] is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\na `user_message` update includes `content`, that array replaces any content\npreviously accumulated for the message, including content from earlier\nchunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "A user message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\na `user_message` update includes `content`, that array replaces any content\npreviously accumulated for the message, including content from earlier\nchunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -5660,7 +5679,7 @@
       "required": ["messageId"]
     },
     "AgentMessage": {
-      "description": "An agent message upsert.\n\nOnly [`AgentMessage::message_id`] is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_message` update includes `content`, that array replaces any\ncontent previously accumulated for the message, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "An agent message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_message` update includes `content`, that array replaces any\ncontent previously accumulated for the message, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -5690,7 +5709,7 @@
       "required": ["messageId"]
     },
     "AgentThought": {
-      "description": "An agent thought or reasoning message upsert.\n\nOnly [`AgentThought::message_id`] is required. `content` has patch semantics:\nan omitted field leaves existing thought content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_thought` update includes `content`, that array replaces any\ncontent previously accumulated for the thought, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "An agent thought or reasoning message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing thought content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted fields use client defaults. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_thought` update includes `content`, that array replaces any\ncontent previously accumulated for the thought, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -5875,7 +5894,7 @@
           "required": ["stopReason"]
         },
         {
-          "description": "Active session work was cancelled by the client via `session/cancel`.\n\nAgents MUST report this stop reason on an idle `state_update` when\ncancellation ends active foreground work, even if aborting causes\nexceptions. Agents MUST catch these errors and report `cancelled`, not\n`error`.",
+          "description": "The client cancelled the work, via `session/cancel` or by closing the\nsession. Work the agent stops on its own uses another reason, such as\n`error` for an internal timeout.\n\nAgents MUST report this stop reason on an idle `state_update` when\ncancellation ends active foreground work, even if aborting causes\nexceptions. Agents MUST catch these errors and report `cancelled`, not\n`error`.",
           "type": "object",
           "properties": {
             "stopReason": {
@@ -6083,7 +6102,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future session state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "description": "Custom or future session state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nUnless the Client advertised support for this state, Agents MUST still\nreport the standard states.\nClients MUST NOT treat an unrecognized state as `idle` or present the\nprevious state as confirmed, and show a generic busy state until a known\nstate arrives.",
           "type": "object",
           "properties": {
             "state": {
@@ -6141,7 +6160,7 @@
       ]
     },
     "ToolCallContentChunk": {
-      "description": "A streamed item of tool-call content.\n\nTool-call content chunks append one [`ToolCallContent`] item to the current\ncontent for the matching [`ToolCallId`]. Agents can use\n[`ToolCallUpdate::content`] when they need to replace the whole content\ncollection instead.",
+      "description": "A streamed item of tool-call content.\n\nTool-call content chunks append one `ToolCallContent` item to the current\ncontent for the matching `toolCallId`. Agents can send a `tool_call_update`\nwith `content` when they need to replace the whole content collection\ninstead.",
       "type": "object",
       "properties": {
         "toolCallId": {
@@ -6212,7 +6231,7 @@
       }
     },
     "TerminalUpdate": {
-      "description": "An upsert for the stored state of an agent-owned terminal.\n\nOnly [`TerminalUpdate::terminal_id`] is required. Other fields have patch\nsemantics: omitted fields leave the stored value unchanged, `null` clears\nit, and concrete values replace it. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When the terminal ID is new,\nomitted fields start unknown.",
+      "description": "An upsert for the stored state of an agent-owned terminal.\n\nOnly `terminalId` is required. Other fields have patch\nsemantics: omitted fields leave the stored value unchanged, `null` clears\nit, and concrete values replace it. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When the terminal ID is new,\nomitted fields start unknown.",
       "type": "object",
       "properties": {
         "terminalId": {
@@ -6948,7 +6967,7 @@
       }
     },
     "SubagentUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n[`SubagentUpdate::session_id`] announces the child and MUST be sent\nbefore any live request or notification bearing the child's session ID,\nincluding messages naming it as sender or recipient. Child events are\ndelivered automatically; no separate child load, resume, or subscription is needed.\nUnderstanding this update, registering child sessions, and applying their\noperation restrictions are baseline v2 requirements; no Client capability\nis required.\n\nOnly [`SubagentUpdate::session_id`] is required. Other fields have\npatch semantics: omitted fields leave the stored value unchanged, `null`\nclears or unsets the value, and concrete values replace it. A concrete\n`_meta` object instead patches the stored metadata by top-level key. For\n`state`, `null` removes the current state report and leaves activity\nunconfirmed; it does not report idle or cancellation. A child whose capabilities are\nunset permits no Client-initiated session mutations.\n\nThe title and description provide the parent's display metadata for the\nchild. Agents SHOULD mirror known child state changes in the parent's\n[`SubagentUpdate::state`] using the same [`StateUpdate`] snapshot as the\nordinary `state_update` notification on the child session. This reports\nchild state, not a separate parent-owned lifecycle. Consumers should\ntreat duplicate reports idempotently.\nCompleting or cancelling work does not end the association: the parent may\nmessage the same child again. Individual messages and their outcomes do not\nchange this association.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live request or notification bearing the child's session ID,\nincluding messages naming it as sender or recipient. Child events are\ndelivered automatically; no separate child load, resume, or subscription is needed.\nUnderstanding this update, registering child sessions, and applying their\noperation restrictions are baseline v2 requirements; no Client capability\nis required.\n\nOnly `sessionId` is required. Other fields have\npatch semantics: omitted fields leave the stored value unchanged, `null`\nclears or unsets the value, and concrete values replace it. A concrete\n`_meta` object instead patches the stored metadata by top-level key. For\n`state`, `null` removes the current state report and leaves activity\nunconfirmed; it does not report idle or cancellation. A child whose capabilities are\nunset permits no Client-initiated session mutations.\n\nThe title and description provide the parent's display metadata for the\nchild. Agents SHOULD mirror known child state changes in the parent's\n`state` using the same `StateUpdate` snapshot as the\nordinary `state_update` notification on the child session. This reports\nchild state, not a separate parent-owned lifecycle. Consumers should\ntreat duplicate reports idempotently.\nCompleting or cancelling work does not end the association: the parent may\nmessage the same child again. Individual messages and their outcomes do not\nchange this association.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -6982,7 +7001,7 @@
           "x-deserialize-default-on-error": true
         },
         "state": {
-          "description": "The child's current foreground state, mirrored onto its parent association.\n\nOptional and nullable. Omitted means unchanged; `null` removes the\ncurrent report and leaves activity unconfirmed (not idle or cancelled).\nA concrete [`StateUpdate`] replaces the entire previous snapshot.",
+          "description": "The child's current foreground state, mirrored onto its parent association.\n\nOptional and nullable. Omitted means unchanged; `null` removes the\ncurrent report and leaves activity unconfirmed (not idle or cancelled).\nA concrete `StateUpdate` replaces the entire previous snapshot.",
           "anyOf": [
             {
               "$ref": "#/$defs/StateUpdate"
@@ -7133,7 +7152,7 @@
       "x-method": "elicitation/complete"
     },
     "ExtNotification": {
-      "description": "Allows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)"
+      "description": "Allows either side to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)"
     },
     "ClientRequest": {
       "description": "A JSON-RPC request object.",
@@ -7168,7 +7187,7 @@
                 },
                 {
                   "title": "LoginAuthRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`new_session` without receiving an `auth_required` error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving an `auth_required` (`-32000`) error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LoginAuthRequest"
@@ -7213,7 +7232,7 @@
                 },
                 {
                   "title": "NewSessionRequest",
-                  "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return an `auth_required` error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/draft/session-setup)",
+                  "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return an `auth_required` (`-32000`) error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/draft/session-setup)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/NewSessionRequest"
@@ -7352,7 +7371,7 @@
           "description": "Authentication capabilities supported by the client.\nDetermines which authentication method types the agent may include\nin its `InitializeResponse`.\n\nOptional. Omitted or `null` both mean the client does not advertise any\nauthentication-method extensions.",
           "anyOf": [
             {
-              "$ref": "#/$defs/AuthCapabilities"
+              "$ref": "#/$defs/ClientAuthCapabilities"
             },
             {
               "type": "null"
@@ -7380,7 +7399,7 @@
         }
       }
     },
-    "AuthCapabilities": {
+    "ClientAuthCapabilities": {
       "description": "Authentication capabilities supported by the client.\n\nAdvertised during initialization to inform the agent which authentication\nmethod types the client can handle. This governs opt-in types that require\nadditional client-side support.",
       "type": "object",
       "properties": {
@@ -7860,7 +7879,7 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\n[`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown\nvalues parse as [`SystemPromptMode::Other`]; Agents MUST return an error\nfor modes they do not support.",
+          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\nUnknown\nvalues are preserved; Agents MUST return an error\nfor modes they do not support.",
           "allOf": [
             {
               "$ref": "#/$defs/SystemPromptMode"
@@ -7868,7 +7887,7 @@
           ]
         },
         "content": {
-          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept [`ContentBlock::Text`].\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types preserved as\n[`ContentBlock::Other`].",
+          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept `text` content blocks.\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -7884,7 +7903,7 @@
       "required": ["mode", "content"]
     },
     "SystemPromptMode": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown modes parse as [`SystemPromptMode::Other`] so they can be stored,\nproxied, or forwarded. An Agent MUST return an error for a mode it does not\nsupport rather than treating it as `append` or `override`.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown modes are preserved so they can be stored,\nproxied, or forwarded. An Agent MUST return an error for a mode it does not\nsupport rather than treating it as `append` or `override`.",
       "anyOf": [
         {
           "description": "Add the content to the Agent's own instructions rather than replacing them.\n\nEvery Agent that advertises `session.systemPrompt` supports this mode.\nAgents SHOULD give the content system-level precedence, for example in the\nmodel's system prompt or developer instructions rather than in user-turn\ncontent. Where it is placed and how it is formatted is implementation-defined.",
@@ -8204,7 +8223,7 @@
       "required": ["sessionId", "configId"],
       "anyOf": [
         {
-          "description": "A [`SessionConfigValueId`] string value (`type: \"id\"`).",
+          "description": "A `SessionConfigValueId` string value (`type: \"id\"`).",
           "type": "object",
           "properties": {
             "type": {
@@ -8294,7 +8313,7 @@
           ]
         },
         "prompt": {
-          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support [`ContentBlock::Text`] and [`ContentBlock::ResourceLink`],\nwhile other variants are optionally enabled via [`PromptCapabilities`].\n\nThe Client MUST adapt its interface according to [`PromptCapabilities`].\n\nThe client MAY include referenced pieces of context as either\n[`ContentBlock::Resource`] or [`ContentBlock::ResourceLink`].\n\nWhen available, [`ContentBlock::Resource`] is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent may not have access to.",
+          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support `text` and `resource_link` content blocks,\nwhile other variants are optionally enabled via `PromptCapabilities`.\n\nThe Client MUST adapt its interface according to `PromptCapabilities`.\n\nThe client MAY include referenced pieces of context as either\n`resource` or `resource_link` content blocks.\n\nWhen available, `resource` is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent may not have access to.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -8433,7 +8452,7 @@
       "description": "The outcome of a permission request.",
       "anyOf": [
         {
-          "description": "Active session work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification to cancel active\nsession work, it MUST respond to all pending `session/request_permission`\nrequests in that session with this `Cancelled` outcome, without answering\nany request twice. Requests in other sessions are unaffected.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+          "description": "The session's work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification, it MUST respond to all\npending `session/request_permission` requests in that session with this\n`cancelled` outcome, without answering any request twice. Requests in other\nsessions are unaffected. Agents treat `cancelled` for background work as a\ndenial.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
           "type": "object",
           "properties": {
             "outcome": {
@@ -8441,7 +8460,12 @@
               "const": "cancelled"
             }
           },
-          "required": ["outcome"]
+          "required": ["outcome"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CancelledPermissionOutcome"
+            }
+          ]
         },
         {
           "description": "The user selected one of the provided options.",
@@ -8497,6 +8521,18 @@
           "additionalProperties": true
         }
       ]
+    },
+    "CancelledPermissionOutcome": {
+      "description": "The session's work was cancelled before the user responded.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "SelectedPermissionOutcome": {
       "description": "The user selected one of the provided options.",
@@ -8621,7 +8657,7 @@
       "x-method": "elicitation/create"
     },
     "ElicitationContentValue": {
-      "description": "Allowed wire representations for [`ElicitationContentValue`].",
+      "description": "Allowed wire representations for `ElicitationContentValue`.",
       "anyOf": [
         {
           "title": "String",
@@ -8750,7 +8786,7 @@
               "anyOf": [
                 {
                   "title": "CancelSessionNotification",
-                  "description": "Cancels ongoing operations for a session.\n\nThis is a notification sent by the client to cancel active work in a\nsession.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason if cancellation ended active\nforeground work. No additional completion update is required if no\nforeground work was active.\n\nAfter cancellation completes, the Agent SHOULD ignore late answers rather\nthan use them to resume the cancelled work.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+                  "description": "Cancels a session's foreground work and its prompts not yet inserted.\n\nBackground work is not covered, but the Agent MAY stop it too.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason if cancellation ended active\nforeground work. No additional completion update is required if no\nforeground work was active.\n\nAfter cancellation completes, the Agent SHOULD ignore late answers rather\nthan use them to resume the cancelled work.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelSessionNotification"
@@ -8787,7 +8823,7 @@
       "x-docs-ignore": true
     },
     "CancelSessionNotification": {
-      "description": "Notification to cancel ongoing operations for a session.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+      "description": "Notification to cancel a session's foreground work and its prompts not yet inserted.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
       "type": "object",
       "properties": {
         "sessionId": {

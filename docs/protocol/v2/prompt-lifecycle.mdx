@@ -37,7 +37,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 
 This is the complete set of standard variants defined in the current [`SessionUpdate` schema](/protocol/v2/schema#sessionupdate), which describes each payload in detail. The walkthrough below illustrates common uses of these updates.
 
-The protocol also supports [custom and future variants](/protocol/v2/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update should preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
+The protocol also supports [custom and future variants](/protocol/v2/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update **SHOULD** preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
 
 Live-only [notices](#session-notices) **SHOULD NOT** be replayed, even when
 preserved as unknown updates.
@@ -46,20 +46,23 @@ Session updates are not limited to prompt-driven foreground work. For example, A
 
 ### Entity IDs
 
-Messages, tool calls, terminals, and plans are entities that the Agent creates and then updates by ID across multiple session updates. An entity is identified by its type together with its ID, not by its ID alone:
+Messages, tool calls, terminals, plans, and compactions are entities that the Agent creates and then updates by ID across multiple session updates. An entity is identified by its type together with its ID, not by its ID alone:
 
-| Entity type   | Session updates                               | ID field     |
-| ------------- | --------------------------------------------- | ------------ |
-| User message  | `user_message`, `user_message_chunk`          | `messageId`  |
-| Agent message | `agent_message`, `agent_message_chunk`        | `messageId`  |
-| Agent thought | `agent_thought`, `agent_thought_chunk`        | `messageId`  |
-| Tool call     | `tool_call_update`, `tool_call_content_chunk` | `toolCallId` |
-| Terminal      | `terminal_update`, `terminal_output_chunk`    | `terminalId` |
-| Plan          | `plan_update`                                 | `planId`     |
+| Entity type   | Session updates                                 | ID field       |
+| ------------- | ----------------------------------------------- | -------------- |
+| User message  | `user_message`, `user_message_chunk`            | `messageId`    |
+| Agent message | `agent_message`, `agent_message_chunk`          | `messageId`    |
+| Agent thought | `agent_thought`, `agent_thought_chunk`          | `messageId`    |
+| Tool call     | `tool_call_update`, `tool_call_content_chunk`   | `toolCallId`   |
+| Terminal      | `terminal_update`, `terminal_output_chunk`      | `terminalId`   |
+| Plan          | `plan_update`                                   | `planId`       |
+| Compaction    | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
 
 An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, and Agent thoughts are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`; they remain two distinct entities.
 
 The Agent **MUST NOT** reuse an ID for a different entity of the same type within a session. Clients **MUST** key entities by both type and ID. An update applies only to the entity of its own type: an `agent_thought` whose `messageId` matches an existing Agent message creates or updates a thought and leaves the message unchanged. Likewise, a field that references an entity identifies an entity of one specific type; for example, the `messageId` returned by `session/prompt` identifies a user message.
+
+An entity's first update fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks patch the entity in place without moving it, including after the session reports `idle`. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, may ignore its position.
 
 ## Foreground and Background Work
 
@@ -182,13 +185,13 @@ The Client sends a user message with `session/prompt`:
 }
 ```
 
-<ParamField path="sessionId" type="SessionId">
+<ParamField path="sessionId" type="SessionId" required>
     The [ID](/protocol/v2/session-setup#session-id) of the session to send this message to.
 </ParamField>
-<ParamField path="prompt" type="ContentBlock[]">
+<ParamField path="prompt" type="ContentBlock[]" required>
     The contents of the user message, e.g. text, images, files, etc.
 
-    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#prompt-capabilities) established during [initialization](/protocol/v2/initialization). Agents **MUST** reject content types they don't support with `-32602`.
+    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/initialization). Agents **MUST** reject content types they don't support with `-32602`.
 
     <Card icon="comments" horizontal href="/protocol/v2/content">
       Learn more about Content
@@ -355,7 +358,7 @@ The Agent can report the model's text response as an `agent_message` update with
 
 The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
 
-User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged, `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content; a changed `messageId` indicates a new message.
+User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged, `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content.
 
 Clients apply message updates and chunks in the order they are received for each `messageId`:
 
@@ -436,6 +439,8 @@ No Client capability is required in v2. Clients that do not implement `notice`
 may preserve it through the [unknown-update
 fallback](/protocol/v2/extensibility#enum-and-tagged-union-variants) and
 ignore it or present it generically; this does not give it replay semantics.
+This is [capability-free informational delivery](/protocol/v2/extensibility#experimental-features-and-negotiation),
+not an advertisement that the Client will display the notice.
 
 At any point while a session exists, including outside prompt processing, the
 Agent **MAY** send a live user-facing notice:
@@ -470,8 +475,8 @@ nullable object scoped to this event; omission and `null` both mean no event
 metadata. Unlike compaction patch fields, these fields do not update or clear
 an earlier notice.
 
-Clients may ignore them, and Agents must behave as though a
-notice may not have been received, displayed, or seen. A notice must not carry
+Clients **MAY** ignore them, and Agents **MUST** behave as though a
+notice may not have been received, displayed, or seen. A notice **MUST NOT** carry
 information required for protocol correctness, authorization, user action,
 task completion, or fatal-error reporting.
 
@@ -489,7 +494,9 @@ Agent may emit a new notice.
 
 #### Session Compaction
 
-No Client capability is required in v2.
+No Client capability is required in v2. Clients without compaction-specific
+handling may preserve, ignore, or generically display these informational updates
+under the [v2 negotiation rules](/protocol/v2/extensibility#experimental-features-and-negotiation).
 
 The Agent **MAY** report context compaction as one persistent, ID-addressed
 timeline entity. A single `compaction_update` with `status: "completed"` is
@@ -521,10 +528,9 @@ session, and **MUST NOT** be reused for another compaction.
 Clients initialize a first-seen compaction ID with status `in_progress` and unset
 optional fields, then apply the notification.
 
-The first notification fixes the entity's timeline position in receive
-order: it follows previously received timeline content and precedes content
-first received later. Later updates and chunks for an ID-addressed entity patch
-it in place; they do not move or split it around the compaction.
+As for every [entity](#entity-ids), the first notification fixes the
+compaction's timeline position. Later updates and chunks for other entities
+patch them in place; they do not move or split them around the compaction.
 
 | `status`      | Meaning                                      |
 | ------------- | -------------------------------------------- |
@@ -612,9 +618,9 @@ accumulated content, and any subsequent chunks append to that replacement.
 output before failure or cancellation.
 
 The summary is not the Agent's complete replacement history or generic status
-text such as "Compaction completed". It should faithfully represent the
+text such as "Compaction completed". It **SHOULD** faithfully represent the
 retained, user-displayable summary without internal prompt framing or hidden
-instructions. Text blocks may contain Markdown. Agents should omit it when no
+instructions. Text blocks may contain Markdown. Agents **SHOULD** omit it when no
 unencrypted summary is available or when disclosure would reveal context that
 was not otherwise user-visible.
 
@@ -790,11 +796,15 @@ When an Agent stops foreground work, it **SHOULD** specify the corresponding `St
 
 <ResponseField name="refusal">The Agent refuses to continue</ResponseField>
 
-<ResponseField name="cancelled">The Client cancels active work</ResponseField>
+<ResponseField name="cancelled">
+  The Client cancelled the work, with `session/cancel` or by closing the session
+</ResponseField>
 
 <ResponseField name="error">
   Foreground work ended because something failed. See [Failures](#failures).
 </ResponseField>
+
+When the Agent stops foreground work on its own, it uses the matching reason: `max_tokens` or `max_turn_requests` for limits, `refusal` for a refusal, and `error` for anything else, such as an internal timeout. `cancelled` is only for work the Client cancelled.
 
 Custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`; unknown non-underscore stop reasons are reserved for future ACP variants.
 
@@ -857,6 +867,8 @@ model call, permission request, or elicitation.
 </ResponseField>
 
 Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state.
+
+Unless the Client has advertised support for a custom or future state, Agents **MUST** still report `running`, `requires_action`, and `idle` where the [state transitions](#state-transitions) require them. A Client that receives a state it doesn't recognize **MUST NOT** treat it as `idle` or present the previous state as confirmed, and shows a generic busy state until a known state arrives.
 
 ### Initial State and Synchronization
 
@@ -970,7 +982,7 @@ may carry a previous stop reason without creating another completion.
 
 ## Cancellation
 
-Clients **MAY** cancel active session work at any time by sending a `session/cancel` notification:
+Clients **MAY** cancel the session's foreground work at any time by sending a `session/cancel` notification:
 
 ```json
 {
@@ -982,13 +994,15 @@ Clients **MAY** cancel active session work at any time by sending a `session/can
 }
 ```
 
-If the Agent cancels a prompt request before insertion, it answers that request with `-32800` as described in [request cancellation](/protocol/v2/cancellation). Once the message is inserted, the prompt request still succeeds with its `messageId`; cancellation does not undo that insertion.
+`session/cancel` covers foreground work and prompts the Agent has not yet inserted. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`; cancellation does not undo that insertion. Background work is not covered, but the Agent **MAY** stop it too.
 
 The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification.
 
 The Client **MUST** respond to pending `session/request_permission` requests in
 the cancelled session with the `cancelled` outcome. Requests already answered
-do not require another response. For selective cancellation of related
+do not require another response. The Client can't tell foreground requests from
+background ones, so this covers every pending request in the session; the Agent
+treats `cancelled` for background work as a denial. For selective cancellation of related
 elicitation requests, see [Elicitation Cancellation](/protocol/v2/elicitation#session-cancellation).
 
 When the Agent receives this notification, it **SHOULD** stop all language model requests and all tool call invocations as soon as possible.
@@ -1004,8 +1018,7 @@ when cancellation took effect. Cancellation can finish without receiving
 answers to abandoned user-action requests.
 
 If no foreground work was active when cancellation took effect, no additional
-completion update is required. Pending requests or background operations can
-still be cancelled without a foreground transition.
+completion update is required.
 
 <Warning>
   API client libraries and tools often throw an exception when their operation is aborted, which may otherwise be surfaced as a generic failure.
