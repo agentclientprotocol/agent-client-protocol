@@ -5,7 +5,7 @@ description: "Requesting structured information from users"
 
 Elicitation lets an Agent ask a user for structured information through the
 Client. It is based on the locked
-[MCP 2026-07-28 release-candidate elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation)
+[MCP 2026-07-28 elicitation specification](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation)
 and supports two modes:
 
 - **Form mode** collects non-sensitive data using a restricted JSON Schema.
@@ -47,7 +47,7 @@ Capability objects have the following semantics:
 - A present capability object may advertise zero, one, or both modes. `{}` and
   `{"form":null,"url":null}` advertise no supported modes.
 
-This deliberately differs from the MCP 2026-07-28 release candidate, where an
+This deliberately differs from MCP 2026-07-28, where an
 empty elicitation capability retains the original form-only meaning. ACP
 requires each supported mode to be explicit.
 
@@ -226,7 +226,7 @@ complete independently. Cancellation can finish without waiting for it.
 Agents and Clients implementing URL mode **MUST** follow these requirements:
 
 These requirements adapt MCP's
-[Safe URL Handling](https://modelcontextprotocol.io/specification/draft/client/elicitation#safe-url-handling)
+[Safe URL Handling](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation#safe-url-handling)
 rules to ACP.
 
 - Agents **MUST NOT** put credentials, personal data, or pre-authenticated
