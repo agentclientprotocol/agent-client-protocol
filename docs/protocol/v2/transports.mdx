@@ -54,6 +54,13 @@ This permission does not override capability requirements or method-specific
 lifecycle and ordering rules. For example, session-scoped messages still
 require a valid session.
 
+## Message Order
+
+Transports **MUST** deliver messages in the order they were sent. Receivers
+**MUST** apply a session's `session/update` notifications in the order they are
+received. Entries in one [batch](#json-rpc-batch-messages) have no relative
+order.
+
 ## JSON-RPC Batch Messages
 
 JSON-RPC 2.0 allows a sender to combine multiple request and notification
@@ -86,10 +93,10 @@ When receiving a batch call:
   responses (`code: -32600`) with `id: null`; they do not make the entire batch
   fail.
 
-Array position does not establish processing order. Senders **SHOULD NOT**
-batch messages whose correctness depends on their relative processing order;
-send them as separate transport messages instead, following any method-specific
-ordering requirements.
+Array position does not establish processing order. Senders **MUST NOT** batch
+messages whose correctness depends on their relative processing order, such as
+two `session/update` notifications for the same entity. Send them as separate
+transport messages instead.
 
 Clients and agents **SHOULD NOT** batch lifecycle-sensitive messages such as
 `initialize`, `auth/login`, `session/new`, `session/resume`, and
@@ -104,4 +111,4 @@ _In discussion, draft proposal in progress._
 
 Agents and clients **MAY** implement additional custom transport mechanisms to suit their specific needs. The protocol is transport-agnostic and can be implemented over any communication channel that supports bidirectional message exchange.
 
-Implementers who choose to support custom transports **MUST** ensure they preserve the JSON-RPC message format and lifecycle requirements defined by ACP. Custom transports **SHOULD** document their specific connection establishment and message exchange patterns to aid interoperability.
+Implementers who choose to support custom transports **MUST** ensure they preserve the JSON-RPC message format, message order, and lifecycle requirements defined by ACP. Custom transports **SHOULD** document their specific connection establishment and message exchange patterns to aid interoperability.

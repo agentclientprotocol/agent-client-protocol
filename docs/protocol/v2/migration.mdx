@@ -879,7 +879,7 @@ v2 makes the whole schema forward-compatible by convention:
 
 ## Transports
 
-stdio remains the primary transport and is unchanged except that v2 explicitly follows **JSON-RPC 2.0 batch** behavior: a newline-delimited message may be a single request, notification, response, or a batch array. Receivers may process batch entries concurrently, must not reply to notifications, and return per-entry `-32600` errors for invalid entries. Don't batch lifecycle-sensitive messages (`initialize`, `auth/login`, `session/new`, `session/resume`, `session/prompt`). They change which later messages are valid.
+stdio remains the primary transport and is unchanged except that v2 explicitly follows **JSON-RPC 2.0 batch** behavior: a newline-delimited message may be a single request, notification, response, or a batch array. Receivers may process batch entries concurrently, must not reply to notifications, and return per-entry `-32600` errors for invalid entries. Don't batch lifecycle-sensitive messages (`initialize`, `auth/login`, `session/new`, `session/resume`, `session/prompt`). They change which later messages are valid. Apply a session's `session/update` notifications in the order received, and don't batch updates whose order matters, such as two updates to the same entity. See [Message Order](/protocol/v2/transports#message-order).
 
 A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of the core v2 protocol surface. See the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
 
