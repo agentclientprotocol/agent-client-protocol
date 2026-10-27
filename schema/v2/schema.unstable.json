@@ -1929,11 +1929,12 @@
       "type": "object",
       "properties": {
         "changes": {
-          "description": "Structured file changes described by this diff.\n\nClients can use this field without parsing patch text to determine affected paths.\nA malformed change invalidates the whole diff rather than being skipped.",
+          "description": "Structured file changes described by this diff.\n\nClients can use this field without parsing patch text to determine affected paths.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/DiffChange"
-          }
+          },
+          "x-deserialize-skip-invalid-items": true
         },
         "patch": {
           "description": "Renderable patch text for some or all of the structured changes.\n\nAgents SHOULD provide patch text whenever feasible. Omitted or `null`\nmeans no renderable patch text was provided.",
@@ -2014,7 +2015,7 @@
       "type": "object",
       "properties": {
         "toolCall": {
-          "description": "Details about the tool call requiring permission.\n\nThe user approves what this shows, so a malformed `content` or `locations` item fails\nthe request instead of being skipped.",
+          "description": "Details about the tool call requiring permission.\n\nThe user approves what this shows, so a malformed `content` or `locations` item, or a\nmalformed change inside a diff, fails the request instead of being skipped.",
           "allOf": [
             {
               "$ref": "#/$defs/ToolCallUpdate"

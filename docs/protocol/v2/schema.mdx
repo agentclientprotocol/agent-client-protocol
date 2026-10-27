@@ -2589,7 +2589,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Structured file changes described by this diff.
 
 Clients can use this field without parsing patch text to determine affected paths.
-A malformed change invalidates the whole diff rather than being skipped.
 
 </ResponseField>
 <ResponseField name="patch" type={<><span><a href="#diffpatch">DiffPatch</a></span><span> | null</span></>} >
@@ -5252,8 +5251,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
 
-The user approves what this shows, so a malformed `content` or `locations` item fails
-the request instead of being skipped.
+The user approves what this shows, so a malformed `content` or `locations` item, or a
+malformed change inside a diff, fails the request instead of being skipped.
 
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
@@ -7536,7 +7535,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Structured file changes described by this diff.
 
 Clients can use this field without parsing patch text to determine affected paths.
-A malformed change invalidates the whole diff rather than being skipped.
 
 </ResponseField>
 <ResponseField name="patch" type={<><span><a href="#diffpatch">DiffPatch</a></span><span> | null</span></>} >
@@ -7687,8 +7685,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="toolCall" type={<a href="#toolcallupdate">ToolCallUpdate</a>} required>
   Details about the tool call requiring permission.
 
-The user approves what this shows, so a malformed `content` or `locations` item fails
-the request instead of being skipped.
+The user approves what this shows, so a malformed `content` or `locations` item, or a
+malformed change inside a diff, fails the request instead of being skipped.
 
 </ResponseField>
 

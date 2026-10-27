@@ -16,9 +16,10 @@ use super::PlanRemoved;
 #[cfg(feature = "unstable_end_turn_token_usage")]
 use super::Usage;
 use super::{
-    AbsolutePath, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate,
-    SessionConfigOption, SessionId, StopReason, TerminalId, TerminalOutputChunk, TerminalUpdate,
-    ToolCallContent, ToolCallContentChunk, ToolCallId, ToolCallLocation, ToolCallUpdate,
+    AbsolutePath, ContentBlock, DiffChange, ExtNotification, ExtRequest, ExtResponse, Meta,
+    PlanUpdate, SessionConfigOption, SessionId, StopReason, TerminalId, TerminalOutputChunk,
+    TerminalUpdate, ToolCallContent, ToolCallContentChunk, ToolCallId, ToolCallLocation,
+    ToolCallUpdate,
 };
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
@@ -2801,8 +2802,8 @@ impl From<CommandPermissionSubject> for RequestPermissionSubject {
 pub struct ToolCallPermissionSubject {
     /// Details about the tool call requiring permission.
     ///
-    /// The user approves what this shows, so a malformed `content` or `locations` item fails
-    /// the request instead of being skipped.
+    /// The user approves what this shows, so a malformed `content` or `locations` item, or a
+    /// malformed change inside a diff, fails the request instead of being skipped.
     #[serde(deserialize_with = "deserialize_strict_tool_call")]
     pub tool_call: ToolCallUpdate,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2818,7 +2819,7 @@ pub struct ToolCallPermissionSubject {
 }
 
 /// Parses a permission subject's tool call without skipping malformed `content` or `locations`
-/// items, which [`ToolCallUpdate`] otherwise tolerates.
+/// items, or malformed changes inside a diff, which [`ToolCallUpdate`] otherwise tolerates.
 fn deserialize_strict_tool_call<'de, D>(deserializer: D) -> Result<ToolCallUpdate, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -2833,6 +2834,15 @@ where
                 for item in items {
                     if key == "content" {
                         ToolCallContent::deserialize(item).map_err(D::Error::custom)?;
+                        // Diffs skip malformed changes elsewhere; here every change must parse.
+                        if item.get("type").and_then(serde_json::Value::as_str) == Some("diff")
+                            && let Some(changes) =
+                                item.get("changes").and_then(serde_json::Value::as_array)
+                        {
+                            for change in changes {
+                                DiffChange::deserialize(change).map_err(D::Error::custom)?;
+                            }
+                        }
                     } else {
                         ToolCallLocation::deserialize(item).map_err(D::Error::custom)?;
                     }
@@ -3723,12 +3733,18 @@ mod tests {
         assert!(subject(serde_json::json!("not an array")).is_err());
         assert!(subject(serde_json::json!([])).is_ok());
 
-        // Outside a permission subject, the malformed item is still skipped.
+        // Outside a permission subject, only the malformed change is skipped.
         let update: ToolCallUpdate = serde_json::from_value(
             serde_json::json!({ "toolCallId": "call_1", "content": bad_diff }),
         )
         .unwrap();
-        assert_eq!(update.content, MaybeUndefined::Value(vec![]));
+        let MaybeUndefined::Value(content) = update.content else {
+            panic!("expected content");
+        };
+        let [ToolCallContent::Diff(diff)] = content.as_slice() else {
+            panic!("expected one diff");
+        };
+        assert_eq!(diff.changes, vec![]);
     }
 
     #[test]

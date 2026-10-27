@@ -559,7 +559,8 @@ pub struct Diff {
     /// Structured file changes described by this diff.
     ///
     /// Clients can use this field without parsing patch text to determine affected paths.
-    /// A malformed change invalidates the whole diff rather than being skipped.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub changes: Vec<DiffChange>,
     /// Renderable patch text for some or all of the structured changes.
     ///
@@ -1443,15 +1444,20 @@ mod tests {
     }
 
     #[test]
-    fn diff_rejects_malformed_changes() {
-        let result = serde_json::from_value::<ToolCallContent>(serde_json::json!({
+    fn diff_changes_skip_malformed_list_items() {
+        let content: ToolCallContent = serde_json::from_value(serde_json::json!({
             "type": "diff",
             "changes": [
                 { "operation": "modify" },
                 { "operation": "delete", "path": "/ok" }
             ]
-        }));
-        assert!(result.is_err());
+        }))
+        .unwrap();
+
+        let ToolCallContent::Diff(diff) = content else {
+            panic!("expected diff content");
+        };
+        assert_eq!(diff.changes, vec![DiffChange::delete("/ok")]);
     }
 
     #[test]
