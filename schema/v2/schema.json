@@ -2537,7 +2537,7 @@
           "minimum": 0
         },
         "pattern": {
-          "description": "Pattern the string must match.\n\nOptional. Omitted and `null` are equivalent and mean there is no pattern constraint.",
+          "description": "Pattern the string must match, in ECMA-262 regular expression syntax.\n\nOptional. Omitted and `null` are equivalent and mean there is no pattern constraint.",
           "type": ["string", "null"],
           "format": "regex"
         },

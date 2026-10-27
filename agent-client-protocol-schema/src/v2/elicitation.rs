@@ -166,7 +166,7 @@ pub struct StringPropertySchema {
     /// Optional. Omitted and `null` are equivalent and mean there is no maximum length constraint.
     #[serde(default)]
     pub max_length: Option<u32>,
-    /// Pattern the string must match.
+    /// Pattern the string must match, in ECMA-262 regular expression syntax.
     ///
     /// Optional. Omitted and `null` are equivalent and mean there is no pattern constraint.
     #[cfg_attr(feature = "schemars", schemars(extend("format" = "regex")))]
@@ -285,7 +285,7 @@ impl StringPropertySchema {
         self
     }
 
-    /// Pattern the string must match.
+    /// Pattern the string must match, in ECMA-262 regular expression syntax.
     #[must_use]
     pub fn pattern(mut self, pattern: impl IntoOption<String>) -> Self {
         self.pattern = pattern.into_option();
