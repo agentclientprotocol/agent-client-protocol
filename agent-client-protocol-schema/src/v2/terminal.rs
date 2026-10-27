@@ -128,11 +128,12 @@ impl TerminalOutput {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalExitStatus {
-    /// Process exit code, when known. Omitted and `null` are equivalent.
+    /// Process exit code as the platform reports it, when known. Negative values are
+    /// allowed, for example signed Windows exit codes. Omitted and `null` are equivalent.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub exit_code: Option<u32>,
+    pub exit_code: Option<i64>,
     /// Signal that terminated the process, when known.
     ///
     /// Agents should use the conventional platform signal name. POSIX examples
@@ -164,7 +165,7 @@ impl TerminalExitStatus {
 
     /// Sets or clears the optional exit code.
     #[must_use]
-    pub fn exit_code(mut self, exit_code: impl IntoOption<u32>) -> Self {
+    pub fn exit_code(mut self, exit_code: impl IntoOption<i64>) -> Self {
         self.exit_code = exit_code.into_option();
         self
     }
@@ -360,6 +361,14 @@ impl TerminalOutputChunk {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn exit_code_accepts_negative_values() {
+        let status: TerminalExitStatus =
+            serde_json::from_value(serde_json::json!({ "exitCode": -1_073_741_819_i64 })).unwrap();
+        assert_eq!(status.exit_code, Some(-1_073_741_819));
+    }
+
     use super::*;
     use serde_json::{from_value, json, to_value};
 

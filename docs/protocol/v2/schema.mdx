@@ -7215,10 +7215,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="exitCode" type={"integer | null"} >
-  Process exit code, when known. Omitted and `null` are equivalent.
-
-    - Minimum: `0`
-
+  Process exit code as the platform reports it, when known. Negative values are
+allowed, for example signed Windows exit codes. Omitted and `null` are equivalent.
 </ResponseField>
 <ResponseField name="signal" type={"string | null"} >
   Signal that terminated the process, when known.

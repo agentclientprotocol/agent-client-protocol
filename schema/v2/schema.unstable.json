@@ -6211,10 +6211,9 @@
       "type": "object",
       "properties": {
         "exitCode": {
-          "description": "Process exit code, when known. Omitted and `null` are equivalent.",
+          "description": "Process exit code as the platform reports it, when known. Negative values are\nallowed, for example signed Windows exit codes. Omitted and `null` are equivalent.",
           "type": ["integer", "null"],
-          "format": "uint32",
-          "minimum": 0,
+          "format": "int64",
           "x-deserialize-default-on-error": true
         },
         "signal": {
