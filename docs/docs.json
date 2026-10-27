@@ -86,6 +86,7 @@
                   "protocol/v1/slash-commands",
                   "protocol/v1/extensibility",
                   "protocol/v1/transports",
+                  "protocol/v1/error",
                   "protocol/v1/schema",
                   {
                     "group": "Draft: In Progress and May Change",
@@ -110,6 +111,7 @@
                       "protocol/v1/draft/slash-commands",
                       "protocol/v1/draft/extensibility",
                       "protocol/v1/draft/transports",
+                      "protocol/v1/draft/error",
                       "protocol/v1/draft/schema"
                     ]
                   }
@@ -137,6 +139,7 @@
                   "protocol/v2/slash-commands",
                   "protocol/v2/extensibility",
                   "protocol/v2/transports",
+                  "protocol/v2/error",
                   "protocol/v2/schema",
                   {
                     "group": "Draft: In Progress and May Change",
@@ -158,6 +161,7 @@
                       "protocol/v2/draft/slash-commands",
                       "protocol/v2/draft/extensibility",
                       "protocol/v2/draft/transports",
+                      "protocol/v2/draft/error",
                       "protocol/v2/draft/schema"
                     ]
                   }

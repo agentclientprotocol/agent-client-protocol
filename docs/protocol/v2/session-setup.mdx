@@ -374,7 +374,8 @@ On success, the Agent responds with an empty result object:
 }
 ```
 
-Agents MAY return an error if the session does not exist or is not currently active.
+If the session does not exist or is not active, the Agent **MUST** respond with
+`-32002`. See [Unknown Sessions](/protocol/v2/error#unknown-sessions).
 
 ## Additional Workspace Roots
 

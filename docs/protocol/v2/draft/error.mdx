@@ -1,6 +1,64 @@
 ---
-title: "Error"
+title: "Errors"
 description: "Error handling in the Agent Client Protocol"
 ---
 
-_Documentation coming soon_
+Failed requests return a [JSON-RPC 2.0 error object](https://www.jsonrpc.org/specification#error_object):
+
+- `code`: an integer identifying the kind of error
+- `message`: a short human-readable description
+- `data` (optional): additional information whose shape depends on the code
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "error": {
+    "code": -32002,
+    "message": "Resource not found",
+    "data": { "sessionId": "sess_abc123def456" }
+  }
+}
+```
+
+## Error Codes
+
+| Code     | Message                      | Meaning                                                                                                                        |
+| -------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `-32700` | Parse error                  | The message is not valid JSON.                                                                                                 |
+| `-32600` | Invalid request              | The message is not a valid request object, or a request other than `initialize` arrived before initialization.                 |
+| `-32601` | Method not found             | The receiver does not implement the method.                                                                                    |
+| `-32602` | Invalid params               | The parameters are malformed or contain a value the receiver does not support.                                                 |
+| `-32603` | Internal error               | The receiver failed unexpectedly.                                                                                              |
+| `-32800` | Request cancelled            | The request was [cancelled](/protocol/v2/draft/cancellation).                                                                  |
+| `-32000` | Authentication required      | The request requires [authentication](/protocol/v2/draft/authentication) first.                                                |
+| `-32002` | Resource not found           | A referenced resource, such as a session, does not exist.                                                                      |
+| `-32022` | Unsupported protocol version | The Agent supports no [protocol version](/protocol/v2/draft/initialization#version-negotiation) at or below the requested one. |
+
+Receivers **MUST** treat an unrecognized code as a generic failure. Implementation-specific errors **SHOULD** use codes outside `-32768` to `-32000`, which is reserved for JSON-RPC and ACP.
+
+## Common Cases
+
+### Unknown Methods
+
+A receiver that does not implement a method, or receives a capability-gated method it did not advertise, **MUST** respond with `-32601`.
+
+### Invalid Parameters
+
+Malformed parameters and unsupported values get `-32602`. For example, an invalid `session/list` cursor, or an unknown `configId` or value in `session/set_config_option`.
+
+### Unknown Sessions
+
+If a session-scoped request names a session that does not exist or is not active on the connection, the Agent **MUST** respond with `-32002` and set `data.sessionId` to the requested ID. A session is active once it is created or resumed on the connection, until it is closed.
+
+This applies to `session/prompt`, `session/set_config_option` and `session/close`, and to `session/resume` of a session that does not exist or was deleted. Deleting a session that does not exist still succeeds; see [Deleting Sessions](/protocol/v2/draft/session-delete).
+
+### Requests Before Initialization
+
+Agents **MUST** reject any request other than `initialize` that arrives before initialization completes with `-32600`.
+
+## Unstable Features
+
+- `session/fork` of a session that does not exist gets `-32002`, as for [unknown sessions](#unknown-sessions).
+- A `systemPrompt` the Agent cannot apply gets an error, `-32602` recommended. See [System Prompt](/protocol/v2/draft/session-setup#system-prompt-unstable).
+- `providers/*` methods called without the [`providers` capability](/protocol/v2/draft/initialization#agent-capabilities) get `-32601`.

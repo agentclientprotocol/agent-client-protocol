@@ -150,7 +150,7 @@ When no sessions match the criteria, the Agent **MUST** return an empty `session
 
 - Clients **MUST** treat a missing `nextCursor` as the end of results
 - Clients **MUST** treat cursors as opaque tokens — do not parse, modify, or persist them
-- Agents **SHOULD** return an error if the cursor is invalid
+- Agents **MUST** return `-32602` if the cursor is invalid
 - Agents **SHOULD** enforce reasonable page sizes internally
 
 ## Updating Session Metadata

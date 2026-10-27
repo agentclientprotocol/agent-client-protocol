@@ -127,6 +127,13 @@ impl Error {
         }
     }
 
+    /// The session named by a session-scoped request does not exist or is not active.
+    #[must_use]
+    pub fn session_not_found(session_id: impl Into<super::SessionId>) -> Self {
+        Error::from(ErrorCode::ResourceNotFound)
+            .data(serde_json::json!({ "sessionId": session_id.into() }))
+    }
+
     /// No supported protocol version is at or below the requested version.
     #[must_use]
     pub fn unsupported_protocol_version(
@@ -191,7 +198,7 @@ pub enum ErrorCode {
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Authentication required")]
     AuthRequired, // -32000
-    /// A given resource, such as a file, was not found.
+    /// A given resource, such as a session, was not found.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Resource not found")]
     ResourceNotFound, // -32002
