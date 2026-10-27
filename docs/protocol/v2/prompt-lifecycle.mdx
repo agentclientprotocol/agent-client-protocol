@@ -858,7 +858,7 @@ model call, permission request, or elicitation.
 
 Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state.
 
-Custom and future states do not replace these: Agents **MUST** still report `running`, `requires_action`, and `idle` where the [state transitions](#state-transitions) require them. A Client that receives a state it doesn't recognize **MUST NOT** treat it as `idle` or present the previous state as confirmed, and shows a generic busy state until a known state arrives.
+Unless the Client has advertised support for a custom or future state, Agents **MUST** still report `running`, `requires_action`, and `idle` where the [state transitions](#state-transitions) require them. A Client that receives a state it doesn't recognize **MUST NOT** treat it as `idle` or present the previous state as confirmed, and shows a generic busy state until a known state arrives.
 
 ### Initial State and Synchronization
 

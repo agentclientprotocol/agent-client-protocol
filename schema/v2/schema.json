@@ -5404,7 +5404,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future session state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nThese do not replace the standard states, which Agents MUST still report.\nClients MUST NOT treat an unrecognized state as `idle` or present the\nprevious state as confirmed, and show a generic busy state until a known\nstate arrives.",
+          "description": "Custom or future session state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nUnless the Client advertised support for this state, Agents MUST still\nreport the standard states.\nClients MUST NOT treat an unrecognized state as `idle` or present the\nprevious state as confirmed, and show a generic busy state until a known\nstate arrives.",
           "type": "object",
           "properties": {
             "state": {
