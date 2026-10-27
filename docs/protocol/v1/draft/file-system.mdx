@@ -5,8 +5,6 @@ description: "Client filesystem access methods"
 
 The filesystem methods allow Agents to read and write text files within the Client's environment. These methods enable Agents to access unsaved editor state and allow Clients to track file modifications made during agent execution.
 
-The Client performs these operations itself. See [Client-Executed Operations](/protocol/v1/draft/security#client-executed-operations) for security requirements.
-
 ## Checking Support
 
 Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](/protocol/v1/initialization#client-capabilities) field in the Client's `initialize` request:
@@ -119,3 +117,10 @@ The Client responds with an empty result on success:
   "result": {}
 }
 ```
+
+## Security
+
+The Client performs these operations itself, so it is responsible for checking them. A permission request from the Agent does not replace the Client's own checks.
+
+- Clients **SHOULD** check requested paths against the session's [workspace roots](/protocol/v1/draft/security#workspace-roots) at the time of use, and deny the request or ask the user outside them.
+- Clients **SHOULD** ask the user before `fs/write_text_file` changes files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.

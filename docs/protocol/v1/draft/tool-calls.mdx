@@ -135,8 +135,6 @@ name.
 
 ## Requesting Permission
 
-See [Permission Requests](/protocol/v1/draft/security#permission-requests) for security requirements.
-
 The Agent **MAY** request permission from the user before executing a tool call by calling the `session/request_permission` method:
 
 ```json
@@ -236,6 +234,16 @@ Each permission option provided to the Client contains:
 - `reject_always` - Reject this operation and remember the choice
 
 </ParamField>
+
+### Security
+
+- Clients **SHOULD** describe the operation from the tool call's `kind`, `locations`, and content, present `title` as Agent-authored text, and show commands and paths in full.
+- Agents **SHOULD NOT** give an option a `name` that contradicts its `kind`, and **SHOULD** act on a selected option according to its known `kind`.
+- Automatic approval **SHOULD NOT** rely only on `title` or option `name`.
+- Agents **SHOULD NOT** treat an outcome they don't recognize as approval.
+- Agents **SHOULD** perform only the operation the approved request described, and **SHOULD** request again if the command or resolved target changes.
+- Agents **SHOULD** state the scope of a remembered decision (`allow_always`, `reject_always`) in the option `name` and **SHOULD NOT** apply it beyond that scope.
+- Agents **SHOULD NOT** switch to a mode or configuration that reduces user oversight without user action.
 
 ## Status
 

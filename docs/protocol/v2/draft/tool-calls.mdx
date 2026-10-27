@@ -203,8 +203,6 @@ continuous text.
 
 ## Requesting Permission
 
-See [Permission Requests](/protocol/v2/draft/security#permission-requests) for security requirements.
-
 Permission requests do not by themselves change the session's foreground state. While foreground work is blocked on a permission response, the Agent **SHOULD** report `requires_action`. Once reported, it **MUST** report `running` when foreground progress resumes, or `idle` if the work ends without resuming. Requests for independent background activity may arrive while the session remains `idle`. See [Waiting for User Action](/protocol/v2/draft/prompt-lifecycle#waiting-for-user-action) for concurrent requests and late answers.
 
 The Agent **MAY** request permission from the user before proceeding with an operation, such as executing a tool call, by calling the `session/request_permission` method:
@@ -361,6 +359,15 @@ Custom or future permission option kinds can be used as UI hints. Custom kinds *
 
 </ParamField>
 
+### Security
+
+- Clients **SHOULD** describe the operation from `subject`, present `title` as Agent-authored text, and show commands and paths in full.
+- Agents **SHOULD NOT** give an option a `name` that contradicts its `kind`, and **SHOULD** act on a selected option according to its known `kind`.
+- Automatic approval **SHOULD NOT** rely only on `title`, `description`, or option `name`. Unless the user's policy allows all requests, it **SHOULD NOT** allow a request with an absent or unknown subject.
+- Agents **SHOULD** perform only the operation the approved request described, and **SHOULD** request again if the command or resolved target changes.
+- Agents **SHOULD** state the scope of a remembered decision (`allow_always`, `reject_always`) in the option `name` and **SHOULD NOT** apply it beyond that scope.
+- Agents **SHOULD NOT** switch to a configuration that reduces user oversight without user action.
+
 ## Status
 
 Tool calls progress through different statuses during their lifecycle:
@@ -491,6 +498,8 @@ sequences, so decoders retain parser state across chunks. Optional nullable
 `_meta` is chunk-scoped; omission and `null` both mean no chunk metadata was
 provided.
 
+Terminal output is Agent content. Clients **SHOULD** render it so that it cannot write the clipboard, send input or query responses, or open links without user action, and sanitizers **SHOULD** keep state across chunks.
+
 ### Diffs
 
 File modifications shown as diffs. A diff always includes structured file
@@ -592,6 +601,8 @@ update or symlink target change:
   ]
 }
 ```
+
+Clients **SHOULD** show affected paths from `changes`, not from `patch` headers.
 
 ## Following the Agent
 

@@ -196,8 +196,6 @@ authentication, the Client can create new sessions without receiving an
 
 ## Terminal authentication
 
-See [Terminal Authentication](/protocol/v2/security#terminal-authentication) for launch requirements.
-
 For a `terminal` method, the Client:
 
 1. Launches a separate interactive process using the same configured Agent
@@ -219,6 +217,12 @@ pattern or other in-band success signal; Clients may recognize
 implementation-specific signals only as an extension. The terminal process is
 not the ACP connection, so the Client **MUST NOT** send an `auth/login` request
 for a terminal method.
+
+### Launch Safety
+
+- Clients **SHOULD** pass `args` as separate arguments rather than building a shell command line from them, and **SHOULD NOT** offer terminal authentication when the launch target re-parses arguments, such as a remote shell or a Windows batch file.
+- Clients **SHOULD NOT** apply `env` entries that change program lookup, dynamic loading, interpreter or shell startup, or proxy and TLS trust without user approval. Examples include `PATH`, `LD_*`, `DYLD_*`, `NODE_OPTIONS`, `PYTHONPATH`, `BASH_ENV`, `HTTPS_PROXY`, and `SSL_CERT_FILE`.
+- Clients **SHOULD** show the appended `args` and `env` before launch. `env` values **SHOULD NOT** contain secrets.
 
 ## Authentication failures during session work
 

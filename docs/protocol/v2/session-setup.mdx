@@ -381,7 +381,7 @@ If the session does not exist or is not active, the Agent **MUST** respond with
 
 ## Additional Workspace Roots
 
-See [Workspace Roots](/protocol/v2/security#workspace-roots) for security requirements.
+See [Workspace Roots](/protocol/v2/security#workspace-roots) for security guidance.
 
 Agents that advertise `session.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
@@ -436,8 +436,6 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 When `session.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
 ## MCP Servers
-
-MCP server configurations can launch processes and carry credentials. See [MCP stdio Servers](/protocol/v2/security#mcp-stdio-servers) and [Secrets](/protocol/v2/security#secrets).
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agents to access external tools and data sources. When creating a session, Clients **MAY** include connection details for MCP servers that the Agent should connect to.
 
@@ -583,3 +581,13 @@ Supplying `{}` means the Agent supports the corresponding transport.
 Agents **SHOULD** connect to all MCP servers specified by the Client. If a server fails to launch or connect, the Agent either fails the request or continues without that server. If it continues, it **SHOULD** tell the user, for example with a [notice](/protocol/v2/prompt-lifecycle#session-notices).
 
 Clients **MAY** use this ability to provide tools directly to the underlying language model by including their own MCP server.
+
+### Security
+
+MCP server configurations can launch processes, and their `env` and `headers` values are credentials.
+
+- Agents **SHOULD** launch `command` with `args` as separate arguments, without a shell.
+- Clients **SHOULD NOT** send a stdio server from workspace files or Agent output until the user has approved its exact command, arguments, and environment variable names.
+- Agents **SHOULD NOT** include `env` or `headers` values in session updates, errors, `_meta`, `session/list` results, replayed history, model context, or command lines, and **SHOULD NOT** log or persist them.
+- Agents **SHOULD** send `headers` only to the configured origin.
+- Clients that persist `mcpServers` **SHOULD** keep credentials in operating-system secret storage and **SHOULD NOT** log them.
