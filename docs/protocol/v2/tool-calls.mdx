@@ -510,8 +510,14 @@ changes and can optionally include renderable patch text.
 
 `changes` is authoritative for affected absolute paths and operations. `patch`,
 when present, provides renderable text for some or all of those changes and **MUST**
-be consistent with `changes`. Agents **SHOULD** provide `patch` whenever feasible.
-Clients **MUST** handle diffs where `patch` is omitted or `null`.
+be consistent with `changes`: it describes only those paths and operations. Agents
+**SHOULD** provide `patch` whenever feasible. Clients **MUST** handle diffs where
+`patch` is omitted or `null`, and **SHOULD** follow `changes` when `patch`
+disagrees with it.
+
+A diff describes each file's change from its state before the change. Each path
+appears in at most one entry of `changes`. A move or copy that also edits the
+file is a single `move` or `copy` entry, with the edits in `patch`.
 
 ```json
 {
@@ -581,11 +587,13 @@ splitting the `diff --git` header, which is ambiguous when paths contain spaces.
 </ParamField>
 
 <ParamField path="changes[].fileType" type="string">
-  Optional file kind: `text`, `binary`, `directory`, or `symlink`.
+  Optional file kind after the operation (for `delete`, of the deleted file):
+  `text`, `binary`, `directory`, or `symlink`.
 </ParamField>
 
 <ParamField path="changes[].mimeType" type="string">
-  Optional MIME type for the file contents.
+  Optional MIME type of the file contents after the operation (for `delete`, of
+  the deleted file).
 </ParamField>
 
 Omit `patch` when there is no useful text patch, such as a same-path binary
