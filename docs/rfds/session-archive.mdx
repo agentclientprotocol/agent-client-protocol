@@ -2,7 +2,8 @@
 title: "Session Archive and Unarchive"
 ---
 
-Authors: Mark Tkachenko, Evgeniy Stepanov
+- Author(s): [@Rizzen](https://github.com/Rizzen), [@xtmq](https://github.com/xtmq)
+- Champion: [@benbrandt](https://github.com/benbrandt)
 
 ## Elevator pitch
 
@@ -30,7 +31,7 @@ Standardize reversible session archiving in both ACP v1 and v2: Clients can hide
   "id": 1,
   "method": "session/archive",
   "params": {
-    "sessionId": "sess_abc123",
+    "sessionId": "sess_abc123"
   }
 }
 ```
@@ -43,18 +44,18 @@ Standardize reversible session archiving in both ACP v1 and v2: Clients can hide
   "id": 2,
   "method": "session/unarchive",
   "params": {
-    "sessionId": "sess_abc123",
+    "sessionId": "sess_abc123"
   }
 }
 ```
 
-Both return a result object with optional `_meta` and the matching request ID:
+On success, both return an empty result:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "result": { "_meta": {} }
+  "result": {}
 }
 ```
 
@@ -66,7 +67,7 @@ The new models are:
 | `ArchiveSessionResponse`, `UnarchiveSessionResponse` | Optional `_meta`.                                            |
 | `SessionArchiveCapabilities`                         | Optional `_meta`.                                            |
 
-In each model, `_meta` is an object with arbitrary values. Omission and `null` are equivalent. An empty result `{}` remains valid when no metadata is supplied.
+In each model, `_meta` is an object with arbitrary values. Omission and `null` are equivalent.
 
 ### Capabilities
 
@@ -75,11 +76,11 @@ Agents advertise one shared `archive` capability:
 - **v1:** `agentCapabilities.sessionCapabilities.archive`.
 - **v2 draft:** `capabilities.session.archive`.
 
-`{}` means the Agent **MUST** support both methods, archived listing, and state reporting; omission or `null` means unsupported. Clients **MUST** check support before using either method or the list parameter.
+`{}` means the Agent **MUST** support both methods, the `archived` list filter, and archive-state reporting; omission or `null` means unsupported. Clients **MUST** check support before using either method or the list filter.
 
-In v1, this also requires `sessionCapabilities.list: {}`; v2 already requires listing for Agents supporting sessions.
+In v1, Agents that advertise `sessionCapabilities.archive` **MUST** also advertise `sessionCapabilities.list`. v2 already requires listing for Agents supporting sessions.
 
-Both `archive` and the existing `delete` capability support optional `_meta` in v1 and v2. Example v1 initialization response:
+Example v1 initialization response:
 
 ```json
 {
@@ -100,16 +101,19 @@ Both `archive` and the existing `delete` capability support optional `_meta` in 
 
 ### Listing and state
 
-Extend `session/list` with an optional `archived` parameter to include archived sessions:
+Extend `session/list` with an optional `archived` filter:
 
-| Value                       | Sessions returned        |
-| --------------------------- | ------------------------ |
-| Omitted, `null`, or `false` | Unarchived only.         |
-| `true`                      | Unarchived and archived. |
+| Value                         | Sessions returned        |
+| ----------------------------- | ------------------------ |
+| Omitted, `null`, or `exclude` | Unarchived only.         |
+| `include`                     | Unarchived and archived. |
+| `only`                        | Archived only.           |
 
-The parameter combines with `cwd` and applies before pagination. Clients keep the same `cwd` and `archived` values when following `nextCursor`; changing either starts a new pagination sequence.
+Agents that advertise `archive` **MUST** support all three values. Any other value is rejected with `Invalid params` (`-32602`) rather than falling back to the default, so a Client never silently receives the wrong view.
 
-Include archived sessions alongside unarchived sessions:
+The filter combines with `cwd` and applies before pagination. Clients keep the same `cwd` and `archived` values when following `nextCursor`; changing either starts a new pagination sequence.
+
+List only archived sessions, e.g. for an "Archived" view:
 
 ```json
 {
@@ -118,7 +122,21 @@ Include archived sessions alongside unarchived sessions:
   "method": "session/list",
   "params": {
     "cwd": "/home/user/project",
-    "archived": true
+    "archived": "only"
+  }
+}
+```
+
+Include archived sessions alongside unarchived sessions:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "session/list",
+  "params": {
+    "cwd": "/home/user/project",
+    "archived": "include"
   }
 }
 ```
@@ -126,7 +144,7 @@ Include archived sessions alongside unarchived sessions:
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 3,
+  "id": 4,
   "result": {
     "sessions": [
       {
@@ -146,10 +164,10 @@ Include archived sessions alongside unarchived sessions:
 }
 ```
 
-Add an optional, non-null boolean `archived` to:
+Add an optional boolean `archived` to:
 
-- **`SessionInfo`:** required in list results when the `archive` capability is advertised. Otherwise, omission conveys no archive-state guarantee.
-- **`SessionInfoUpdate`:** omission leaves state unchanged. Agents **SHOULD** report changes through existing `session_info_update` notifications to connected session observers. Listing remains the source of truth after reconnecting; no global subscription is introduced.
+- **`SessionInfo`:** Omission and `null` are equivalent and convey no archive-state guarantee. Agents that advertise `archive` **MUST** include a boolean value on every listed session.
+- **`SessionInfoUpdate`:** Omission and `null` are equivalent and leave the archive state unchanged. Unlike `title`, `null` does not clear anything, because every session is either archived or not. Agents **SHOULD** report changes through existing `session_info_update` notifications to Clients that have the session open. Listing remains the source of truth after reconnecting; no global subscription is introduced.
 
 ```json
 {
@@ -165,15 +183,16 @@ Add an optional, non-null boolean `archived` to:
 }
 ```
 
-### Guarantees
+### Semantics
 
 - **Preservation:** Both operations preserve the ID and saved conversation. Archive state persists with session history across connections and restarts; ordinary retention policies still apply.
-- **Independent execution:** Neither operation loads, resumes, closes, or cancels a session. Agents **MAY** reject archiving an active session without changing archive state if stopping it would be necessary. Clients can explicitly close it first.
-- **Explicit restoration:** Closing, loading, or resuming does not change archive state. Agents may require unarchiving before loading or resuming.
-- **Idempotency:** Repeating the desired state succeeds for retained, non-deleted sessions. Unknown, deleted, or expired sessions return `Resource not found` (`-32002`). Neither method requires activation on the current connection.
-- **Consistency:** Success commits the change; subsequent list requests reflect it unless another operation intervenes. Concurrent mutations are serialized per session.
-- **Deletion:** Deleted sessions remain excluded regardless of the `archived` parameter. Unarchive does not undo deletion; Clients must not substitute deletion for archiving.
-- **Activity:** Archiving and unarchiving alone **SHOULD NOT** change `updatedAt`.
+- **Archiving closes active sessions:** If the session is active, `session/archive` **MUST** cancel any ongoing work and free the session's resources as if [`session/close`](/protocol/v1/session-setup#closing-active-sessions) had been called, then archive it. This does not require the `close` capability. Agents **SHOULD** send the `archived: true` `session_info_update` to Clients with the session open before closing it. `session/unarchive` never loads or resumes a session.
+- **Loading archived sessions:** Closing, loading, or resuming does not change archive state. Agents **MAY** reject `session/load` or `session/resume` for an archived session. Clients that want to continue an archived session **SHOULD** call `session/unarchive` first; they already know the state from `SessionInfo.archived`.
+- **Idempotency:** Archiving an archived session, or unarchiving an unarchived session, succeeds. Neither method requires the session to be active on the current connection.
+- **Unknown sessions:** Unknown, deleted, or expired sessions return `Resource not found` (`-32002`). This differs from `session/delete`, which succeeds silently for unknown sessions because its end state ("not listed") already holds. Neither archive state can hold for a session that doesn't exist, so silently succeeding would hide stale or mistyped IDs.
+- **Consistency:** Success commits the change; subsequent list requests reflect it unless another operation intervenes.
+- **Deletion:** Deleted sessions are excluded from every `archived` filter value, and unarchiving does not restore a deleted session. Agents that advertise `archive` **MUST NOT** implement `session/delete` as an archive that later shows up in archived listings.
+- **Subagent sessions:** Archiving applies to the given session. Whether archiving a parent also archives its [subagent sessions](/rfds/subagents) is implementation-defined; some Agents archive the whole tree.
 
 ## Shiny future
 
@@ -185,22 +204,35 @@ A user archives a conversation in one Client, finds it in another Client's archi
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-The implementation **MUST** cover both ACP v1 and v2: `session/archive`, `session/unarchive`, all new models with `_meta`, the shared `archive` capability, the `session/list` parameter, and archive-state reporting. Implement these behind `unstable_session_archive`, regenerate both versions' schemas, and update conversions, SDKs, and docs. Validate restoration, retries, persistence, pagination, active sessions, and deletion compatibility in both protocol versions before preview.
+The implementation **MUST** cover both ACP v1 and v2: `session/archive`, `session/unarchive`, all new models with `_meta`, the shared `archive` capability, the `session/list` filter, and archive-state reporting. Implement these behind `unstable_session_archive`, regenerate both versions' schemas, and update conversions, SDKs, and docs. Validate restoration, retries, persistence, pagination, active sessions, and deletion compatibility in both protocol versions before preview.
 
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
 
-## Why separate methods?
+### Why separate methods?
 
 They express opposite state transitions under one shared capability. A boolean setter is possible, but a general metadata-editing API exceeds this request. Extending deletion cannot guarantee recovery when Agents may permanently remove data.
 
-## What needs discussion?
+### Why does archiving close an active session?
 
-- **Active sessions:** Keep execution separate as proposed, or make archiving also close the session?
-- **Discovery:** Should including archived sessions have its own capability for Agents that support neither mutation?
-- **Migration:** Some adapters implement deletion through native archiving. They need a distinction to keep deleted sessions out of archived results; how should historical records without that distinction be handled?
+Several Agents with native archiving (Codex, Qwen Code, Kimi Code) stop or unload a session when archiving it, and both reference adapters close the session first. Requiring archive to leave execution untouched would force those Agents to reject the request and every Client to handle a "close, then archive" retry. Reusing `session/close` semantics gives Clients one predictable outcome.
+
+### Why a three-value list filter instead of a boolean?
+
+Clients usually show archived sessions in their own view, which needs archived-only results; a boolean "include archived" would force Clients to page through every session and filter locally. Native stores differ: Codex lists one side at a time, while others list both together, so Agents need adapter work for at least one of the values either way. A boolean named `archived` would also read as "archived only".
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Extend `session/delete` with soft-delete semantics:** Deletion may be permanent and its behavior is implementation-defined, so it cannot guarantee recovery.
+- **A single `session/setArchived` method with a boolean:** Equivalent in power, but two methods match the rest of the session lifecycle methods and keep each request's intent obvious.
+- **A general session-metadata editing method:** Larger in scope than this proposal needs.
+
+### What needs discussion?
+
+- **Discovery:** Should listing archived sessions have its own capability for Agents that support neither mutation?
 
 ## Revision history
 
+- 2026-10-28: Archiving closes active sessions; three-value `archived` list filter; clarified null handling, errors, deletion, and subagent sessions; removed the `updatedAt` requirement.
 - 2026-09-14: Initial proposal.
