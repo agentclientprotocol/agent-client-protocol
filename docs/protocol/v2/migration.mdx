@@ -742,7 +742,7 @@ v1 had two ways to reattach to a session: `session/load` (replays full history, 
 ```
 
 - Omit `replayFrom` (or send `null`) for v1 `resume` behavior: reattach without replay.
-- `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays the entire conversation as `session/update` notifications (using the same updates as live traffic) before responding. Replay must leave the Client in the same state as live delivery did, so the Agent can send current state, such as a terminal `output` snapshot, instead of every historical update. See [Replay Contents](/protocol/v2/session-setup#replay-contents).
+- `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays the entire conversation as `session/update` notifications (using the same updates as live traffic) before responding. The Agent can send current state, such as a terminal `output` snapshot, instead of every historical update. See [Replay Contents](/protocol/v2/session-setup#replay-contents).
 
 The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods. The schema accepts custom and future cursor types for preservation by intermediaries, but Agents **MUST** reject unsupported types or malformed cursors with `-32602` (Invalid params), not silently fall back to another replay mode.
 
@@ -900,7 +900,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations.
 10. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
 11. **Modes and config options.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`. Rename option `id` to `configId` and group `group` to `groupId`, and require the `type` discriminator (`"id"` or `"boolean"`) on `session/set_config_option`.
-12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, leaving the Client in the same state as live delivery; current-state snapshots such as terminal `output` are fine. Give unfinished tool calls a final status. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Remove `session/load`.
+12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, current-state snapshots such as terminal `output` are fine. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Remove `session/load`.
 13. **Client surface.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
 14. **MCP config.** Require and emit `type` discriminators. Reject SSE and unadvertised transports with `-32602`. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
 15. **Slash commands.** Add the `type: "command"` discriminator to each advertised command and the `type: "text"` discriminator to command `input` specifications. Optionally advertise initial commands in setup responses via `availableCommands`, and use complete-replacement `available_commands_update` notifications for later changes.

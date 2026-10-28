@@ -60,7 +60,7 @@ This does not require the Agent to retain every inserted user message.
 Live-only or discarded messages may be absent; retained user messages must
 preserve the ID returned on insertion, as defined by the [Prompt Lifecycle RFD](./prompt.mdx#correlation-and-replay).
 
-Replay uses the same updates as live delivery, and applying them must produce the same state. The Agent can send each entity's history or only its current state, such as a terminal `output` snapshot instead of every chunk.
+Replay uses the same updates as live delivery. The Agent can send each entity's updates or only its current state, such as a terminal `output` snapshot instead of every chunk.
 
 Agents **SHOULD** preserve agent and thought message IDs, `toolCallId`, `terminalId`, and `planId` across replay when possible, but Clients cannot assume stability across reconnects or Agent restarts. Full replay should rebuild messages, tool calls, terminals, and plans rather than merge them into existing state solely by ID. The empty-content primer for chunked
 replay initializes or clears content only under the ID used in that replay;
@@ -111,6 +111,6 @@ An object leaves room for future cursor forms that need fields. The initial
 
 ## Revision history
 
-- 2026-10-28: Replay must reproduce the live state, may send current state instead of history, and covers tool calls, terminals, and plans, not only messages.
+- 2026-10-28: Replay may send current state instead of every update, and covers tool calls, terminals, and plans, not only messages.
 - 2026-10-13: Replay applies top-level `_meta` as a key-level patch, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-02: Initial draft.
