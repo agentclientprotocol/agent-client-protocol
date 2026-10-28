@@ -200,7 +200,7 @@ silently substitute another cursor or resume without replay. Malformed
 
 ### Replay Contents
 
-Replay reports retained history with the same updates and semantics as live delivery: messages, tool calls, [display terminals](/protocol/v2/tool-calls#display-only-terminals), plans, and [compactions](/protocol/v2/prompt-lifecycle#session-compaction). No Client capability is required.
+Replay reports retained history with the same updates and semantics as live delivery: messages, tool calls, [display terminals](/protocol/v2/tool-calls#display-only-terminals), plans, and [compactions](/protocol/v2/prompt-lifecycle#session-compaction).
 
 Applying the replayed updates **MUST** produce the same state as the live updates did. The Agent can send each entity's history or only its current state, for example a whole message instead of its chunks, a terminal `output` snapshot instead of every output chunk, or a tool call's final state instead of every patch. Replay doesn\'t implicitly reset fields the Client may already hold: the Agent sends replacements or clears where the Client\'s existing state could differ.
 
