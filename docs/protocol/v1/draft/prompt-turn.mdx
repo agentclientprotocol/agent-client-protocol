@@ -7,6 +7,102 @@ A prompt turn represents a complete interaction cycle between the [Client](/prot
 
 Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v1/draft/initialization) phase and [session setup](/protocol/v1/draft/session-setup).
 
+## Session Updates
+
+Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
+
+| `sessionUpdate` value       | Description                                                                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                                             |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                                                       |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                                      |
+| `subagent_update`           | **Draft only.** Announces an owned child session or updates its parent-owned metadata and work state. Requires the Client's `subagents` capability.             |
+| `session_message`           | **Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable). Requires the Client's `subagents` capability. |
+| `session_message_chunk`     | **Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable). Requires the Client's `subagents` capability.             |
+| `tool_call`                 | A new [tool call](/protocol/v1/draft/tool-calls#creating).                                                                                                      |
+| `tool_call_update`          | A change to a [tool call's status or results](/protocol/v1/draft/tool-calls#updating).                                                                          |
+| `plan`                      | The Agent's [execution plan](/protocol/v1/draft/agent-plan).                                                                                                    |
+| `plan_update`               | **Draft only.** A [content update for a plan](/protocol/v1/draft/agent-plan#plan-operations) identified by ID. Requires the Client's `plan` capability.         |
+| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v1/draft/agent-plan#removing-plans) identified by ID. Requires the Client's `plan` capability.                    |
+| `available_commands_update` | The set of [available slash commands](/protocol/v1/draft/slash-commands) is ready or has changed.                                                               |
+| `current_mode_update`       | The current [session mode](/protocol/v1/draft/session-modes#from-the-agent) has changed.                                                                        |
+| `config_option_update`      | The session's [configuration options](/protocol/v1/draft/session-config-options#from-the-agent) have changed.                                                   |
+| `session_info_update`       | [Session metadata](/protocol/v1/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.                              |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                                               |
+| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history. Requires the Client's `session.notices` capability.                          |
+| `compaction_update`         | Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.                                          |
+| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.                               |
+
+This is the complete set of variants defined in the current draft [`SessionUpdate` schema](/protocol/v1/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
+
+Session updates are not limited to active prompt turns. For example, Agents may advertise commands after creating a session, and replay user and Agent messages when [loading a session](/protocol/v1/draft/session-setup#loading-sessions).
+
+### Session-directed messages (unstable)
+
+When the Client advertises `subagents: {}`, the Agent may report outgoing and
+incoming messages between sessions, separately from user-facing responses and
+tool calls. The outer `params.sessionId` identifies the transcript being
+updated. Every message and chunk requires a `messageId` scoped to that
+transcript. Optional `senderSessionId` and `recipientSessionId` on
+`session_message` identify the participants; chunks carry only content.
+Include them on the first `session_message` when available, before the first
+chunk of a streamed message; later updates may omit them or add missing
+identities.
+
+For example, an incoming message in the child can name its participants, then
+stream its content:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message",
+      "messageId": "received_message_1",
+      "senderSessionId": "parent_session",
+      "recipientSessionId": "child_session"
+    }
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "child_session",
+    "update": {
+      "sessionUpdate": "session_message_chunk",
+      "messageId": "received_message_1",
+      "content": { "type": "text", "text": "Please investigate " }
+    }
+  }
+}
+```
+
+Every chunk carries one normal `ContentBlock`; later chunks append content
+for the same `messageId`. `session_message` can supply a whole
+`content` array to replace accumulated content. Its optional `content` and
+`_meta` fields leave prior values unchanged when omitted; `null` clears them.
+`content: []` also clears content. Chunk metadata is local to the chunk, not a
+message-level patch.
+
+Clients can render "To …" with a recipient link or "From …" with a sender link.
+Without sufficient participant metadata, use a generic inter-session
+presentation and add links when the metadata arrives. Participant IDs follow the same patch rule as `content`: omission leaves a known value unchanged and `null` clears it.
+The two views have independent message IDs. Optional `senderMessageId` on the
+incoming view and `recipientMessageId` on the outgoing view name the other
+view's `messageId`, so a Client can go from either view to the other. They
+follow the participant-ID rules and can arrive in a later `session_message`; Clients must
+not link views by equal IDs alone. The Agent reports each side only
+when observed; Clients must not synthesize an incoming entry from an outgoing
+one or forward the content themselves. Neither view acknowledges completed
+recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
+for participant registration, history gaps, and ownership rules.
+
 ## The Prompt Turn Lifecycle
 
 A prompt turn follows a structured flow that enables rich interactions between the user, Agent, and any connected tools.
@@ -83,10 +179,10 @@ The turn begins when the Client sends a `session/prompt`:
 }
 ```
 
-<ParamField path="sessionId" type="SessionId">
+<ParamField path="sessionId" type="SessionId" required>
     The [ID](/protocol/v1/draft/session-setup#session-id) of the session to send this message to.
 </ParamField>
-<ParamField path="prompt" type="ContentBlock[]">
+<ParamField path="prompt" type="ContentBlock[]" required>
     The contents of the user message, e.g. text, images, files, etc.
 
     Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v1/draft/initialization#prompt-capabilities) established during [initialization](/protocol/v1/draft/initialization).
@@ -164,6 +260,8 @@ The Agent then reports text responses from the model:
 }
 ```
 
+#### Message IDs
+
 The Agent **MAY** include an opaque, unique `messageId` on message chunks. Chunks with the same `messageId` belong to the same message; a changed `messageId` indicates a new message.
 
 If the model requested tool calls, these are also reported immediately:
@@ -187,8 +285,17 @@ If the model requested tool calls, these are also reported immediately:
 
 #### Session Notices
 
-At any point while a session exists, including outside prompt processing, the
-Agent **MAY** send a live advisory notice:
+The Agent **MUST NOT** send `notice` updates unless the Client advertised support
+by supplying `clientCapabilities.session.notices: {}` in its `initialize`
+request. Omitting `session` or `notices`, or setting either field to `null`,
+means the Client does not advertise support.
+
+When the capability is absent, the Agent may use an ordinary agent message
+instead if the information should still be surfaced to the user. That fallback
+is conversation content and follows normal message-history semantics.
+
+When the Client advertises support, the Agent **MAY** send a live user-facing
+notice at any point while a session exists, including outside prompt processing:
 
 ```json
 {
@@ -206,7 +313,8 @@ Agent **MAY** send a live advisory notice:
 }
 ```
 
-`severity` is required and initially supports `info`, `warning`, and `error`.
+`severity` is required and non-null and initially supports `info`, `warning`,
+and `error`.
 It is an open string enum: values beginning with `_` are reserved for
 implementation-specific extensions, while other unknown values are reserved
 for future ACP severities. Clients preserve unknown values and use a generic
@@ -214,12 +322,16 @@ notice presentation without inferring additional behavior from them.
 
 `title` is required, non-null, non-empty plain text suitable for a compact
 presentation. `description` is optional, nullable plain text with supporting
-detail.
+detail; omission and `null` both mean no description. `_meta` is an optional,
+nullable object scoped to this event; omission and `null` both mean no event
+metadata. Unlike compaction patch fields, these fields do not update or clear
+an earlier notice.
 
-Clients may ignore them, and Agents must behave as though a
-notice may not have been received, displayed, or seen. A notice must not carry
-information required for protocol correctness, authorization, user action,
-task completion, or fatal-error reporting.
+Advertising support does not acknowledge delivery or guarantee display of an
+individual notice. Agents must still behave as though a notice may not have
+been received, displayed, or seen. A notice must not carry information required
+for protocol correctness, authorization, user action, task completion, or
+fatal-error reporting.
 
 Clients own presentation and dismissal. They may use a toast, banner, inline
 status region, notification center, or another accessible surface, and may
@@ -239,13 +351,20 @@ The Agent **MUST NOT** send `compaction_update` or
 `compaction_summary_chunk` unless the Client advertised support by supplying
 `clientCapabilities.session.compaction: {}` in its `initialize` request.
 Omitting `session` or `compaction`, or setting either field to `null`, means the
-Client does not support these updates.
+Client does not support these updates. This requirement applies to both live
+updates and history replay.
+
+When the capability is absent, the Agent may describe compaction through an
+ordinary agent message instead. That fallback is conversation content, not an
+ID-addressed compaction entity, and follows normal message-history semantics.
 
 When the Client advertises support, the Agent **MAY** report context compaction
-as one stable, ID-addressed timeline entity. It first sends
-`compaction_update` and may then append retained summary content with
-`compaction_summary_chunk` before sending one terminal update for the same
-`compactionId`:
+as one persistent, ID-addressed timeline entity. A single `compaction_update`
+with `status: "completed"` is sufficient; reporting progress is optional.
+Summary content is also optional. It may be sent all at once in the `summary`
+field or streamed using `compaction_summary_chunk` for the same `compactionId`.
+
+For example, an Agent can report that compaction has started:
 
 ```json
 {
@@ -262,18 +381,119 @@ as one stable, ID-addressed timeline entity. It first sends
 }
 ```
 
-The first update fixes the entity's timeline position. Agents send summary
-chunks only between an `in_progress` update and its terminal update. Known
-terminal statuses are `completed`, `failed`, and `cancelled`; receivers
-preserve unknown status strings as opaque future or implementation-specific
-values.
+`compactionId` and `status` are required and non-null on every
+`compaction_update`. The ID is an opaque, Agent-owned string, unique within the
+session, and **MUST NOT** be reused for another compaction.
 
-`summary`, `error`, and `_meta` on `compaction_update` are nullable patch
-fields: omission leaves the current value unchanged, `null` clears it, and a
-concrete value replaces it. Summary chunks append one `ContentBlock`; a later
-concrete `summary` replaces all accumulated content. Agents expose only an
-unencrypted, user-displayable summary and omit it when none can be disclosed
-safely.
+Clients initialize a first-seen compaction ID with status `in_progress` and unset
+optional fields, then apply the notification.
+
+The first notification fixes the entity's timeline position in receive
+order: it follows previously received timeline content and precedes content
+first received later. Later updates and chunks for an ID-addressed entity patch
+it in place; they do not move or split it around the compaction.
+
+| `status`      | Meaning                                      |
+| ------------- | -------------------------------------------- |
+| `in_progress` | Compaction has started and has not finished. |
+| `completed`   | Compaction finished successfully.            |
+| `failed`      | Compaction finished unsuccessfully.          |
+| `cancelled`   | Compaction was cancelled before it finished. |
+
+The Agent **MUST** report a terminal status when a reported compaction ends.
+
+`status` is an open string enum. Values beginning with `_` are reserved for
+implementation-specific extensions; other unknown values are reserved for
+future ACP statuses. Clients preserve unknown strings and present a generic
+state without inferring lifecycle or control behavior.
+
+If the retained summary is available incrementally, the Agent may append one
+[content block](/protocol/v1/draft/content) at a time:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "compaction_summary_chunk",
+      "compactionId": "cmp_001",
+      "content": {
+        "type": "text",
+        "text": "## Retained context\n\n"
+      }
+    }
+  }
+}
+```
+
+`compactionId` and `content` are required and non-null on each chunk.
+Chunk `_meta` is optional and nullable, is scoped to that chunk, and has no
+patch semantics: omission and `null` both mean no chunk metadata.
+
+An update may omit `summary` to retain the streamed content. A
+non-streaming Agent can instead supply the complete summary, and a streaming
+Agent can use the same field as an authoritative replacement of content received
+so far:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "compaction_update",
+      "compactionId": "cmp_001",
+      "status": "completed",
+      "summary": [
+        {
+          "type": "text",
+          "text": "## Retained context\n\nThe user is updating the ACP schema."
+        }
+      ]
+    }
+  }
+}
+```
+
+The following `compaction_update` fields are optional, nullable patches:
+
+| Field     | Type             | Meaning                                                                               |
+| --------- | ---------------- | ------------------------------------------------------------------------------------- |
+| `summary` | `ContentBlock[]` | The unencrypted, user-displayable summary content produced or retained by compaction. |
+| `error`   | `string`         | A human-readable error description.                                                   |
+| `_meta`   | `object`         | Extensible metadata for the compaction entity.                                        |
+
+For each patch field, omission leaves the stored value unchanged, `null` clears
+it, and a concrete value replaces it. On a first-seen ID, omission and `null`
+both start with no value. `summary: []` also clears the summary.
+
+Clients apply updates and chunks in receive order for each ID. Chunks append
+to the current summary; a concrete `summary` replaces all previously
+accumulated content, and any subsequent chunks append to that replacement.
+`summary: null` or `summary: []` clears accumulated content, including partial
+output before failure or cancellation.
+
+The summary is not the Agent's complete replacement history or generic status
+text such as "Compaction completed". It should faithfully represent the
+retained, user-displayable summary without internal prompt framing or hidden
+instructions. Text blocks may contain Markdown. Agents should omit it when no
+unencrypted summary is available or when disclosure would reveal context that
+was not otherwise user-visible.
+
+During [history replay](/protocol/v1/draft/session-setup#loading-sessions),
+compaction updates and summary chunks follow the same semantics as live delivery.
+
+Replay does not implicitly reset omitted patch fields. Agents use replacement
+or clearing summary patches as needed to avoid duplicating content the Client
+already holds.
+
+Compaction does not instruct the Client to discard earlier conversation
+history; collapsing it is a local presentation choice. It also does not replace
+[`usage_update`](#session-usage-updates), which reports current context-window
+utilization and cost rather than a compaction boundary.
 
 #### Session Usage Updates
 

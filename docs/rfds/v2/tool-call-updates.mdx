@@ -47,13 +47,13 @@ ACP v2 should remove `sessionUpdate: "tool_call"` and make `sessionUpdate: "tool
 The v2 `ToolCallUpdate` payload has the following semantics:
 
 - `toolCallId` is required.
-- `title`, `kind`, `status`, `content`, `locations`, `rawInput`, and `rawOutput` are patch fields.
+- `name`, `title`, `kind`, `status`, `content`, `locations`, `rawInput`, and `rawOutput` are patch fields.
 - An omitted patch field leaves the previous value unchanged.
 - `null` explicitly clears or unsets the field.
 - Any concrete value replaces the previous value.
 - `content` and `locations` are replaced as whole arrays, not appended.
 - `[]` and `null` both clear a collection field.
-- `_meta` preserves omitted, `null`, and object values as distinct update signals.
+- `_meta` preserves omitted, `null`, and object values as distinct update signals. An object patches the stored metadata by top-level key, as defined by [Metadata Patches](./meta-patches.mdx).
 - For a new `toolCallId`, omitted fields use Client defaults.
 - Agents **SHOULD** include `title` the first time they report a `toolCallId`.
 
@@ -92,11 +92,7 @@ There is a single way to update a tool call, removing lots of confusion from how
 
 ### Compatibility
 
-When converting v1 to v2, both v1 `tool_call` and v1 `tool_call_update` should map to v2 `tool_call_update`.
-
-When converting v2 back to v1, adapters can represent compatible v2 updates as a v1 `ToolCallUpdate`. Some explicit clear operations are not representable because v1 update fields cannot preserve every distinction between omitted and `null`. Collection clears can be represented as empty arrays. A strict adapter must reject unrepresentable scalar or raw-field clears; an explicitly lossy bridge may instead omit them and document that the previous v1 value remains.
-
-`tool_call_content_chunk` cannot be represented by a stateless v2-to-v1 adapter because v1 tool-call content updates replace the whole content array rather than appending one item. A stateful bridge can choose to accumulate chunks and emit replacement arrays to v1 clients.
+This RFD doesn't define v1↔v2 conversions. Implementations that bridge versions follow the migration guide's advice on [adapters](/protocol/v2/migration#share-application-logic-not-wire-shapes).
 
 ## Frequently asked questions
 
@@ -118,6 +114,7 @@ Tool-call updates need both operations. Omission means "I am not changing this f
 
 ## Revision history
 
+- 2026-10-13: A top-level `_meta` object now patches stored metadata by key, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-14: Distinguished tool-call content item chunks from terminal byte-stream chunks.
 - 2026-07-02: Updated permission requests to carry tool-call updates through an optional `subject` tagged union and to use separate `title` and `description` fields for permission-specific prompt text.
 - 2026-06-09: Added `tool_call_content_chunk` for streaming tool-call content.

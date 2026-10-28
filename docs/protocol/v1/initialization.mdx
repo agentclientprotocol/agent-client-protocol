@@ -36,6 +36,9 @@ They **SHOULD** also provide a name and version to the Agent.
   "params": {
     "protocolVersion": 1,
     "clientCapabilities": {
+      "auth": {
+        "terminal": true
+      },
       "fs": {
         "readTextFile": true,
         "writeTextFile": true
@@ -181,6 +184,38 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Config Options
 </Card>
 
+#### Session Compaction
+
+<ParamField path="session.compaction" type="CompactionCapabilities Object">
+  The Client supports ID-addressed `compaction_update` and
+  `compaction_summary_chunk` session updates, including their lifecycle,
+  placement, patch, and replay semantics. Omitted or `null` at either level
+  means unsupported. Supplying `{}` advertises the complete contract. Agents
+  must not send these updates to a v1 Client that does not advertise it.
+</ParamField>
+
+<Card
+  icon="compress"
+  horizontal
+  href="/protocol/v1/prompt-turn#session-compaction"
+>
+  Learn more about Session Compaction
+</Card>
+
+#### Session Notices
+
+<ParamField path="session.notices" type="NoticeCapabilities Object">
+  The Client can present live `notice` session updates to the user. This field
+  is optional and nullable. Omitting `session` or `notices`, or setting either
+  to `null`, means unsupported. Supplying `{}` advertises notice support. Agents
+  must not send notices without this capability and may instead use an agent
+  message when the information should still be surfaced to the user.
+</ParamField>
+
+<Card icon="message" horizontal href="/protocol/v1/prompt-turn#session-notices">
+  Learn more about Session Notices
+</Card>
+
 ### Agent Capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
@@ -201,20 +236,20 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 
 #### Prompt capabilities
 
-As a baseline, all Agents **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
+As a baseline, all Agents **MUST** support `text` and `resource_link` content blocks in `session/prompt` requests.
 
 Optionally, they **MAY** support richer types of [content](/protocol/v1/content) by specifying the following capabilities:
 
 <ResponseField name="image" type="boolean" post={["default: false"]}>
-  The prompt may include `ContentBlock::Image`
+  The prompt may include `image` content blocks
 </ResponseField>
 
 <ResponseField name="audio" type="boolean" post={["default: false"]}>
-  The prompt may include `ContentBlock::Audio`
+  The prompt may include `audio` content blocks
 </ResponseField>
 
 <ResponseField name="embeddedContext" type="boolean" post={["default: false"]}>
-  The prompt may include `ContentBlock::Resource`
+  The prompt may include `resource` content blocks
 </ResponseField>
 
 #### MCP capabilities
@@ -270,17 +305,18 @@ Optionally, they **MAY** support other session methods and notifications by spec
 
 Both Clients and Agents **SHOULD** provide information about their implementation in the `clientInfo` and `agentInfo` fields respectively. Both take the following three fields:
 
-<ParamField path="name" type="string">
+<ParamField path="name" type="string" required>
   Intended for programmatic or logical use, but can be used as a display name
   fallback if title isn’t present.
 </ParamField>
 
 <ParamField path="title" type="string">
   Intended for UI and end-user contexts — optimized to be human-readable and
-  easily understood. If not provided, the name should be used for display.
+  easily understood. Optional; omitted and `null` are equivalent. If not
+  provided, the name should be used for display.
 </ParamField>
 
-<ParamField path="version" type="string">
+<ParamField path="version" type="string" required>
   Version of the implementation. Can be displayed to the user or used for
   debugging or metrics purposes.
 </ParamField>

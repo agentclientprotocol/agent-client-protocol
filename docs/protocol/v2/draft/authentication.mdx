@@ -71,18 +71,23 @@ authentication-related extensions, not the availability of the baseline
         "type": "agent",
         "description": "Sign in using the agent's login flow"
       }
-    ]
+    ],
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
+    }
   }
 }
 ```
 
-Because this response contains an `agent` authentication method, the Agent must
+Because this response contains an `agent` authentication method, the Agent **MUST**
 support both `auth/login` and `auth/logout`.
 
 ### Authentication method types
 
 The standard authentication method type is `agent`, where the Agent handles
-authentication through `auth/login`. Every authentication method must include a
+authentication through `auth/login`. Every authentication method **MUST** include a
 `type` discriminator:
 
 ```json
@@ -115,7 +120,7 @@ interactively:
 Authentication method `type` values can be custom or future variants. Custom
 method types **MUST** begin with `_`. Unknown non-underscore method types are
 reserved for future ACP variants. Clients that do not understand a method type
-should preserve the raw method payload when storing, replaying, proxying, or
+**SHOULD** preserve the raw method payload when storing, replaying, proxying, or
 forwarding initialization data, and otherwise ignore the method or display it
 generically.
 
@@ -133,6 +138,11 @@ during initialization with `capabilities.auth.terminal`:
       "auth": {
         "terminal": {}
       }
+    },
+    "info": {
+      "name": "my-client",
+      "title": "My Client",
+      "version": "1.0.0"
     }
   }
 }
@@ -166,7 +176,7 @@ method's ID:
 
 <ParamField path="methodId" type="string" required>
   The ID of an advertised authentication method whose type defines the
-  `auth/login` flow. Clients MUST NOT pass a `terminal` method.
+  `auth/login` flow. Clients **MUST NOT** pass a `terminal` method.
 </ParamField>
 
 On success, the Agent returns an empty result:
@@ -179,8 +189,10 @@ On success, the Agent returns an empty result:
 }
 ```
 
-After successful authentication, the Client can create new sessions without
-receiving an `auth_required` error for authentication-gated requests.
+When the Agent requires authentication, any request except `initialize` and
+`auth/login` may fail with `auth_required` (`-32000`). After successful
+authentication, the Client can create new sessions without receiving an
+`auth_required` error for authentication-gated requests.
 
 ## Terminal authentication
 
@@ -194,8 +206,9 @@ For a `terminal` method, the Client:
 3. Presents the terminal to the user and waits for the process to exit. Exit
    status zero signals success; a non-zero status, termination without an exit
    status, or cancellation signals failure.
-4. Reconnects and reinitializes the ACP Agent, then retries the operation that
-   required authentication.
+4. Reconnects and reinitializes the ACP Agent, then retries an operation rejected
+   for requiring authentication. For an already-inserted prompt, see
+   [Authentication failures during session work](#authentication-failures-during-session-work).
 
 The descriptor cannot provide a command. The Client derives the command from its
 own Agent configuration. Agents **SHOULD** provide arguments that enter a
@@ -204,6 +217,31 @@ pattern or other in-band success signal; Clients may recognize
 implementation-specific signals only as an extension. The terminal process is
 not the ACP connection, so the Client **MUST NOT** send an `auth/login` request
 for a terminal method.
+
+### Launch Safety
+
+- Clients **SHOULD** pass `args` as separate arguments rather than building a shell command line from them, and **SHOULD NOT** offer terminal authentication when the launch target re-parses arguments, such as a remote shell or a Windows batch file.
+- Clients **SHOULD NOT** apply `env` entries that change program lookup, dynamic loading, interpreter or shell startup, or proxy and TLS trust without user approval. Examples include `PATH`, `LD_*`, `DYLD_*`, `NODE_OPTIONS`, `PYTHONPATH`, `BASH_ENV`, `HTTPS_PROXY`, and `SSL_CERT_FILE`.
+- Clients **SHOULD** show the appended `args` and `env` before launch. `env` values **SHOULD NOT** contain secrets.
+
+## Authentication failures during session work
+
+`auth_required` (`-32000`) applies in v2 both to rejected requests and to
+authentication failures that end foreground work. For `session/prompt`, the
+reporting channel depends on whether the user message was inserted:
+
+- Before insertion, the Agent returns an `auth_required` JSON-RPC error response.
+- After insertion, the Agent **MUST** respond successfully with the inserted
+  `messageId`, even if authentication fails before the response is sent. If the
+  failure terminates foreground work, the Agent **MUST** report `idle` and
+  **SHOULD** include `stopReason: "error"` with `error.code: -32000`.
+
+Clients may prompt the user to complete an advertised authentication flow.
+Successful authentication does not itself restart work that already ended.
+Resending the prompt inserts a new message and does not undo the original
+insertion or any tool side effects. Clients **SHOULD NOT** automatically resubmit
+an inserted prompt as though it had been rejected. See
+[Failures](/protocol/v2/draft/prompt-lifecycle#failures).
 
 ## Logging Out
 
@@ -241,5 +279,5 @@ The protocol does not guarantee what happens to already-running sessions after
 `auth_required` errors for future session activity.
 
 Clients **SHOULD** be prepared for active session operations to fail with
-authentication-related errors after logout and should prompt the user to
+authentication-related errors after logout and **SHOULD** prompt the user to
 authenticate again when appropriate.

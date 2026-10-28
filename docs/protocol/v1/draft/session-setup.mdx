@@ -133,7 +133,19 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
 }
 ```
 
-The Agent **MUST** replay the entire conversation to the Client in the form of `session/update` notifications (like `session/prompt`). Live-only `notice` updates are not conversation history and **SHOULD NOT** be replayed. If the underlying condition is still relevant after loading finishes, the Agent may emit a new notice as a new live event.
+The Agent **MUST** replay the entire conversation to the Client in the form of
+`session/update` notifications (like `session/prompt`).
+
+[Session compactions](/protocol/v1/draft/prompt-turn#session-compaction) are
+replayed using the same update, chunk, and patch semantics as live delivery.
+The Client's `session.compaction` capability is required for replay as well as
+live delivery.
+
+Live-only [notices](/protocol/v1/draft/prompt-turn#session-notices) are not
+conversation history and **SHOULD NOT** be replayed. If the underlying
+condition is still relevant after loading finishes, the Agent may emit a new
+notice as a new live event, subject to the Client's `session.notices`
+capability.
 
 For example, a user message from the conversation history:
 
@@ -332,8 +344,10 @@ On success, the Agent responds with an empty result object:
 }
 ```
 
-Agents MAY return an error if the session does not exist or is not currently
-active.
+Closing is idempotent. If the session does not exist or is not active, for
+example because it was already closed, the Agent **SHOULD** respond with the
+same empty result. Clients **SHOULD** treat a `-32002` response to
+`session/close` as a successful close. See [Unknown Sessions](/protocol/v1/draft/error#unknown-sessions).
 
 ## Additional Workspace Roots
 
@@ -368,6 +382,65 @@ When present, `additionalDirectories` has the following behavior:
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `sessionCapabilities.additionalDirectories`.
 
+## System Prompt (unstable)
+
+Agents that advertise `sessionCapabilities.systemPrompt` allow Clients to include
+system-level instructions on `session/new`, `session/load`, `session/resume`,
+and, when the Agent supports it, `session/fork`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "mcpServers": [],
+    "systemPrompt": {
+      "mode": "append",
+      "content": [
+        {
+          "type": "text",
+          "text": "You are a code review specialist. Focus on security issues."
+        }
+      ]
+    }
+  }
+}
+```
+
+`systemPrompt` has the following behavior:
+
+- `mode` is required and selects how the Agent combines `content` with its own instructions
+- `mode` values beginning with `_` are reserved for implementation-specific modes, and other unknown values for future ACP modes. Clients **MUST** only use a mode the Agent advertised. An Agent that receives a mode it does not support **MUST** return an error rather than treating it as `append` or `override`
+- `append` adds `content` to the Agent's own instructions rather than replacing them. The Agent **SHOULD** give it system-level precedence, for example in the model's system prompt or developer instructions rather than in user-turn content; where it is placed and how it is formatted is up to the Agent
+- `override` replaces the Agent's built-in default instructions. It does not change tool availability, MCP servers, permissions, or session configuration. Context the Agent supplies from the workspace or environment, such as `AGENTS.md` files or skill listings, **MAY** still be included, and Agents **SHOULD** document what they keep. Clients that use `override` take responsibility for any tool guidance or safety instructions the Agent's default instructions provided
+- only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them
+- omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
+- on `session/load`, `session/resume`, and `session/fork`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
+- if the Agent cannot apply a supplied `systemPrompt`, for example because of an unadvertised mode, an unsupported content block type, or content that exceeds its limits, it **MUST** return an error and **MUST NOT** create, load, resume, or fork the session. JSON-RPC `-32602` (Invalid params) is the **RECOMMENDED** error for malformed or unsupported values
+
+Clients **MUST** only send `systemPrompt` when the Agent advertises `sessionCapabilities.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `sessionCapabilities.systemPrompt.mode.override`:
+
+```json highlight={8-10}
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "result": {
+    "protocolVersion": 1,
+    "agentCapabilities": {
+      "sessionCapabilities": {
+        "systemPrompt": {
+          "mode": { "override": {} }
+        }
+      }
+    }
+  }
+}
+```
+
+Content delivered at system level carries more weight with the model than user turns or tool output. Clients **SHOULD** only send content they trust at that level.
+
 ## Session ID
 
 The session ID returned by `session/new` is a unique identifier for the conversation context.
@@ -390,6 +463,14 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 - **MUST** be part of the session's effective root set
 
 When `sessionCapabilities.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
+
+### Workspace Root Security
+
+The root set declares the session's scope. It confines shell commands only when a sandbox enforces it.
+
+- Clients **SHOULD** only include directories the user expects the Agent to access, such as the workspace or directories the Client provides, like skills.
+- Agents **SHOULD NOT** treat model output, Agent content, or replayed history as granting access outside the root set. Access outside it goes through a permission request.
+- Implementations that enforce the root set **SHOULD** check the resolved path at the time of use, compare paths by component, and fail closed.
 
 ## MCP Servers
 
@@ -421,10 +502,10 @@ All Agents **MUST** support connecting to MCP servers via stdio (standard input/
   Environment variables to set when launching the server
 
   <Expandable title="EnvVariable">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the environment variable.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value of the environment variable.
       </ParamField>
   </Expandable>
@@ -466,10 +547,10 @@ When the Agent supports `mcpCapabilities.http`, Clients can specify MCP servers 
   HTTP headers to include in requests to the server
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -517,10 +598,10 @@ When the Agent supports `mcpCapabilities.sse`, Clients can specify MCP servers c
   HTTP headers to include when establishing the SSE connection
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -568,3 +649,13 @@ If `mcpCapabilities.sse` is `false` or not present, the Agent does not support S
 Agents **SHOULD** connect to all MCP servers specified by the Client.
 
 Clients **MAY** use this ability to provide tools directly to the underlying language model by including their own MCP server.
+
+### Security
+
+MCP server configurations can launch processes, and their `env` and `headers` values are credentials.
+
+- Agents **SHOULD** launch `command` with `args` as separate arguments, without a shell.
+- Clients **SHOULD NOT** send a stdio server from workspace files or Agent output until the user has approved its exact command, arguments, and environment variable names.
+- Agents **SHOULD NOT** include `env` or `headers` values in session updates, errors, `_meta`, `session/list` results, replayed history, model context, or command lines, and **SHOULD NOT** log or persist them.
+- Agents **SHOULD** send `headers` only to the configured origin.
+- Clients that persist `mcpServers` **SHOULD** keep credentials in operating-system secret storage and **SHOULD NOT** log them.

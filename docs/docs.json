@@ -86,6 +86,8 @@
                   "protocol/v1/slash-commands",
                   "protocol/v1/extensibility",
                   "protocol/v1/transports",
+                  "protocol/v1/security",
+                  "protocol/v1/error",
                   "protocol/v1/schema",
                   {
                     "group": "Draft: In Progress and May Change",
@@ -110,6 +112,8 @@
                       "protocol/v1/draft/slash-commands",
                       "protocol/v1/draft/extensibility",
                       "protocol/v1/draft/transports",
+                      "protocol/v1/draft/security",
+                      "protocol/v1/draft/error",
                       "protocol/v1/draft/schema"
                     ]
                   }
@@ -137,6 +141,8 @@
                   "protocol/v2/slash-commands",
                   "protocol/v2/extensibility",
                   "protocol/v2/transports",
+                  "protocol/v2/security",
+                  "protocol/v2/error",
                   "protocol/v2/schema",
                   {
                     "group": "Draft: In Progress and May Change",
@@ -158,6 +164,8 @@
                       "protocol/v2/draft/slash-commands",
                       "protocol/v2/draft/extensibility",
                       "protocol/v2/draft/transports",
+                      "protocol/v2/draft/security",
+                      "protocol/v2/draft/error",
                       "protocol/v2/draft/schema"
                     ]
                   }
@@ -173,7 +181,8 @@
               "libraries/python",
               "libraries/rust",
               "libraries/typescript",
-              "libraries/community"
+              "libraries/community",
+              "libraries/testing"
             ]
           }
         ]
@@ -188,22 +197,22 @@
             "pages": [
               "rfds/session-fork",
               "rfds/proxy-chains",
-              "rfds/mcp-over-acp",
-              "rfds/end-turn-token-usage",
               "rfds/diff-delete",
-              "rfds/next-edit-suggestions",
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
-              "rfds/tool-call-name",
+              "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
-              "rfds/session-compaction",
-              "rfds/session-notices"
+              "rfds/session-status",
+              "rfds/session-set-title"
             ]
           },
           {
             "group": "Active",
             "pages": [
               "rfds/streamable-http-websocket-transport",
+              "rfds/subagents",
+              "rfds/client-system-prompt",
+              "rfds/mcp-over-acp",
               {
                 "group": "v2",
                 "expanded": true,
@@ -211,15 +220,16 @@
                 "pages": [
                   "rfds/v2/prompt",
                   "rfds/v2/enum-variant-extension",
-                  "rfds/v2/required-session-methods",
-                  "rfds/v2/session-resume-replay",
                   "rfds/v2/client-filesystem-terminal-capabilities",
-                  "rfds/v2/terminal-output",
                   "rfds/v2/plan-variants",
                   "rfds/v2/tool-call-updates",
-                  "rfds/v2/diff-file-states",
+                  "rfds/v2/message-updates",
                   "rfds/v2/permission-requests",
-                  "rfds/v2/message-updates"
+                  "rfds/v2/required-session-methods",
+                  "rfds/v2/session-resume-replay",
+                  "rfds/v2/diff-file-states",
+                  "rfds/v2/terminal-output",
+                  "rfds/v2/meta-patches"
                 ]
               }
             ]
@@ -231,25 +241,28 @@
           {
             "group": "Completed",
             "pages": [
-              "rfds/auth-methods",
               "rfds/introduce-rfd-process",
               "rfds/session-config-options",
-              "rfds/acp-agent-registry",
               "rfds/session-info-update",
               "rfds/session-list",
+              "rfds/acp-agent-registry",
               "rfds/session-resume",
               "rfds/session-close",
               "rfds/logout-method",
               "rfds/additional-directories",
               "rfds/meta-propagation",
-              "rfds/message-id",
-              "rfds/session-usage",
               "rfds/session-delete",
+              "rfds/session-usage",
+              "rfds/message-id",
               "rfds/model-config-category",
               "rfds/rust-sdk-v1",
               "rfds/request-cancellation",
               "rfds/boolean-config-option",
-              "rfds/elicitation"
+              "rfds/elicitation",
+              "rfds/auth-methods",
+              "rfds/tool-call-name",
+              "rfds/session-compaction",
+              "rfds/session-notices"
             ]
           }
         ]
@@ -275,6 +288,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/tool-call-name-stabilized",
               "announcements/elicitation-stabilized",
               "announcements/acp-v2-draft",
               "announcements/boolean-config-option-stabilized",

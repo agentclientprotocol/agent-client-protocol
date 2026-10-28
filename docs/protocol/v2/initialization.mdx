@@ -34,7 +34,11 @@ Before a Session can be created, Clients **MUST** initialize the connection by c
   "method": "initialize",
   "params": {
     "protocolVersion": 2,
-    "capabilities": {},
+    "capabilities": {
+      "auth": {
+        "terminal": {}
+      }
+    },
     "info": {
       "name": "my-client",
       "title": "My Client",
@@ -91,9 +95,38 @@ See [Capabilities](#capabilities) to learn how non-breaking features are introdu
 
 The `initialize` request **MUST** include the latest protocol version the Client supports.
 
-If the Agent supports the requested version, it **MUST** respond with the same version. Otherwise, the Agent **MUST** respond with the latest version it supports.
+The Agent **MUST** read `protocolVersion` before validating any other parameter. Missing, non-integer, or out-of-range values are malformed parameters and **MUST** receive `-32602` (`Invalid params`).
 
-If the Client does not support the version specified by the Agent in the `initialize` response, the Client **SHOULD** close the connection and inform the user about it.
+The Agent **MUST** select the highest protocol version it supports that is less than or equal to the requested version. If it supports the requested version, this selects that version. A successful `initialize` response **MUST NOT** select a version higher than the requested version and **MUST** use the selected version's initialization response shape.
+
+If no supported version is less than or equal to the requested version, the Agent **MUST** reject `initialize` with error code `-32022` (`Unsupported protocol version`). The error's `data` **MUST** be an object containing the required, non-null fields `requested` (the requested protocol version) and `supported` (an array of the protocol versions the Agent supports). An empty `supported` array means the endpoint has no protocol implementations configured.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "error": {
+    "code": -32022,
+    "message": "Unsupported protocol version",
+    "data": {
+      "requested": 1,
+      "supported": [2]
+    }
+  }
+}
+```
+
+A version-mismatch error does not initialize the connection. The Agent **MUST NOT** begin version-specific operations on that connection, and the Client **SHOULD** close it and inform the user.
+
+The Agent validates the remaining parameters against the selected version. If the requested version is newer than the selected one, the request was written for a version the Agent doesn't know, so the Agent **MUST** ignore parameters it can't parse under the selected version instead of rejecting the request.
+
+The Client **MUST** check that it supports the version in a successful response. Advertising a latest version does not imply support for every earlier version. If the Client does not support the selected version, it **SHOULD** close the connection and inform the user.
+
+#### Repeating Initialization
+
+When the Agent selects a lower version than requested, it may have ignored parts of the Client's request, such as capabilities. The Client **MAY** then send `initialize` again with the selected version and that version's parameters. It **MUST** wait for the first response and send the repeat before any other request. The Agent **MUST** accept it and treat the latest `initialize` as authoritative. `initialize` **MUST NOT** be repeated after any other request.
+
+Agents that implement only v1 may not accept a repeated `initialize`. To change its parameters with such an Agent, the Client opens a new connection.
 
 ## Capabilities
 
@@ -108,7 +141,15 @@ only apply within a supported surface.
 
 Capabilities may specify the availability of protocol methods, notifications, or a subset of their parameters. They may also signal behaviors of the Agent or Client implementation.
 
+Receivers **MUST** ignore unknown capability fields at every nesting level, as described in [Unknown Object Fields](/protocol/v2/extensibility#unknown-object-fields). Unknown fields do not advertise support for any capability the receiver understands.
+
 Implementations can also [advertise custom capabilities](/protocol/v2/extensibility#advertising-custom-capabilities) using the `_meta` field to indicate support for protocol extensions.
+
+Experimental features follow their own documented negotiation requirements, not
+a connection-wide unstable-schema flag. See [Experimental Features and
+Negotiation](/protocol/v2/extensibility#experimental-features-and-negotiation)
+for the distinction between capability-gated operations and capability-free
+informational additions.
 
 ### Client Capabilities
 
@@ -170,6 +211,9 @@ Optionally, Agents **MAY** support prompt extensions, MCP server transports, and
 additional session methods such as `session/delete` by specifying nested
 capabilities.
 
+Agents that advertise [config options](/protocol/v2/session-config-options#setting-a-config-option) **MUST** also
+support `session/set_config_option`.
+
 <ResponseField name="prompt" type="PromptCapabilities Object">
   Object indicating the different types of [content](/protocol/v2/content) that
   may be included in `session/prompt` requests. Omitted or `null` means the
@@ -200,18 +244,18 @@ capabilities.
 
 #### Session Prompt Capabilities
 
-As a baseline, Agents that advertise `session` **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
+As a baseline, Agents that advertise `session` **MUST** support `text` and `resource_link` content blocks in `session/prompt` requests.
 
 Optionally, they **MAY** support richer types of [content](/protocol/v2/content) by specifying the following capabilities:
 
 <ResponseField name="image" type="PromptImageCapabilities Object">
-  The prompt may include `ContentBlock::Image`. Omitted or `null` means the
+  The prompt may include `image` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   image content in prompts.
 </ResponseField>
 
 <ResponseField name="audio" type="PromptAudioCapabilities Object">
-  The prompt may include `ContentBlock::Audio`. Omitted or `null` means the
+  The prompt may include `audio` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   audio content in prompts.
 </ResponseField>
@@ -220,7 +264,7 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/content)
   name="embeddedContext"
   type="PromptEmbeddedContextCapabilities Object"
 >
-  The prompt may include `ContentBlock::Resource`. Omitted or `null` means the
+  The prompt may include `resource` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   embedded context in prompts.
 </ResponseField>
@@ -247,17 +291,18 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/content)
 
 Both Clients and Agents **MUST** provide information about their implementation in the `info` field. It takes the following three fields:
 
-<ParamField path="name" type="string">
+<ParamField path="name" type="string" required>
   Intended for programmatic or logical use, but can be used as a display name
   fallback if title isn’t present.
 </ParamField>
 
 <ParamField path="title" type="string">
   Intended for UI and end-user contexts — optimized to be human-readable and
-  easily understood. If not provided, the name should be used for display.
+  easily understood. Optional; omitted and `null` are equivalent. If not
+  provided, the name **SHOULD** be used for display.
 </ParamField>
 
-<ParamField path="version" type="string">
+<ParamField path="version" type="string" required>
   Version of the implementation. Can be displayed to the user or used for
   debugging or metrics purposes.
 </ParamField>

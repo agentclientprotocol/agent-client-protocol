@@ -1,0 +1,77 @@
+---
+title: "Security Considerations"
+description: "Trust model and security guidance for Agents and Clients"
+---
+
+This page describes ACP's trust model and security guidance that spans features. Guidance for a single feature is on that feature's page; see [Feature Guidance](#feature-guidance).
+
+## Trust Model
+
+- The Agent runs with whatever permissions its process is given. ACP itself does not sandbox it.
+- Files, web pages, tool results, and MCP servers can influence Agent output. Treat every Agent-authored string, URI, and path as untrusted, including replayed content.
+- Permission requests are advisory: the Agent performs its own operations and is responsible for honoring the user's decision. The Client performs [file system](/protocol/v1/draft/file-system) and [terminal](/protocol/v1/draft/terminals) operations itself.
+- `clientInfo` and `agentInfo` are self-reported. Implementations **SHOULD NOT** use them for security decisions, and Clients **SHOULD** identify the Agent from their own launch configuration.
+
+Out of scope: a malicious Agent binary, detecting prompt injection, and operating-system sandboxing.
+
+## Rendering Agent Content
+
+This applies to all Agent-authored display text, including messages, thoughts, tool calls, plans, commands, modes, config options, notices, session titles, authentication methods, permission requests, and elicitations.
+
+- Clients **SHOULD NOT** run scripts from Agent content, and **SHOULD** disable or sanitize raw HTML when rendering Markdown.
+- Clients **SHOULD NOT** automatically run active content, such as diagram renderers, that can fetch resources or execute code.
+- Clients **SHOULD NOT** open links from Agent content without user action, and **SHOULD** show the full target and get user confirmation before handing a link with a scheme other than `http` or `https` to the operating system or another handler.
+- Clients **SHOULD** show the full link target when it differs from the link text.
+- Clients **SHOULD** reveal or remove bidirectional, zero-width, and tag characters in commands, paths, URLs, diffs, and permission requests.
+- Clients that print Agent text to a terminal **SHOULD** neutralize terminal control sequences in it.
+- Clients **SHOULD** keep Agent [slash commands](/protocol/v1/draft/slash-commands) distinguishable from their own commands.
+- Clients **MAY** bound or throttle permission requests, elicitations, and output.
+
+## URIs and Remote Resources
+
+This applies to `uri` on images, resource links, and embedded resources, and to URLs in Markdown.
+
+- Clients **SHOULD** render images from `data` and **SHOULD NOT** fetch Agent-supplied remote URIs without user action. A request can leak data through its URL.
+- Automatic fetches **SHOULD** use only `https:` or `data:` URIs, **SHOULD NOT** carry credentials, **SHOULD** refuse loopback and private-network targets, and **SHOULD** bound the response size.
+- Clients **SHOULD NOT** run scripts in SVG images from Agent content.
+- Clients **SHOULD NOT** read a `file:` URI from Agent content outside the session's [root set](/protocol/v1/draft/session-setup#workspace-root-security) without user action.
+- Agents **SHOULD** apply the root set and these fetch rules to URIs in prompts.
+
+## Credentials
+
+- Implementations **SHOULD NOT** put credentials in `_meta`, including `traceparent`, `tracestate`, and `baggage`.
+- Session, message, tool-call, and terminal IDs are not credentials.
+
+## Prompt Injection
+
+- Agents **SHOULD** treat embedded resources, files, tool results, and MCP results as data, not as user instructions.
+- Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
+- Agents **SHOULD** request permission before writing files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.
+- Clients **SHOULD NOT** open links, run commands, change settings, or send data based only on Agent-authored text.
+
+## Intermediaries
+
+- An intermediary between the Client and the Agent, such as a proxy, can read and change every message, and each side treats it as the other. Clients **SHOULD** only use intermediaries the user trusts.
+- Intermediaries **SHOULD NOT** answer permission requests or elicitations for the user except under user-configured policy.
+- An Agent serving more than one user **SHOULD** scope `session/list`, session loading and resumption, permission requests, and elicitations to the user that owns the session.
+
+## Transports
+
+[Custom transports](/protocol/v1/draft/transports#custom-transports) **SHOULD** document their security considerations, including how peers authenticate.
+
+## Feature Guidance
+
+- [Workspace roots](/protocol/v1/draft/session-setup#workspace-root-security)
+- [Terminal authentication](/protocol/v1/draft/authentication#launch-safety)
+- [MCP servers](/protocol/v1/draft/session-setup#security)
+- [Permission requests](/protocol/v1/draft/tool-calls#security)
+- [File system](/protocol/v1/draft/file-system#security) and [terminal](/protocol/v1/draft/terminals#security) methods, which the Client performs itself
+- [Elicitation](/protocol/v1/draft/elicitation)
+
+## Residual Risk
+
+A user can approve a harmful operation, prompt injection can steer operations the user allowed, and an Agent can act without asking.
+
+## Unstable Features
+
+- A [system prompt](/protocol/v1/draft/session-setup#system-prompt-unstable) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.

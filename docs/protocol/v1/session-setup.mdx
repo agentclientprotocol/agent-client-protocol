@@ -7,6 +7,8 @@ Sessions represent a specific conversation or thread between the [Client](/proto
 
 Before creating a session, Clients **MUST** first complete the [initialization](/protocol/v1/initialization) phase to establish protocol compatibility and capabilities.
 
+If the Agent requires authentication, `session/new` may fail with an `auth_required` error until the Client completes the [authentication flow](/protocol/v1/authentication).
+
 <br />
 
 ```mermaid
@@ -82,7 +84,7 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 
 ## Loading Sessions
 
-Agents that support the `loadSession` capability allow Clients to resume previous conversations. This feature enables persistence across restarts and sharing sessions between different Client instances.
+Agents that support the `loadSession` capability allow Clients to resume previous conversations with history replay. This feature enables persistence across restarts and sharing sessions between different Client instances.
 
 ### Checking Support
 
@@ -133,6 +135,17 @@ To load an existing session, Clients **MUST** call the `session/load` method wit
 
 The Agent **MUST** replay the entire conversation to the Client in the form of `session/update` notifications (like `session/prompt`).
 
+[Session compactions](/protocol/v1/prompt-turn#session-compaction) are
+replayed using the same update, chunk, and patch semantics as live delivery.
+The Client's `session.compaction` capability is required for replay as well as
+live delivery.
+
+Live-only [notices](/protocol/v1/prompt-turn#session-notices) are not
+conversation history and **SHOULD NOT** be replayed. If the underlying
+condition is still relevant after loading finishes, the Agent may emit a new
+notice as a new live event, subject to the Client's `session.notices`
+capability.
+
 For example, a user message from the conversation history:
 
 ```json
@@ -181,9 +194,11 @@ When **all** the conversation entries have been streamed to the Client, the Agen
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "result": null
+  "result": {}
 }
 ```
+
+The response **MAY** also include initial mode, model, or session configuration state when those features are supported by the Agent.
 
 The Client can then continue sending prompts as if the session was never interrupted.
 
@@ -308,7 +323,10 @@ On success, the Agent responds with an empty result object:
 }
 ```
 
-Agents MAY return an error if the session does not exist or is not currently active.
+Closing is idempotent. If the session does not exist or is not active, for
+example because it was already closed, the Agent **SHOULD** respond with the
+same empty result. Clients **SHOULD** treat a `-32002` response to
+`session/close` as a successful close. See [Unknown Sessions](/protocol/v1/error#unknown-sessions).
 
 ## Additional Workspace Roots
 
@@ -366,6 +384,14 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 
 When `sessionCapabilities.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
+### Workspace Root Security
+
+The root set declares the session's scope. It confines shell commands only when a sandbox enforces it.
+
+- Clients **SHOULD** only include directories the user expects the Agent to access, such as the workspace or directories the Client provides, like skills.
+- Agents **SHOULD NOT** treat model output, Agent content, or replayed history as granting access outside the root set. Access outside it goes through a permission request.
+- Implementations that enforce the root set **SHOULD** check the resolved path at the time of use, compare paths by component, and fail closed.
+
 ## MCP Servers
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agents to access external tools and data sources. When creating a session, Clients **MAY** include connection details for MCP servers that the Agent should connect to.
@@ -396,10 +422,10 @@ All Agents **MUST** support connecting to MCP servers via stdio (standard input/
   Environment variables to set when launching the server
 
   <Expandable title="EnvVariable">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the environment variable.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value of the environment variable.
       </ParamField>
   </Expandable>
@@ -441,10 +467,10 @@ When the Agent supports `mcpCapabilities.http`, Clients can specify MCP servers 
   HTTP headers to include in requests to the server
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -492,10 +518,10 @@ When the Agent supports `mcpCapabilities.sse`, Clients can specify MCP servers c
   HTTP headers to include when establishing the SSE connection
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -543,3 +569,13 @@ If `mcpCapabilities.sse` is `false` or not present, the Agent does not support S
 Agents **SHOULD** connect to all MCP servers specified by the Client.
 
 Clients **MAY** use this ability to provide tools directly to the underlying language model by including their own MCP server.
+
+### Security
+
+MCP server configurations can launch processes, and their `env` and `headers` values are credentials.
+
+- Agents **SHOULD** launch `command` with `args` as separate arguments, without a shell.
+- Clients **SHOULD NOT** send a stdio server from workspace files or Agent output until the user has approved its exact command, arguments, and environment variable names.
+- Agents **SHOULD NOT** include `env` or `headers` values in session updates, errors, `_meta`, `session/list` results, replayed history, model context, or command lines, and **SHOULD NOT** log or persist them.
+- Agents **SHOULD** send `headers` only to the configured origin.
+- Clients that persist `mcpServers` **SHOULD** keep credentials in operating-system secret storage and **SHOULD NOT** log them.

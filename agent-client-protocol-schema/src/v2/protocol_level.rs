@@ -6,7 +6,7 @@ use crate::IntoOption;
 
 /// Notification to cancel an ongoing request.
 ///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -18,10 +18,10 @@ pub struct CancelRequestNotification {
     /// The ID of the request to cancel.
     pub request_id: RequestId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -43,7 +43,7 @@ impl CancelRequestNotification {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -100,7 +100,7 @@ pub enum ProtocolLevelNotification {
     ///   - Valid response with appropriate data (partial results or cancellation marker)
     ///   - Error response with code `-32800` (Cancelled)
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
     CancelRequestNotification(CancelRequestNotification),
 }
 

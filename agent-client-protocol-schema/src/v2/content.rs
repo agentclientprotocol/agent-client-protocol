@@ -7,7 +7,7 @@
 //! The content block structure is designed to be compatible with the Model Context Protocol (MCP),
 //! allowing seamless integration between ACP and MCP-based tools.
 //!
-//! See: [Content](https://agentclientprotocol.com/protocol/content)
+//! See: [Content](https://agentclientprotocol.com/protocol/v2/content)
 
 use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
 
@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use super::Meta;
-use crate::{IntoOption, SkipListener};
+use crate::IntoOption;
 
 /// An Internet media type identifying the format of protocol content.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -80,16 +80,17 @@ impl_media_type_option_conversion!(Cow<'_, str>);
 /// This structure is compatible with the Model Context Protocol (MCP), enabling
 /// agents to seamlessly forward content from MCP tool outputs without transformation.
 ///
-/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
+/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum ContentBlock {
     /// Text content. May be plain text or formatted with Markdown.
     ///
     /// All agents MUST support text content blocks in prompts.
-    /// Clients SHOULD render this text as Markdown.
+    /// Clients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown
+    /// extensions.
     Text(TextContent),
     /// Images for visual context or analysis.
     ///
@@ -117,14 +118,16 @@ pub enum ContentBlock {
     ///
     /// Receivers that do not understand this content block type should preserve
     /// the raw payload when storing, replaying, proxying, or forwarding content,
-    /// and otherwise ignore it or display it generically.
+    /// and otherwise ignore it or display it generically. Agents MUST reject a
+    /// `session/prompt` request with a content block type they do not support
+    /// with `-32602`.
     #[serde(untagged)]
     Other(OtherContentBlock),
 }
 
 /// Custom or future content block payload.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_content_block_schema))]
 #[serde(rename_all = "camelCase")]
@@ -197,21 +200,23 @@ fn other_content_block_schema(schema: &mut Schema) {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct TextContent {
     /// Text payload carried by this content block.
     pub text: String,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -241,7 +246,7 @@ impl TextContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -259,7 +264,7 @@ impl<T: Into<String>> From<T> for ContentBlock {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ImageContent {
@@ -269,21 +274,25 @@ pub struct ImageContent {
     /// MIME type describing the encoded media payload.
     pub mime_type: MediaType,
     /// URI associated with this resource or media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean no URI is associated with the image.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[cfg_attr(feature = "schemars", schemars(url))]
     #[serde(default)]
     pub uri: Option<String>,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -322,7 +331,7 @@ impl ImageContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -334,7 +343,7 @@ impl ImageContent {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AudioContent {
@@ -344,15 +353,17 @@ pub struct AudioContent {
     /// MIME type describing the encoded media payload.
     pub mime_type: MediaType,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -383,7 +394,7 @@ impl AudioContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -395,21 +406,23 @@ impl AudioContent {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct EmbeddedResource {
     /// Embedded resource payload, either text or binary data.
     pub resource: EmbeddedResourceResource,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -439,7 +452,7 @@ impl EmbeddedResource {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -449,7 +462,7 @@ impl EmbeddedResource {
 
 /// Resource content that can be embedded in a message.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum EmbeddedResourceResource {
@@ -463,7 +476,7 @@ pub enum EmbeddedResourceResource {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextResourceContents {
@@ -473,15 +486,17 @@ pub struct TextResourceContents {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// MIME type describing the encoded media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean the MIME type is not specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -512,7 +527,7 @@ impl TextResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -524,7 +539,7 @@ impl TextResourceContents {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BlobResourceContents {
@@ -535,15 +550,17 @@ pub struct BlobResourceContents {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// MIME type describing the encoded media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean the MIME type is not specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -574,7 +591,7 @@ impl BlobResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -586,7 +603,7 @@ impl BlobResourceContents {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResourceLink {
@@ -596,40 +613,52 @@ pub struct ResourceLink {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// Optional display title for end-user UI.
+    ///
+    /// Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// Optional human-readable details shown with this protocol object.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Optional set of sized icons that the client can display in a user interface.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    ///
+    /// Omitted and `null` are equivalent and mean no icons are provided.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub icons: Option<Vec<Icon>>,
     /// MIME type describing the encoded media payload.
+    ///
+    /// Omitted and `null` are equivalent and mean the MIME type is not specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// Optional size of the linked resource in bytes, if known.
+    ///
+    /// Omitted and `null` are equivalent and mean the size is not known.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub size: Option<i64>,
+    pub size: Option<u64>,
     /// Optional annotations that help clients decide how to display or route this content.
+    ///
+    /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -684,7 +713,7 @@ impl ResourceLink {
 
     /// Sets or clears the optional `size` field.
     #[must_use]
-    pub fn size(mut self, size: impl IntoOption<i64>) -> Self {
+    pub fn size(mut self, size: impl IntoOption<u64>) -> Self {
         self.size = size.into_option();
         self
     }
@@ -700,7 +729,7 @@ impl ResourceLink {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -720,6 +749,8 @@ pub struct Icon {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub src: String,
     /// Optional MIME type override if the source MIME type is missing or generic.
+    ///
+    /// Omitted and `null` are equivalent and mean the source MIME type is used.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -729,15 +760,29 @@ pub struct Icon {
     /// `"any"` for scalable formats like SVG.
     ///
     /// If not provided, the client should assume that the icon can be used at any size.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    ///
+    /// Omitted and `null` are equivalent and mean no sizes are specified.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub sizes: Option<Vec<String>>,
     /// Optional theme this icon is designed for.
+    ///
+    /// Omitted and `null` are equivalent and mean the icon is not theme-specific.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub theme: Option<IconTheme>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
 }
 
 impl Icon {
@@ -749,7 +794,19 @@ impl Icon {
             mime_type: None,
             sizes: None,
             theme: None,
+            meta: None,
         }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 
     /// Sets or clears the optional `mimeType` field.
@@ -797,38 +854,73 @@ pub enum IconTheme {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Annotations {
     /// Intended recipients for this content, such as the user or assistant.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    ///
+    /// Omitted and `null` are equivalent and mean no audience is specified.
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub audience: Option<Vec<Role>>,
     /// Timestamp indicating when the underlying resource was last modified.
     ///
     /// Must be an RFC 3339 formatted string (e.g., "2025-01-12T15:00:58Z").
+    ///
+    /// Omitted and `null` are equivalent and mean the modification time is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
     #[serde(default)]
     pub last_modified: Option<String>,
     /// Relative importance of this content when clients choose what to surface.
+    ///
+    /// Omitted and `null` are equivalent and mean no priority is specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[cfg_attr(feature = "schemars", schemars(range(min = 0, max = 1)))]
     #[serde(default)]
     pub priority: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+/// Priorities are compared with [`f64::total_cmp`] (the IEEE 754 total order), so
+/// equality is reflexive even for NaN and annotations, and the content that
+/// carries them, can be `Eq`. Unlike `==`, it treats `0.0` and `-0.0` as
+/// different, matching how they serialize.
+impl PartialEq for Annotations {
+    fn eq(&self, other: &Self) -> bool {
+        let Self {
+            audience,
+            last_modified,
+            priority,
+            meta,
+        } = self;
+        *audience == other.audience
+            && *last_modified == other.last_modified
+            && priority_eq(*priority, other.priority)
+            && *meta == other.meta
+    }
+}
+
+impl Eq for Annotations {}
+
+fn priority_eq(a: Option<f64>, b: Option<f64>) -> bool {
+    match (a, b) {
+        (Some(a), Some(b)) => a.total_cmp(&b).is_eq(),
+        (None, None) => true,
+        _ => false,
+    }
 }
 
 impl Annotations {
@@ -863,7 +955,7 @@ impl Annotations {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -900,6 +992,34 @@ mod tests {
         let json = serde_json::to_value(&content).unwrap();
         let parsed: TextContent = serde_json::from_value(json).unwrap();
         assert_eq!(content, parsed);
+    }
+
+    #[test]
+    fn test_annotations_equality_is_reflexive() {
+        let nan = Annotations::new().priority(f64::NAN);
+        assert_eq!(nan, nan.clone());
+        assert_eq!(
+            Annotations::new().priority(0.5),
+            Annotations::new().priority(0.5)
+        );
+        assert_ne!(
+            Annotations::new().priority(0.0),
+            Annotations::new().priority(-0.0)
+        );
+        assert_ne!(
+            serde_json::to_string(&Annotations::new().priority(0.0)).unwrap(),
+            serde_json::to_string(&Annotations::new().priority(-0.0)).unwrap()
+        );
+        assert_ne!(
+            Annotations::new().priority(0.5),
+            Annotations::new().priority(1.0)
+        );
+        assert_ne!(nan, Annotations::new().priority(0.5));
+        assert_ne!(Annotations::new().priority(0.5), Annotations::new());
+        assert_ne!(
+            Annotations::new().priority(0.5).audience(vec![Role::User]),
+            Annotations::new().priority(0.5)
+        );
     }
 
     #[test]

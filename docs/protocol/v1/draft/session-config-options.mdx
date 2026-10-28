@@ -84,13 +84,13 @@ During [Session Setup](/protocol/v1/draft/session-setup) the Agent **MAY** retur
 }
 ```
 
-<ResponseField name="configOptions" type="ConfigOption[]">
+<ResponseField name="configOptions" type="SessionConfigOption[]">
   The list of configuration options available for this session. The order of
   this array represents the Agent's preferred priority. Clients **SHOULD**
   respect this ordering when displaying options.
 </ResponseField>
 
-### ConfigOption
+### SessionConfigOption
 
 <ResponseField name="id" type="string" required>
   Unique identifier for this configuration option. Used when setting values.
@@ -104,12 +104,12 @@ During [Session Setup](/protocol/v1/draft/session-setup) the Agent **MAY** retur
   Optional description providing more details about what this option controls
 </ResponseField>
 
-<ResponseField name="category" type="ConfigOptionCategory">
+<ResponseField name="category" type="SessionConfigOptionCategory">
   Optional [semantic category](#option-categories) to help Clients provide
   consistent UX.
 </ResponseField>
 
-<ResponseField name="type" type="ConfigOptionType" required>
+<ResponseField name="type" type="string" required>
   The type of input control. `select` is supported by default. `boolean` is only
   supported when the Client advertises `session.configOptions.boolean: {}` in
   `clientCapabilities`.
@@ -120,12 +120,16 @@ During [Session Setup](/protocol/v1/draft/session-setup) the Agent **MAY** retur
   ID. For `boolean` options this is a boolean.
 </ResponseField>
 
-<ResponseField name="options" type="ConfigOptionValue[]">
+<ResponseField
+  name="options"
+  type="SessionConfigSelectOption[] | SessionConfigSelectGroup[]"
+>
   The available values for a `select` option. Required when `type` is `"select"`
-  and omitted when `type` is `"boolean"`.
+  and omitted when `type` is `"boolean"`. This is either a flat array of values
+  or an array of groups; values and groups are not mixed in the same array.
 </ResponseField>
 
-### ConfigOptionValue
+### SessionConfigSelectOption
 
 <ResponseField name="value" type="string" required>
   The value identifier used when setting this option
@@ -138,6 +142,34 @@ During [Session Setup](/protocol/v1/draft/session-setup) the Agent **MAY** retur
 <ResponseField name="description" type="string">
   Optional description of what this value does
 </ResponseField>
+
+### Grouped Select Options
+
+Select values may be organized into groups:
+
+```json
+{
+  "options": [
+    {
+      "group": "recommended",
+      "name": "Recommended",
+      "options": [
+        {
+          "value": "model-1",
+          "name": "Model 1",
+          "description": "Fast for everyday tasks"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Each `SessionConfigSelectGroup` requires `group` (its unique string identifier),
+`name` (its human-readable label), and `options` (an array of
+`SessionConfigSelectOption` objects). A group may also include `_meta`. Each
+option still requires `value` and `name`; its `description` and `_meta` fields
+are optional.
 
 ### Boolean Config Options
 
@@ -210,13 +242,13 @@ Clients **SHOULD**:
 
 ## Default Values and Graceful Degradation
 
-Agents **MUST** always provide a default value for every configuration option. This ensures the Agent can operate correctly even if:
+Every configuration option's `currentValue` is the value the Agent uses until the Client changes it. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent will continue using its default value.
+If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent keeps using its `currentValue`.
 
 ## Setting a Config Option
 
@@ -280,16 +312,58 @@ The Agent **MUST** respond with the complete list of all configuration options a
       {
         "id": "mode",
         "name": "Session Mode",
+        "description": "Controls how the agent requests permission",
+        "category": "mode",
         "type": "select",
         "currentValue": "code",
-        "options": [...]
+        "options": [
+          {
+            "value": "ask",
+            "name": "Ask",
+            "description": "Request permission before making any changes"
+          },
+          {
+            "value": "code",
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
+          }
+        ]
       },
       {
         "id": "model",
         "name": "Model",
+        "category": "model",
         "type": "select",
         "currentValue": "model-1",
-        "options": [...]
+        "options": [
+          {
+            "value": "model-1",
+            "name": "Model 1",
+            "description": "The fastest model"
+          },
+          {
+            "value": "model-2",
+            "name": "Model 2",
+            "description": "The most powerful model"
+          }
+        ]
+      },
+      {
+        "id": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
+          }
+        ]
       }
     ]
   }
@@ -319,16 +393,58 @@ The Agent can also change configuration options and notify the Client by sending
         {
           "id": "mode",
           "name": "Session Mode",
+          "description": "Controls how the agent requests permission",
+          "category": "mode",
           "type": "select",
           "currentValue": "code",
-          "options": [...]
+          "options": [
+            {
+              "value": "ask",
+              "name": "Ask",
+              "description": "Request permission before making any changes"
+            },
+            {
+              "value": "code",
+              "name": "Code",
+              "description": "Write and modify code with full tool access"
+            }
+          ]
         },
         {
           "id": "model",
           "name": "Model",
+          "category": "model",
           "type": "select",
           "currentValue": "model-2",
-          "options": [...]
+          "options": [
+            {
+              "value": "model-1",
+              "name": "Model 1",
+              "description": "The fastest model"
+            },
+            {
+              "value": "model-2",
+              "name": "Model 2",
+              "description": "The most powerful model"
+            }
+          ]
+        },
+        {
+          "id": "context_size",
+          "name": "Context Size",
+          "category": "model_config",
+          "type": "select",
+          "currentValue": "200k",
+          "options": [
+            {
+              "value": "200k",
+              "name": "200K"
+            },
+            {
+              "value": "1m",
+              "name": "1M"
+            }
+          ]
         }
       ]
     }

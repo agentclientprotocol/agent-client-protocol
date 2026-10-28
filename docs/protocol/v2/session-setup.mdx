@@ -7,6 +7,8 @@ Sessions represent a specific conversation or thread between the [Client](/proto
 
 Before creating a session, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase to establish protocol compatibility and capabilities.
 
+If the Agent requires authentication, session methods may fail with `auth_required` (`-32000`) until the Client completes the [authentication flow](/protocol/v2/authentication).
+
 <br />
 
 ```mermaid
@@ -31,10 +33,11 @@ sequenceDiagram
             Agent->>Client: session/update
             Note over Agent,Client: All content reported
         end
+        Agent->>Client: "session/update (current state_update)"
         Agent-->>Client: session/resume response
     end
 
-    Note over Client,Agent: Ready for prompts
+    Note over Client,Agent: Session attached. Foreground state synchronized
 ```
 
 <br />
@@ -78,6 +81,48 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 }
 ```
 
+## Initial Session State
+
+New sessions default to `idle` until a `state_update` reports otherwise. Updates
+may arrive before or after the `session/new` response. Clients **MUST NOT**
+overwrite an already-reported state when the response arrives. An optional
+initial idle notification is a snapshot, not a completed turn.
+
+`session/resume` does not imply idle: an existing session may still be running
+or waiting for user action. See [Current-State Synchronization](#current-state-synchronization).
+
+Agents **MAY** include initial [configuration options](/protocol/v2/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/slash-commands) in `availableCommands` in both `session/new` and `session/resume` responses. For example, a new session can return both:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "configOptions": [
+      {
+        "configId": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
+      }
+    ],
+    "availableCommands": [
+      {
+        "type": "command",
+        "name": "test",
+        "description": "Run tests for the current project"
+      }
+    ]
+  }
+}
+```
+
+`availableCommands` is optional. Omission or `[]` means no initial commands are advertised, and empty lists are omitted when serializing setup responses. Agents **MUST NOT** send `null` for this field.
+
+Returning commands in the response avoids requiring command notifications before the `session/new` response. Agents can still advertise commands later or update the list through `available_commands_update` notifications. Each notification replaces the complete command list, including `[]` to clear it.
+
 ## Resuming Sessions
 
 Agents that support the `session` method surface **MUST** support
@@ -118,13 +163,15 @@ with:
 When `replayFrom` is omitted or `null`, the Agent **MUST NOT** replay the
 conversation history via `session/update` notifications before responding. It
 restores the session context, reconnects to the requested MCP servers, and
-returns once the session is ready to continue.
+returns once the session is attached and its current foreground state has been
+synchronized. The required current-state snapshot is live synchronization, not
+history replay.
 
 To request full history replay, Clients set `replayFrom` to
 `{ "type": "start" }`:
 
 Replay cursors are inclusive: replay includes the position identified by the
-cursor. For `{ "type": "start" }`, that means replaying the whole conversation.
+cursor. For `{ "type": "start" }`, that means replaying all retained conversation history.
 
 ```json
 {
@@ -141,10 +188,30 @@ cursor. For `{ "type": "start" }`, that means replaying the whole conversation.
 }
 ```
 
-When `replayFrom.type` is `"start"`, the Agent **MUST** replay the entire
-conversation to the Client in the form of `session/update` notifications before
+When `replayFrom.type` is `"start"`, the Agent **MUST** replay all retained
+conversation history to the Client in the form of `session/update` notifications before
 responding. User, agent, and thought messages can each be replayed as message
 updates with full `content` arrays or as chunks.
+
+The schema accepts custom and future `replayFrom.type` values so intermediaries
+can preserve them. An Agent that does not support the supplied cursor type
+**MUST** reject `session/resume` with `-32602` (Invalid params). It **MUST NOT**
+silently substitute another cursor or resume without replay. Malformed
+`replayFrom` values also result in `-32602`.
+
+Agents are not required to persist every inserted user message or retain it for
+any minimum period. Live-only messages, including locally handled commands, may
+be absent from replay. A successful prompt response confirms insertion, not
+future availability in history; absence from replay does not contradict it.
+
+[Session compactions](/protocol/v2/prompt-lifecycle#session-compaction)
+are replayed using the same update, chunk, and patch semantics as live delivery.
+No Client capability is required.
+
+Live-only [notices](/protocol/v2/prompt-lifecycle#session-notices) are not
+conversation history and **SHOULD NOT** be replayed. If the underlying condition
+is still relevant after resuming finishes, the Agent may emit a new notice as a
+new live event.
 
 For example, a user message from the conversation history:
 
@@ -190,10 +257,31 @@ Followed by the agent's response:
 }
 ```
 
-During replay, the Agent **MUST** include an opaque, unique `messageId` for each
-replayed message. `user_message`, `agent_message`, and `agent_thought` updates
+During replay, the Agent **MUST** include an opaque `messageId` for each
+replayed message, unique among messages of the same
+[type](/protocol/v2/prompt-lifecycle#entity-ids). A retained user message
+inserted by `session/prompt` **MUST** use the ID returned in that prompt
+response, including after reconnecting or restarting the Agent. Replaying a command reports its message; it does not
+execute the command again.
+
+Agents **SHOULD** preserve agent and thought message IDs across replay when
+possible, but these IDs are not guaranteed to remain stable across reconnects
+or Agent restarts. Clients **MUST NOT** rely on them to deduplicate replay
+against previously received history. When requesting full replay, Clients
+**SHOULD** rebuild the agent and thought message history from the replay rather
+than merging it into existing history solely by `messageId`.
+
+`user_message`, `agent_message`, and `agent_thought` updates
 are upserts keyed by `messageId`; their `content` arrays replace the whole
 message content, while chunk updates with the same `messageId` append content.
+
+When replay reconstructs a message from its beginning using chunks, the Agent
+**MUST** first send the corresponding message update (`user_message`,
+`agent_message`, or `agent_thought`) with the same ID and `content: []`.
+This initializes or clears content under the ID used for that replay before
+replayed chunks append; it does not reconcile a message previously delivered
+under a different ID. A full-content message update can instead replace content
+under the replayed ID directly.
 
 Clients apply replayed message updates and chunks in the order they are
 received. If a message update with `content` arrives after chunks for the same
@@ -202,8 +290,16 @@ arrive after a message update, they append to that update's current content.
 Message updates that omit `content` can update other optional fields without
 changing the current content.
 
+Replay also applies top-level `_meta` as a
+[metadata patch](/protocol/v2/extensibility#metadata-patches) and does not reset it.
+A message update that replaces `content` leaves `_meta` keys it does not
+mention. When the Client may already hold metadata for an entity, the Agent
+removes stale keys by setting them to `null`, or sends `_meta: null` before the
+current object.
+
 When all requested replay entries have been reported to the Client, the Agent
-**MUST** respond to the original `session/resume` request.
+**MUST** synchronize current state as described below, then respond to the
+original `session/resume` request.
 
 ```json
 {
@@ -213,8 +309,33 @@ When all requested replay entries have been reported to the Client, the Agent
 }
 ```
 
-The response **MAY** also include initial session configuration state when that
-feature is supported by the Agent.
+The response **MAY** also include `configOptions` and `availableCommands` as
+described in [Initial Session State](#initial-session-state), whether or not
+history replay was requested.
+
+### Current-State Synchronization
+
+For every successful resume, the Agent **MUST** send a current
+[`state_update`](/protocol/v2/prompt-lifecycle#session-states) after any requested
+history replay and before the resume response. This is required even when
+`replayFrom` is omitted or `null`. The snapshot reports the current foreground
+state after resuming: `idle`, `running`, or `requires_action`.
+
+Agents **MUST NOT** replay historical `state_update` notifications as current
+activity. The snapshot and subsequent live state changes **MUST** be delivered
+in order, without replacing a newer state with a stale snapshot. An idle
+snapshot may include the last stop reason for context, but does not report a
+new completion or cancellation. Clients **MUST NOT** reset the state to idle
+on the resume response.
+
+If connection loss made a pending permission request or elicitation unusable,
+the Agent **SHOULD** reestablish it or safely resolve the wait.
+
+Agents **SHOULD** also return current `configOptions` in the resume response
+and send current session info through `session_info_update` after any requested
+history replay and before responding, even when `replayFrom` is omitted or
+`null`. This synchronizes current state rather than replaying historical
+configuration or metadata changes.
 
 ## Closing Active Sessions
 
@@ -241,6 +362,10 @@ To close an active session, Clients **MUST** call the `session/close` method wit
 
 The Agent **MUST** cancel any ongoing work for that session as if [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation) had been called, then free the resources associated with the session.
 
+When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
+
+Closing may also cancel pending `session/prompt` requests, including queued prompts. If closing prevents a prompt's user message from being inserted, the Agent **MUST** answer that request with `-32800` (Request Cancelled). If the message has already been inserted, the Agent **MUST** respond successfully with its `messageId`, as described in [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted). Prompt responses need not precede the close response.
+
 On success, the Agent responds with an empty result object:
 
 ```json
@@ -251,14 +376,17 @@ On success, the Agent responds with an empty result object:
 }
 ```
 
-Agents MAY return an error if the session does not exist or is not currently active.
+Closing is idempotent. If the session does not exist or is not active, for
+example because it was already closed, the Agent **SHOULD** respond with the
+same empty result. Clients **SHOULD** treat a `-32002` response to
+`session/close` as a successful close. See [Unknown Sessions](/protocol/v2/error#unknown-sessions).
 
 ## Additional Workspace Roots
 
 Agents that advertise `session.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
-expand the session's effective workspace root set. Supported stable lifecycle
-requests include `session/new` and `session/resume`.
+expand the session's effective workspace root set. The supported stable requests
+are `session/new` and `session/resume`.
 
 ```json
 {
@@ -281,7 +409,7 @@ When present, `additionalDirectories` has the following behavior:
 - `cwd` remains the primary working directory and the base for relative paths
 - each `additionalDirectories` entry **MUST** be an absolute path
 - omitting the field or providing an empty array activates no additional roots for the resulting session
-- on `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
+- on `session/resume`, Clients **MUST** send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
 
@@ -307,11 +435,19 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 
 When `session.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
+### Workspace Root Security
+
+The root set declares the session's scope. It confines shell commands only when a sandbox enforces it.
+
+- Clients **SHOULD** only include directories the user expects the Agent to access, such as the workspace or directories the Client provides, like skills.
+- Agents **SHOULD NOT** treat model output, Agent content, or replayed history as granting access outside the root set. Access outside it goes through a permission request.
+- Implementations that enforce the root set **SHOULD** check the resolved path at the time of use, compare paths by component, and fail closed.
+
 ## MCP Servers
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agents to access external tools and data sources. When creating a session, Clients **MAY** include connection details for MCP servers that the Agent should connect to.
 
-MCP servers can be connected to using different transports. Agents advertise supported transports during initialization using `session.mcp.stdio`, `session.mcp.http`, and any extension-specific transport capabilities.
+MCP servers can be connected to using different transports. Agents advertise supported transports during initialization using `session.mcp.stdio`, `session.mcp.http`, and any extension-specific transport capabilities. Agents **MUST** reject a request with a transport they don't support with `-32602`, including a transport they did not advertise and v1's `sse`.
 
 ### Transport Types
 
@@ -343,10 +479,10 @@ When the Agent supports `session.mcp.stdio`, Clients can specify MCP servers con
   values are equivalent.
 
   <Expandable title="EnvVariable">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the environment variable.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value of the environment variable.
       </ParamField>
   </Expandable>
@@ -390,10 +526,10 @@ When the Agent supports `session.mcp.http`, Clients can specify MCP servers conf
   equivalent.
 
   <Expandable title="HttpHeader">
-      <ParamField path="name" type="string">
+      <ParamField path="name" type="string" required>
         The name of the HTTP header.
       </ParamField>
-      <ParamField path="value" type="string">
+      <ParamField path="value" type="string" required>
         The value to set for the HTTP header.
       </ParamField>
   </Expandable>
@@ -436,6 +572,11 @@ Before using stdio or HTTP transports, Clients **MUST** verify the Agent's capab
           "http": {}
         }
       }
+    },
+    "info": {
+      "name": "my-agent",
+      "title": "My Agent",
+      "version": "1.0.0"
     }
   }
 }
@@ -445,6 +586,16 @@ If `session.mcp.stdio` is omitted or `null`, the Agent does not support stdio tr
 If `session.mcp.http` is omitted or `null`, the Agent does not support HTTP transport.
 Supplying `{}` means the Agent supports the corresponding transport.
 
-Agents **SHOULD** connect to all MCP servers specified by the Client.
+Agents **SHOULD** connect to all MCP servers specified by the Client. If a server fails to launch or connect, the Agent either fails the request or continues without that server. If it continues, it **SHOULD** tell the user, for example with a [notice](/protocol/v2/prompt-lifecycle#session-notices).
 
 Clients **MAY** use this ability to provide tools directly to the underlying language model by including their own MCP server.
+
+### Security
+
+MCP server configurations can launch processes, and their `env` and `headers` values are credentials.
+
+- Agents **SHOULD** launch `command` with `args` as separate arguments, without a shell.
+- Clients **SHOULD NOT** send a stdio server from workspace files or Agent output until the user has approved its exact command, arguments, and environment variable names.
+- Agents **SHOULD NOT** include `env` or `headers` values in session updates, errors, `_meta`, `session/list` results, replayed history, model context, or command lines, and **SHOULD NOT** log or persist them.
+- Agents **SHOULD** send `headers` only to the configured origin.
+- Clients that persist `mcpServers` **SHOULD** keep credentials in operating-system secret storage and **SHOULD NOT** log them.

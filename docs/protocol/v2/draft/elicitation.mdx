@@ -5,7 +5,7 @@ description: "Requesting structured information from users"
 
 Elicitation lets an Agent ask a user for structured information through the
 Client. It is based on the locked
-[MCP 2026-07-28 release-candidate elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation)
+[MCP 2026-07-28 elicitation specification](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation)
 and supports two modes:
 
 - **Form mode** collects non-sensitive data using a restricted JSON Schema.
@@ -47,7 +47,7 @@ Capability objects have the following semantics:
 - A present capability object may advertise zero, one, or both modes. `{}` and
   `{"form":null,"url":null}` advertise no supported modes.
 
-This deliberately differs from the MCP 2026-07-28 release candidate, where an
+This deliberately differs from MCP 2026-07-28, where an
 empty elicitation capability retains the original form-only meaning. ACP
 requires each supported mode to be explicit.
 
@@ -60,15 +60,42 @@ The Agent sends an `elicitation/create` request directly over the ACP
 connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly; it does
 not apply MCP's omitted-mode form default.
 
-Scope is represented with flattened fields:
+Scope is represented with flattened fields. Exactly one of `sessionId` or
+`requestId` **MUST** be present:
 
 - `sessionId` for a session-scoped request. It can also include `toolCallId` to
   associate the request with a tool call in that session.
-- `requestId` for a request-scoped interaction outside a session.
+- `requestId` for a request-scoped interaction outside a session. It **MUST** be
+  the ID of a Client-to-Agent request on the same connection that the
+  Agent has not yet responded to.
+
+The Agent **MUST** cancel any pending request-scoped elicitations before it
+responds to their request.
 
 Agents **MUST** bind each elicitation and related state to the receiving Client
 connection and, when authentication exists, the verified user identity. A
 `sessionId` alone or an unverified Client-provided identity is not sufficient.
+
+### Foreground State
+
+A session-scoped elicitation follows the aggregate
+[foreground-state contract](/protocol/v2/draft/prompt-lifecycle#waiting-for-user-action).
+When foreground work cannot progress without user action, the Agent **SHOULD**
+report `requires_action`. Once reported, it **MUST** report `running` when
+progress resumes, or `idle` if the work ends without resuming.
+
+An elicitation does not by itself start foreground work. Requests for
+independent background activity can be presented while the session remains
+`idle`. Request-scoped elicitations outside a session do not change any
+session's foreground state. Multiple outstanding requests are tracked
+individually, but their creation and responses do not each cause state updates.
+The Agent remains `running` while other foreground work can progress, and
+remains `requires_action` while the foreground workflow is still blocked.
+
+In URL mode, `accept` only means consent to open the URL. If foreground work
+still needs the user to finish the external interaction, a reported
+`requires_action` remains unchanged. The Agent reports `running` when foreground
+progress actually resumes. `elicitation/complete` is not itself a state update.
 
 ### Form mode
 
@@ -95,9 +122,31 @@ connection and, when authentication exists, the verified user identity. A
 }
 ```
 
-Form schemas are flat objects whose properties use the supported primitive and
-enum schemas. Clients **SHOULD** validate submitted values before responding,
-and Agents **SHOULD** validate them again.
+`requestedSchema` is a flat object with `type: "object"`, `properties`, and
+optional `required`, `title`, and `description`. Each property is one of:
+
+| Property      | Schema                                                                                                                      | Optional keywords                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Text          | `type: "string"`                                                                                                            | `minLength`, `maxLength`, `pattern`, `format` (`email`, `uri`, `date`, `date-time`), `default` |
+| Single select | `type: "string"` with `enum` (values) or `oneOf` (`const` and `title` options)                                              | `default`                                                                                      |
+| Number        | `type: "number"` or `type: "integer"`                                                                                       | `minimum`, `maximum`, `default`                                                                |
+| Boolean       | `type: "boolean"`                                                                                                           | `default`                                                                                      |
+| Multi select  | `type: "array"` with `items` of `{ "type": "string", "enum": [...] }` or `{ "anyOf": [...] }` (`const` and `title` options) | `minItems`, `maxItems`, `default`                                                              |
+
+Every property may also have `title` and `description`. `pattern` uses
+ECMA-262 regular expression syntax, as in JSON Schema. Clients treat an unknown
+`format` as plain text. Accepted `content` maps each property name to a string,
+number, boolean, or array of strings.
+
+Clients **SHOULD** validate submitted values before responding, and Agents
+**SHOULD** validate them again.
+
+If a Client cannot render a form, it **SHOULD** respond with `-32602` (Invalid
+params), not `decline` or `cancel`, which report a user's choice. This includes
+a required property of an unknown type, a `required` entry with no matching
+property, and a property that sets both `enum` and `oneOf`. Clients **MAY** leave
+out optional properties of unknown types and render the rest. Clients **SHOULD**
+ignore a `default` that does not match its property schema.
 
 Clients that support schema defaults **SHOULD** pre-populate form fields with
 their declared default values.
@@ -108,7 +157,7 @@ refresh tokens, private keys, recovery codes, or payment credentials. Ordinary
 profile information such as a name, email address, or username is not
 categorically prohibited. Agents **MUST** use URL mode for sensitive
 interactions. If the Client does not support URL mode, the Agent **MUST NOT**
-fall back to form mode; it must use another safe flow or fail the operation.
+fall back to form mode; it **MUST** use another safe flow or fail the operation.
 
 ### URL mode
 
@@ -142,6 +191,8 @@ The Client responds with one of three actions:
 - `decline`: the user explicitly declined.
 - `cancel`: the user dismissed the interaction without choosing.
 
+Agents **MUST** handle an unknown action as `cancel`.
+
 The `content` field is optional on `accept`; receivers treat omission and `null`
 equivalently. It is only meaningful for `accept`; receivers ignore it for
 `decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD**
@@ -166,12 +217,38 @@ unknown or already-completed IDs.
 Requests using a mode the Client has not advertised produce JSON-RPC `-32602`
 (Invalid params).
 
+## Session Cancellation
+
+[`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) does not
+automatically cancel every elicitation scoped to the session. `sessionId` and
+`toolCallId` identify context, not a cancellation instruction.
+
+When cancelling work makes a pending elicitation no longer relevant, the Agent
+**SHOULD** cancel that individual request using
+[`$/cancel_request`](/protocol/v2/draft/cancellation).
+An elicitation can depend on the affected work with or without a `toolCallId`.
+Clients handle individual cancellation using the existing request-cancellation
+rules rather than infer it from session scope. Request-scoped elicitations
+outside the session are unaffected by `session/cancel`.
+
+Clients **SHOULD** dismiss interaction UI they know is no longer relevant.
+An accepted URL interaction may continue externally after its create request
+has returned. Cancelling foreground work does not guarantee that an external
+browser page closes or undo external side effects. A repeated or resume idle
+snapshot carrying a previous `cancelled` stop reason does not cancel a current
+interaction.
+
+A response or external completion can race with cancellation. After foreground
+cancellation completes, the Agent **SHOULD NOT** use late responses or external
+completions to resume the cancelled work. An external URL workflow may still
+complete independently. Cancellation can finish without waiting for it.
+
 ## URL security
 
 Agents and Clients implementing URL mode **MUST** follow these requirements:
 
 These requirements adapt MCP's
-[Safe URL Handling](https://modelcontextprotocol.io/specification/draft/client/elicitation#safe-url-handling)
+[Safe URL Handling](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation#safe-url-handling)
 rules to ACP.
 
 - Agents **MUST NOT** put credentials, personal data, or pre-authenticated

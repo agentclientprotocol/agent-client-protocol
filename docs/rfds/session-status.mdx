@@ -1,0 +1,230 @@
+---
+title: "Session status"
+---
+
+Author(s): [@chazcb](https://github.com/chazcb)
+
+Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `session/status` method that lets a Client ask an Agent about a single session without changing anything:
+
+- **Active**: the Agent has this session in memory right now.
+- **Inactive**: the Agent knows this session and it can be resumed, but it is not in memory.
+- **Unknown**: the Agent does not know this session. This is returned as a `-32002` error.
+
+`session/status` never loads, resumes, creates, or changes a session.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+All the session lifecycle methods change Agent state:
+
+- `session/new` creates a session.
+- `session/load` and `session/resume` make the Agent start handling a session for the connection that sent them. In v2, `session/load` is gone and replay is a `replayFrom` option on `session/resume`.
+- `session/close` cancels a session's work and frees its resources.
+
+`session/list` says which sessions exist, but not which ones the Agent has in memory right now.
+
+So a Client has no way to ask "do you have this session right now?" without becoming a participant in it. This matters when:
+
+- **A routing layer runs several Agent instances.** It needs to find which instance has a session before it forwards a `session/resume`. Sending `session/resume` to an instance just to find out loads the session there, so two instances could end up running the same session.
+- **A Client reconnects over a long-lived transport.** After a network drop, it wants to know whether the session is still in memory or the Agent restarted, before deciding how to recover and what to show the user.
+- **A Client checks a session ID before using it.** Today an unknown ID only shows up as an error from whichever method it used first, and there is no shared error code for it.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add `session/status`, a read-only request from the Client to the Agent.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/status",
+  "params": {
+    "sessionId": "sess_abc123"
+  }
+}
+```
+
+The Agent has the session in memory:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "status": "active"
+  }
+}
+```
+
+The Agent knows the session but does not have it in memory:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "status": "inactive"
+  }
+}
+```
+
+The Agent does not know the session:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32002,
+    "message": "Resource not found",
+    "data": {
+      "sessionId": "sess_abc123"
+    }
+  }
+}
+```
+
+### Status values
+
+- `active`: The Agent has this session in memory, for any connection. This does **not** mean the requesting connection is attached to it. A Client that did not create or resume the session on its own connection **MUST** still call `session/resume` (or `session/load` in v1) before sending `session/prompt` or expecting `session/update` notifications.
+- `inactive`: The Agent knows the session and can resume it, but it is not in memory. The Client can call `session/resume` (or `session/load` in v1) to start it.
+
+Clients **MUST** treat a `status` value they don't recognize as `inactive`. That keeps a later status value from being read as permission to skip `session/resume`.
+
+### Foreground state (v2)
+
+In v2, an `active` response **SHOULD** also include `state`: the session's current foreground state, using the same `StateUpdate` snapshot the Agent sends in `state_update` notifications (`running`, `idle`, or `requires_action`). `SubagentUpdate.state` already reuses this snapshot the same way.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "status": "active",
+    "state": {
+      "state": "requires_action"
+    }
+  }
+}
+```
+
+- `state` is optional. If it is omitted, `null`, or malformed, the Agent is not reporting foreground state. Clients **MUST NOT** read that as `idle`.
+- Like the snapshot `session/resume` sends, this is a snapshot. It is not a new transition, completion, or usage report. An `idle` snapshot may carry the last `stopReason` for context, and Clients **MUST NOT** count it as a new completion.
+- v1 has no foreground state model, so the v1 response has no `state` field.
+
+### Errors
+
+If the Agent does not know the session, it **MUST** return error `-32002` (Resource not found) with the requested `sessionId` in `data`. Unknown session IDs are an error, not a normal answer, so `session/status` reports them the same way other session methods should.
+
+### Contract
+
+- `session/status` **MUST NOT** have side effects. It must not load, resume, create, close, or change the session, and it must not attach the requesting connection to it.
+- Checking whether a session is `active` **SHOULD** be cheap (an in-memory lookup), and Clients may call it often, for example as a routing probe.
+- Telling `inactive` apart from unknown may require a storage lookup. If an Agent cannot do that cheaply, it **MAY** return `inactive` for any session it does not have in memory. A later `session/resume` will then fail with `-32002` if the session does not exist.
+- The result is a snapshot. A session reported `active` may be closed or evicted before the Client's next request, so Clients **MUST** still handle errors from later session methods.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+- Routing layers ask each Agent instance for `session/status` to find the one with the session `active`, and send `session/resume` there instead of loading it on the wrong instance.
+- Clients reconnecting over a long-lived transport can tell "the Agent still has my session" from "the Agent restarted and the session needs resuming", and show the right thing right away.
+- v2 Clients and dashboards can show whether a session is working, idle, or waiting on the user without attaching to it. For example, they can surface a session blocked on a permission request elsewhere.
+- Agents report unknown session IDs with one error code, which other session methods can adopt too.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Capability
+
+`session/status` is optional. Agents advertise it with a session capability marker.
+
+v1:
+
+```json
+{
+  "agentCapabilities": {
+    "sessionCapabilities": {
+      "status": {}
+    }
+  }
+}
+```
+
+v2:
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "status": {}
+    }
+  }
+}
+```
+
+Clients **MUST NOT** call `session/status` unless the Agent advertises this capability. Like other session capability markers, an invalid value means the capability is unsupported.
+
+### Schema
+
+Following the existing naming rules (`session/status` → `session_status`):
+
+- `SessionStatusRequest`: `sessionId` (required), `_meta` (optional).
+- `SessionStatusResponse`: `status` (required), `_meta` (optional). In v2 only, it also has `state` (optional `StateUpdate`, deserialized with `DefaultOnError`, since a fallback just means no foreground state was reported).
+- `SessionStatus`: string enum, `active` | `inactive`, open to future values (see the unrecognized-value rule above).
+- `SessionStatusCapabilities`: empty object with optional `_meta`, added as `status` on the v1 `SessionCapabilities` and the v2 session capabilities.
+
+### Plan
+
+1. Add the method behind an `unstable_session_status` feature flag in the v1 and v2 schemas.
+2. Document it in the session setup docs, including the `-32002` error.
+3. Implement it in at least one Agent and one routing layer or Client before stabilizing.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not just call `session/resume`?
+
+`session/resume` attaches the requesting connection and makes the Agent start handling the session. That is what a Client wants once it has decided where the session should run, but not when it is only asking. A routing layer that probes by resuming loads the session on every instance it asks.
+
+### Why is an unknown session an error instead of a `not_found` status?
+
+`active` and `inactive` are expected answers about a session the Agent knows. An ID the Agent has never seen is a bad request, and other session methods already fail on it. Returning `-32002` here gives that failure one consistent shape instead of a second way to say it.
+
+### Does `active` mean I can send `session/prompt` right away?
+
+Only if your connection already created or resumed the session. `active` means the Agent has the session in memory, maybe for another connection. Multi-client attach semantics are covered separately in the [Multi-Client Session Attach RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/533).
+
+### Why not add this to `session/list`?
+
+`session/list` is paged and filtered by `cwd`. It is the wrong tool for a cheap, frequent check on one known ID. Optional row fields on `session/list` (such as a turn `state`) can still exist alongside `session/status`.
+
+### Why is foreground state v2-only?
+
+v1 has no foreground state model. Turn completion is only signaled by the `session/prompt` response, so a v1 Agent has no defined snapshot to report. v2 already defines `StateUpdate` and requires `session/resume` to send it, so `session/status` can return the same snapshot without any new semantics.
+
+### Should the response include the session's current position?
+
+Not yet. Once message IDs and replay cursors are stable, the response could include the session's current position, so a reconnecting Client can choose a `replayFrom` cursor. That can be added as an optional response field later without breaking this proposal.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Transport-level heartbeats:** these only show the connection is alive, not that the Agent still has a particular session.
+- **Probing with `session/resume`:** this has side effects (see above).
+- **Two states, with unknown sessions as a `not_found` status:** this merges "can be resumed" with "never existed", which a reconnecting Client needs to tell apart. It also reports unknown IDs differently from other session methods.
+
+## Revision history
+
+- 2026-10-26: Reworked to three states (`active` / `inactive` / `-32002` error), dropped the `live` naming so it isn't confused with v2 turn state, pointed recovery at `session/resume`, added v2 capability and connection semantics, added a v2-only `state` foreground snapshot on `active` responses, and made the contract a snapshot rather than a guarantee.
+- 2026-04-15: Initial draft.

@@ -6,7 +6,7 @@ use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
-use super::{AbsolutePath, Meta};
+use super::{AbsolutePath, Meta, apply_meta_update};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 /// Unique identifier for an agent-owned terminal within a session.
@@ -34,22 +34,21 @@ impl IntoOption<TerminalId> for &str {
 /// A display-only reference to an agent-owned terminal.
 ///
 /// Terminal state and output are delivered separately through
-/// [`TerminalUpdate`] and [`TerminalOutputChunk`].
+/// `terminal_update` and `terminal_output_chunk` session updates.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Terminal {
     /// The ID of the terminal to display.
     pub terminal_id: TerminalId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This metadata is scoped to the content reference. Omitted
-    /// and `null` are equivalent and mean no item metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -87,11 +86,10 @@ pub struct TerminalOutput {
     #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This metadata is scoped to the replacement snapshot. Omitted
-    /// and `null` are equivalent and mean no snapshot metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -128,11 +126,12 @@ impl TerminalOutput {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalExitStatus {
-    /// Process exit code, when known. Omitted and `null` are equivalent.
+    /// Process exit code as the platform reports it, when known. Negative values are
+    /// allowed, for example signed Windows exit codes. Omitted and `null` are equivalent.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub exit_code: Option<u32>,
+    pub exit_code: Option<i64>,
     /// Signal that terminated the process, when known.
     ///
     /// Agents should use the conventional platform signal name. POSIX examples
@@ -143,11 +142,10 @@ pub struct TerminalExitStatus {
     #[serde(default)]
     pub signal: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This metadata is scoped to the exit information. Omitted
-    /// and `null` are equivalent and mean no exit metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -164,7 +162,7 @@ impl TerminalExitStatus {
 
     /// Sets or clears the optional exit code.
     #[must_use]
-    pub fn exit_code(mut self, exit_code: impl IntoOption<u32>) -> Self {
+    pub fn exit_code(mut self, exit_code: impl IntoOption<i64>) -> Self {
         self.exit_code = exit_code.into_option();
         self
     }
@@ -186,13 +184,14 @@ impl TerminalExitStatus {
 
 /// An upsert for the stored state of an agent-owned terminal.
 ///
-/// Only [`TerminalUpdate::terminal_id`] is required. Other fields have patch
+/// Only `terminalId` is required. Other fields have patch
 /// semantics: omitted fields leave the stored value unchanged, `null` clears
-/// it, and concrete values replace it. When the terminal ID is new, omitted
-/// fields start unknown.
+/// it, and concrete values replace it. A concrete `_meta` object instead
+/// patches the stored metadata by top-level key. When the terminal ID is new,
+/// omitted fields start unknown.
 #[serde_as]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalUpdate {
@@ -218,11 +217,22 @@ pub struct TerminalUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub exit_status: MaybeUndefined<TerminalExitStatus>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted means no metadata update; `null` is an
-    /// explicit clear signal. Implementations MUST NOT make assumptions about values at these keys.
+    /// The terminal size the command runs with, when known.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// Clients can render output at this size so that column layouts, progress bars,
+    /// and cursor-positioned output display as the program wrote them.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub size: MaybeUndefined<TerminalSize>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT make assumptions about values at these keys.
+    ///
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -243,6 +253,7 @@ impl TerminalUpdate {
             cwd: MaybeUndefined::Undefined,
             output: MaybeUndefined::Undefined,
             exit_status: MaybeUndefined::Undefined,
+            size: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
     }
@@ -275,7 +286,17 @@ impl TerminalUpdate {
         self
     }
 
-    /// Sets, clears, or leaves unchanged terminal metadata.
+    /// Sets, clears, or leaves unchanged the terminal size.
+    #[must_use]
+    pub fn size(mut self, size: impl IntoMaybeUndefined<TerminalSize>) -> Self {
+        self.size = size.into_maybe_undefined();
+        self
+    }
+
+    /// Patches, clears, or leaves unchanged terminal metadata.
+    ///
+    /// A concrete object patches stored metadata by top-level key; see
+    /// [`apply_meta_update`].
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
         self.meta = meta.into_maybe_undefined();
@@ -285,7 +306,9 @@ impl TerminalUpdate {
     /// Applies a later terminal patch to this stored terminal state.
     ///
     /// Fields set to `null` remain `null` so callers can distinguish explicit
-    /// clearing from an update that did not mention the field.
+    /// clearing from an update that did not mention the field. A concrete
+    /// `_meta` object patches the stored metadata by top-level key, as described
+    /// by [`apply_meta_update`].
     pub fn apply_update(&mut self, update: TerminalUpdate) {
         debug_assert_eq!(self.terminal_id, update.terminal_id);
         if !update.command.is_undefined() {
@@ -300,9 +323,59 @@ impl TerminalUpdate {
         if !update.exit_status.is_undefined() {
             self.exit_status = update.exit_status;
         }
-        if !update.meta.is_undefined() {
-            self.meta = update.meta;
+        if !update.size.is_undefined() {
+            self.size = update.size;
         }
+        apply_meta_update(&mut self.meta, update.meta);
+    }
+}
+
+/// The size of an agent-owned terminal in character cells.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct TerminalSize {
+    /// Number of columns.
+    #[cfg_attr(feature = "schemars", schemars(range(min = 1)))]
+    pub cols: u16,
+    /// Number of rows.
+    #[cfg_attr(feature = "schemars", schemars(range(min = 1)))]
+    pub rows: u16,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl TerminalSize {
+    /// Builds a terminal size from its columns and rows.
+    #[must_use]
+    pub fn new(cols: u16, rows: u16) -> Self {
+        Self {
+            cols,
+            rows,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -310,7 +383,7 @@ impl TerminalUpdate {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalOutputChunk {
@@ -320,11 +393,11 @@ pub struct TerminalOutputChunk {
     #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys. This field is chunk-scoped. Omitted and `null` are
-    /// equivalent and mean no chunk metadata was provided.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// This metadata is scoped to the chunk and does not patch stored metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -353,7 +426,34 @@ impl TerminalOutputChunk {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn terminal_size_is_an_optional_patch_field() {
+        let update = TerminalUpdate::new("term_1").size(TerminalSize::new(120, 40));
+        assert_eq!(
+            serde_json::to_value(&update).unwrap(),
+            serde_json::json!({ "terminalId": "term_1", "size": { "cols": 120, "rows": 40 } })
+        );
+
+        let mut stored = update;
+        stored.apply_update(TerminalUpdate::new("term_1").command("ls"));
+        assert_eq!(
+            stored.size,
+            MaybeUndefined::Value(TerminalSize::new(120, 40))
+        );
+        stored.apply_update(TerminalUpdate::new("term_1").size(None));
+        assert_eq!(stored.size, MaybeUndefined::Null);
+    }
+
+    #[test]
+    fn exit_code_accepts_negative_values() {
+        let status: TerminalExitStatus =
+            serde_json::from_value(serde_json::json!({ "exitCode": -1_073_741_819_i64 })).unwrap();
+        assert_eq!(status.exit_code, Some(-1_073_741_819));
+    }
+
     use super::*;
+    use serde_json::{from_value, json, to_value};
 
     #[test]
     fn terminal_reference_meta_is_optional_and_content_scoped() {
@@ -449,6 +549,65 @@ mod tests {
             stored.exit_status,
             MaybeUndefined::Value(TerminalExitStatus::new().signal("SIGTERM"))
         );
+    }
+
+    #[test]
+    fn terminal_wire_patches_preserve_omitted_fields_and_replace_values() {
+        let initial = json!({
+            "terminalId": "term_1",
+            "_meta": {"source": "replay", "opaque": {"sequence": 1}}
+        });
+        let mut stored: TerminalUpdate = from_value(initial.clone()).unwrap();
+        // A metadata-only first update leaves output and exit status unknown.
+        assert_eq!(to_value(&stored).unwrap(), initial);
+
+        let populated = json!({
+            "terminalId": "term_1",
+            "command": "cargo check",
+            "cwd": "/workspace/project",
+            "output": {"data": "b2xk", "_meta": {"source": "snapshot"}},
+            "exitStatus": {"exitCode": 0, "_meta": {"observed": true}}
+        });
+        stored.apply_update(from_value(populated.clone()).unwrap());
+        let mut expected = populated;
+        expected["_meta"] = initial["_meta"].clone();
+        assert_eq!(to_value(&stored).unwrap(), expected);
+
+        for (field, empty) in [
+            ("command", json!("")),
+            ("output", json!({"data": ""})),
+            ("exitStatus", json!({})),
+        ] {
+            let original = expected[field].clone();
+            // Nested objects are replacements too: an empty output snapshot
+            // must not inherit snapshot metadata, and an empty exit-status
+            // object means exited with unknown details, not exit code zero.
+            for replacement in [empty, json!(null), original] {
+                stored.apply_update(
+                    from_value(json!({"terminalId": "term_1", (field): replacement})).unwrap(),
+                );
+                expected[field] = replacement;
+                assert_eq!(to_value(&stored).unwrap(), expected, "patching {field}");
+
+                stored.apply_update(from_value(json!({"terminalId": "term_1"})).unwrap());
+                assert_eq!(to_value(&stored).unwrap(), expected, "omitting {field}");
+            }
+        }
+
+        // Top-level `_meta` patches individual keys instead of replacing the object.
+        stored.apply_update(
+            from_value(json!({
+                "terminalId": "term_1",
+                "_meta": {"source": null, "opaque": {"other": 2}, "extra": true}
+            }))
+            .unwrap(),
+        );
+        expected["_meta"] = json!({"opaque": {"other": 2}, "extra": true});
+        assert_eq!(to_value(&stored).unwrap(), expected, "patching _meta keys");
+
+        stored.apply_update(from_value(json!({"terminalId": "term_1", "_meta": null})).unwrap());
+        expected["_meta"] = json!(null);
+        assert_eq!(to_value(&stored).unwrap(), expected, "clearing _meta");
     }
 
     #[test]

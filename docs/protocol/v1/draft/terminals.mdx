@@ -7,13 +7,14 @@ The terminal methods allow Agents to execute shell commands within the Client's 
 
 ## Checking Support
 
-Before attempting to use terminal methods, Agents **MUST** verify that the Client supports this capability by checking the [Client Capabilities](/protocol/v1/draft/initialization#client-capabilities) field in the `initialize` response:
+Before attempting to use terminal methods, Agents **MUST** verify that the Client supports this capability by checking the [Client Capabilities](/protocol/v1/draft/initialization#client-capabilities) field in the Client's `initialize` request:
 
-```json highlight={7}
+```json highlight={8}
 {
   "jsonrpc": "2.0",
   "id": 0,
-  "result": {
+  "method": "initialize",
+  "params": {
     "protocolVersion": 1,
     "clientCapabilities": {
       "terminal": true
@@ -279,3 +280,10 @@ The `terminal/release` kills the command if still running and releases all resou
 After release the terminal ID becomes invalid for all other `terminal/*` methods.
 
 If the terminal was added to a tool call, the client **SHOULD** continue to display its output after release.
+
+## Security
+
+The Client runs these commands itself, so it is responsible for checking them. A permission request from the Agent does not replace the Client's own checks.
+
+- Clients **SHOULD** require `cwd` to be inside the session's [root set](/protocol/v1/draft/session-setup#workspace-root-security) and apply their own permission policy to the full `command`, `args`, and `env`. Clients that approve commands automatically **SHOULD** include `env` in what the policy matches.
+- Clients **SHOULD** display `terminal/output` with terminal control sequences neutralized, so that it cannot write the clipboard, send input or query responses, or open links without user action.

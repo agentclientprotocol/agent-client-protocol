@@ -25,14 +25,15 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v5
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v5
         with:
           python-version: "3.14"
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v4
         with:
-          node-version: latest
+          node-version: "lts/*"
+          check-latest: true
           cache: "npm"
 
       - name: Install dependencies
@@ -56,7 +57,7 @@ jobs:
         # Generating a GitHub token, so that PRs and tags created by
         # the action can trigger actions workflows.
       - name: Generate GitHub token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
         id: generate-token
         with:
           # GitHub App ID secret name

@@ -18,7 +18,7 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 - **MAY** cancel the corresponding request activity and all nested activities related to that request
 - **MAY** finish sending any pending notifications before responding
 - **MUST** send one of these responses for the original request:
-  - A valid response with appropriate data (such as partial results or cancellation marker)
+  - A valid response with appropriate data, such as `session/prompt` with the `cancelled` stop reason or `session/request_permission` with the `cancelled` outcome
   - An error response with code [`-32800` (Request Cancelled)](/protocol/v1/schema#errorcode)
 
 The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
@@ -39,6 +39,8 @@ When internal cancellation occurs, the executing party **SHOULD**:
 
 ## Example: Cascading Cancellation Flow
 
+This example shows an Agent explicitly propagating cancellation to an outstanding terminal request. That propagation is optional, not an automatic protocol guarantee. Independently, the Client **MUST** answer pending permission requests with the `cancelled` outcome when it sends `session/cancel`, as specified in [prompt turn cancellation](/protocol/v1/prompt-turn#cancellation); it does not wait for `$/cancel_request`.
+
 ```mermaid
 sequenceDiagram
     participant Client
@@ -54,14 +56,14 @@ sequenceDiagram
 
     Note over Client,Agent: 3. Client cancels the prompt turn
     Client->>Agent: session/cancel (sessionId)
+    Client->>Agent: response to id=3 (outcome: cancelled)
 
-    Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: $/cancel_request (id=2) [terminal request]
-    Agent->>Client: $/cancel_request (id=3) [permission request]
+    opt 4. Agent propagates cancellation to the terminal request
+        Agent->>Client: $/cancel_request (requestId=2)
+    end
 
-    Note over Client,Agent: 5. Client confirms individual cancellations
+    Note over Client,Agent: 5. Terminal request is cancelled in this example
     Client->>Agent: response to id=2 (error -32800 "Cancelled")
-    Client->>Agent: response to id=3 (error -32800 "Cancelled")
 
     Note over Client,Agent: 6. Agent completes prompt cancellation
     Agent->>Client: response to id=1 (stopReason: "cancelled")
