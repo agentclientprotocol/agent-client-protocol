@@ -264,7 +264,7 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   about the operation. Omitted or `null` means no structured subject was
   provided. Custom or future subject types may appear. Clients that do not
   understand a subject **SHOULD** preserve it when proxying and use the common
-  prompt fields or decline according to policy.
+  prompt fields or decline according to policy with the `cancelled` outcome.
 </ParamField>
 
 Clients apply a `tool_call` subject's `toolCall` to their stored tool call
@@ -337,11 +337,15 @@ When the Client sends [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellat
 }
 ```
 
+Clients also send `cancelled` when the user dismisses the prompt or the Client declines it by policy, including when no `reject_*` option is offered. After a `cancelled` outcome, the Agent **MUST NOT** proceed with the operation.
+
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
   The user's decision. Known outcomes are `cancelled` when the [active work was
-  cancelled](/protocol/v2/prompt-lifecycle#cancellation), and `selected` with an
-  `optionId` for the selected permission option. Custom or future outcomes may
-  appear; agents that do not understand the outcome **MUST NOT** treat it as
+  cancelled](/protocol/v2/prompt-lifecycle#cancellation), the user dismissed the
+  prompt, or the Client declined it, and `selected` with an `optionId` for the
+  selected permission option. If `optionId` doesn't match an offered option, the
+  Agent **MUST** treat the request as not approved. Custom or future outcomes
+  may appear; agents that do not understand the outcome **MUST NOT** treat it as
   approval.
 </ResponseField>
 
@@ -350,7 +354,7 @@ When the Client sends [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellat
 Each permission option provided to the Client contains:
 
 <ParamField path="optionId" type="string" required>
-  Unique identifier for this option
+  Identifier for this option. **MUST** be unique within the request.
 </ParamField>
 
 <ParamField path="name" type="string" required>

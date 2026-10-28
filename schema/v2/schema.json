@@ -2031,7 +2031,7 @@
       "type": "object",
       "properties": {
         "optionId": {
-          "description": "Unique identifier for this permission option.",
+          "description": "Identifier for this permission option. MUST be unique within the request.",
           "allOf": [
             {
               "$ref": "#/$defs/PermissionOptionId"
@@ -7156,7 +7156,7 @@
       "description": "The outcome of a permission request.",
       "anyOf": [
         {
-          "description": "The session's work was cancelled before the user responded.\n\nWhen a client sends a `session/cancel` notification, it MUST respond to all\npending `session/request_permission` requests in that session with this\n`cancelled` outcome, without answering any request twice. Requests in other\nsessions are unaffected. Agents treat `cancelled` for background work as a\ndenial.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
+          "description": "The request was not approved and no option was selected: the session's work was\ncancelled, the user dismissed the prompt, or the client declined it by policy.\nAgents MUST NOT proceed with the operation.\n\nWhen a client sends a `session/cancel` notification, it MUST respond to all\npending `session/request_permission` requests in that session with this\n`cancelled` outcome, without answering any request twice. Requests in other\nsessions are unaffected.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
           "type": "object",
           "properties": {
             "outcome": {
@@ -7172,7 +7172,7 @@
           ]
         },
         {
-          "description": "The user selected one of the provided options.",
+          "description": "The user selected one of the provided options.\n\nIf `optionId` doesn't match an offered option, the agent MUST treat the request as not\napproved.",
           "type": "object",
           "properties": {
             "outcome": {
@@ -7227,7 +7227,7 @@
       ]
     },
     "CancelledPermissionOutcome": {
-      "description": "The session's work was cancelled before the user responded.",
+      "description": "The request was not approved and no option was selected.",
       "type": "object",
       "properties": {
         "_meta": {

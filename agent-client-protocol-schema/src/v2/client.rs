@@ -2994,7 +2994,7 @@ fn other_request_permission_subject_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PermissionOption {
-    /// Unique identifier for this permission option.
+    /// Identifier for this permission option. MUST be unique within the request.
     pub option_id: PermissionOptionId,
     /// Human-readable label to display to the user.
     pub name: String,
@@ -3132,17 +3132,21 @@ impl RequestPermissionResponse {
 #[serde(tag = "outcome", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum RequestPermissionOutcome {
-    /// The session's work was cancelled before the user responded.
+    /// The request was not approved and no option was selected: the session's work was
+    /// cancelled, the user dismissed the prompt, or the client declined it by policy.
+    /// Agents MUST NOT proceed with the operation.
     ///
     /// When a client sends a `session/cancel` notification, it MUST respond to all
     /// pending `session/request_permission` requests in that session with this
     /// `cancelled` outcome, without answering any request twice. Requests in other
-    /// sessions are unaffected. Agents treat `cancelled` for background work as a
-    /// denial.
+    /// sessions are unaffected.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
     Cancelled(CancelledPermissionOutcome),
     /// The user selected one of the provided options.
+    ///
+    /// If `optionId` doesn't match an offered option, the agent MUST treat the request as not
+    /// approved.
     #[serde(rename_all = "camelCase")]
     Selected(SelectedPermissionOutcome),
     /// Custom or future permission outcome.
@@ -3233,7 +3237,7 @@ fn other_request_permission_outcome_schema(schema: &mut Schema) {
     );
 }
 
-/// The session's work was cancelled before the user responded.
+/// The request was not approved and no option was selected.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
