@@ -524,8 +524,9 @@ sequences, so decoders retain parser state across chunks. Optional nullable
 provided. A chunk for a `terminalId` the Client hasn't seen creates the terminal
 with unknown fields and empty output, then appends to it.
 
-Clients **SHOULD** ignore a chunk or snapshot whose `data` isn't valid base64,
-keeping the bytes they already have. Agents **SHOULD** send all output before a
+Clients **SHOULD** ignore a chunk, or the `output` snapshot of a `terminal_update`,
+whose `data` isn't valid base64, keeping the bytes they already have. The other
+fields of that `terminal_update` still apply. Agents **SHOULD** send all output before a
 concrete `exitStatus`, but Clients still append output that arrives after it.
 Clients **MAY** bound how much output they keep, for example by dropping the
 oldest bytes; a later `output` snapshot replaces whatever they kept.
