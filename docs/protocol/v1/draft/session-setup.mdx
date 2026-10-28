@@ -344,8 +344,10 @@ On success, the Agent responds with an empty result object:
 }
 ```
 
-If the session does not exist or is not active, the Agent **SHOULD** respond with
-`-32002`. See [Unknown Sessions](/protocol/v1/draft/error#unknown-sessions).
+Closing is idempotent. If the session does not exist or is not active, for
+example because it was already closed, the Agent **SHOULD** respond with the
+same empty result. Clients **SHOULD** treat a `-32002` response to
+`session/close` as a successful close. See [Unknown Sessions](/protocol/v1/draft/error#unknown-sessions).
 
 ## Additional Workspace Roots
 
