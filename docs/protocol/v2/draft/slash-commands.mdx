@@ -35,9 +35,9 @@ For example, a `session/new` response can advertise a command with text input:
 ```
 
 <ResponseField name="availableCommands" type="AvailableCommand[]">
-  Optional initial list of commands available in this session. Omission or `[]`
-  means no initial commands are advertised. Empty lists are omitted when
-  serializing setup responses.
+  Optional complete list of commands available in this session. Omission or `[]`
+  means none, and Clients replace any list they hold with it. Empty lists are
+  omitted when serializing setup responses.
 </ResponseField>
 
 `null` is not a valid outbound value for this field.
