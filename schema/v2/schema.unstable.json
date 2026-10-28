@@ -3243,7 +3243,7 @@
           ]
         },
         "authMethods": {
-          "description": "Authentication methods supported by the agent.\n\nOptional. Omitted or empty means the agent does not advertise the\nauthentication method surface. Supplying one or more valid methods means\nthe agent MUST support both `auth/login` and `auth/logout`.",
+          "description": "Authentication methods supported by the agent.\n\nOptional. Omitted or empty means the agent does not advertise the\nauthentication method surface. Supplying one or more methods means\nthe agent MUST support both `auth/login` and `auth/logout`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AuthMethod"

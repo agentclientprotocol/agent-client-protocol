@@ -79,7 +79,7 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
 }
 ```
 
-`authMethods` is optional. Returning one or more valid entries advertises the Agent's authentication surface and means the Agent **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method.
+`authMethods` is optional. Returning a non-empty list advertises the Agent's authentication surface and means the Agent **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method.
 
 `capabilities.auth` is separate from this method surface. It advertises authentication-related extensions and does not change the availability rules for `auth/login` or `auth/logout`.
 

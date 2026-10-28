@@ -57,7 +57,7 @@ Agents are programs that use generative AI to autonomously modify code. They typ
 
 ### Baseline Methods
 
-Some baseline methods belong to optional surfaces. An Agent that returns one or more valid entries in `authMethods` **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method. The `session/*` methods require `capabilities.session`.
+Some baseline methods belong to optional surfaces. An Agent that returns a non-empty `authMethods` list **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method. The `session/*` methods require `capabilities.session`.
 
 <ResponseField
   name="initialize"

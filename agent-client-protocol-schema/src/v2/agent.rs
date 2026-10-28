@@ -120,7 +120,7 @@ pub struct InitializeResponse {
     /// Authentication methods supported by the agent.
     ///
     /// Optional. Omitted or empty means the agent does not advertise the
-    /// authentication method surface. Supplying one or more valid methods means
+    /// authentication method surface. Supplying one or more methods means
     /// the agent MUST support both `auth/login` and `auth/logout`.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -160,7 +160,7 @@ impl InitializeResponse {
 
     /// Authentication methods supported by the agent.
     ///
-    /// Supplying one or more valid methods means the agent MUST support both
+    /// Supplying one or more methods means the agent MUST support both
     /// `auth/login` and `auth/logout`.
     #[must_use]
     pub fn auth_methods(mut self, auth_methods: Vec<AuthMethod>) -> Self {

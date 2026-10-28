@@ -48,8 +48,7 @@ Agents advertise authentication options in the `authMethods` field of the
 ID to `auth/login` only for a method whose type defines that protocol-driven
 flow.
 
-Returning one or more valid entries in `authMethods` advertises the
-authentication surface. An Agent that does so **MUST** implement both
+Returning a non-empty `authMethods` list advertises the authentication surface. Each `methodId` **MUST** be unique within the list. An Agent that does so **MUST** implement both
 `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, the Agent
 does not advertise this surface and Clients **MUST NOT** call either method.
 
@@ -150,8 +149,7 @@ during initialization with `capabilities.auth.terminal`:
 
 If `capabilities.auth.terminal` is omitted or `null`, the Client does not
 advertise support. Supplying `{}` means the Client can reproduce the configured
-Agent invocation in an interactive terminal. An Agent may advertise a
-`terminal` method only when this capability is present.
+Agent invocation in an interactive terminal. Agents **MUST NOT** advertise a `terminal` method unless this capability is present. Clients ignore `terminal` methods they did not enable.
 
 See the [schema](/protocol/v2/schema#authmethod) for the full
 `AuthMethod` definitions and the [Terminal Authentication
@@ -188,6 +186,8 @@ On success, the Agent returns an empty result:
   "result": {}
 }
 ```
+
+If `methodId` is not an advertised method whose type uses `auth/login`, the Agent responds with `-32602` (Invalid params). If login fails or the user abandons it, the Agent responds with `-32000` (Authentication required). A login cancelled with [`$/cancel_request`](/protocol/v2/cancellation) gets `-32800`.
 
 When the Agent requires authentication, any request except `initialize` and
 `auth/login` may fail with `auth_required` (`-32000`). After successful
@@ -246,8 +246,7 @@ an inserted prompt as though it had been rejected. See
 ## Logging Out
 
 The `auth/logout` method allows Clients to end the current authenticated state.
-Clients may call it only when the Agent advertised one or more valid
-authentication methods during initialization; there is no separate logout
+Clients may call it only when the Agent advertised one or more authentication methods during initialization; there is no separate logout
 capability marker.
 
 ```json
