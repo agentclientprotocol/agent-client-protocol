@@ -190,8 +190,7 @@ cursor. For `{ "type": "start" }`, that means replaying all retained conversatio
 
 When `replayFrom.type` is `"start"`, the Agent **MUST** replay all retained
 conversation history to the Client in the form of `session/update` notifications before
-responding. User, agent, and thought messages can each be replayed as message
-updates with full `content` arrays or as chunks.
+responding.
 
 The schema accepts custom and future `replayFrom.type` values so intermediaries
 can preserve them. An Agent that does not support the supplied cursor type
@@ -199,19 +198,29 @@ can preserve them. An Agent that does not support the supplied cursor type
 silently substitute another cursor or resume without replay. Malformed
 `replayFrom` values also result in `-32602`.
 
+### Replay Contents
+
+Replay reports retained history with the same updates as live delivery:
+
+- **Messages:** user, agent, and thought messages, as message updates with full `content` arrays or as chunks.
+- **Tool calls:** each retained tool call, through `tool_call_update`. Agents **SHOULD** send its current state, including status and content such as diffs, rather than every historical patch.
+- **Terminals:** each retained [display terminal]({b}tool-calls#display-only-terminals), through `terminal_update` with an `output` replacement snapshot and any `exitStatus`, rather than every historical output chunk.
+- **Plans:** each retained plan's current entries, through `plan_update`.
+- **[Compactions]({b}prompt-lifecycle#session-compaction):** with the same update, chunk, and patch semantics as live delivery. No Client capability is required.
+
+A replayed tool call whose work is no longer running or waiting **MUST** have a final status (`completed`, `failed`, or `cancelled`). Work that is still running after resuming keeps its live status and continues with live updates.
+
+Replay does not include:
+
+- Historical `state_update` notifications. See [Current-State Synchronization](#current-state-synchronization).
+- [Notices]({b}prompt-lifecycle#session-notices), which are live-only and **SHOULD NOT** be replayed. If the condition is still relevant after resuming, the Agent may send a new notice.
+- Historical `usage_update`, `session_info_update`, `config_option_update`, and `available_commands_update` notifications, which Agents **SHOULD NOT** replay. Current values are synchronized after replay instead.
+- Pending permission requests and elicitations. See [Current-State Synchronization](#current-state-synchronization).
+
 Agents are not required to persist every inserted user message or retain it for
 any minimum period. Live-only messages, including locally handled commands, may
 be absent from replay. A successful prompt response confirms insertion, not
 future availability in history; absence from replay does not contradict it.
-
-[Session compactions](/protocol/v2/prompt-lifecycle#session-compaction)
-are replayed using the same update, chunk, and patch semantics as live delivery.
-No Client capability is required.
-
-Live-only [notices](/protocol/v2/prompt-lifecycle#session-notices) are not
-conversation history and **SHOULD NOT** be replayed. If the underlying condition
-is still relevant after resuming finishes, the Agent may emit a new notice as a
-new live event.
 
 For example, a user message from the conversation history:
 
@@ -264,12 +273,13 @@ inserted by `session/prompt` **MUST** use the ID returned in that prompt
 response, including after reconnecting or restarting the Agent. Replaying a command reports its message; it does not
 execute the command again.
 
-Agents **SHOULD** preserve agent and thought message IDs across replay when
-possible, but these IDs are not guaranteed to remain stable across reconnects
-or Agent restarts. Clients **MUST NOT** rely on them to deduplicate replay
-against previously received history. When requesting full replay, Clients
-**SHOULD** rebuild the agent and thought message history from the replay rather
-than merging it into existing history solely by `messageId`.
+Agents **SHOULD** preserve agent and thought message IDs, `toolCallId`,
+`terminalId`, and `planId` across replay when possible, but these IDs are not
+guaranteed to remain stable across reconnects or Agent restarts. Clients **MUST
+NOT** rely on them to deduplicate replay against previously received history. A
+full replay is authoritative: Clients **SHOULD** rebuild the session's
+messages, tool calls, terminals, and plans from it rather than merging it into
+existing state by ID.
 
 `user_message`, `agent_message`, and `agent_thought` updates
 are upserts keyed by `messageId`; their `content` arrays replace the whole
