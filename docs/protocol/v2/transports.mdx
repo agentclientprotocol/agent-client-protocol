@@ -5,10 +5,7 @@ description: "Mechanisms for agents and clients to communicate with each other"
 
 ACP uses JSON-RPC to encode messages. JSON-RPC messages **MUST** be UTF-8 encoded.
 
-The protocol currently defines the following transport mechanisms for agent-client communication:
-
-1. [stdio](#stdio), communication over standard in and standard out
-2. _[Streamable HTTP](#streamable-http) (draft proposal in progress)_
+The protocol currently defines one transport mechanism for agent-client communication: [stdio](#stdio), communication over standard in and standard out. A remote transport based on Streamable HTTP is being specified in the [transport RFD](/rfds/streamable-http-websocket-transport).
 
 Agents and clients **SHOULD** support stdio whenever possible.
 
@@ -41,6 +38,12 @@ sequenceDiagram
     Client->>Agent Process: Close stdin, terminate subprocess
     deactivate Agent Process
 ```
+
+### Shutdown
+
+To end the connection, the Client closes the Agent's `stdin`. The Agent treats end of input as the end of the connection: its sessions stop being [active](/protocol/v2/session-setup#session-lifecycle), and it **SHOULD** exit once it has finished or stopped its work. If the Agent does not exit within a reasonable time, the Client **MAY** terminate the process, for example with `SIGTERM` and then `SIGKILL`.
+
+When the connection ends, either side treats requests it sent that have no response as failed.
 
 ## Message Timing
 
@@ -102,10 +105,6 @@ Clients and agents **SHOULD NOT** batch lifecycle-sensitive messages such as
 `initialize`, `auth/login`, `session/new`, `session/resume`, and
 `session/prompt`. These messages are easier to reason about as individual
 transport messages and can change which later messages are valid.
-
-## _Streamable HTTP_
-
-_In discussion, draft proposal in progress._
 
 ## Custom Transports
 
