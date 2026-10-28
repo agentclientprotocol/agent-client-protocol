@@ -39,8 +39,7 @@ This is the complete set of standard variants defined in the current [`SessionUp
 
 The protocol also supports [custom and future variants](/protocol/v2/extensibility#enum-and-tagged-union-variants). Clients that do not understand an update **SHOULD** preserve its raw payload when storing, replaying, proxying, or forwarding session history, and otherwise ignore it or display it generically.
 
-Live-only [notices](#session-notices) **SHOULD NOT** be replayed, even when
-preserved as unknown updates.
+Live-only [notices](#session-notices) **SHOULD NOT** be [replayed](/protocol/v2/session-setup#replay-contents), even when preserved as unknown updates.
 
 Session updates are not limited to prompt-driven foreground work. For example, Agents may advertise commands after creating a session, and background activity may emit updates while the Agent is [idle](#session-states).
 
@@ -624,12 +623,7 @@ instructions. Text blocks may contain Markdown. Agents **SHOULD** omit it when n
 unencrypted summary is available or when disclosure would reveal context that
 was not otherwise user-visible.
 
-During [history replay](/protocol/v2/session-setup#resuming-sessions),
-compaction updates and summary chunks follow the same semantics as live delivery.
-
-Replay does not implicitly reset omitted patch fields. Agents use replacement
-or clearing summary patches as needed to avoid duplicating content the Client
-already holds.
+Compactions are replayed like other session entities. See [Replay Contents](/protocol/v2/session-setup#replay-contents).
 
 Compaction does not instruct the Client to discard earlier conversation
 history; collapsing it is a local presentation choice. It also does not replace

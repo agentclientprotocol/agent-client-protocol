@@ -468,7 +468,7 @@ Alongside the chunk updates, v2 adds `user_message`, `agent_message`, and `agent
 
 Chunks always **append** to whatever content is current. For example: `agent_message` with `content: [A]`, then `agent_message_chunk` with `B` renders as `[A, B]`. A later `agent_message` with `content: [C]` resets the message to `[C]`, and subsequent chunks append to that.
 
-Use chunks for streaming. Use whole-message updates for replay, correction, or output that is already complete.
+Use chunks for streaming, and whole-message updates for output that is already complete, such as corrections or replay.
 
 ## Tool calls
 
@@ -742,11 +742,11 @@ v1 had two ways to reattach to a session: `session/load` (replays full history, 
 ```
 
 - Omit `replayFrom` (or send `null`) for v1 `resume` behavior: reattach without replay.
-- `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays the entire conversation as `session/update` notifications (using the same message, tool-call, and plan updates as live traffic) before responding.
+- `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays the entire conversation as `session/update` notifications (using the same updates as live traffic) before responding. Replay must leave the Client in the same state as live delivery did, so the Agent can send current state, such as a terminal `output` snapshot, instead of every historical update. See [Replay Contents](/protocol/v2/session-setup#replay-contents).
 
 The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods. The schema accepts custom and future cursor types for preservation by intermediaries, but Agents **MUST** reject unsupported types or malformed cursors with `-32602` (Invalid params), not silently fall back to another replay mode.
 
-Retained user messages **MUST** preserve the ID returned by `session/prompt`. Agents **SHOULD** preserve agent and thought message IDs when possible, but Clients cannot assume those IDs remain stable across reconnects or restarts. For full replay, Clients **SHOULD** rebuild agent and thought message history rather than merge it into existing history solely by `messageId`. An empty-content primer resets only the ID used in that replay; it cannot clear a message previously delivered under another ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
+Retained user messages **MUST** preserve the ID returned by `session/prompt`. Agents **SHOULD** preserve agent and thought message IDs when possible, but Clients cannot assume those IDs remain stable across reconnects or restarts. The same applies to `toolCallId`, `terminalId`, and `planId`. For full replay, Clients **SHOULD** rebuild messages, tool calls, terminals, and plans rather than merge them into existing state by ID. An empty-content primer resets only the ID used in that replay; it cannot clear a message previously delivered under another ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
 
 ### Consistent lifecycle requests
 
@@ -900,7 +900,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations.
 10. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
 11. **Modes and config options.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`. Rename option `id` to `configId` and group `group` to `groupId`, and require the `type` discriminator (`"id"` or `"boolean"`) on `session/set_config_option`.
-12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, including terminal replacement snapshots rather than requiring every historical output chunk. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Remove `session/load`.
+12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, leaving the Client in the same state as live delivery; current-state snapshots such as terminal `output` are fine. Give unfinished tool calls a final status. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Remove `session/load`.
 13. **Client surface.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
 14. **MCP config.** Require and emit `type` discriminators. Reject SSE and unadvertised transports with `-32602`. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
 15. **Slash commands.** Add the `type: "command"` discriminator to each advertised command and the `type: "text"` discriminator to command `input` specifications. Optionally advertise initial commands in setup responses via `availableCommands`, and use complete-replacement `available_commands_update` notifications for later changes.
