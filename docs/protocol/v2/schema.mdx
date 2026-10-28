@@ -4021,9 +4021,11 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-The client cancelled the work, via `session/cancel` or by closing the
-session. Work the agent stops on its own uses another reason, such as
-`error` for an internal timeout.
+The user or client chose to stop the work: via `session/cancel`, by
+closing the session, or through an interaction the agent offers, such
+as a permission option that tells the agent to stop. Work the agent
+stops for its own reasons uses another reason, such as `error` for an
+internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
@@ -6290,9 +6292,11 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-The client cancelled the work, via `session/cancel` or by closing the
-session. Work the agent stops on its own uses another reason, such as
-`error` for an internal timeout.
+The user or client chose to stop the work: via `session/cancel`, by
+closing the session, or through an interaction the agent offers, such
+as a permission option that tells the agent to stop. Work the agent
+stops for its own reasons uses another reason, such as `error` for an
+internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
@@ -6997,9 +7001,11 @@ prompt, so this should be reflected in the UI.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-The client cancelled the work, via `session/cancel` or by closing the
-session. Work the agent stops on its own uses another reason, such as
-`error` for an internal timeout.
+The user or client chose to stop the work: via `session/cancel`, by
+closing the session, or through an interaction the agent offers, such
+as a permission option that tells the agent to stop. Work the agent
+stops for its own reasons uses another reason, such as `error` for an
+internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
 cancellation ends active foreground work, even if aborting causes
