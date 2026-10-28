@@ -594,9 +594,12 @@ Git can produce most of this. With `$ROOT` set to the repository root,
 repository root prepended, with Git's quoting applied to the full path.
 
 Many diff parsers strip one leading path component by default to remove Git's
-`a/` and `b/` prefixes, so configure them not to strip any. Take paths from
-`changes`, or from the `---`, `+++`, rename, and copy lines, rather than by
-splitting the `diff --git` header, which is ambiguous when paths contain spaces.
+`a/` and `b/` prefixes. Don't strip anything from an absolute path, which has no
+such prefix. A Client can still strip a leading `a/` or `b/` from a relative
+path to tolerate Agents that send Git's default output, as long as `changes`
+decides which file a patch belongs to. Take paths from `changes`, or from the
+`---`, `+++`, rename, and copy lines, rather than by splitting the `diff --git`
+header, which is ambiguous when paths contain spaces.
 
 </ParamField>
 
