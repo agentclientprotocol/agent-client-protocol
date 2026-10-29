@@ -13,7 +13,7 @@ If you only remember five things, remember these:
 2. **Updates are upserts.** Messages and tool calls are patched by ID with uniform semantics: omitted field = unchanged, `null` = cleared, value = replaced, chunks append. Plans are replaced whole by `planId`.
 3. **The Client file system, terminal execution, and session modes APIs are gone.** Agent-owned terminal output is a separate display-only v2 surface. Use client-provided MCP servers when the Agent needs Client-side tools.
 4. **Capabilities were reorganized.** One `capabilities` + required `info` field on both sides, session-scoped groups nested under `session`, object support markers instead of booleans, and a required baseline of session methods.
-5. **Everything is extensible now.** Enums and tagged unions accept unknown values. `_`-prefixed values are yours, the rest are reserved for future ACP versions.
+5. **Everything is extensible now.** Almost all enums and tagged unions accept unknown values. `_`-prefixed values are yours, the rest are reserved for future ACP versions.
 
 ## Scope: stable v2 and draft surfaces
 
@@ -877,7 +877,7 @@ A few schema definition names also changed without any wire-format change, which
 
 v2 makes the whole schema forward-compatible by convention:
 
-- **Open enums and tagged unions.** Every enum-like string accepts unknown values. Values beginning with `_` are reserved for implementation-specific extensions (e.g. `_mycompany_widget`). Unknown values _without_ a leading `_` are reserved for future ACP versions. Receivers **SHOULD** preserve unknown values when storing, replaying, proxying, or forwarding, and either render them generically or fall back safely. Do not mint non-underscore custom values.
+- **Open enums and tagged unions.** Enum-like strings and tagged unions accept unknown values, except the few [closed ones](/protocol/v2/extensibility#enum-and-tagged-union-variants). Values beginning with `_` are reserved for implementation-specific extensions (e.g. `_mycompany_widget`). Unknown values _without_ a leading `_` are reserved for future ACP versions. Receivers **SHOULD** preserve unknown values when storing, replaying, proxying, or forwarding, and either render them generically or fall back safely. Do not mint non-underscore custom values.
 - **`_meta` everywhere.** As in v1, `_meta` objects carry implementation metadata. In v2's upsert-style updates, top-level `_meta` is a patch: omitted means unchanged, `null` clears it, and an object patches stored metadata by top-level key, where a key set to `null` is removed and any other value replaces that key whole (see [Metadata Patches](/protocol/v2/extensibility#metadata-patches)). Metadata nested in a snapshot, exit-status object, content item, command permission subject, or chunk is scoped to that object. Omission and `null` are equivalent.
 - **Custom methods** still use the `_` prefix, unchanged from v1.
 
