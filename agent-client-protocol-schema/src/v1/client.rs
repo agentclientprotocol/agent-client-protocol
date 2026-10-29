@@ -950,6 +950,8 @@ impl CompactionSummaryChunk {
 /// state replaces the entire previous state object, not the session.
 /// The title and description provide the parent's display metadata for the
 /// child. They do not replace the content of individual messages or operations.
+/// `cwd` and `additionalDirectories` report where the Agent placed the child;
+/// while unset, each inherits the immediate parent's effective value.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -997,6 +999,23 @@ pub struct SubagentUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub state: MaybeUndefined<StateUpdate>,
+    /// The child's working directory. Must be an absolute path.
+    ///
+    /// Optional and nullable. Omitted means unchanged; `null` clears the
+    /// reported value. While unset, the child inherits its immediate parent's
+    /// effective working directory. Clients use this value for the child's
+    /// root set and as the default terminal working directory.
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub cwd: MaybeUndefined<PathBuf>,
+    /// Additional workspace roots for the child. Each path must be absolute.
+    ///
+    /// Optional and nullable. Omitted means unchanged; `null` clears the
+    /// reported value. While unset, the child inherits its immediate parent's
+    /// effective additional directories, independently of `cwd`. A concrete
+    /// array replaces the whole list; `[]` reports no additional directories.
+    /// Clients use these values for the child's root set.
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub additional_directories: MaybeUndefined<Vec<PathBuf>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1024,6 +1043,8 @@ impl SubagentUpdate {
             description: MaybeUndefined::Undefined,
             capabilities: MaybeUndefined::Undefined,
             state: MaybeUndefined::Undefined,
+            cwd: MaybeUndefined::Undefined,
+            additional_directories: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
     }
@@ -1056,6 +1077,27 @@ impl SubagentUpdate {
     #[must_use]
     pub fn state(mut self, state: impl IntoMaybeUndefined<StateUpdate>) -> Self {
         self.state = state.into_maybe_undefined();
+        self
+    }
+
+    /// Sets, clears, or leaves unchanged the child's working directory.
+    ///
+    /// While unset, the child inherits its parent's working directory.
+    #[must_use]
+    pub fn cwd(mut self, cwd: impl IntoMaybeUndefined<PathBuf>) -> Self {
+        self.cwd = cwd.into_maybe_undefined();
+        self
+    }
+
+    /// Replaces, clears, or leaves unchanged the child's additional directories.
+    ///
+    /// While unset, the child inherits its parent's additional directories.
+    #[must_use]
+    pub fn additional_directories(
+        mut self,
+        additional_directories: impl IntoMaybeUndefined<Vec<PathBuf>>,
+    ) -> Self {
+        self.additional_directories = additional_directories.into_maybe_undefined();
         self
     }
 
@@ -4520,6 +4562,50 @@ mod tests {
             Some("Updated title")
         );
         assert!(title_only.description.is_undefined());
+    }
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn subagent_directories_use_strict_patch_semantics() {
+        use serde_json::json;
+
+        let update = SubagentUpdate::new("child")
+            .cwd("/home/user/project/.worktrees/investigator")
+            .additional_directories(vec![]);
+        let wire = json!({
+            "sessionId": "child",
+            "cwd": "/home/user/project/.worktrees/investigator",
+            "additionalDirectories": []
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SubagentUpdate>(wire).unwrap(),
+            update
+        );
+
+        let inherited: SubagentUpdate =
+            serde_json::from_value(json!({"sessionId": "child"})).unwrap();
+        assert!(inherited.cwd.is_undefined());
+        assert!(inherited.additional_directories.is_undefined());
+
+        let cleared_wire = json!({
+            "sessionId": "child", "cwd": null, "additionalDirectories": null
+        });
+        let cleared: SubagentUpdate = serde_json::from_value(cleared_wire.clone()).unwrap();
+        assert!(cleared.cwd.is_null());
+        assert!(cleared.additional_directories.is_null());
+        assert_eq!(serde_json::to_value(cleared).unwrap(), cleared_wire);
+
+        for malformed in [
+            json!({"sessionId": "child", "cwd": false}),
+            json!({"sessionId": "child", "additionalDirectories": "/tmp/wt"}),
+            json!({"sessionId": "child", "additionalDirectories": ["/tmp/wt", false]}),
+        ] {
+            assert!(
+                serde_json::from_value::<SubagentUpdate>(malformed.clone()).is_err(),
+                "{malformed}"
+            );
+        }
     }
 
     #[cfg(feature = "unstable_subagents")]

@@ -131,6 +131,8 @@ Only `update.sessionId` is required:
   `capabilities` was never supplied, no session mutations are permitted.
 - `state` is an optional current-work snapshot, defined in
   [Current work state](#current-work-state). It is not a lifecycle outcome.
+- `cwd` and `additionalDirectories` optionally report the child's working
+  directories, defined in [Working directories](#working-directories).
 - `_meta` optionally carries association metadata.
 
 In both versions, these optional fields are nullable patches: omission means
@@ -139,6 +141,8 @@ previous field. The exception is a concrete `_meta` object in v2, which patches
 the stored metadata by top-level key as defined by
 [v2 Metadata Patches](/rfds/v2/meta-patches). Clearing `title` or `description` removes the parent's display
 override. Clearing `state` leaves current activity unconfirmed, not idle.
+Clearing `cwd` or `additionalDirectories` makes the child inherit that value
+from its parent again.
 Both `capabilities: null` and `capabilities: {}` disable Client-initiated
 mutations.
 
@@ -200,9 +204,9 @@ without the parent's MCP servers. Whatever the context, all child activity
 flows through the same ACP connection: Agent-to-Client requests made on behalf
 of a child are subject to the same Client capabilities and permission checks as
 the parent's, and the Agent **MUST NOT** use a child to circumvent restrictions
-the Client imposed on the parent session. A future RFD may add explicit
-per-child execution-context fields if Clients need to display or negotiate
-them.
+the Client imposed on the parent session. The Agent reports the parts of that
+context a Client needs as described in
+[Child session context](#child-session-context).
 
 ### Automatic child event delivery
 
@@ -249,7 +253,134 @@ and may use explicitly advertised controls, but cannot submit new
 work to it. Existing permission and security boundaries apply equally to parent
 and child activity.
 
-### Child configuration
+### Child session context
+
+A child is not created through `session/new`, so the context a Client supplies
+during ordinary session setup — working directory, additional directories, MCP
+servers, and similar setup parameters — is not something the Client chose for
+it. Directories default to the parent's, but the Agent chooses the child's
+context and reports what the Client needs to
+display the child and evaluate its requests. Where ACP already reports a piece
+of session context for ordinary sessions, the child uses that same mechanism,
+addressed to its own session ID:
+
+| Context                                   | Reported through                                                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Working directory and additional dirs     | `cwd` and `additionalDirectories` on the parent's `subagent_update`; see [Working directories](#working-directories) |
+| Display label and role                    | `title` and `description` on the parent's `subagent_update`                                                          |
+| The child's own conversation title        | Child-addressed `session_info_update`                                                                                |
+| Model, reasoning level, and other options | Child-addressed `config_option_update`; see [Child configuration](#child-configuration)                              |
+| Current work state                        | See [Current work state](#current-work-state)                                                                        |
+| Plan, token usage, and cost               | Child-addressed `plan` and `usage_update`; see [Cost reporting](#cost-reporting-without-inferred-aggregation)        |
+
+In v1, an Agent that still uses legacy session modes may report a child's
+current mode with a child-addressed `current_mode_update`. As with
+configuration, reporting a mode does not authorize `session/set_mode`.
+
+The Client cannot prompt a child, so a child's slash commands are not
+actionable. Agents need not send `available_commands_update` for a child, and
+Clients **MUST NOT** offer commands from one as input to the child or its
+parent.
+
+This RFD does not report a child's MCP servers, available tools, or system
+prompt; see
+[Why not report MCP servers or tools for a child?](#why-not-report-mcp-servers-or-tools-for-a-child)
+
+#### Working directories
+
+`subagent_update` has two optional, nullable directory fields:
+
+- `cwd`: the child's working directory, with the same meaning as `cwd` in
+  ordinary [session setup](/protocol/v1/draft/session-setup#working-directory).
+  It **MUST** be an absolute path.
+- `additionalDirectories`: further directories the child works in, with the
+  same meaning as `additionalDirectories` in ordinary session setup. Each
+  entry **MUST** be an absolute path. `[]` reports that the child has no
+  additional directories.
+
+Both follow the association's patch convention: omission leaves the stored
+value unchanged, `null` clears it, and a concrete value replaces it.
+`additionalDirectories` is replaced as a whole array, not merged.
+
+A field that has not been reported, or has been cleared, is inherited: the
+child's effective value is its immediate parent's current effective value.
+For a root session that is the value from ordinary session setup; for a nested
+child it may itself be inherited. The two fields are inherited independently,
+so a child moved to its own worktree that should not keep the parent's
+additional directories reports `additionalDirectories: []` alongside its
+`cwd`.
+
+Because silence means "same as the parent", an Agent **MUST** report a value
+that differs from the parent's before sending child traffic that depends on
+it. An Agent that cannot determine a child's directories **SHOULD NOT** expose
+that child as sharing the parent's workspace; it can keep the child's
+Client-mediated work unexposed, as described in
+[Announcing and updating an association](#announcing-and-updating-an-association).
+
+A child running in its own worktree, for example, is announced as:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_parent",
+    "update": {
+      "sessionUpdate": "subagent_update",
+      "sessionId": "sess_child_1",
+      "title": "Test investigator",
+      "cwd": "/home/user/project/.worktrees/test-investigator",
+      "additionalDirectories": []
+    }
+  }
+}
+```
+
+Reporting these fields does not depend on the Agent advertising the
+`additionalDirectories` session capability, which governs directories the
+Client sends during session setup. In v1, the fields are covered by the
+`subagents` Client capability like the rest of the association.
+
+The Agent may change a reusable child's directories, for example by giving
+each new assignment a fresh worktree. It sends the updated values before
+child traffic that depends on them. A change does not rewrite earlier
+messages or tool calls, whose paths are already absolute. The reported
+directories describe where the Agent placed the child; they do not ask the
+Client to create, check out, or clean up anything. The Agent owns these
+resources like any other child resource.
+
+In v1, when a child's `terminal/create` request omits `cwd`, the Client uses the
+child's effective `cwd`. Agents **SHOULD** still pass an explicit `cwd` on
+child terminal requests.
+
+##### A child's root set
+
+In v1, the [root-set checks](/protocol/v1/draft/session-setup#workspace-root-security)
+that filesystem and terminal requests apply to "the session's root set" use,
+for a child, the child's effective `[cwd, ...additionalDirectories]`.
+
+This is a report, not a grant the Client negotiates. Choosing where a child
+runs is the Agent's decision, just as Agent-local tools act without going
+through the Client, and the root set confines the child's work only where a
+sandbox enforces it. Agents commonly place worktrees outside the project, for
+example in a temporary directory or a per-user cache; reporting them keeps
+the Client's view of the child accurate and lets its Client-mediated requests
+there pass the ordinary root-set check. A Client with a stricter policy for
+directories outside the parent's root set applies it to the requests it
+receives, as it would for any session.
+
+Agents **SHOULD** report the narrowest directories the child needs, such as
+the worktree itself rather than its containing temporary directory or the
+user's home. A directory named only in model output or replayed history is
+not part of a child's root set. Agent-local tools remain subject to the
+Agent's own sandbox and permission policy, as for any session.
+
+On reconnection, replayed directory values describe the recorded context.
+Agents **SHOULD** send current values after reconnecting when they differ,
+and **MUST** report a new value or `null` when a child's directory no longer
+exists.
+
+#### Child configuration
 
 Agents **SHOULD** report a child's current configuration, when available, using
 the existing `config_option_update` notification with the child's session ID.
@@ -989,6 +1120,12 @@ these differences:
 - **Resume with replay.** Available child history is replayed best-effort
   through `session/resume` with `replayFrom: { "type": "start" }`, not
   `session/load`.
+- **Directories are informational.** v2 removes the Client filesystem and
+  terminal methods, so a child's `cwd` and `additionalDirectories` have no
+  Client-side root-set check or terminal default to drive. They use the same
+  fields and inheritance rules and tell the Client where the child runs; the
+  root set remains a boundary for the Agent's own tools, as for any v2
+  session.
 
 The restricted-session rules, cancellation flow, and connection-loss handling
 defined above also apply to v2. The [v2 prompt lifecycle](/protocol/v2/prompt-lifecycle) resolves
@@ -1017,7 +1154,8 @@ This is a project rollout and validation plan, not a requirement for every
 implementation to use the named SDKs, providers, or integration techniques.
 
 1. Add the v1 `SubagentCapabilities` marker and the `SubagentUpdate` association
-   and `SubagentSessionCapabilities` types in both versions.
+   and `SubagentSessionCapabilities` types in both versions, including the
+   optional `cwd` and `additionalDirectories` fields on `SubagentUpdate`.
 2. Add `SessionMessage` and `SessionMessageChunk` update variants in both
    versions, using normal content, with optional sender and recipient session
    metadata and message references on `SessionMessage` for incoming and
@@ -1094,6 +1232,14 @@ implementation of child routing or the replay freshness boundary.
   singleton selects and boolean options remain read-only, and reporting options
   never enables `session/set_config_option`. On reconnection, distinguish
   historical configuration from fresh snapshots.
+- Announce one child in the parent's directory and another in its own
+  worktree, then move the first to a new worktree between assignments. Verify
+  that the first child inherits the parent's directories until it moves,
+  `additionalDirectories: []` stops inheriting the parent's extra directories,
+  in v1 a terminal request without `cwd` uses the child's effective `cwd` and
+  Client-mediated requests inside a worktree in a temporary directory pass
+  the child's root-set check without extending the parent's or a sibling's
+  root set.
 - Send messages to a parent and a sibling from a child's stream. Verify that
   each message has the correct sender, recipient, and content, and that the
   parent-child tree does not change.
@@ -1274,6 +1420,27 @@ chunk patch message state even though its `_meta` does not. An Agent that
 learns the identity while streaming sends one metadata-only upsert, which
 needs no content.
 
+### Why report directories on the association rather than `session_info_update`?
+
+For ordinary sessions the Client chooses `cwd` and `additionalDirectories`
+during setup, and `session_info_update` deliberately omits them. Keeping that
+true for every session avoids a `session_info_update` field that is valid only
+for children. Like `title` and `description`, the directories are also roster
+information: a Client can show where each child runs from the parent's stream
+without collecting it from every child's stream. Configuration differs because
+`config_option_update` already reports it for every session.
+
+### Why not report MCP servers or tools for a child?
+
+The Client supplies MCP server definitions for ordinary sessions, and those
+definitions can carry credentials in environment variables and headers.
+A child's tools may also come from sources inside the Agent that the Client
+cannot name. ACP does not report the available tools of an ordinary session
+either. Tool calls already show which tools a child actually uses. Reporting
+tool or server availability would be a separate proposal covering all sessions,
+not only children. The same applies to the child's system prompt: what the
+parent asks of a child appears in the session messages it sends.
+
 ### Why not allow prompting or steering a subagent?
 
 The parent Agent can message or reuse a child according to its runtime's
@@ -1326,6 +1493,14 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-29: Added optional `cwd` and `additionalDirectories` to
+  `subagent_update` so an Agent can report a child that runs outside its
+  parent's workspace, such as in its own worktree. Unreported directories are
+  inherited from the parent, and a child's root set is its own effective
+  directories.
+  Summarized how the rest of a child's
+  session context is reported, and why MCP servers, tools, and system prompts
+  are not.
 - 2026-10-27: Participant IDs and message references now follow the standard
   patch convention: `null` clears a stored value instead of leaving it
   unchanged.

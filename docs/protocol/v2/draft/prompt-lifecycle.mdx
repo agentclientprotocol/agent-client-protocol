@@ -13,31 +13,31 @@ Before sending prompts, Clients **MUST** first complete the [initialization](/pr
 
 Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
 
-| `sessionUpdate` value       | Description                                                                                                                        |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                |
-| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                       |
-| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                          |
-| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                     |
-| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                         |
-| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                           |
-| `subagent_update`           | **Draft only.** Announces an owned child session or updates its display metadata, capabilities, and mirrored work-state snapshot.  |
-| `session_message`           | **Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable).                  |
-| `session_message_chunk`     | **Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable).                              |
-| `state_update`              | A snapshot of the Agent's [foreground activity](#session-states).                                                                  |
-| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/draft/tool-calls#streaming-content).                                         |
-| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/draft/tool-calls#reporting).                                                         |
-| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                |
-| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                           |
-| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/draft/agent-plan) identified by ID.                                        |
-| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v2/draft/agent-plan#removing-plans) identified by ID.                                |
-| `available_commands_update` | The set of [available slash commands](/protocol/v2/draft/slash-commands) is ready or has changed.                                  |
-| `config_option_update`      | The session's [configuration options](/protocol/v2/draft/session-config-options#from-the-agent) have changed.                      |
-| `session_info_update`       | [Session metadata](/protocol/v2/draft/session-list#updating-session-metadata), such as the title or last update time, has changed. |
-| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                  |
-| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                 |
-| `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                    |
-| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                         |
+| `sessionUpdate` value       | Description                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                                    |
+| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                                           |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                                              |
+| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                                         |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                             |
+| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                                               |
+| `subagent_update`           | **Draft only.** Announces an owned child session or updates its display metadata, working directories, capabilities, and mirrored work-state snapshot. |
+| `session_message`           | **Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable).                                      |
+| `session_message_chunk`     | **Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable).                                                  |
+| `state_update`              | A snapshot of the Agent's [foreground activity](#session-states).                                                                                      |
+| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/draft/tool-calls#streaming-content).                                                             |
+| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/draft/tool-calls#reporting).                                                                             |
+| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                                    |
+| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                               |
+| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/draft/agent-plan) identified by ID.                                                            |
+| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v2/draft/agent-plan#removing-plans) identified by ID.                                                    |
+| `available_commands_update` | The set of [available slash commands](/protocol/v2/draft/slash-commands) is ready or has changed.                                                      |
+| `config_option_update`      | The session's [configuration options](/protocol/v2/draft/session-config-options#from-the-agent) have changed.                                          |
+| `session_info_update`       | [Session metadata](/protocol/v2/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.                     |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                                      |
+| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                                     |
+| `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                                        |
+| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                                             |
 
 This is the complete set of standard variants defined in the current draft [`SessionUpdate` schema](/protocol/v2/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 

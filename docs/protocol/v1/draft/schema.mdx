@@ -7235,6 +7235,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 Omitted means unchanged; `null` removes the metadata.
 
 </ResponseField>
+<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Additional workspace roots for the child. Each path must be absolute.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective additional directories, independently of `cwd`. A concrete
+array replaces the whole list; `[]` reports no additional directories.
+Clients use these values for the child's root set.
+
+</ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
   Client-initiated session mutations permitted for this subagent session.
 
@@ -7242,6 +7252,15 @@ Omitted means unchanged; `null` clears the capability set and disables
 child mutations. If never supplied, no session mutations are permitted.
 Read-only operations retain their normal protocol semantics and capability
 requirements. A concrete object replaces the whole capability set.
+
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  The child's working directory. Must be an absolute path.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective working directory. Clients use this value for the child's
+root set and as the default terminal working directory.
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
@@ -7818,6 +7837,8 @@ not imply idle, stop work, or create an `unknown` state snapshot. A concrete
 state replaces the entire previous state object, not the session.
 The title and description provide the parent's display metadata for the
 child. They do not replace the content of individual messages or operations.
+`cwd` and `additionalDirectories` report where the Agent placed the child;
+while unset, each inherits the immediate parent's effective value.
 
 **Type:** Object
 
@@ -7832,6 +7853,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 Omitted means unchanged; `null` removes the metadata.
 
 </ResponseField>
+<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Additional workspace roots for the child. Each path must be absolute.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective additional directories, independently of `cwd`. A concrete
+array replaces the whole list; `[]` reports no additional directories.
+Clients use these values for the child's root set.
+
+</ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
   Client-initiated session mutations permitted for this subagent session.
 
@@ -7839,6 +7870,15 @@ Omitted means unchanged; `null` clears the capability set and disables
 child mutations. If never supplied, no session mutations are permitted.
 Read-only operations retain their normal protocol semantics and capability
 requirements. A concrete object replaces the whole capability set.
+
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  The child's working directory. Must be an absolute path.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective working directory. Clients use this value for the child's
+root set and as the default terminal working directory.
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >

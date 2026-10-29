@@ -8074,11 +8074,28 @@ MUST NOT make assumptions about values at these keys.
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
+<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Additional workspace roots for the child. Each path must be absolute.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective additional directories, independently of `cwd`. A concrete
+array replaces the whole list; `[]` reports no additional directories.
+
+</ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
   Client-initiated session mutations permitted for this subagent session.
 
 Read-only operations retain their normal protocol semantics and
 capability requirements.
+
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  The child's working directory. Must be an absolute path.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective working directory.
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
@@ -8724,6 +8741,8 @@ clears or unsets the value, and concrete values replace it. A concrete
 unconfirmed; it does not report idle or cancellation. A child whose capabilities are
 unset permits no Client-initiated session mutations.
 
+`cwd` and `additionalDirectories` report where the Agent placed the child;
+while unset, each inherits the immediate parent's effective value.
 The title and description provide the parent's display metadata for the
 child. Agents SHOULD mirror known child state changes in the parent's
 `state` using the same `StateUpdate` snapshot as the
@@ -8749,11 +8768,28 @@ MUST NOT make assumptions about values at these keys.
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
+<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+  Additional workspace roots for the child. Each path must be absolute.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective additional directories, independently of `cwd`. A concrete
+array replaces the whole list; `[]` reports no additional directories.
+
+</ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
   Client-initiated session mutations permitted for this subagent session.
 
 Read-only operations retain their normal protocol semantics and
 capability requirements.
+
+</ResponseField>
+<ResponseField name="cwd" type={"string | null"} >
+  The child's working directory. Must be an absolute path.
+
+Optional and nullable. Omitted means unchanged; `null` clears the
+reported value. While unset, the child inherits its immediate parent's
+effective working directory.
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
