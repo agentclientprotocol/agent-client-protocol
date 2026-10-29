@@ -54,6 +54,8 @@ requires each supported mode to be explicit.
 Agents **MUST NOT** request a mode the Client has not advertised. Agents
 **SHOULD** provide a graceful fallback when the required mode is unavailable.
 
+If an Agent sends `elicitation/create` anyway, a Client with no `elicitation` capability (omitted or `null`) responds with `-32601`, as for any [capability-gated method](/protocol/v2/error#unknown-methods) it did not advertise. A Client that advertised `elicitation` but not the requested mode responds with `-32602` (Invalid params).
+
 ## Creating an elicitation
 
 The Agent sends an `elicitation/create` request directly over the ACP
@@ -211,9 +213,6 @@ connection, and the Client **MUST** treat it as opaque. The Agent **MAY** send
 send that notification only to the same Client that received the original
 request and include the original `elicitationId`. Clients **MUST** ignore
 unknown or already-completed IDs. On receiving it, Clients **MAY** retry the original operation, update the UI, or otherwise continue. They **SHOULD** still let the user retry or cancel if the notification never arrives.
-
-Requests using a mode the Client has not advertised produce JSON-RPC `-32602`
-(Invalid params).
 
 ## Session Cancellation
 
