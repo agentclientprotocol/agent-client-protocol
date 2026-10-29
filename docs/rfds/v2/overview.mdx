@@ -46,6 +46,8 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 
 ### v2 Changes
 
+This list tracks every breaking change in v2. Smaller changes without their own RFD are recorded here and in the [migration guide](/protocol/v2/migration).
+
 - Remove the dedicated session modes API from v2. This includes the `modes` session response fields, `session/set_mode`, `current_mode_update`, and the `SessionMode*` types.
 - Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
 - Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and the Client-owned semantics of v1 terminal tool-call content. Terminal authentication remains separate under `capabilities.auth.terminal`.
@@ -59,12 +61,19 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
 - Apply the top-level `_meta` of upsert updates as a [metadata patch](./meta-patches.mdx): omission leaves it unchanged, `null` clears it, and an object patches stored metadata by top-level key, where a key set to `null` is removed and any other value replaces that key whole.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
 - Acknowledge [prompt insertion](./prompt.mdx) by returning the inserted user message's `messageId` from `session/prompt`, without waiting for foreground work to finish. Live user-message updates use the same ID; retention remains optional.
+- Report foreground activity with [`state_update`](./prompt.mdx) (`running`, `idle`, `requires_action`), and move the stop reason from the `session/prompt` response to the idle update.
 - Report [failures after prompt insertion](./prompt.mdx#report-failures-after-insertion) by ending foreground work with an idle `state_update` whose `stopReason` is `error`, carrying an optional JSON-RPC error object. A JSON-RPC error on `session/prompt` always means the message was not inserted.
 - Follow JSON-RPC 2.0 batch request and notification behavior.
+- Make [enums and tagged unions open](./enum-variant-extension.mdx) where a safe fallback exists: `_`-prefixed values are for extensions, and other unknown values are reserved for future ACP versions.
+- Add the `cancelled` status for tool calls and plan entries.
+- Allow initial `configOptions` and `availableCommands` in `session/new` and `session/resume` responses, and add `type` discriminators to commands (`command`) and command input (`text`).
+- Reject `initialize` with `-32022` (Unsupported protocol version) when no supported version is at or below the requested one, with the requested and supported versions in the error data.
+- Make `mcpServers` optional on session setup requests.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
   - Require implementation metadata in both `initialize` params and results with a single role-agnostic `info` field, replacing the v1-style `clientInfo` and `agentInfo` fields so agent-to-agent and other symmetric ACP connections do not need role-specific field names.
-  - Group authentication methods under `auth/*`: v2 uses `auth/login` and `auth/logout` instead of v1's top-level `authenticate` and `logout` method names. An Agent that returns one or more valid entries in `authMethods` advertises the authentication surface and **MUST** implement both methods; if the field is omitted or empty, Clients **MUST NOT** call either method. There is no `capabilities.auth.logout` support marker, and `capabilities.auth` remains orthogonal for authentication-related extensions. The generated request and response type names follow the grouped method naming as `LoginAuthRequest` / `LoginAuthResponse` and `LogoutAuthRequest` / `LogoutAuthResponse`.
+  - Group authentication methods under `auth/*`: v2 uses `auth/login` and `auth/logout` instead of v1's top-level `authenticate` and `logout` method names. An Agent that returns a non-empty `authMethods` list advertises the authentication surface and **MUST** implement both methods; if the field is omitted or empty, Clients **MUST NOT** call either method. There is no `capabilities.auth.logout` support marker, and `capabilities.auth` remains orthogonal for authentication-related extensions. The generated request and response type names follow the grouped method naming as `LoginAuthRequest` / `LoginAuthResponse` and `LogoutAuthRequest` / `LogoutAuthResponse`.
+  - Rename the authentication method descriptor's `id` to `methodId`, make its `type` discriminator required, and advertise Client support for `terminal` methods with a `capabilities.auth.terminal` object marker.
   - Use concise capability group names such as `session` and `auth`, replacing names like `sessionCapabilities`.
   - Make `session` optional so Agents that only expose non-session method surfaces can omit it.
   - Require the baseline session lifecycle methods when `session` is present: `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
@@ -76,7 +85,7 @@ Other RFDs will progress separately and are not dependent on breaking changes (s
   - Make stdio an explicit `session.mcp.stdio` capability so Agents that cannot launch local subprocesses can opt out.
   - Require MCP server configurations to include a `type` discriminator, including `type: "stdio"`, so unknown future transports can be preserved as extension/future variants.
   - Keep HTTP as the remote MCP server transport capability.
-- Unify ID naming and typing across the v2 schema. Protocol fields should use domain-specific ID names such as `messageId`, `toolCallId`, `planId`, `providerId`, and `serverId` rather than a generic `id` whenever the field identifies a protocol entity or references another resource.
+- Unify ID naming and typing across the v2 schema. Protocol fields should use domain-specific ID names such as `messageId`, `toolCallId`, `planId`, `terminalId`, `configId`, and `methodId` rather than a generic `id` whenever the field identifies a protocol entity or references another resource.
 
 ### RFDs to be Written
 
@@ -114,6 +123,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-10-29: Reconciled the v2 change list with the migration guide, adding open enums, `state_update`, `cancelled` statuses, setup-response commands, `-32022`, optional `mcpServers`, and the auth method descriptor changes. ID examples now use stable fields only.
 - 2026-10-13: Added the v2 Metadata Patches RFD so a top-level `_meta` object on an upsert patches stored metadata by key instead of replacing it.
 - 2026-10-01: Recorded that failures after prompt insertion end foreground work with an `error` stop reason that carries an optional JSON-RPC error.
 - 2026-10-12: Specified that every `git_patch` path, including rename and copy headers, is absolute with no `a/` or `b/` prefix, and otherwise follows Git, including `/dev/null` and path quoting.
