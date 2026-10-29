@@ -4,9 +4,9 @@ on:
   # Allow manual trigger
   workflow_dispatch:
 
-  # Run hourly to pick up registry changes
+  # Run daily to pick up registry changes
   schedule:
-    - cron: "15 * * * *" # Every hour at :15
+    - cron: "15 0 * * *" # Every day at 00:15 UTC
 
 jobs:
   sync:
