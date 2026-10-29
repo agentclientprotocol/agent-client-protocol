@@ -1973,8 +1973,8 @@ fn other_state_update_schema(schema: &mut Schema) {
 pub struct Cost {
     /// Total cumulative cost for session.
     pub amount: f64,
-    /// ISO 4217 currency code (e.g., "USD", "EUR").
-    #[cfg_attr(feature = "schemars", schemars(pattern(r"^[A-Z]{3}$")))]
+    /// Unit of `amount`: an ISO 4217 currency code (e.g., "USD", "EUR") for money, or another
+    /// unit such as "credits".
     pub currency: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.

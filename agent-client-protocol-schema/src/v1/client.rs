@@ -1950,7 +1950,8 @@ impl UsageUpdate {
 pub struct Cost {
     /// Total cumulative cost for session.
     pub amount: f64,
-    /// ISO 4217 currency code (e.g., "USD", "EUR").
+    /// Unit of `amount`: an ISO 4217 currency code (e.g., "USD", "EUR") for money, or another
+    /// unit such as "credits".
     pub currency: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at

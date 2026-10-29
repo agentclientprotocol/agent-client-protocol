@@ -6002,9 +6002,8 @@
           "format": "double"
         },
         "currency": {
-          "description": "ISO 4217 currency code (e.g., \"USD\", \"EUR\").",
-          "type": "string",
-          "pattern": "^[A-Z]{3}$"
+          "description": "Unit of `amount`: an ISO 4217 currency code (e.g., \"USD\", \"EUR\") for money, or another\nunit such as \"credits\".",
+          "type": "string"
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",

@@ -4242,7 +4242,7 @@
           "format": "double"
         },
         "currency": {
-          "description": "ISO 4217 currency code (e.g., \"USD\", \"EUR\").",
+          "description": "Unit of `amount`: an ISO 4217 currency code (e.g., \"USD\", \"EUR\") for money, or another\nunit such as \"credits\".",
           "type": "string"
         },
         "_meta": {
