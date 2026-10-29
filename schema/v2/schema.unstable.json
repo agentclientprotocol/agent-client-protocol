@@ -7599,7 +7599,7 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\nUnknown\nvalues are preserved; Agents MUST return an error\nfor modes they do not support.",
+          "description": "How the Agent combines `content` with its own instructions.\n\nRequired. Agents MUST return an error for a mode they do not support rather than\ntreating it as `append` or `override`.",
           "allOf": [
             {
               "$ref": "#/$defs/SystemPromptMode"
