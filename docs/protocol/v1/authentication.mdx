@@ -177,7 +177,7 @@ For a `terminal` method, the Client:
 3. Presents the terminal to the user and waits for the process to exit. Exit
    status zero signals success; a non-zero status, termination without an exit
    status, or cancellation signals failure.
-4. Reconnects and reinitializes the ACP Agent.
+4. On success, reconnects and reinitializes the ACP Agent.
 
 The descriptor cannot provide a command. The Client derives the command from its
 own Agent configuration. Agents **SHOULD** provide arguments that enter a
