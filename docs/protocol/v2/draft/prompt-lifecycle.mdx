@@ -1123,7 +1123,7 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 
 `session/cancel` covers foreground work and prompts the Agent has not yet inserted. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`; cancellation does not undo that insertion. Background work is not covered, but the Agent **MAY** stop it too.
 
-The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification.
+The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification. This mark is a local display hint: the Agent gives those tool calls their [final status](/protocol/v2/draft/tool-calls#status), and its updates replace the mark.
 
 The Client **MUST** respond to pending `session/request_permission` requests in
 the cancelled session with the `cancelled` outcome. Requests already answered
