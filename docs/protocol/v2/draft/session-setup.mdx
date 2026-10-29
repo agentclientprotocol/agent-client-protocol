@@ -287,7 +287,7 @@ execute the command again.
 
 Agents **SHOULD** preserve agent and thought message IDs, `toolCallId`,
 `terminalId`, and `planId` across replay when possible, but these IDs are not
-guaranteed to remain stable across reconnects or Agent restarts. Clients **MUST
+guaranteed to remain stable across reconnects or Agent restarts. They are still never reused for a different entity of the same type. Clients **MUST
 NOT** rely on them to deduplicate replay against previously received history. A
 full replay is authoritative: Clients **SHOULD** rebuild the session's
 messages, tool calls, terminals, and plans from it rather than merging it into
