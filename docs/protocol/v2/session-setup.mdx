@@ -225,7 +225,7 @@ Replay does not include:
 - [Notices](/protocol/v2/prompt-lifecycle#session-notices), which are live-only and **SHOULD NOT** be replayed. If the condition is still relevant after resuming, the Agent may send a new notice.
 - Pending permission requests and elicitations. See [Current-State Synchronization](#current-state-synchronization).
 
-Agents need not replay historical `usage_update`, `session_info_update`, `config_option_update`, or `available_commands_update` notifications, because current values are synchronized after replay.
+Agents need not replay historical `usage_update`, `session_info_update`, `config_option_update`, or `available_commands_update` notifications, since they describe past values rather than current ones. See [Current-State Synchronization](#current-state-synchronization).
 
 Agents are not required to persist every inserted user message or retain it for
 any minimum period. Live-only messages, including locally handled commands, may
@@ -356,6 +356,8 @@ and send current session info through `session_info_update` after any requested
 history replay and before responding, even when `replayFrom` is omitted or
 `null`. This synchronizes current state rather than replaying historical
 configuration or metadata changes.
+
+Agents that report usage **MAY** likewise send a current `usage_update` after any requested history replay and before responding.
 
 ## Closing Active Sessions
 
