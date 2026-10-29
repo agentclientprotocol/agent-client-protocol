@@ -680,7 +680,8 @@ pub enum DiffPatchFormat {
     /// Git's default `a/` and `b/`. Otherwise paths follow Git: `/dev/null`
     /// names the missing side of an added or deleted file in the `---` and
     /// `+++` lines, and paths with unusual characters are quoted as Git quotes
-    /// them. Surrounding commit metadata and email envelopes MUST NOT be
+    /// them. Each path, once unquoted, is the same native absolute path string as
+    /// the matching `changes` entry. Surrounding commit metadata and email envelopes MUST NOT be
     /// included.
     GitPatch,
     /// Custom or future patch format.

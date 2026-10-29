@@ -590,14 +590,14 @@ file is a single `move` or `copy` entry, with the edits in `patch`.
   **MUST NOT** have a prefix such as Git's default `a/` and `b/`. Otherwise paths
   follow Git: `/dev/null` names the missing side of an added or deleted file in
   the `---` and `+++` lines, and paths with unusual characters are [quoted as Git
-  quotes them](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath).
+  quotes them](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath). Each path, once unquoted, is the same native absolute path string as the matching `changes` entry, for example `C:\repo\src\a.rs` on Windows.
   Surrounding commit metadata and email envelopes **MUST NOT** be included.
 
 Git can produce most of this. With `$ROOT` set to the repository root,
 `git diff --src-prefix="$ROOT/" --dst-prefix="$ROOT/"` writes absolute
 `diff --git`, `---`, and `+++` lines. Git never prefixes `rename from`,
 `rename to`, `copy from`, or `copy to` paths, so those still need the
-repository root prepended, with Git's quoting applied to the full path.
+repository root prepended, with Git's quoting applied to the full path. On Windows, Git still writes `/` after the root (`C:\repo/src/a.rs`), so Agents convert those paths to native separators before quoting.
 
 Many diff parsers strip one leading path component by default to remove Git's
 `a/` and `b/` prefixes. Don't strip anything from an absolute path, which has no
