@@ -69,7 +69,7 @@ The JSON-RPC request ID links a response to the client's submission. The returne
 | JSON-RPC `id` | One request/response exchange     | The request sender |
 | `messageId`   | The accepted logical user message | The agent          |
 
-The working assumption is **one accepted submission, one logical ACP user message**. The agent **MUST** assign a distinct `messageId` to each accepted submission, even when its content is identical to another submission. IDs are unique within the session and **MUST NOT** be reused for a different submission.
+The working assumption is **one accepted submission, one logical ACP user message**. The agent **MUST** assign a distinct `messageId` to each accepted submission, even when its content is identical to another submission. IDs are unique among user messages within the session and **MUST NOT** be reused for a different submission. Agent messages and thoughts have their own ID spaces, so the same string may also identify one of those.
 
 The agent **MUST** use the returned ID for all updates and chunks for that user message. The response and the user-message update describe the same insertion, but clients **MUST** tolerate those updates arriving before or after the response. On receiving the response, the submitting client can associate its local pending input with `(sessionId, messageId)`, reconciling with an already-received message rather than creating a second canonical message.
 
@@ -452,6 +452,8 @@ Reusing the JSON-RPC error object keeps failures before and after insertion in o
 Codex's app-server makes the same split. A failed turn ends with `turn/completed` whose status is `failed` and whose details are in `turn.error`, while a separate `error` notification with `willRetry` reports transient errors that don't end the turn, which `notice` covers here.
 
 ## Revision history
+
+2026-10-29: Message IDs are unique per message type, not across the session.
 
 2026-04-13: Initial draft
 2026-04-22: Move from bidirectional notification approach to a change in the prompt request lifecycle

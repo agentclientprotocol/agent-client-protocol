@@ -8,7 +8,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt)
 
 > What are you proposing to change?
 
-ACP v2 should support both whole-message updates and streamed message chunks for user messages, agent messages, and agent thoughts. Whole-message updates are upserts keyed by `messageId`, while chunks append content to the message with the matching `messageId`.
+ACP v2 should support both whole-message updates and streamed message chunks for user messages, agent messages, and agent thoughts. Whole-message updates are upserts keyed by message type and `messageId`, while chunks append content to the message with the matching `messageId`.
 
 ## Status quo
 
@@ -41,7 +41,9 @@ ACP v2 should define whole-message session updates:
 - `agent_message`
 - `agent_thought`
 
-Each whole-message update is an upsert keyed by `messageId`:
+Each whole-message update is an upsert keyed by its message type and `messageId`. IDs are unique per type, so a user message, an agent message, and an agent thought may share an ID without affecting each other. A field that refers to a message must also identify its type.
+
+For each update:
 
 - `messageId` is required.
 - `content` and `_meta` are patch fields.
@@ -67,7 +69,7 @@ When replay reconstructs a message from its beginning using chunks, the Agent mu
 
 ### Interaction between updates and chunks
 
-Clients apply message updates and chunks in the order they are received for each `messageId`.
+Clients apply message updates and chunks in the order they are received for each message, identified by its type and `messageId`.
 
 If a message update includes `content`, that content array replaces all content currently stored for the message, including content accumulated from earlier chunks:
 
@@ -166,5 +168,6 @@ The Client appends those chunks to the message for that `messageId`. A later mes
 
 ## Revision history
 
+- 2026-10-29: Messages are keyed by type and `messageId`, since IDs are unique per message type.
 - 2026-10-13: A top-level `_meta` object now patches stored metadata by key, per [Metadata Patches](./meta-patches.mdx).
 - 2026-06-09: Initial draft.
