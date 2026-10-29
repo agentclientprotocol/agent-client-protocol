@@ -229,7 +229,9 @@ Option `type` values can be custom or future variants. Custom option types **MUS
 
 The current value of a config option can be changed at any point during a session.
 
-Agents that advertise config options for a session **MUST** support `session/set_config_option` for it. Clients **MUST NOT** call it otherwise and **MUST** only send an advertised `configId`. Agents **MUST** reject an unknown `configId` or invalid value, including an unsupported value `type`, with `-32602` and leave the configuration unchanged.
+Agents that advertise config options for a session **MUST** support `session/set_config_option` for it. Clients **MUST NOT** call it otherwise and **MUST** only send an advertised `configId`. Agents **MUST** reject an unknown `configId` or invalid value, including an unsupported value `type` or a `type` that doesn't match the option, with `-32602` and leave the configuration unchanged.
+
+Whether a change made while foreground work is active applies to that work or only to later work is up to the Agent. The response's `configOptions` is the complete list as of the response, and Clients replace their list with it. It may report a `currentValue` different from the one requested, for example when the Agent adjusted the value or another change applied concurrently. Clients apply responses and `config_option_update` notifications in the order received, each replacing the whole list.
 
 ### From the Client
 

@@ -45,7 +45,7 @@ A receiver that does not implement a method, or receives a capability-gated meth
 
 ### Invalid Parameters
 
-Malformed parameters and unsupported values get `-32602`. For example, an invalid `session/list` cursor, or an unknown `configId` or value in `session/set_config_option`.
+Malformed parameters and unsupported values get `-32602`. For example, an invalid `session/list` cursor, or in `session/set_config_option` an unknown `configId`, an invalid value, or a value `type` that is unsupported or doesn't match the option.
 
 ### Unknown Sessions
 
