@@ -742,7 +742,7 @@ v1 had two ways to reattach to a session: `session/load` (replays full history, 
 ```
 
 - Omit `replayFrom` (or send `null`) for v1 `resume` behavior: reattach without replay.
-- `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays all retained conversation history as `session/update` notifications (using the same updates as live traffic) before responding. Unlike v1, Agents need not retain every message, so replay may not cover the whole conversation. The Agent can send current state, such as a terminal `output` snapshot, instead of every historical update. See [Replay Contents](/protocol/v2/session-setup#replay-contents).
+- `"replayFrom": { "type": "start" }` for v1 `load` behavior: the Agent replays all retained conversation history as `session/update` notifications (using the same updates as live traffic) before responding. The Agent can send current state, such as a terminal `output` snapshot, instead of every historical update. See [Replay Contents](/protocol/v2/session-setup#replay-contents).
 
 The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods. The schema accepts custom and future cursor types for preservation by intermediaries, but Agents **MUST** reject unsupported types or malformed cursors with `-32602` (Invalid params), not silently fall back to another replay mode.
 
