@@ -3549,9 +3549,7 @@ pub enum StopReason {
     /// The active work ended because the agent reached the maximum number of
     /// allowed agent requests before returning idle.
     MaxTurnRequests,
-    /// The active work ended because the agent refused to continue. The user
-    /// prompt and everything that comes after it won't be included in the next
-    /// prompt, so this should be reflected in the UI.
+    /// The active work ended because the agent refused to continue.
     Refusal,
     /// The user or client chose to stop the work: via `session/cancel`, by
     /// closing the session, or through an interaction the agent offers, such

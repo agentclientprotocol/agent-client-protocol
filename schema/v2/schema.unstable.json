@@ -5945,7 +5945,7 @@
           "required": ["stopReason"]
         },
         {
-          "description": "The active work ended because the agent refused to continue. The user\nprompt and everything that comes after it won't be included in the next\nprompt, so this should be reflected in the UI.",
+          "description": "The active work ended because the agent refused to continue.",
           "type": "object",
           "properties": {
             "stopReason": {
