@@ -540,6 +540,8 @@ The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agent
 
 MCP servers can be connected to using different transports. Agents advertise supported transports during initialization using `session.mcp.stdio`, `session.mcp.http`, and any extension-specific transport capabilities. Agents **MUST** reject a request with a transport they don't support with `-32602`, including a transport they did not advertise and v1's `sse`.
 
+Each server `name` **MUST** be unique within `mcpServers`. Agents reject duplicates with `-32602`.
+
 ### Transport Types
 
 Every MCP server object has a `type` discriminator that identifies its transport. Custom implementation-specific transport types **MUST** begin with `_`; unknown non-underscore transport types are reserved for future ACP variants.
@@ -595,6 +597,8 @@ Example stdio transport configuration:
   ]
 }
 ```
+
+Agents **SHOULD** launch stdio servers with the session's `cwd` as the working directory. `env` entries are added to the environment the Agent would otherwise give the process, replacing variables with the same name. Each `env` entry **MUST** have a unique `name`.
 
 #### HTTP Transport
 
