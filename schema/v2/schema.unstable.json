@@ -8040,7 +8040,7 @@
       "type": "object",
       "properties": {
         "cwd": {
-          "description": "Filter sessions by working directory. Must be an absolute path.\n\nOmitted and `null` are equivalent and mean sessions are not filtered by working directory.",
+          "description": "Filter sessions by working directory. Must be an absolute path.\n\nOnly sessions whose `cwd` is this same directory match; subdirectories and\n`additionalDirectories` don't. Agents MAY normalize paths when comparing.\n\nOmitted and `null` are equivalent and mean sessions are not filtered by working directory.",
           "anyOf": [
             {
               "$ref": "#/$defs/AbsolutePath"

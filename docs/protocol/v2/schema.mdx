@@ -413,6 +413,9 @@ Omitted and `null` are equivalent and mean the first page is requested.
 <ResponseField name="cwd" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   Filter sessions by working directory. Must be an absolute path.
 
+Only sessions whose `cwd` is this same directory match; subdirectories and
+`additionalDirectories` don't. Agents MAY normalize paths when comparing.
+
 Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
 
 </ResponseField>

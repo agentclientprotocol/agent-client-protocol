@@ -1743,6 +1743,9 @@ crate::serde_util::default_on_null! {
     pub struct ListSessionsRequest {
         /// Filter sessions by working directory. Must be an absolute path.
         ///
+        /// Only sessions whose `cwd` is this same directory match; subdirectories and
+        /// `additionalDirectories` don't. Agents MAY normalize paths when comparing.
+        ///
         /// Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
         #[serde(default)]
         pub cwd: Option<AbsolutePath>,
