@@ -1241,6 +1241,9 @@ pub struct ResumeSessionRequest {
     /// The ID of the session to resume.
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
+    ///
+    /// MUST be the session's working directory; Agents reject a different directory with
+    /// `-32602`. Agents MAY normalize paths when comparing.
     pub cwd: AbsolutePath,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///

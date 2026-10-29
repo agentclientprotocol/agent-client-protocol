@@ -8165,7 +8165,7 @@
           ]
         },
         "cwd": {
-          "description": "The working directory for this session. Must be an absolute path.",
+          "description": "The working directory for this session. Must be an absolute path.\n\nMUST be the session's working directory; Agents reject a different directory with\n`-32602`. Agents MAY normalize paths when comparing.",
           "allOf": [
             {
               "$ref": "#/$defs/AbsolutePath"
