@@ -4817,7 +4817,15 @@
           "type": "string"
         },
         "data": {
-          "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details.\n\nOmitted and `null` are equivalent and mean no additional data is provided.",
+          "description": "Optional primitive or structured value that contains additional information about the error.\nThis may include debugging information or context-specific details.\n\nOmitted and `null` are equivalent and mean no additional data is provided. Some codes\ndefine a shape: [`UnsupportedProtocolVersionErrorData`] for `-32022`, and\n[`SessionNotFoundErrorData`] for `-32002` when a session is not found.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorData"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "x-deserialize-default-on-error": true
         }
       },
@@ -4884,7 +4892,7 @@
         },
         {
           "title": "Unsupported protocol version",
-          "description": "**Unsupported protocol version**: No protocol version supported by the Agent is at or below the requested version.\nThe error data contains the requested version and the Agent's supported versions.",
+          "description": "**Unsupported protocol version**: No protocol version supported by the Agent is at or below the requested version.\nThe error data is an [`UnsupportedProtocolVersionErrorData`].",
           "type": "integer",
           "format": "int32",
           "const": -32022
@@ -4896,6 +4904,79 @@
           "format": "int32"
         }
       ]
+    },
+    "ErrorData": {
+      "description": "Schema for [`Error::data`]: the shapes ACP defines, or any other value.",
+      "anyOf": [
+        {
+          "title": "UnsupportedProtocolVersion",
+          "allOf": [
+            {
+              "$ref": "#/$defs/UnsupportedProtocolVersionErrorData"
+            }
+          ]
+        },
+        {
+          "title": "SessionNotFound",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionNotFoundErrorData"
+            }
+          ]
+        },
+        {
+          "title": "Other"
+        }
+      ]
+    },
+    "UnsupportedProtocolVersionErrorData": {
+      "description": "Data for the `-32022` (Unsupported protocol version) error.\n\nSee protocol docs: [Version Negotiation](https://agentclientprotocol.com/protocol/v2/draft/initialization#version-negotiation)",
+      "type": "object",
+      "properties": {
+        "requested": {
+          "description": "The protocol version the Client requested.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProtocolVersion"
+            }
+          ]
+        },
+        "supported": {
+          "description": "The protocol versions the Agent supports.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProtocolVersion"
+          }
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["requested", "supported"]
+    },
+    "SessionNotFoundErrorData": {
+      "description": "Data for the `-32002` (Resource not found) error when a session-scoped request names a\nsession that does not exist or is not active.\n\nSee protocol docs: [Unknown Sessions](https://agentclientprotocol.com/protocol/v2/draft/error#unknown-sessions)",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The session ID from the request.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"]
     },
     "AgentNotification": {
       "description": "A JSON-RPC notification object.",

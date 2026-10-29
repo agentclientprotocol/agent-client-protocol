@@ -4215,11 +4215,13 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
   A number indicating the error type that occurred.
 This must be an integer as defined in the JSON-RPC specification.
 </ResponseField>
-<ResponseField name="data" type={"object"} >
+<ResponseField name="data" type={<><span><a href="#errordata">ErrorData</a></span><span> | null</span></>} >
   Optional primitive or structured value that contains additional information about the error.
 This may include debugging information or context-specific details.
 
-Omitted and `null` are equivalent and mean no additional data is provided.
+Omitted and `null` are equivalent and mean no additional data is provided. Some codes
+define a shape: `UnsupportedProtocolVersionErrorData` for `-32022`, and
+`SessionNotFoundErrorData` for `-32002` when a session is not found.
 
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
@@ -4275,13 +4277,64 @@ range LSP reserves (-32899 to -32800).
 
 <ResponseField name="-32022" type="int32">
   **Unsupported protocol version**: No protocol version supported by the Agent
-  is at or below the requested version. The error data contains the requested
-  version and the Agent's supported versions.
+  is at or below the requested version. The error data is an
+  `UnsupportedProtocolVersionErrorData`.
 </ResponseField>
 
 <ResponseField name="Other" type="int32">
   Other undefined error code.
 </ResponseField>
+
+## <span class="font-mono">ErrorData</span>
+
+Schema for `Error::data`: the shapes ACP defines, or any other value.
+
+**Type:** Union
+
+<ResponseField name="UnsupportedProtocolVersion">
+{""}
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="requested" type={<a href="#protocolversion">ProtocolVersion</a>} required>
+  The protocol version the Client requested.
+</ResponseField>
+<ResponseField name="supported" type={<a href="#protocolversion">ProtocolVersion[]</a>} required>
+  The protocol versions the Agent supports.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="SessionNotFound">
+{""}
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID from the request.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Other">{""}</ResponseField>
 
 ## <span class="font-mono">ErrorStopReason</span>
 
@@ -7065,6 +7118,29 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Identifier of this message within the enclosing session's transcript.
 </ResponseField>
 
+## <span class="font-mono">SessionNotFoundErrorData</span>
+
+Data for the `-32002` (Resource not found) error when a session-scoped request names a
+session that does not exist or is not active.
+
+See protocol docs: [Unknown Sessions](https://agentclientprotocol.com/protocol/v2/draft/error#unknown-sessions)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The session ID from the request.
+</ResponseField>
+
 ## <span class="font-mono">SessionSystemPromptCapabilities</span>
 
 **UNSTABLE**
@@ -9653,6 +9729,31 @@ Implementations MUST NOT make assumptions about values at these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
+</ResponseField>
+
+## <span class="font-mono">UnsupportedProtocolVersionErrorData</span>
+
+Data for the `-32022` (Unsupported protocol version) error.
+
+See protocol docs: [Version Negotiation](https://agentclientprotocol.com/protocol/v2/draft/initialization#version-negotiation)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT make assumptions about values at these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="requested" type={<a href="#protocolversion">ProtocolVersion</a>} required>
+  The protocol version the Client requested.
+</ResponseField>
+<ResponseField name="supported" type={<a href="#protocolversion">ProtocolVersion[]</a>} required>
+  The protocol versions the Agent supports.
 </ResponseField>
 
 ## <span class="font-mono">Usage</span>
