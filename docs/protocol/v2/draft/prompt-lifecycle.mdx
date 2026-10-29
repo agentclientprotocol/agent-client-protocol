@@ -1161,7 +1161,3 @@ Agents **MUST** catch these errors and report the semantically meaningful `cance
 The Agent **MAY** send `session/update` notifications with content or tool call updates after receiving the `session/cancel` notification, but it **MUST** ensure that it does so before sending the idle `state_update` session update that reports cancellation.
 
 The Client **SHOULD** still accept tool call updates received after sending `session/cancel`.
-
----
-
-After the Agent reports `idle`, the Client may send another `session/prompt` to continue the conversation, building on the established session context.
