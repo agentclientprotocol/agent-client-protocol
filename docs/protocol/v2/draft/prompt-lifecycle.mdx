@@ -261,7 +261,7 @@ The Client sends a user message with `session/prompt`:
 <ParamField path="prompt" type="ContentBlock[]" required>
     The contents of the user message, e.g. text, images, files, etc.
 
-    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/draft/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/draft/initialization). Agents **MUST** reject content types they don't support with `-32602`.
+    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/draft/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/draft/initialization). Agents **MUST** reject a prompt containing a content type they did not advertise or don't understand with `-32602`, without inserting it. Custom content types need a [custom capability](/protocol/v2/draft/extensibility#advertising-custom-capabilities), such as an entry in `capabilities.session.prompt._meta`.
 
     <Card icon="comments" horizontal href="/protocol/v2/draft/content">
       Learn more about Content

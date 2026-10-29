@@ -19,7 +19,7 @@ ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context P
 
 A content type from a later MCP revision that ACP doesn't define isn't forwarded as is. Agents convert it to a supported type, such as an embedded resource, or omit it.
 
-Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants.
+Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants. In prompts, Clients send only content types the Agent advertised, including custom types advertised through a [custom capability](/protocol/v2/draft/extensibility#advertising-custom-capabilities), and Agents reject others with `-32602`.
 
 ### Text Content
 
