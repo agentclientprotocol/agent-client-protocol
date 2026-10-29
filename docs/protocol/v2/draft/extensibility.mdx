@@ -236,7 +236,7 @@ ACP also reserves `_`-prefixed values for implementation-specific extensions in 
 - Extensions **MUST NOT** define custom non-underscore values.
 - Implementations **MUST NOT** treat unknown non-underscore values as custom extensions.
 
-This rule applies only where the schema defines a fallback path. Most enums and tagged unions have one. These are closed, and receivers reject values outside them:
+This rule applies only where the schema defines a fallback path. Most enums and tagged unions have one. The following are closed, and receivers reject values outside them:
 
 - `ElicitationSchema.type`, which is always `object`.
 - Embedded resource contents, which are text or blob contents, as in MCP.
