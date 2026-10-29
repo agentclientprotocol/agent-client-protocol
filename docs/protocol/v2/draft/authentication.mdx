@@ -177,6 +177,8 @@ method's ID:
   `auth/login` flow. Clients **MUST NOT** pass a `terminal` method.
 </ParamField>
 
+`auth/login` may stay pending while the user completes an interactive flow. The Agent can run that flow itself, for example by opening a local browser, or through a URL-mode [elicitation](/protocol/v2/draft/elicitation) scoped to the `auth/login` request with `requestId`. Whether authentication outlasts the connection is up to the Agent; credentials are often stored where other connections can use them.
+
 On success, the Agent returns an empty result:
 
 ```json
@@ -189,8 +191,7 @@ On success, the Agent returns an empty result:
 
 If `methodId` is not an advertised method whose type uses `auth/login`, the Agent responds with `-32602` (Invalid params). If login fails or the user abandons it, the Agent responds with `-32000` (Authentication required). A login cancelled with [`$/cancel_request`](/protocol/v2/draft/cancellation) gets `-32800`.
 
-When the Agent requires authentication, any request except `initialize` and
-`auth/login` may fail with `auth_required` (`-32000`). After successful
+When the Agent requires authentication, any request except `initialize`, `auth/login`, and `auth/logout` may fail with `auth_required` (`-32000`). After successful
 authentication, the Client can create new sessions without receiving an
 `auth_required` error for authentication-gated requests.
 

@@ -178,7 +178,7 @@ fall back to form mode; it **MUST** use another safe flow or fail the operation.
 An `accept` response means the user consented to open the URL. It does not mean
 the external interaction completed.
 
-URL mode is not a substitute for authorizing the Client's access to the Agent.
+URL mode is not a substitute for authorizing the Client's access to the Agent. An Agent can still use it during `auth/login` to sign in to its own provider.
 Agents **MUST NOT** send credentials or tokens obtained through URL mode back
 over ACP or place them in Client or model context.
 
