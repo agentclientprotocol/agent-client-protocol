@@ -682,6 +682,10 @@ in a different directory reject it with `-32602`, and MAY normalize paths when c
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP servers to connect to for this session.
+
+The complete set of Client-provided servers; omitted and `[]` mean none. Servers from
+earlier requests are not restored.
+
 </ResponseField>
 <ResponseField name="replayFrom" type={<><span><a href="#replayfrom">ReplayFrom</a></span><span> | null</span></>} >
   Inclusive cursor describing where conversation replay should begin.

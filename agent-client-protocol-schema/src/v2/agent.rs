@@ -1256,6 +1256,9 @@ pub struct ResumeSessionRequest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
+    ///
+    /// The complete set of Client-provided servers; omitted and `[]` mean none. Servers from
+    /// earlier requests are not restored.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
