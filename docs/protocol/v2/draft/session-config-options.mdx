@@ -127,7 +127,9 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
   or an array of groups; values and groups are not mixed in the same array. For
   a `select` option, Agents **MUST** offer at least one value, **MUST** keep
   each `value` unique within the option, including across groups, and
-  `currentValue` **MUST** be one of them.
+  `currentValue` **MUST** be one of them. Each group **MUST** contain at least
+  one value. Clients **SHOULD** hide a group that ends up empty, for example
+  after skipping values they couldn\'t parse.
 </ResponseField>
 
 ### SessionConfigSelectOption

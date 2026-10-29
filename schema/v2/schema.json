@@ -3493,7 +3493,8 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigSelectOption"
-          }
+          },
+          "minItems": 1
         },
         {
           "title": "Grouped",
@@ -3501,7 +3502,8 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigSelectGroup"
-          }
+          },
+          "minItems": 1
         }
       ]
     },
@@ -3552,11 +3554,12 @@
           "type": "string"
         },
         "options": {
-          "description": "The set of option values in this group.",
+          "description": "The set of option values in this group. MUST contain at least one value.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigSelectOption"
           },
+          "minItems": 1,
           "x-deserialize-default-on-error": true,
           "x-deserialize-skip-invalid-items": true
         },

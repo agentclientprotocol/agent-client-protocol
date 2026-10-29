@@ -2180,9 +2180,9 @@ pub struct SessionConfigSelectGroup {
     pub group_id: SessionConfigGroupId,
     /// Human-readable label for this group.
     pub name: String,
-    /// The set of option values in this group.
+    /// The set of option values in this group. MUST contain at least one value.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1), extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub options: Vec<SessionConfigSelectOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -2231,9 +2231,13 @@ impl SessionConfigSelectGroup {
 #[non_exhaustive]
 pub enum SessionConfigSelectOptions {
     /// A flat list of options with no grouping.
-    Ungrouped(Vec<SessionConfigSelectOption>),
+    Ungrouped(
+        #[cfg_attr(feature = "schemars", schemars(length(min = 1)))] Vec<SessionConfigSelectOption>,
+    ),
     /// A list of options grouped under headers.
-    Grouped(Vec<SessionConfigSelectGroup>),
+    Grouped(
+        #[cfg_attr(feature = "schemars", schemars(length(min = 1)))] Vec<SessionConfigSelectGroup>,
+    ),
 }
 
 impl From<Vec<SessionConfigSelectOption>> for SessionConfigSelectOptions {
