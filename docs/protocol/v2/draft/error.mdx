@@ -41,7 +41,7 @@ Receivers **MUST** treat an unrecognized code as a generic failure. Implementati
 
 ### Unknown Methods
 
-A receiver that does not implement a method, or receives a capability-gated method it did not advertise, **MUST** respond with `-32601`.
+A receiver that does not implement a method, or receives a capability-gated method it did not advertise, **MUST** respond with `-32601`. This applies to custom and standard methods alike. Notifications can't be answered, so receivers **SHOULD** ignore unknown ones.
 
 ### Invalid Parameters
 

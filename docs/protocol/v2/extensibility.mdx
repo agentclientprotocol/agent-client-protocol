@@ -158,7 +158,7 @@ Ignoring an unknown property means not interpreting it. Implementations are not 
 
 ## Extension Methods
 
-The protocol reserves any method name starting with an underscore (`_`) for custom extensions. This allows implementations to add new functionality without the risk of conflicting with future protocol versions.
+The protocol reserves any method name starting with an underscore (`_`) for custom extensions. This allows implementations to add new functionality without the risk of conflicting with future protocol versions. Names starting with `$/` are reserved for protocol-level messages such as [`$/cancel_request`](/protocol/v2/cancellation), and all other names are reserved for ACP.
 
 Extension methods follow standard [JSON-RPC 2.0](https://www.jsonrpc.org/specification) semantics:
 
@@ -224,7 +224,7 @@ Custom notifications are regular JSON-RPC notifications that start with an under
 }
 ```
 
-Unlike with custom requests, implementations **SHOULD** ignore unrecognized notifications.
+Unlike with custom requests, implementations **SHOULD** ignore any notification they don't recognize, whether it is custom or from a later ACP version.
 
 ## Enum and Tagged-Union Variants
 
