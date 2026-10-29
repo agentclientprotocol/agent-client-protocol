@@ -21,6 +21,8 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 
 If the request already finished, or the receiver doesn't cancel it, the receiver sends its normal response.
 
+Receivers **MUST** ignore a `$/cancel_request` for a request ID that is unknown or already answered, and **MUST NOT** send a second response for it.
+
 If the receiver does cancel the request, it sends one of these responses:
 
 - A successful response, where the method defines one for cancellation: `session/prompt` after its user message is inserted (with its `messageId`), `session/request_permission` with the `cancelled` outcome, or `elicitation/create` with the `cancel` action

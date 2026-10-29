@@ -101,6 +101,9 @@ pub enum ProtocolLevelNotification {
     ///    method's defined cancellation result (for example an inserted `session/prompt`, or a
     ///    `cancelled` permission outcome) or an error with code `-32800` (Request Cancelled).
     ///
+    /// Receivers MUST ignore this notification for an unknown or already-answered request ID,
+    /// and MUST NOT send a second response for it.
+    ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
     CancelRequestNotification(CancelRequestNotification),
 }
