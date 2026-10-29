@@ -105,7 +105,9 @@ Custom or future status values can be used when Clients can preserve or display 
 
 As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same `sessionUpdate: "plan_update"` structure and `planId`.
 
-For item-based plans, the Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current contents of that plan completely. An empty `entries` array empties the plan.
+Each `plan_update` replaces the whole plan with that `planId`, whatever its `type`, including when the type differs from the previous update.
+
+For item-based plans, the Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current contents of that plan completely. An empty `entries` array empties the plan. Clients **MAY** hide an empty plan.
 
 ### Dynamic Planning
 
