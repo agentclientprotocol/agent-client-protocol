@@ -676,8 +676,8 @@ the request `cwd` matches the session's `cwd`.
 <ResponseField name="cwd" type={<a href="#absolutepath">AbsolutePath</a>} required>
   The working directory for this session. Must be an absolute path.
 
-MUST be the session's working directory; Agents reject a different directory with
-`-32602`, and MAY normalize paths when comparing.
+Clients MUST send the session's working directory. Agents MAY reject a different directory
+with `-32602`, and MAY normalize paths when comparing.
 
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
