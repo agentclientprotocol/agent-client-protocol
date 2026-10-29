@@ -46,7 +46,7 @@ sequenceDiagram
 
 A session exists from `session/new` until the Agent discards it. Agents choose how long to keep sessions: for example, they may not store a session that was never prompted, may expire old sessions, or may remove one through [`session/delete`](/protocol/v2/draft/session-delete). `session/list` and `session/resume` only see sessions the Agent still has, and resuming one it no longer has fails with `-32002`.
 
-On a connection, a session is **active** from a successful `session/new` or `session/resume` until `session/close` or the end of the connection. Agents **SHOULD NOT** discard a session while it is active, except through `session/delete`, which closes it first.
+On a connection, a session is **active** from a successful `session/new`, `session/resume`, or, when supported, `session/fork` (for the new session) until `session/close` or the end of the connection. Agents **SHOULD NOT** discard a session while it is active, except through `session/delete`, which closes it first.
 
 - Session-scoped requests such as `session/prompt` and `session/set_config_option` require an active session. Otherwise the Agent responds with `-32002`; see [Unknown Sessions](/protocol/v2/draft/error#unknown-sessions). Agents ignore `session/cancel` for a session that isn't active.
 - Closing a session ends it on the connection but doesn't discard it. Whether a closed session stays listed and resumable depends on how long the Agent keeps it.
@@ -134,7 +134,7 @@ Agents **MAY** include initial [configuration options](/protocol/v2/draft/sessio
 
 `configOptions` and `availableCommands` are optional. Each is the complete current list for the session: omission or `[]` means none, and empty lists are omitted when serializing. Agents **MUST NOT** send `null` for these fields.
 
-When a `session/new` or `session/resume` response arrives, Clients replace the lists they hold for the session with the response's lists, including lists from updates received before the response. Later `config_option_update` and `available_commands_update` notifications each replace the complete list, including `[]` to clear it.
+When a `session/new`, `session/resume`, or, when supported, `session/fork` response arrives, Clients replace the lists they hold for the session with the response's lists, including lists from updates received before the response. Later `config_option_update` and `available_commands_update` notifications each replace the complete list, including `[]` to clear it.
 
 For a fork, `availableCommands` advertises commands available in the newly created session, not the source session.
 

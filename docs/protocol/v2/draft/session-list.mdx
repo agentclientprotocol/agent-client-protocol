@@ -205,7 +205,7 @@ mutation for `additionalDirectories`. Agents typically send this notification
 after the first meaningful exchange to auto-generate a title.
 
 The Agent sends these updates to Clients with the session currently attached
-through `session/new` or `session/resume`. Clients can refresh metadata for
+through `session/new`, `session/resume`, or, when supported, `session/fork`. Clients can refresh metadata for
 other sessions through `session/list`.
 
 ## Interaction with Other Session Methods
