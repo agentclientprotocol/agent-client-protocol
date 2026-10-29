@@ -134,7 +134,9 @@ The Client **MUST** check that it supports the version in a successful response.
 
 #### Repeating Initialization
 
-When the Agent selects a lower version than requested, it may have ignored parts of the Client's request, such as capabilities. The Client **MAY** then send `initialize` again with the selected version and that version's parameters. It **MUST** wait for the first response and send the repeat before any other request. The Agent **MUST** accept it and treat the latest `initialize` as authoritative. `initialize` **MUST NOT** be repeated after any other request.
+When the Agent selects a lower version than requested, it may have ignored parts of the Client's request, such as capabilities. The Client **MAY** then send `initialize` again with the selected version and that version's parameters.
+
+The Client **MAY** repeat `initialize` any number of times before its first other request, waiting for each response before sending the next. The Agent handles each one like the first and treats the latest successful `initialize` as authoritative. A repeat that fails leaves the previous successful initialization in effect. `initialize` **MUST NOT** be repeated after any other request.
 
 Agents that implement only v1 may not accept a repeated `initialize`. To change its parameters with such an Agent, the Client opens a new connection.
 
