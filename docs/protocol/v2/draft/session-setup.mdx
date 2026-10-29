@@ -524,7 +524,7 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 - **MUST** remain the base for relative-path resolution
 - **MUST** be part of the session's effective root set
 
-On `session/resume`, Clients **SHOULD** send the session's working directory. Agents that can't resume a session in a different directory reject it with `-32602`. Agents **MAY** normalize paths when comparing, for example ignoring a trailing separator.
+On `session/resume`, `cwd` **MUST** be the session's working directory, and Agents reject a different directory with `-32602`. Agents **MAY** normalize paths when comparing, for example ignoring a trailing separator.
 
 When `session.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
