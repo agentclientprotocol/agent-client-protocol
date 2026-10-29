@@ -1808,10 +1808,12 @@ Upon receiving this notification, the receiver:
 
 1. MAY cancel the corresponding request activity and all nested activities
 2. MAY send any pending notifications.
-3. MUST send one of these responses for the original request:
+3. MUST still send a response for the original request. If the request already finished
+   or is not cancelled, that is its normal response. If it is cancelled, it is either the
+   method's defined cancellation result (for example an inserted `session/prompt`, or a
+   `cancelled` permission outcome) or an error with code `-32800` (Request Cancelled).
 
-- Valid response with appropriate data (partial results or cancellation marker)
-- Error response with code `-32800` (Cancelled)
+The sender must handle a normal response arriving after it sent this notification.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/cancellation)
 
