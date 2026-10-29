@@ -1598,8 +1598,8 @@ impl ResumeSessionResponse {
 /// before responding successfully to `session/close`. Closing an idle session
 /// does not itself require another idle update.
 ///
-/// Closing may also cancel pending `session/prompt` requests, including queued
-/// prompts. If closing prevents a prompt's user message from being inserted, the
+/// Closing also cancels pending `session/prompt` requests whose messages have not
+/// been inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the
 /// Agent MUST answer that request with `-32800` (Request Cancelled). If the message
 /// has already been inserted, the Agent MUST respond successfully with its
 /// `messageId`. Prompt responses need not precede the close response.
@@ -3475,7 +3475,7 @@ impl PromptRequest {
 
 /// Response acknowledging that a user prompt was inserted into the ACP conversation.
 ///
-/// This response does not indicate that the prompt was merely received or queued, nor that the
+/// This response does not indicate that the prompt was merely received or held, nor that the
 /// agent has finished processing it.
 /// Processing and completion are reported through `state_update` session updates.
 ///

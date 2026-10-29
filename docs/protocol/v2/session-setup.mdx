@@ -384,7 +384,7 @@ The Agent **MUST** cancel any ongoing work for that session as if [`session/canc
 
 When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
 
-Closing also cancels pending `session/prompt` requests whose messages have not been inserted, including queued prompts. If closing prevents a prompt's user message from being inserted, the Agent **MUST** answer that request with `-32800` (Request Cancelled). If the message has already been inserted, the Agent **MUST** respond successfully with its `messageId`, as described in [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted). Prompt responses need not precede the close response. After the close response, the Agent sends no other messages for the session on that connection.
+Closing also cancels pending `session/prompt` requests whose messages have not been inserted, including [held prompts](/protocol/v2/prompt-lifecycle#prompts-during-active-work). If closing prevents a prompt's user message from being inserted, the Agent **MUST** answer that request with `-32800` (Request Cancelled). If the message has already been inserted, the Agent **MUST** respond successfully with its `messageId`, as described in [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted). Prompt responses need not precede the close response. After the close response, the Agent sends no other messages for the session on that connection.
 
 On success, the Agent responds with an empty result object:
 
