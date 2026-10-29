@@ -9767,7 +9767,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
 
-Token usage information for completed session work.
+Token usage for the foreground work that just completed, not cumulative for the session.
 
 **Type:** Object
 
@@ -9782,7 +9782,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="cachedReadTokens" type={"integer | null"} >
-  Total cache read tokens.
+  Cache read tokens for the completed work.
 
 Omitted and `null` are equivalent and mean the count is not reported.
 
@@ -9790,7 +9790,7 @@ Omitted and `null` are equivalent and mean the count is not reported.
 
 </ResponseField>
 <ResponseField name="cachedWriteTokens" type={"integer | null"} >
-  Total cache write tokens.
+  Cache write tokens for the completed work.
 
 Omitted and `null` are equivalent and mean the count is not reported.
 
@@ -9798,19 +9798,19 @@ Omitted and `null` are equivalent and mean the count is not reported.
 
 </ResponseField>
 <ResponseField name="inputTokens" type={"uint64"} required>
-  Total input tokens.
+  Input tokens for the completed work.
 
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="outputTokens" type={"uint64"} required>
-  Total output tokens.
+  Output tokens for the completed work.
 
     - Minimum: `0`
 
 </ResponseField>
 <ResponseField name="thoughtTokens" type={"integer | null"} >
-  Total thought/reasoning tokens
+  Thought/reasoning tokens for the completed work.
 
 Omitted and `null` are equivalent and mean the count is not reported.
 
@@ -9818,7 +9818,7 @@ Omitted and `null` are equivalent and mean the count is not reported.
 
 </ResponseField>
 <ResponseField name="totalTokens" type={"uint64"} required>
-  Sum of all token types across session.
+  Sum of all token types for the completed work.
 
     - Minimum: `0`
 

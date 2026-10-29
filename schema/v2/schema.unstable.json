@@ -5428,43 +5428,43 @@
       }
     },
     "Usage": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage information for completed session work.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nToken usage for the foreground work that just completed, not cumulative for the session.",
       "type": "object",
       "properties": {
         "totalTokens": {
-          "description": "Sum of all token types across session.",
+          "description": "Sum of all token types for the completed work.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0
         },
         "inputTokens": {
-          "description": "Total input tokens.",
+          "description": "Input tokens for the completed work.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0
         },
         "outputTokens": {
-          "description": "Total output tokens.",
+          "description": "Output tokens for the completed work.",
           "type": "integer",
           "format": "uint64",
           "minimum": 0
         },
         "thoughtTokens": {
-          "description": "Total thought/reasoning tokens\n\nOmitted and `null` are equivalent and mean the count is not reported.",
+          "description": "Thought/reasoning tokens for the completed work.\n\nOmitted and `null` are equivalent and mean the count is not reported.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0,
           "x-deserialize-default-on-error": true
         },
         "cachedReadTokens": {
-          "description": "Total cache read tokens.\n\nOmitted and `null` are equivalent and mean the count is not reported.",
+          "description": "Cache read tokens for the completed work.\n\nOmitted and `null` are equivalent and mean the count is not reported.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0,
           "x-deserialize-default-on-error": true
         },
         "cachedWriteTokens": {
-          "description": "Total cache write tokens.\n\nOmitted and `null` are equivalent and mean the count is not reported.",
+          "description": "Cache write tokens for the completed work.\n\nOmitted and `null` are equivalent and mean the count is not reported.",
           "type": ["integer", "null"],
           "format": "uint64",
           "minimum": 0,

@@ -3706,7 +3706,7 @@ fn other_stop_reason_schema(schema: &mut Schema) {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Token usage information for completed session work.
+/// Token usage for the foreground work that just completed, not cumulative for the session.
 #[cfg(feature = "unstable_end_turn_token_usage")]
 #[serde_as]
 #[skip_serializing_none]
@@ -3715,27 +3715,27 @@ fn other_stop_reason_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Usage {
-    /// Sum of all token types across session.
+    /// Sum of all token types for the completed work.
     pub total_tokens: u64,
-    /// Total input tokens.
+    /// Input tokens for the completed work.
     pub input_tokens: u64,
-    /// Total output tokens.
+    /// Output tokens for the completed work.
     pub output_tokens: u64,
-    /// Total thought/reasoning tokens
+    /// Thought/reasoning tokens for the completed work.
     ///
     /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub thought_tokens: Option<u64>,
-    /// Total cache read tokens.
+    /// Cache read tokens for the completed work.
     ///
     /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cached_read_tokens: Option<u64>,
-    /// Total cache write tokens.
+    /// Cache write tokens for the completed work.
     ///
     /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -3770,21 +3770,21 @@ impl Usage {
         }
     }
 
-    /// Total thought/reasoning tokens
+    /// Thought/reasoning tokens for the completed work.
     #[must_use]
     pub fn thought_tokens(mut self, thought_tokens: impl IntoOption<u64>) -> Self {
         self.thought_tokens = thought_tokens.into_option();
         self
     }
 
-    /// Total cache read tokens.
+    /// Cache read tokens for the completed work.
     #[must_use]
     pub fn cached_read_tokens(mut self, cached_read_tokens: impl IntoOption<u64>) -> Self {
         self.cached_read_tokens = cached_read_tokens.into_option();
         self
     }
 
-    /// Total cache write tokens.
+    /// Cache write tokens for the completed work.
     #[must_use]
     pub fn cached_write_tokens(mut self, cached_write_tokens: impl IntoOption<u64>) -> Self {
         self.cached_write_tokens = cached_write_tokens.into_option();
