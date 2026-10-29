@@ -1821,7 +1821,7 @@ pub struct ListSessionsResponse {
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
     /// to fetch the next page. Omitted and `null` are equivalent and mean there are no more
-    /// results.
+    /// results. An empty string is a valid cursor, not the end of results.
     #[serde(default)]
     pub next_cursor: Option<SessionListCursor>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

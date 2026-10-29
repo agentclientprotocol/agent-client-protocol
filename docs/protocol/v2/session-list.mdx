@@ -151,7 +151,8 @@ When no sessions match the criteria, the Agent **MUST** return an empty `session
 
 `session/list` uses cursor-based pagination. The request includes an optional `cursor`, and the response includes `nextCursor` when more results are available.
 
-- Clients **MUST** treat a missing `nextCursor` as the end of results
+- Clients **MUST** treat a missing `nextCursor` as the end of results. Only an omitted or `null` `nextCursor` ends the results; an empty string is a valid cursor
+- Clients **MUST NOT** assume a fixed page size
 - Clients **MUST** treat cursors as opaque tokens — do not parse, modify, or persist them
 - Agents **MUST** return `-32602` if the cursor is invalid
 - Agents **SHOULD** enforce reasonable page sizes internally

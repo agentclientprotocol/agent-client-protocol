@@ -769,7 +769,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="nextCursor" type={<><span><a href="#sessionlistcursor">SessionListCursor</a></span><span> | null</span></>} >
   Opaque cursor token. If present, pass this in the next request's cursor parameter
 to fetch the next page. Omitted and `null` are equivalent and mean there are no more
-results.
+results. An empty string is a valid cursor, not the end of results.
 </ResponseField>
 <ResponseField name="sessions" type={<a href="#sessioninfo">SessionInfo[]</a>} required>
   Array of session information objects.

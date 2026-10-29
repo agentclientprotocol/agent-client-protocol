@@ -3777,7 +3777,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "nextCursor": {
-          "description": "Opaque cursor token. If present, pass this in the next request's cursor parameter\nto fetch the next page. Omitted and `null` are equivalent and mean there are no more\nresults.",
+          "description": "Opaque cursor token. If present, pass this in the next request's cursor parameter\nto fetch the next page. Omitted and `null` are equivalent and mean there are no more\nresults. An empty string is a valid cursor, not the end of results.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionListCursor"
