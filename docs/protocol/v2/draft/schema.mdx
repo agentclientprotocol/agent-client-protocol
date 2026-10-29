@@ -1929,7 +1929,7 @@ An agent message upsert.
 Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
-`messageId`, omitted fields use client defaults. `content` is replaced as a
+`messageId`, omitted `content` starts empty. `content` is replaced as a
 whole array; send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
@@ -1967,7 +1967,7 @@ An agent thought or reasoning message upsert.
 Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing thought content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
-`messageId`, omitted fields use client defaults. `content` is replaced as a
+`messageId`, omitted `content` starts empty. `content` is replaced as a
 whole array; send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
@@ -9578,7 +9578,7 @@ unsets the value, and concrete values replace the previous value. For
 collection fields, concrete arrays replace the previous collection, and both
 `null` and `[]` clear the collection. A concrete `_meta` object instead
 patches the stored metadata by top-level key. When a client receives a tool
-call ID it has not seen before, omitted fields use client defaults.
+call ID it has not seen before, omitted fields start at their protocol defaults.
 
 See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls)
 
@@ -9866,7 +9866,7 @@ A user message upsert.
 Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
-`messageId`, omitted fields use client defaults. `content` is replaced as a
+`messageId`, omitted `content` starts empty. `content` is replaced as a
 whole array; send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When

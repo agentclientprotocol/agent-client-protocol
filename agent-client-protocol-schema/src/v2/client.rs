@@ -2067,7 +2067,7 @@ impl ContentChunk {
 /// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing message content unchanged, `null` clears the
 /// value, and a concrete array replaces the previous value. For a new
-/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// `messageId`, omitted `content` starts empty. `content` is replaced as a
 /// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
@@ -2141,7 +2141,7 @@ impl UserMessage {
 /// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing message content unchanged, `null` clears the
 /// value, and a concrete array replaces the previous value. For a new
-/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// `messageId`, omitted `content` starts empty. `content` is replaced as a
 /// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When
@@ -2215,7 +2215,7 @@ impl AgentMessage {
 /// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing thought content unchanged, `null` clears the
 /// value, and a concrete array replaces the previous value. For a new
-/// `messageId`, omitted fields use client defaults. `content` is replaced as a
+/// `messageId`, omitted `content` starts empty. `content` is replaced as a
 /// whole array; send `[]` or `null` to clear it.
 ///
 /// Message updates and chunks are applied in the order they are received. When

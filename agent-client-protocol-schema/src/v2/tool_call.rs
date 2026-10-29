@@ -26,7 +26,7 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 /// collection fields, concrete arrays replace the previous collection, and both
 /// `null` and `[]` clear the collection. A concrete `_meta` object instead
 /// patches the stored metadata by top-level key. When a client receives a tool
-/// call ID it has not seen before, omitted fields use client defaults.
+/// call ID it has not seen before, omitted fields start at their protocol defaults.
 ///
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
 #[serde_as]
@@ -1020,7 +1020,8 @@ impl ToolCallLocation {
 
     /// Optional line number within the file.
     ///
-    /// Line numbers are 1-based; `0` means no specific line.
+    /// Line numbers are 1-based, and `0` is invalid on the wire. This builder maps `0` to no
+    /// specific line.
     #[must_use]
     pub fn line(mut self, line: impl IntoOption<u32>) -> Self {
         self.line = line.into_option().and_then(std::num::NonZeroU32::new);

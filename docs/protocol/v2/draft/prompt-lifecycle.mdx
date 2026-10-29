@@ -436,7 +436,7 @@ The Agent can report the model's text response as an `agent_message` update with
 
 The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
 
-User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged, `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content.
+User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged (or empty for a new `messageId`), `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content.
 
 A chunk for a `messageId` the Client hasn't seen creates the message with empty content, then appends to it. Clients apply message updates and chunks in the order they are received for each `messageId`:
 
