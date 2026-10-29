@@ -551,8 +551,7 @@ be consistent with `changes`: it describes only those paths and operations. Agen
 `patch` is omitted or `null`, and **SHOULD** follow `changes` when `patch`
 disagrees with it.
 
-A diff describes each file's change from its state before the change. Each path
-appears in at most one entry of `changes`. A move or copy that also edits the
+A diff describes each file's change from its state before the change. Each `path` value appears in at most one entry of `changes`. A move or copy's `oldPath` may also appear as another entry's `path`, for example a file copied and then edited, or a file moved and replaced by a new one. A move or copy that also edits the
 file is a single `move` or `copy` entry, with the edits in `patch`.
 
 ```json
