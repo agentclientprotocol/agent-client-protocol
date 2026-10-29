@@ -1972,7 +1972,7 @@ pub struct SessionInfo {
     /// Additional workspace roots reported for this session. Each path must be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
-    /// by the Agent. Omitted, `null`, and empty values are equivalent: the response
+    /// by the Agent. Omitted and empty values are equivalent: the response
     /// reports no additional roots.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
