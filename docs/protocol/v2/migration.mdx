@@ -547,6 +547,10 @@ The reference contains no mutable state. The Agent reports that separately with 
   "terminalId": "term_001",
   "command": "cargo test",
   "cwd": "/workspace/project",
+  "size": {
+    "cols": 120,
+    "rows": 40
+  },
   "output": {
     "data": "cnVubmluZyAxMjMgdGVzdHMNCg=="
   },
@@ -557,7 +561,7 @@ The reference contains no mutable state. The Agent reports that separately with 
 }
 ```
 
-Only `terminalId` is required. `command`, `cwd`, `output`, `exitStatus`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it, except that a `_meta` object patches stored metadata by top-level key. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` must be absolute.
+Only `terminalId` is required. `command`, `cwd`, `size`, `output`, `exitStatus`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it, except that a `_meta` object patches stored metadata by top-level key. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` must be absolute. `size` is the terminal size in character cells, with required `cols` and `rows`; when present, Clients **SHOULD** render output at that size.
 
 `output` is an authoritative replacement snapshot for replay, correction, or resynchronization. Its required `data` field is RFC 4648 base64-encoded bytes and is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. A concrete snapshot replaces all previously stored bytes. Clients must not merge or splice bytes from the previous snapshot into it. Optional nullable `output._meta` is snapshot-scoped. Omission and `null` both mean no snapshot metadata was provided.
 
@@ -897,7 +901,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 4. **Prompt lifecycle.** Respond to an accepted `session/prompt` with `{ "messageId": "…" }`, carrying the agent-generated ID of the inserted user message. Emit a `user_message` acknowledgment with the same `messageId`, a `running` state update when foreground work starts, and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Don't reject a prompt only because work is active: insert or hold it, and answer prompts not yet inserted with `-32800` on `session/cancel` or `session/close`. Report a failure after insertion as an idle `state_update` with `stopReason: "error"` and the JSON-RPC error in `error`, never as an error response to the prompt. Background updates may continue while idle.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics, including key-level `_meta` patches.
-7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, snapshots, and exit state. Send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.
+7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, size, snapshots, and exit state. Send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.
 8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible. If a tool's input describes an edit only as a snippet, read the file somewhere the tool waits on, before it can run, or send no diff until the change is done (see [Edits known only as a snippet](#edits-known-only-as-a-snippet)).
 9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations.
 10. **Plans.** Send `plan_update` with `{ "type": "items", "planId": ..., "entries": [...] }`.
@@ -915,7 +919,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 3. **Prompt lifecycle.** Don't treat the `session/prompt` response as turn completion. Drive UI from `state_update` (`running` / `idle` / `requires_action`), take the stop reason from the idle update, and render the user's message from the `user_message` acknowledgment (which carries its canonical `messageId`). Treat `stopReason: "error"` as a failed outcome and read its details from the idle update's `error`. An error response to `session/prompt` means the message was not inserted. Keep accepting background updates while idle.
 4. **Messages.** Track messages by required `messageId`. Implement upsert semantics: whole-message updates replace content (or clear it with `null`/`[]`), chunks append.
 5. **Tool calls.** Create tool calls on first-seen `toolCallId` in `tool_call_update`. Apply omit/`null`/value patches, and patch top-level `_meta` by key. Append `tool_call_content_chunk` items. Replace accumulated content when an update carries `content`.
-6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics. Independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input or process controls.
+6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics, and render at the reported `size` when present. Independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input or process controls.
 7. **Diffs.** Render `patch.text` when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
 8. **Permissions.** Render `title`/`description`. Apply `tool_call` subjects like ordinary tool-call updates, and render `command` subjects from their command, required absolute cwd, and optional associations. Show a generic prompt for absent or unknown subjects.
 9. **Plans.** Handle `plan_update` keyed by `planId`. Each update replaces that plan's entries.
