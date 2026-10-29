@@ -99,7 +99,7 @@ may arrive before or after the `session/new` response. Clients **MUST NOT**
 overwrite an already-reported state when the response arrives. An optional
 initial idle notification is a snapshot, not a completed turn.
 
-Agents **SHOULD** put initial state in the `session/new` response, such as `configOptions` and `availableCommands`, rather than sending notifications before it. Agents **SHOULD NOT** send session-scoped requests, such as permission requests or elicitations, before the response, because the Client cannot yet show them for that session. While a `session/new` is pending, Clients **SHOULD** buffer notifications for a `sessionId` they don't recognize and apply them in order once the response arrives. Clients **MAY** limit this buffer and drop notifications beyond the limit.
+Agents **SHOULD** put initial state in the `session/new` response, such as `configOptions` and `availableCommands`, rather than sending notifications before it. Agents **SHOULD NOT** send session-scoped requests, such as permission requests or elicitations, before the response, because the Client cannot yet show them for that session. While a `session/new` is pending, Clients **MAY** buffer notifications for a `sessionId` they don't recognize and apply them in order once the response arrives, or drop them. Agents cannot rely on such notifications being seen.
 
 `session/resume` does not imply idle: an existing session may still be running
 or waiting for user action. See [Current-State Synchronization](#current-state-synchronization).
