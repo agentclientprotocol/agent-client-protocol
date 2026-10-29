@@ -439,7 +439,7 @@ v2 adds the `error` stop reason. v1 reported a failure during the turn as an err
 
 `session/cancel` is unchanged as a notification, but confirmation moved with the rest of the lifecycle: when active foreground work is cancelled, the Agent **MUST** finish sending any pending updates and then send an idle `state_update` with the `cancelled` stop reason. Clients respond to pending `session/request_permission` requests in that session with the `cancelled` outcome. Agents **SHOULD** cancel individual pending elicitations that the affected work no longer needs rather than cancel every elicitation with that session ID. Clients **SHOULD** accept tool-call updates that arrive after sending `session/cancel`. The Agent **MUST** answer pending prompts it has not inserted, including held prompts, with `-32800`.
 
-`session/close` cancels ongoing work the same way. When it cancels active foreground work, the Agent sends the final updates and the idle `cancelled` state before responding to `session/close`, and answers prompts it never inserted with `-32800`.
+`session/close` cancels ongoing work the same way, and unlike `session/cancel` it also stops the session's background work. When it cancels active foreground work, the Agent sends the final updates and the idle `cancelled` state before responding to `session/close`, and answers prompts it never inserted with `-32800`.
 
 After cancellation completes, Agents **SHOULD** ignore late answers and
 external completions rather than use them to resume the cancelled work.
