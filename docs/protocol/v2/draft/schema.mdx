@@ -8172,7 +8172,7 @@ MUST NOT make assumptions about values at these keys.
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
-<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+<ResponseField name="additionalDirectories" type={<><span><a href="#absolutepath">AbsolutePath[]</a></span><span> | null</span></>} >
   Additional workspace roots for the child. Each path must be absolute.
 
 Optional and nullable. Omitted means unchanged; `null` clears the
@@ -8188,7 +8188,7 @@ Read-only operations retain their normal protocol semantics and
 capability requirements.
 
 </ResponseField>
-<ResponseField name="cwd" type={"string | null"} >
+<ResponseField name="cwd" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   The child's working directory. Must be an absolute path.
 
 Optional and nullable. Omitted means unchanged; `null` clears the
@@ -8864,7 +8864,7 @@ MUST NOT make assumptions about values at these keys.
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
-<ResponseField name="additionalDirectories" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
+<ResponseField name="additionalDirectories" type={<><span><a href="#absolutepath">AbsolutePath[]</a></span><span> | null</span></>} >
   Additional workspace roots for the child. Each path must be absolute.
 
 Optional and nullable. Omitted means unchanged; `null` clears the
@@ -8880,7 +8880,7 @@ Read-only operations retain their normal protocol semantics and
 capability requirements.
 
 </ResponseField>
-<ResponseField name="cwd" type={"string | null"} >
+<ResponseField name="cwd" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   The child's working directory. Must be an absolute path.
 
 Optional and nullable. Omitted means unchanged; `null` clears the

@@ -1012,7 +1012,7 @@ pub struct SubagentUpdate {
     /// reported value. While unset, the child inherits its immediate parent's
     /// effective working directory.
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
-    pub cwd: MaybeUndefined<std::path::PathBuf>,
+    pub cwd: MaybeUndefined<AbsolutePath>,
     /// Additional workspace roots for the child. Each path must be absolute.
     ///
     /// Optional and nullable. Omitted means unchanged; `null` clears the
@@ -1020,7 +1020,7 @@ pub struct SubagentUpdate {
     /// effective additional directories, independently of `cwd`. A concrete
     /// array replaces the whole list; `[]` reports no additional directories.
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
-    pub additional_directories: MaybeUndefined<Vec<std::path::PathBuf>>,
+    pub additional_directories: MaybeUndefined<Vec<AbsolutePath>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
@@ -1091,7 +1091,7 @@ impl SubagentUpdate {
     ///
     /// While unset, the child inherits its parent's working directory.
     #[must_use]
-    pub fn cwd(mut self, cwd: impl IntoMaybeUndefined<std::path::PathBuf>) -> Self {
+    pub fn cwd(mut self, cwd: impl IntoMaybeUndefined<AbsolutePath>) -> Self {
         self.cwd = cwd.into_maybe_undefined();
         self
     }
@@ -1102,7 +1102,7 @@ impl SubagentUpdate {
     #[must_use]
     pub fn additional_directories(
         mut self,
-        additional_directories: impl IntoMaybeUndefined<Vec<std::path::PathBuf>>,
+        additional_directories: impl IntoMaybeUndefined<Vec<AbsolutePath>>,
     ) -> Self {
         self.additional_directories = additional_directories.into_maybe_undefined();
         self

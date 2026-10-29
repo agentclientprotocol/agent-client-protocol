@@ -6709,13 +6709,20 @@
         },
         "cwd": {
           "description": "The child's working directory. Must be an absolute path.\n\nOptional and nullable. Omitted means unchanged; `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective working directory.",
-          "type": ["string", "null"]
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "additionalDirectories": {
           "description": "Additional workspace roots for the child. Each path must be absolute.\n\nOptional and nullable. Omitted means unchanged; `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list; `[]` reports no additional directories.",
           "type": ["array", "null"],
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/AbsolutePath"
           }
         },
         "_meta": {
