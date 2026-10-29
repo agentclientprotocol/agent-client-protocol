@@ -92,11 +92,10 @@ Protocol object types that define a `_meta` field can use it to attach custom in
 }
 ```
 
-Clients may propagate fields to the agent for correlation purposes, such as `requestId`. The following root-level keys in `_meta` **SHOULD** be reserved for [W3C trace context](https://www.w3.org/TR/trace-context/) to guarantee interop with existing MCP implementations and OpenTelemetry tooling:
+Clients may propagate fields to the agent for correlation purposes, using a namespaced key such as `com.example/requestId`. The following root-level keys in `_meta` are reserved, as in MCP, for interop with MCP implementations and OpenTelemetry tooling. When present, their values **MUST** use the corresponding W3C format:
 
-- `traceparent`
-- `tracestate`
-- `baggage`
+- `traceparent` and `tracestate`: [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+- `baggage`: [W3C Baggage](https://www.w3.org/TR/baggage/)
 
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
 
