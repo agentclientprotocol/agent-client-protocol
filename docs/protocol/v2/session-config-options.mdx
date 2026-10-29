@@ -373,9 +373,7 @@ The Agent **MUST** respond with the complete list of all configuration options a
 
 ### From the Agent
 
-Agents **SHOULD** send a `config_option_update` session notification to attached
-Clients whenever configuration state changes, including changes requested by a
-Client through `session/set_config_option`, to keep observers in sync.
+Agents **SHOULD** send a `config_option_update` session notification on each connection where the session is [active](/protocol/v2/session-setup#session-lifecycle) whenever configuration state changes, including changes requested through `session/set_config_option`.
 
 The response remains the source of truth for the requesting Client, which may
 also receive a duplicate notification. Agents **SHOULD** send that duplicate before

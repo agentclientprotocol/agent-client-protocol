@@ -158,8 +158,7 @@ When no sessions match the criteria, the Agent **MUST** return an empty `session
 
 ## Updating Session Metadata
 
-Agents **SHOULD** send a `session_info_update` notification via `session/update`
-to attached Clients whenever session metadata changes, including changes
+Agents **SHOULD** send a `session_info_update` notification via `session/update` on each connection where the session is [active](/protocol/v2/draft/session-setup#session-lifecycle) whenever session metadata changes, including changes
 requested by a Client. The same response and notification ordering guidance as
 [`config_option_update`](/protocol/v2/draft/session-config-options#from-the-agent)
 applies here.
@@ -204,8 +203,7 @@ immutable after session setup, and ACP does not currently define mid-session
 mutation for `additionalDirectories`. Agents typically send this notification
 after the first meaningful exchange to auto-generate a title.
 
-The Agent sends these updates to Clients with the session currently attached
-through `session/new`, `session/resume`, or, when supported, `session/fork`. Clients can refresh metadata for
+The Agent sends these updates on each connection where the session is [active](/protocol/v2/draft/session-setup#session-lifecycle). Clients can refresh metadata for
 other sessions through `session/list`.
 
 ## Interaction with Other Session Methods

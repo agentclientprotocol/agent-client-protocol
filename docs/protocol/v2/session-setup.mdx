@@ -37,7 +37,7 @@ sequenceDiagram
         Agent-->>Client: session/resume response
     end
 
-    Note over Client,Agent: Session attached. Foreground state synchronized
+    Note over Client,Agent: Session active. Foreground state synchronized
 ```
 
 <br />
@@ -176,7 +176,7 @@ with:
 When `replayFrom` is omitted or `null`, the Agent **MUST NOT** replay the
 conversation history via `session/update` notifications before responding. It
 restores the session context, reconnects to the requested MCP servers, and
-returns once the session is attached and its current foreground state has been
+returns once the session is active and its current foreground state has been
 synchronized. The required current-state snapshot is live synchronization, not
 history replay. Updates that report in-progress work, such as the content of a message that is still streaming, are live updates, not history replay.
 
