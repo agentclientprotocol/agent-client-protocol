@@ -8027,9 +8027,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
-  Cumulative session cost (optional).
+  Cumulative session cost.
 
-Omitted and `null` are equivalent and mean no cost is reported.
+Omitted leaves the last reported cost unchanged; `null` clears it; a value replaces it.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -9843,9 +9843,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
-  Cumulative session cost (optional).
+  Cumulative session cost.
 
-Omitted and `null` are equivalent and mean no cost is reported.
+Omitted leaves the last reported cost unchanged; `null` clears it; a value replaces it.
 
 </ResponseField>
 <ResponseField name="size" type={"uint64"} required>

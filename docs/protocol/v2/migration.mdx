@@ -77,7 +77,7 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 | `available_commands_update`                     | Kept. Commands and their `input` now carry a required `type` discriminator                                                                        |
 | `config_option_update`                          | Kept. Options use `configId` instead of `id` and groups use `groupId` instead of `group`                                                          |
 | `session_info_update`                           | Kept. Top-level `_meta` is now a key-level [patch](/protocol/v2/extensibility#metadata-patches)                                                   |
-| `usage_update`                                  | Unchanged                                                                                                                                         |
+| `usage_update`                                  | Kept. `cost` is a patch: omitted leaves it unchanged, `null` clears it                                                                            |
 | `notice`                                        | Kept. No Client capability required                                                                                                               |
 | `compaction_update`, `compaction_summary_chunk` | Kept. No Client capability required; top-level `_meta` on `compaction_update` is a key-level [patch](/protocol/v2/extensibility#metadata-patches) |
 

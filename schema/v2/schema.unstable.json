@@ -6845,7 +6845,7 @@
           "minimum": 0
         },
         "cost": {
-          "description": "Cumulative session cost (optional).\n\nOmitted and `null` are equivalent and mean no cost is reported.",
+          "description": "Cumulative session cost.\n\nOmitted leaves the last reported cost unchanged; `null` clears it; a value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/Cost"

@@ -724,7 +724,7 @@ The Agent **MAY** also report current session context and cumulative cost state 
 }
 ```
 
-`used` and `size` are required and non-null token counts for the current session context. `cost` is optional and, if present, `amount` and `currency` are required. `currency` is an ISO 4217 currency code like `"USD"`.
+`used` and `size` are required and non-null token counts for the current session context. `cost` is a patch field: omitting it leaves the last reported cost unchanged, `null` clears it, and a value replaces it, including when the currency differs. A value requires `amount` and `currency`. `currency` is an ISO 4217 currency code like `"USD"`.
 
 ### 4. Report Completion
 

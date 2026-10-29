@@ -1502,13 +1502,13 @@ pub struct UsageUpdate {
     pub used: u64,
     /// Total context window size in tokens.
     pub size: u64,
-    /// Cumulative session cost (optional).
+    /// Cumulative session cost.
     ///
-    /// Omitted and `null` are equivalent and mean no cost is reported.
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// Omitted leaves the last reported cost unchanged; `null` clears it; a value replaces it.
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub cost: Option<Cost>,
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub cost: MaybeUndefined<Cost>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT make assumptions about values at these keys.
@@ -1528,15 +1528,15 @@ impl UsageUpdate {
         Self {
             used,
             size,
-            cost: None,
+            cost: MaybeUndefined::Undefined,
             meta: None,
         }
     }
 
-    /// Cumulative session cost (optional).
+    /// Sets, clears, or leaves unchanged the cumulative session cost.
     #[must_use]
-    pub fn cost(mut self, cost: impl IntoOption<Cost>) -> Self {
-        self.cost = cost.into_option();
+    pub fn cost(mut self, cost: impl IntoMaybeUndefined<Cost>) -> Self {
+        self.cost = cost.into_maybe_undefined();
         self
     }
 
@@ -4930,7 +4930,18 @@ mod tests {
             panic!("expected usage update");
         };
 
-        assert_eq!(update.cost, None);
+        assert_eq!(update.cost, MaybeUndefined::Null);
+
+        let SessionUpdate::UsageUpdate(update) = serde_json::from_value(json!({
+            "sessionUpdate": "usage_update",
+            "used": 53000,
+            "size": 200_000
+        }))
+        .unwrap() else {
+            panic!("expected usage update");
+        };
+
+        assert_eq!(update.cost, MaybeUndefined::Undefined);
     }
 
     #[test]
