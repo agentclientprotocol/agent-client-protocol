@@ -2792,6 +2792,9 @@
                   "title": "Str",
                   "description": "A string request ID.",
                   "type": "string"
+                },
+                {
+                  "type": "null"
                 }
               ]
             },
@@ -8115,6 +8118,9 @@
                   "title": "Str",
                   "description": "A string request ID.",
                   "type": "string"
+                },
+                {
+                  "type": "null"
                 }
               ]
             },

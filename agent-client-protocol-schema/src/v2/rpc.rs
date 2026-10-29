@@ -81,11 +81,25 @@ pub enum Response<Result> {
         /// for a parse error or an invalid request.
         // Require the key; serde would otherwise treat a missing `Option` as `None`.
         #[serde(deserialize_with = "Option::deserialize")]
-        #[cfg_attr(feature = "schemars", schemars(required))]
+        #[cfg_attr(feature = "schemars", schemars(required, transform = nullable_request_id))]
         id: Option<RequestId>,
         /// Method-specific error data.
         error: Error,
     },
+}
+
+/// Adds `null` to the error response `id` schema. Schemars emits a required `Option` field as
+/// its inner type only.
+#[cfg(feature = "schemars")]
+fn nullable_request_id(schema: &mut schemars::Schema) {
+    let null = serde_json::json!({ "type": "null" });
+    if let Some(variants) = schema
+        .get_mut("anyOf")
+        .and_then(serde_json::Value::as_array_mut)
+        && !variants.contains(&null)
+    {
+        variants.push(null);
+    }
 }
 
 impl<R> Response<R> {

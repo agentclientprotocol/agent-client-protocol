@@ -725,6 +725,37 @@ mod schema_annotation_tests {
 
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
+    fn generated_v2_error_response_id_is_required_and_nullable() {
+        let schema = root_schema_value();
+        for definition in ["AgentResponse", "ClientResponse"] {
+            let error = def_schema(&schema, definition)
+                .get("anyOf")
+                .and_then(Value::as_array)
+                .and_then(|variants| {
+                    variants
+                        .iter()
+                        .find(|variant| variant.pointer("/properties/error").is_some())
+                })
+                .unwrap_or_else(|| panic!("missing error variant in {definition}"));
+            assert!(
+                error
+                    .pointer("/properties/id/anyOf")
+                    .and_then(Value::as_array)
+                    .is_some_and(|variants| variants.iter().any(|v| v["type"] == "null")),
+                "{definition} error id must accept null"
+            );
+            assert!(
+                error
+                    .get("required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "id")),
+                "{definition} error id must be required"
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
     fn generated_v2_schema_excludes_json_rpc_batch_messages() {
         let schema = root_schema_value();
         let titles: Vec<&str> = schema
