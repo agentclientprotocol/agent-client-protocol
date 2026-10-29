@@ -51,6 +51,8 @@ This deliberately differs from MCP 2026-07-28, where an
 empty elicitation capability retains the original form-only meaning. ACP
 requires each supported mode to be explicit.
 
+An Agent that forwards elicitation for an MCP server **MUST NOT** copy the Client's capability object to that server unchanged. It advertises each mode the Client supports explicitly, and omits the MCP `elicitation` capability when the Client advertises no modes.
+
 Agents **MUST NOT** request a mode the Client has not advertised. Agents
 **SHOULD** provide a graceful fallback when the required mode is unavailable.
 
