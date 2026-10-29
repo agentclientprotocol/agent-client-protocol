@@ -779,9 +779,8 @@
           "x-deserialize-skip-invalid-items": true
         },
         "lastModified": {
-          "description": "Timestamp indicating when the underlying resource was last modified.\n\nMust be an RFC 3339 formatted string (e.g., \"2025-01-12T15:00:58Z\").\n\nOmitted and `null` are equivalent and mean the modification time is not reported.",
+          "description": "Timestamp indicating when the underlying resource was last modified.\n\nShould be an ISO 8601 formatted string (e.g., \"2025-01-12T15:00:58Z\"), as in MCP.\n\nOmitted and `null` are equivalent and mean the modification time is not reported.",
           "type": ["string", "null"],
-          "format": "date-time",
           "x-deserialize-default-on-error": true
         },
         "priority": {
@@ -1007,7 +1006,7 @@
       ]
     },
     "ResourceLink": {
-      "description": "A resource that the server is capable of reading, included in a prompt or tool call result.",
+      "description": "A link to a resource that the receiver may be able to read, included in a prompt or tool call result.",
       "type": "object",
       "properties": {
         "name": {

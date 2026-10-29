@@ -599,7 +599,7 @@ impl BlobResourceContents {
     }
 }
 
-/// A resource that the server is capable of reading, included in a prompt or tool call result.
+/// A link to a resource that the receiver may be able to read, included in a prompt or tool call result.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -867,11 +867,11 @@ pub struct Annotations {
     pub audience: Option<Vec<Role>>,
     /// Timestamp indicating when the underlying resource was last modified.
     ///
-    /// Must be an RFC 3339 formatted string (e.g., "2025-01-12T15:00:58Z").
+    /// Should be an ISO 8601 formatted string (e.g., "2025-01-12T15:00:58Z"), as in MCP.
     ///
     /// Omitted and `null` are equivalent and mean the modification time is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub last_modified: Option<String>,
     /// Relative importance of this content when clients choose what to surface.
@@ -1173,7 +1173,8 @@ mod tests {
 
         assert_eq!(json["properties"]["priority"]["minimum"], 0);
         assert_eq!(json["properties"]["priority"]["maximum"], 1);
-        assert_eq!(json["properties"]["lastModified"]["format"], "date-time");
+        // MCP allows any ISO 8601 string, so ACP does not narrow it to `date-time`.
+        assert!(json["properties"]["lastModified"].get("format").is_none());
     }
 
     #[cfg(feature = "schemars")]

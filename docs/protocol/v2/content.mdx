@@ -15,7 +15,7 @@ Content blocks appear in:
 
 Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) and [URIs and Remote Resources](/protocol/v2/security#uris-and-remote-resources).
 
-ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2026-07-28 `ContentBlock`](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content, `_meta` on icons, and the open `type` fallback described below.
+ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2026-07-28 `ContentBlock`](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content, `_meta` on icons and annotations, extensible `Role` and `IconTheme` values, and the open `type` fallback described below.
 
 A content type from a later MCP revision that ACP doesn't define isn't forwarded as is. Agents convert it to a supported type, such as an embedded resource, or omit it.
 

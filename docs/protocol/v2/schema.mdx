@@ -1558,11 +1558,9 @@ Omitted and `null` are equivalent and mean no audience is specified.
 <ResponseField name="lastModified" type={"string | null"} >
   Timestamp indicating when the underlying resource was last modified.
 
-Must be an RFC 3339 formatted string (e.g., "2025-01-12T15:00:58Z").
+Should be an ISO 8601 formatted string (e.g., "2025-01-12T15:00:58Z"), as in MCP.
 
 Omitted and `null` are equivalent and mean the modification time is not reported.
-
-    - Format: `date-time`
 
 </ResponseField>
 <ResponseField name="priority" type={"number | null"} >
@@ -5469,7 +5467,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">ResourceLink</span>
 
-A resource that the server is capable of reading, included in a prompt or tool call result.
+A link to a resource that the receiver may be able to read, included in a prompt or tool call result.
 
 **Type:** Object
 
