@@ -683,8 +683,8 @@ in a different directory reject it with `-32602`, and MAY normalize paths when c
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP servers to connect to for this session.
 
-The complete set of Client-provided servers; omitted and `[]` mean none. Servers from
-earlier requests are not restored.
+The complete set of Client-provided servers; omitted and `[]` mean none. Agents SHOULD
+NOT restore servers from earlier requests.
 
 </ResponseField>
 <ResponseField name="replayFrom" type={<><span><a href="#replayfrom">ReplayFrom</a></span><span> | null</span></>} >

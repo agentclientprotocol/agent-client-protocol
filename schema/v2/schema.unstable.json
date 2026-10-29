@@ -8181,7 +8181,7 @@
           "x-deserialize-default-on-null": true
         },
         "mcpServers": {
-          "description": "List of MCP servers to connect to for this session.\n\nThe complete set of Client-provided servers; omitted and `[]` mean none. Servers from\nearlier requests are not restored.",
+          "description": "List of MCP servers to connect to for this session.\n\nThe complete set of Client-provided servers; omitted and `[]` mean none. Agents SHOULD\nNOT restore servers from earlier requests.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"

@@ -475,7 +475,7 @@ MCP servers can be connected to using different transports. Agents advertise sup
 
 Each server `name` **MUST** be unique within `mcpServers`. Agents reject duplicates with `-32602`.
 
-On `session/resume`, `mcpServers` is the complete set of Client-provided servers for the session; omitted and `[]` mean none. Agents do not restore servers from earlier `session/new` or `session/resume` requests. MCP servers the Agent is configured with independently of ACP are unaffected.
+On `session/resume`, `mcpServers` is the complete set of Client-provided servers for the session; omitted and `[]` mean none. Agents **SHOULD NOT** restore servers from earlier `session/new` or `session/resume` requests. MCP servers the Agent is configured with independently of ACP are unaffected.
 
 ### Transport Types
 
