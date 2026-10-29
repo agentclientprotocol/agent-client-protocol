@@ -144,7 +144,7 @@ Commands are included as regular user messages in prompt requests:
 }
 ```
 
-A prompt invokes a command when its first text block starts with `/` followed by the command `name`, and the name is followed by whitespace or the end of the text block. For example, `/web foo` invokes `web`, while `/webfoo` does not, and `/web-search foo` invokes `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
+A prompt invokes a command when its first text block starts with `/` followed by the command `name`. The Agent decides how to interpret the prompt; Clients recognizing a command for highlighting or completion **SHOULD** require the name to be followed by whitespace or the end of the text block, so `/web foo` matches `web`, `/webfoo` does not, and `/web-search foo` matches `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
 
 The same [prompt insertion contract](/protocol/v2/prompt-lifecycle#2-prompt-accepted) applies to commands: the successful response returns the inserted user message's `messageId`, and the Agent reports that message through a `user_message` update or `user_message_chunk` updates with the same ID.
 
