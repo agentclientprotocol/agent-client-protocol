@@ -2282,7 +2282,10 @@ Omitted and `null` are equivalent and mean the command takes no input.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Command name (e.g., `create_plan`, `research_codebase`).
+  Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).
+
+MUST NOT contain whitespace and MUST be unique within the command list.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"command"`.
@@ -2309,7 +2312,8 @@ command using its `name` and `description`.
   Human-readable description of what the command does.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Command name.
+  Command name without the leading `/`. MUST NOT contain whitespace and MUST be unique
+within the command list.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   Custom or future command type.
@@ -2582,7 +2586,10 @@ Omitted and `null` are equivalent and mean the command takes no input.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Command name (e.g., `create_plan`, `research_codebase`).
+  Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).
+
+MUST NOT contain whitespace and MUST be unique within the command list.
+
 </ResponseField>
 
 ## <span class="font-mono">CommandPermissionSubject</span>

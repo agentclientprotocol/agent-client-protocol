@@ -95,7 +95,8 @@ Each command carries a required `type` discriminator. Currently the only type is
 </ResponseField>
 
 <ResponseField name="name" type="string" required>
-  The command name (e.g., "web", "test", "plan")
+  The command name without the leading `/`, such as `web`, `test`, or `plan`.
+  **MUST NOT** contain whitespace and **MUST** be unique within the list.
 </ResponseField>
 
 <ResponseField name="description" type="string" required>
@@ -143,7 +144,7 @@ Commands are included as regular user messages in prompt requests:
 }
 ```
 
-The Agent recognizes the command prefix and processes it accordingly. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
+A prompt invokes a command when its first text block starts with `/` followed by the command `name`. The rest of that text block, after the name and any following whitespace, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
 
 The same [prompt insertion contract](/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted) applies to commands: the successful response returns the inserted user message's `messageId`, and the Agent reports that message through a `user_message` update or `user_message_chunk` updates with the same ID.
 

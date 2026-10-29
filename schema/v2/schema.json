@@ -3992,7 +3992,7 @@
               "type": "string"
             },
             "name": {
-              "description": "Command name.",
+              "description": "Command name without the leading `/`. MUST NOT contain whitespace and MUST be unique\nwithin the command list.",
               "type": "string"
             },
             "description": {
@@ -4089,7 +4089,7 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Command name (e.g., `create_plan`, `research_codebase`).",
+          "description": "Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).\n\nMUST NOT contain whitespace and MUST be unique within the command list.",
           "type": "string"
         },
         "description": {

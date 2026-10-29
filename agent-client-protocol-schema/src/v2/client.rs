@@ -2424,7 +2424,8 @@ pub struct OtherAvailableCommand {
     /// future ACP variants.
     #[serde(rename = "type")]
     pub type_: String,
-    /// Command name.
+    /// Command name without the leading `/`. MUST NOT contain whitespace and MUST be unique
+    /// within the command list.
     pub name: String,
     /// Human-readable description of what the command does.
     pub description: String,
@@ -2512,7 +2513,9 @@ fn other_available_command_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Command {
-    /// Command name (e.g., `create_plan`, `research_codebase`).
+    /// Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).
+    ///
+    /// MUST NOT contain whitespace and MUST be unique within the command list.
     pub name: String,
     /// Human-readable description of what the command does.
     pub description: String,
