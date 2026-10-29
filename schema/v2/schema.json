@@ -3668,7 +3668,7 @@
       "description": "The input specification for a command.",
       "anyOf": [
         {
-          "description": "All text that was typed after the command name is provided as input.",
+          "description": "All text after the command name and the whitespace following it is provided as input.",
           "type": "object",
           "properties": {
             "type": {

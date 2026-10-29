@@ -2575,7 +2575,7 @@ impl Command {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum AvailableCommandInput {
-    /// All text that was typed after the command name is provided as input.
+    /// All text after the command name and the whitespace following it is provided as input.
     #[serde(rename = "text")]
     Text(TextCommandInput),
     /// Custom or future command input specification.
