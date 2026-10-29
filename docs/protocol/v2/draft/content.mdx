@@ -21,6 +21,8 @@ A content type from a later MCP revision that ACP doesn't define isn't forwarded
 
 Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants.
 
+When displaying Agent output, Clients **SHOULD** show text content. For image, audio, resource, and resource link content they can't render, Clients **SHOULD** show a placeholder with whatever identifies it, such as its name, title, URI, or MIME type, and **SHOULD NOT** drop it silently. Agents that need content to reach the user in a particular form **SHOULD** also include it as text.
+
 ### Text Content
 
 Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/draft/security#rendering-agent-content) for raw HTML.
