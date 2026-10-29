@@ -83,6 +83,16 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
 
 `capabilities.auth` is separate from this method surface. It advertises authentication-related extensions and does not change the availability rules for `auth/login` or `auth/logout`.
 
+## Before Initialization Completes
+
+Initialization completes when the Agent responds successfully to `initialize`. Until then:
+
+- Clients **MUST NOT** send requests other than `initialize`. Agents reject them with `-32600` and ignore notifications. See [Requests Before Initialization](/protocol/v2/draft/error#requests-before-initialization).
+- Agents **MUST NOT** send requests or notifications.
+- If `initialize` fails, the connection is still uninitialized, and the Client **MAY** send `initialize` again, for example after correcting invalid params.
+
+After initialization completes, the Client can repeat `initialize` only as described in [Repeating Initialization](#repeating-initialization).
+
 ## Protocol version
 
 The protocol versions that appear in the `initialize` requests and responses are a single integer that identifies a **MAJOR** protocol version. This version is only incremented when breaking changes are introduced.

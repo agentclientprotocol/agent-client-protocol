@@ -55,4 +55,4 @@ This applies to `session/prompt` and `session/set_config_option`, and to `sessio
 
 ### Requests Before Initialization
 
-Agents **MUST** reject any request other than `initialize` that arrives before initialization completes with `-32600`.
+Agents **MUST** reject any request other than `initialize` that arrives before initialization completes with `-32600`, and ignore notifications. They also reject an `initialize` repeated after another request with `-32600`. See [Before Initialization Completes](/protocol/v2/initialization#before-initialization-completes).
