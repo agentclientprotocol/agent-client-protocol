@@ -595,6 +595,9 @@ When available, `resource` is preferred
 as it avoids extra round-trips and allows the message to include
 pieces of context from sources the agent may not have access to.
 
+Clients MUST NOT send an empty array. Agents MAY reject one with `-32602` without
+inserting it.
+
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The ID of the session to send this user message to

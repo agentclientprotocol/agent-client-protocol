@@ -8022,11 +8022,12 @@
           ]
         },
         "prompt": {
-          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support `text` and `resource_link` content blocks,\nwhile other variants are optionally enabled via `PromptCapabilities`.\n\nThe Client MUST adapt its interface according to `PromptCapabilities`.\n\nThe client MAY include referenced pieces of context as either\n`resource` or `resource_link` content blocks.\n\nWhen available, `resource` is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent may not have access to.",
+          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support `text` and `resource_link` content blocks,\nwhile other variants are optionally enabled via `PromptCapabilities`.\n\nThe Client MUST adapt its interface according to `PromptCapabilities`.\n\nThe client MAY include referenced pieces of context as either\n`resource` or `resource_link` content blocks.\n\nWhen available, `resource` is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent may not have access to.\n\nClients MUST NOT send an empty array. Agents MAY reject one with `-32602` without\ninserting it.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
-          }
+          },
+          "minItems": 1
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT make assumptions about values at these keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",

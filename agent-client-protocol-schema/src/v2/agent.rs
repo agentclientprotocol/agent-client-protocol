@@ -3437,6 +3437,10 @@ pub struct PromptRequest {
     /// When available, `resource` is preferred
     /// as it avoids extra round-trips and allows the message to include
     /// pieces of context from sources the agent may not have access to.
+    ///
+    /// Clients MUST NOT send an empty array. Agents MAY reject one with `-32602` without
+    /// inserting it.
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
     pub prompt: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
