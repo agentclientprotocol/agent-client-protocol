@@ -431,6 +431,8 @@ When present, `additionalDirectories` has the following behavior:
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
 
+Agents that advertise the capability **MUST** reject a request with `-32602` if any entry is not an absolute path, and **MAY** reject entries that don't exist or aren't directories. Agents **MAY** ignore duplicate entries and entries equal to `cwd`, so the list reported in [`SessionInfo`](/protocol/v2/session-list) can differ from the request. Agents that don't advertise the capability ignore the field.
+
 ## Session ID
 
 The session ID returned by `session/new` is a unique identifier for the conversation context.
