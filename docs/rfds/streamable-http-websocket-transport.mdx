@@ -79,11 +79,13 @@ In v1, durability and reliability are the implementer's responsibility — the p
 
 ### v2
 
+These are requirements of this transport and its SDKs, not changes to the core v2 messages, so they can land after v2 without breaking it. Message IDs and the update lifecycle are already part of core v2.
+
 - **Message IDs on streamed messages.** Streamed message chunks carry IDs (a "last replay ID"), enabling reliable retry and resumption after a reconnect.
 - **Stream resumability.** SSE `Last-Event-ID`-style resumption lets a reconnecting client replay messages missed while disconnected.
 - **Defined reconnection semantics.** Reconnection scenarios are addressed by the protocol/SDKs rather than left entirely to each implementer.
 - **More reliable notification update cycles.** v2 tightens the update/notification lifecycle to reduce lost or out-of-order updates.
-- **Standardized keepalive.** Both transport-level and application-level ping/pong become part of the protocol's reliability story, enabling more sophisticated awareness by both client and server of when the other end has crashed.
+- **Standardized keepalive.** Transport-level ping/pong, plus an additive application-level ping if needed, become part of this transport's reliability story, enabling more sophisticated awareness by both client and server of when the other end has crashed.
 
 ## Shiny future
 
@@ -419,6 +421,7 @@ HTTP/2 provides multiplexing, allowing many concurrent POST requests alongside t
 
 ## Revision history
 
+- **2026-10-29**: Clarified that the v2 reliability features are requirements of this transport, not changes to core v2 messages, so the transport does not block v2.
 - **2026-07-02**: Moved to Active to reflect current Transports Working Group focus.
 - **2026-06-05**: Added a "Durability and reliability expectations" section splitting out what implementers can expect in v1 (sessions survive disconnects, session affinity is preserved across reconnects, and reconnect/retry/liveness are the implementer's responsibility with no in-flight message replay) versus v2 (message IDs, stream resumability, defined reconnection semantics, more reliable notification cycles, and standardized keepalive). Marked Last-Event-ID resumability as deferred to v2.
 - **2026-05-04**: Split the single GET stream into two: a connection-scoped stream (GET with `Acp-Connection-Id`) for connection-level messages such as responses to `session/new` and `session/load`, and session-scoped streams (GET with `Acp-Connection-Id` + `Acp-Session-Id`) for session updates, server-to-client requests like `request_permission`, and responses to session-scoped POSTs. Routing happens on HTTP headers rather than JSON-RPC body inspection; per-session streams have independent lifetimes.
