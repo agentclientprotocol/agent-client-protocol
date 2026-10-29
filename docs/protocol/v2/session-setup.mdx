@@ -283,12 +283,10 @@ inserted by `session/prompt` **MUST** use the ID returned in that prompt
 response, including after reconnecting or restarting the Agent. Replaying a command reports its message; it does not
 execute the command again.
 
-Agents **SHOULD** preserve agent and thought message IDs, `toolCallId`,
-`terminalId`, and `planId` across replay when possible, but these IDs are not
+Agents **SHOULD** preserve the IDs of all other replayed [entities](/protocol/v2/prompt-lifecycle#entity-ids), such as agent and thought message IDs, `toolCallId`, `terminalId`, `planId`, and `compactionId`, across replay when possible, but these IDs are not
 guaranteed to remain stable across reconnects or Agent restarts. Clients **MUST
 NOT** rely on them to deduplicate replay against previously received history. A
-full replay is authoritative: Clients **SHOULD** rebuild the session's
-messages, tool calls, terminals, and plans from it rather than merging it into
+full replay is authoritative: Clients **SHOULD** rebuild all of the session's entities, such as messages, tool calls, terminals, plans, and compactions, from it rather than merging it into
 existing state by ID.
 
 `user_message`, `agent_message`, and `agent_thought` updates
