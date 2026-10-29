@@ -328,6 +328,12 @@ The same insertion boundary applies when [closing the session](/protocol/v2/draf
 
 `running` reports foreground work, not insertion. It may precede insertion, the prompt response, and user-message updates, for example while a foreground hook runs. It does not acknowledge a pending prompt's insertion.
 
+#### Prompts During Active Work
+
+Clients **MAY** send `session/prompt` in any state, including while foreground work is `running` or `requires_action`. The Agent either inserts the prompt right away or holds it and inserts it later. Held prompts are inserted in the order they were received. What inserting during active work means, such as steering the current turn or starting the next one, is up to the Agent. Agents **MUST NOT** reject a prompt only because foreground work is active.
+
+A held prompt's response stays pending until the prompt is inserted. The Client can withdraw it with [`$/cancel_request`](/protocol/v2/draft/cancellation), and [`session/cancel`](#cancellation) and `session/close` answer prompts that haven't been inserted with `-32800`. Future capabilities may let Agents advertise steering or queueing behavior.
+
 #### Prompts that are never inserted
 
 If a request is rejected before insertion, including by a hook or early failure, the Agent **MUST** return a JSON-RPC error response and **MUST NOT** emit user-message updates for that submission. [Request cancellation](/protocol/v2/draft/cancellation) before insertion uses `-32800`.
@@ -1061,8 +1067,7 @@ another foreground interval then begins, it reports an active state again,
 even when the next interval starts immediately. Consecutive completed turns
 therefore have an idle boundary, not a continuous `running` state. Completing
 an individual prompt, command, or tool call while other foreground activity
-continues does not require an idle boundary. This does not require Agents to
-support prompts while work is active.
+continues does not require an idle boundary. For prompts sent while work is active, see [Prompts During Active Work](#prompts-during-active-work).
 
 Handling an accepted prompt, including a local slash command that performs no
 model work, **MUST** use the foreground lifecycle. A local command handled from
