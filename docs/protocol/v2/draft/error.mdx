@@ -51,7 +51,7 @@ Malformed parameters and unsupported values get `-32602`. For example, an invali
 
 If a session-scoped request names a session that does not exist or is not active on the connection, the Agent **MUST** respond with `-32002` and set `data.sessionId` to the requested ID. A session is active once it is created, resumed, or forked on the connection, until it is closed or the connection ends. See [Session Lifecycle](/protocol/v2/draft/session-setup#session-lifecycle).
 
-This applies to `session/prompt` and `session/set_config_option`, and to `session/resume` of a session that does not exist or was deleted. Closing or deleting a session that does not exist still succeeds; see [Closing Active Sessions](/protocol/v2/draft/session-setup#closing-active-sessions) and [Deleting Sessions](/protocol/v2/draft/session-delete).
+This applies to `session/prompt` and `session/set_config_option`, and to `session/resume` of a session that does not exist or was deleted. `session/close` and `session/delete` are exceptions: Agents **SHOULD** still return success when closing a session that does not exist or is not active, or deleting one that does not exist. Clients **SHOULD** treat a `-32002` response to either as success. See [Closing Active Sessions](/protocol/v2/draft/session-setup#closing-active-sessions) and [Deleting Sessions](/protocol/v2/draft/session-delete).
 
 ### Requests Before Initialization
 
