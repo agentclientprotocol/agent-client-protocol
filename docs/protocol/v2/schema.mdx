@@ -3460,11 +3460,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Optional. Omitted and `null` are equivalent and mean no schema description is provided.
 
 </ResponseField>
-<ResponseField name="properties" type={"object"} >
+<ResponseField name="properties" type={"object"} required>
   Property definitions (must be primitive types).
-
-    - Default: `{}`
-
 </ResponseField>
 <ResponseField name="required" type={<><span><><span>"string"</span><span>[]</span></></span><span> | null</span></>} >
   List of required property names.
@@ -3478,12 +3475,8 @@ Optional. Omitted and `null` are equivalent and mean no property names are requi
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
-<ResponseField name="type" type={<a href="#elicitationschematype">ElicitationSchemaType</a>} >
-  Type discriminator. Always `"object"`. Omitted means `"object"`; any other value is
-rejected.
-
-    - Default: `"object"`
-
+<ResponseField name="type" type={<a href="#elicitationschematype">ElicitationSchemaType</a>} required>
+  Type discriminator. Always `"object"`; any other value is rejected.
 </ResponseField>
 
 ## <span class="font-mono">ElicitationSchemaType</span>

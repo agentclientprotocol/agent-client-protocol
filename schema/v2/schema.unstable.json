@@ -1901,8 +1901,7 @@
       "type": "object",
       "properties": {
         "type": {
-          "description": "Type discriminator. Always `\"object\"`. Omitted means `\"object\"`; any other value is\nrejected.",
-          "default": "object",
+          "description": "Type discriminator. Always `\"object\"`; any other value is rejected.",
           "allOf": [
             {
               "$ref": "#/$defs/ElicitationSchemaType"
@@ -1917,7 +1916,6 @@
         "properties": {
           "description": "Property definitions (must be primitive types).",
           "type": "object",
-          "default": {},
           "additionalProperties": {
             "$ref": "#/$defs/ElicitationPropertySchema"
           }
@@ -1940,7 +1938,8 @@
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
         }
-      }
+      },
+      "required": ["type", "properties"]
     },
     "ElicitationSchemaType": {
       "description": "Type discriminator for elicitation schemas.",

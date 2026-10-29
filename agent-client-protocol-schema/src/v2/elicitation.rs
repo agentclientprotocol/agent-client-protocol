@@ -1097,9 +1097,8 @@ fn default_object_type() -> ElicitationSchemaType {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
-    /// Type discriminator. Always `"object"`. Omitted means `"object"`; any other value is
-    /// rejected.
-    #[serde(rename = "type", default = "default_object_type")]
+    /// Type discriminator. Always `"object"`; any other value is rejected.
+    #[serde(rename = "type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
     ///
@@ -1109,7 +1108,6 @@ pub struct ElicitationSchema {
     #[serde(default)]
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
-    #[serde(default)]
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
     /// List of required property names.
     ///
@@ -2620,10 +2618,16 @@ mod tests {
     }
 
     #[test]
-    fn schema_root_type_defaults_when_omitted_and_rejects_other_values() {
-        let omitted: ElicitationSchema =
-            serde_json::from_value(json!({ "properties": {} })).unwrap();
-        assert_eq!(omitted.type_, ElicitationSchemaType::Object);
+    fn schema_root_requires_object_type_and_properties() {
+        let schema: ElicitationSchema =
+            serde_json::from_value(json!({ "type": "object", "properties": {} })).unwrap();
+        assert_eq!(schema.type_, ElicitationSchemaType::Object);
+        for missing in [json!({ "properties": {} }), json!({ "type": "object" })] {
+            assert!(
+                serde_json::from_value::<ElicitationSchema>(missing.clone()).is_err(),
+                "{missing}"
+            );
+        }
         for bad in [json!("array"), json!(42), json!(null)] {
             assert!(
                 serde_json::from_value::<ElicitationSchema>(
