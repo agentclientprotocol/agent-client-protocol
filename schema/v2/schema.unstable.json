@@ -8718,6 +8718,10 @@
           "items": {
             "type": "string"
           }
+        },
+        {
+          "title": "Other",
+          "description": "Any other JSON value, such as the value of a custom or future property type.\n\nPreserved as sent. Agents validate it against the requested schema like any\nother value."
         }
       ]
     },

@@ -135,8 +135,7 @@ optional `required`, `title`, and `description`. Each property is one of:
 
 Every property may also have `title` and `description`. `pattern` uses
 ECMA-262 regular expression syntax, as in JSON Schema. Clients treat an unknown
-`format` as plain text. Accepted `content` maps each property name to a string,
-number, boolean, or array of strings.
+`format` as plain text. Accepted `content` maps each answered property name to its value: a string for text and single-select properties, a number for `number` and `integer`, a boolean for `boolean`, and an array of strings for multi-select. Unanswered properties are omitted, not set to `null`. Custom or future property types may use other JSON values.
 
 Clients **SHOULD** validate submitted values before responding, and Agents
 **SHOULD** validate them again.
@@ -195,8 +194,7 @@ Agents **MUST** handle an unknown action as `cancel`.
 
 The `content` field is optional on `accept`; receivers treat omission and `null`
 equivalently. It is only meaningful for `accept`; receivers ignore it for
-`decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD**
-conform to the requested schema. For an accepted URL elicitation, clients
+`decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD** conform to the requested schema. Receivers accept any JSON value in `content` and validate it against the schema, so an unexpected value invalidates only that property, not the whole response. For an accepted URL elicitation, clients
 normally omit `content` because the interaction happens out of band.
 
 Agents **MUST NOT** assume an elicitation succeeds. They **MUST** handle
