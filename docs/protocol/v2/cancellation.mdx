@@ -19,7 +19,7 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 - **MAY** finish sending any pending notifications before responding
 - **MUST** still send a response for the original request
 
-If the request already finished, or the receiver doesn't cancel it, the receiver sends its normal response. The sender **MUST** handle a normal response arriving after it sent `$/cancel_request`, since the two can cross.
+If the request already finished, or the receiver doesn't cancel it, the receiver sends its normal response. Since the two can cross, a normal response can still arrive after the sender sent `$/cancel_request`. The sender **MAY** ignore it.
 
 If the receiver does cancel the request, it sends one of these responses:
 
