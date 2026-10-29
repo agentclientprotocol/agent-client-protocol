@@ -85,7 +85,7 @@ Because `session/update`s can more freely flow from the agent, and we lost the a
 
 The prompt response acknowledges insertion. The agent **MUST** report each inserted user message through `user_message` or `user_message_chunk` updates, using the same `messageId`. These updates establish its content and placement in the client-visible conversation, not a guarantee that the agent stored it for later replay.
 
-This RFD does not specify queueing, steering, or whether agents insert new prompts while busy.
+Clients may send `session/prompt` while foreground work is active. Agents do not reject a prompt only because work is active: they insert it right away or hold it and insert held prompts in the order received, and a held prompt's response stays pending until insertion. See [Prompts During Active Work](/protocol/v2/prompt-lifecycle#prompts-during-active-work). Capabilities for explicit queueing or steering are left to a later RFD.
 
 The question then turns to what makes up this notification. Which brings us to:
 
@@ -276,7 +276,8 @@ snapshots of aggregate foreground activity, not events for individual requests:
   active foreground work with `idle(cancelled)`. Agents should cancel individual
   elicitations that the affected work no longer needs, not every elicitation
   scoped to the session.
-  After cancellation completes, agents should ignore late answers rather than
+  Prompts the agent has not inserted, including held prompts, are answered with
+  `-32800`. After cancellation completes, agents should ignore late answers rather than
   resume cancelled work. Repeated or resume snapshots do not cause new
   cancellations. Cancelling idle work needs no additional completion update.
 
@@ -332,7 +333,7 @@ The `error` stop reason is only for failures that end foreground work:
 | Background activity fails while the Agent is `idle`          | Not a stop reason, since no foreground work ended                                                  |
 | The Agent process exits or the connection is lost            | Detected by the Client; no update can report it                                                    |
 
-A v2 Client that predates the `error` stop reason handles it like any unknown stop reason: foreground work has ended, and it shows a generic stopped state. It does not need `error` to know that the work ended. Because the error is part of the idle snapshot, anything that carries that snapshot carries the failure too, including an exposed subagent's `subagent_update.state` and any later mechanism for synchronizing current state on resume.
+A v2 Client that predates the `error` stop reason handles it like any unknown stop reason: foreground work has ended, and it shows a generic stopped state. It does not need `error` to know that the work ended. Because the error is part of the idle snapshot, anything that carries that snapshot carries the failure too, including an exposed subagent's `subagent_update.state` and the current-state snapshot sent on resume.
 
 v1's `session/prompt` is unchanged; it already reports these failures as an error response. The one v1 surface that carries this idle snapshot, the draft [subagent](/rfds/subagents#current-work-state) `subagent_update.state`, gains the same `error` stop reason, because a v1 child has no prompt response that could report its failure.
 
@@ -364,7 +365,7 @@ The v2 schema and guides define the insertion-receipt response. The implementati
 6. Add serialization and schema coverage for the idle update with an `error`, without one, and with `error: null`, and verify that an `error` beside another stop reason is treated as an unknown field. Exercise a failure after insertion but before the response is sent: the response still succeeds and the idle update reports the failure.
 7. Update examples and generated artifacts, then run `npm run generate` and `npm run check`.
 
-The schema and serialization tests establish the wire shape. Adapters still need to implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. The [foreground state contract](#foreground-state-contract) defines current-state synchronization on resume and gives guidance for cancellation races. Adapters and conformance suites should exercise the guide's traces, including concurrent requests and late answers. Those rules are separate from the insertion receipt's identity and do not require another prompt ID. Queueing, steering, sender identity, safe retries, and submission idempotency guarantees remain outside this change.
+The schema and serialization tests establish the wire shape. Adapters still need to implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. The [foreground state contract](#foreground-state-contract) defines current-state synchronization on resume and gives guidance for cancellation races. Adapters and conformance suites should exercise the guide's traces, including concurrent requests and late answers. Those rules are separate from the insertion receipt's identity and do not require another prompt ID. Explicit queueing and steering capabilities, sender identity, safe retries, and submission idempotency guarantees remain outside this change.
 
 Depending on how the rest of v2 testing goes, we can either:
 
@@ -453,7 +454,7 @@ Codex's app-server makes the same split. A failed turn ends with `turn/completed
 
 ## Revision history
 
-2026-10-29: Message IDs are unique per message type, not across the session.
+2026-10-29: Message IDs are unique per message type, not across the session. Prompts sent during active work are inserted or held in order rather than rejected, and held prompts get `-32800` on cancel.
 
 2026-04-13: Initial draft
 2026-04-22: Move from bidirectional notification approach to a change in the prompt request lifecycle
