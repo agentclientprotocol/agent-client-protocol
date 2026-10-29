@@ -592,7 +592,7 @@
       "x-docs-ignore": true
     },
     "RequestId": {
-      "description": "A JSON-RPC request ID: a string or an integer. Unlike base JSON-RPC, it MUST NOT be `null`.\n\nThe receiver MUST reply with the same value in the response. Each side chooses IDs for its own\nrequests, so the same ID can be in use in both directions. A sender MUST NOT reuse an ID while\na request with it is still awaiting a response. Integer IDs SHOULD stay within ±2^53 so\nJavaScript implementations can represent them exactly.",
+      "description": "A JSON-RPC request ID: a string or an integer. Unlike base JSON-RPC, it MUST NOT be `null`.\n\nThe receiver MUST reply with the same value in the response. Each side chooses IDs for its own\nrequests, so the same ID can be in use in both directions. A sender MUST NOT reuse an ID while\na request with it is still awaiting a response.",
       "anyOf": [
         {
           "title": "Number",

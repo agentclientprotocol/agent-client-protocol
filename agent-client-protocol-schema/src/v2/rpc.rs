@@ -15,8 +15,7 @@ use super::Error;
 ///
 /// The receiver MUST reply with the same value in the response. Each side chooses IDs for its own
 /// requests, so the same ID can be in use in both directions. A sender MUST NOT reuse an ID while
-/// a request with it is still awaiting a response. Integer IDs SHOULD stay within ±2^53 so
-/// JavaScript implementations can represent them exactly.
+/// a request with it is still awaiting a response.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(
     Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, From,
