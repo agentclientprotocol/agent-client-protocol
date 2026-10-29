@@ -450,7 +450,7 @@ Clients use this ID to:
 
 The `cwd` (current working directory) parameter establishes the primary file system context for the session. This directory:
 
-- **MUST** be an absolute path
+- **MUST** be an absolute path. Agents reject a request with a relative `cwd` with `-32602`.
 - **MUST** be used for the session regardless of where the Agent subprocess was spawned
 - **MUST** remain the base for relative-path resolution
 - **MUST** be part of the session's effective root set

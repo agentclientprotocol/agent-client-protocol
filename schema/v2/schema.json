@@ -1431,7 +1431,7 @@
       ]
     },
     "AbsolutePath": {
-      "description": "An absolute filesystem path used by the protocol.",
+      "description": "An absolute filesystem path used by the protocol.\n\nUses the native syntax of the machine the Agent runs on, such as `/home/user/project`,\n`C:\\Users\\user\\project`, or `\\\\server\\share\\project`. It is not a URI.",
       "type": "string"
     },
     "DiffPathChange": {

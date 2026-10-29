@@ -214,7 +214,7 @@ Either side can send [`$/cancel_request`](/protocol/v2/draft/cancellation) to ca
 
 ## Argument requirements
 
-- All file paths in the protocol **MUST** be absolute.
+- All file paths in the protocol **MUST** be absolute, in the native syntax of the machine the Agent runs on (for example `/home/user/project`, `C:\Users\user\project`, or `\\server\share\project`), and are not URIs.
 - Line numbers are 1-based
 
 ## Error Handling

@@ -61,10 +61,11 @@ Clients discover existing sessions by calling the `session/list` method with opt
 All parameters are optional. A request with an empty `params` object returns the first page of sessions.
 
 <ParamField path="cwd" type="string">
-  Filter sessions by working directory. Must be an absolute path. Only sessions
-  whose `cwd` is this same directory are returned; sessions in subdirectories or
-  with it in `additionalDirectories` don't match. Agents **MAY** normalize paths
-  when comparing, for example ignoring a trailing separator.
+  Filter sessions by working directory. Must be an absolute path; Agents reject
+  a relative path with `-32602`. Only sessions whose `cwd` is this same
+  directory are returned; sessions in subdirectories or with it in
+  `additionalDirectories` don't match. Agents **MAY** normalize paths when
+  comparing, for example ignoring a trailing separator.
 </ParamField>
 
 <ParamField path="cursor" type="string">

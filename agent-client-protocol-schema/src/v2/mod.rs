@@ -51,6 +51,9 @@ use std::{
 };
 
 /// An absolute filesystem path used by the protocol.
+///
+/// Uses the native syntax of the machine the Agent runs on, such as `/home/user/project`,
+/// `C:\Users\user\project`, or `\\server\share\project`. It is not a URI.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, From)]
 #[serde(transparent)]
