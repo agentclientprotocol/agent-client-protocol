@@ -262,8 +262,7 @@ rules to ACP.
 - Clients **SHOULD NOT** render a URL as clickable in any elicitation field
   except the `url` field of a URL-mode request, subject to the restrictions
   above.
-- The Agent **MUST** verify that the authenticated user who started the
-  elicitation is the same user who completes the external interaction.
+- When the Agent has an authenticated user, it **MUST** verify that the user who started the elicitation is the same user who completes the external interaction. Without one, such as during `auth/login`, the Agent **MUST** tie completion to the elicitation it issued and the connection it issued it on, for example with an unguessable single-use `state` value in the URL, and **MUST NOT** apply the result to a different connection.
 
 See the [schema reference](/protocol/v2/schema#elicitation%2Fcreate) for the
 complete request and response types.
