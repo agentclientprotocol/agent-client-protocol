@@ -29,7 +29,7 @@ A legacy v1-only Agent can return `"protocolVersion": 1` to a Client requesting 
 
 Treat v2 support as additive. Keep serving `protocolVersion: 1` peers when you add v2: an Agent that drops v1 cuts itself off from existing Clients, and a Client that drops v1 loses access to existing Agents. Each side selects its v1 or v2 surface per connection based on the negotiated version.
 
-v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer be `null`, so a single connection always speaks exactly one negotiated version after `initialize`.
+v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer be `null` and JSON-RPC batches are not used (see [Transports](/protocol/v2/transports#no-batches)), so a single connection always speaks exactly one negotiated version after `initialize`.
 
 ## At a glance
 
