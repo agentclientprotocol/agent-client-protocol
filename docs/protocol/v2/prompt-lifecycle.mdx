@@ -249,7 +249,7 @@ The Client uses the JSON-RPC response ID to identify its submission, then associ
 
 Insertion is not a promise of durable storage or model consumption. Every inserted input, including a locally handled command, is reported live, but Agents are not required to persist it or retain it for any minimum period. If the message is retained and replayed, the Agent **MUST** use the same ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
 
-A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. If the response is lost, the submission's outcome remains uncertain: replay may omit live-only or discarded messages, and a retry can create another submission.
+A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. The response has no fixed order relative to other session updates: the `user_message` acknowledgment, Agent output, and even the `idle` `state_update` that ends the resulting work may arrive before or after it. Clients **MUST NOT** infer ordering between them. If the response is lost, the submission's outcome remains uncertain: replay may omit live-only or discarded messages, and a retry can create another submission.
 
 The same insertion boundary applies when [closing the session](/protocol/v2/session-setup#closing-active-sessions) cancels a pending prompt: if closing prevents insertion, the request receives `-32800` (Request Cancelled); if the message has already been inserted, it receives a successful `messageId` response. Prompt responses need not precede the close response.
 
