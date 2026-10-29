@@ -18,9 +18,7 @@ determined.
 
 Both sides send requests, and each side chooses IDs for its own requests independently, so the same ID can be in use in both directions. A sender **MUST NOT** reuse an ID while a request with that ID is still awaiting a response.
 
-ACP follows JSON-RPC 2.0 batch behavior. See
-[Transports](/protocol/v2/draft/transports#json-rpc-batch-messages) for batch
-handling requirements.
+Unlike base JSON-RPC, ACP does not use batches. See [Transports](/protocol/v2/draft/transports#no-batches).
 
 ## Message Flow
 

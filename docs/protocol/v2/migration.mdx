@@ -883,7 +883,7 @@ v2 makes the whole schema forward-compatible by convention:
 
 ## Transports
 
-stdio remains the primary transport and is unchanged except that v2 explicitly follows **JSON-RPC 2.0 batch** behavior: a newline-delimited message may be a single request, notification, response, or a batch array. Receivers may process batch entries concurrently, must not reply to notifications, and return per-entry `-32600` errors for invalid entries. Don't batch lifecycle-sensitive messages (`initialize`, `auth/login`, `session/new`, `session/resume`, `session/prompt`). They change which later messages are valid. Apply a session's `session/update` notifications in the order received, and don't batch updates whose order matters, such as two updates to the same entity. See [Message Order](/protocol/v2/transports#message-order).
+stdio remains the primary transport and is unchanged. Each message is a single JSON-RPC object; ACP does not use JSON-RPC batches, and receivers reject an array with `-32600`. Apply a session's `session/update` notifications in the order received. See [Transports](/protocol/v2/transports#no-batches).
 
 A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of the core v2 protocol surface. See the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
 
@@ -904,7 +904,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 13. **Client surface.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
 14. **MCP config.** Require and emit `type` discriminators. Reject SSE and unadvertised transports with `-32602`. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
 15. **Slash commands.** Add the `type: "command"` discriminator to each advertised command and the `type: "text"` discriminator to command `input` specifications. Optionally advertise initial commands in setup responses via `availableCommands`, and use complete-replacement `available_commands_update` notifications for later changes.
-16. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists, and accept batch arrays on stdio.
+16. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists.
 
 ## Migration checklist: Clients
 
@@ -922,7 +922,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 12. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and plain reconnects with `session/resume` without `replayFrom`.
 13. **Client surface.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`, using only transports the Agent advertises under `session.mcp`. Do not treat display terminals as Client resources.
 14. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
-15. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, read commands and their `input` as tagged unions, and accept batch arrays on stdio. Read initial `availableCommands` from setup responses and replace the list on each `available_commands_update`, including `[]` to clear it.
+15. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, and read commands and their `input` as tagged unions. Read initial `availableCommands` from setup responses and replace the list on each `available_commands_update`, including `[]` to clear it.
 
 ## Migration checklist: SDKs
 
@@ -930,7 +930,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 2. **Three-state fields.** Model omitted vs `null` vs concrete values distinctly wherever v2 defines patch semantics. A plain nullable/optional type erases a distinction the protocol depends on. Apply the top-level `_meta` of upserts as a key-level patch rather than a replacement.
 3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
-5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, exit state, command subjects, structured diffs, and JSON-RPC batches.
+5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, exit state, command subjects, and structured diffs.
 6. **Stop reasons.** Model the idle update's stop reason as a union tagged by `stopReason` and flattened into the update, so a stop reason can carry fields of its own, such as the `error` stop reason's `error`. Keep unknown stop reasons with their fields, and treat a missing, `null`, or non-string `stopReason` as no stop reason rather than rejecting the update.
 
 ## Supporting v1 and v2 side by side

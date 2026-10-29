@@ -10,7 +10,7 @@ use agent_client_protocol_schema::v1::{
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
     PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification, Request, Response,
 };
 use schemars::{
@@ -73,30 +73,6 @@ enum ClientOutgoingMessage {
     Notification(Notification<ClientNotification>),
 }
 
-/// Messages that an agent can include in a JSON-RPC batch call to a client.
-#[cfg(feature = "unstable_protocol_v2")]
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
-#[schemars(inline)]
-#[allow(clippy::large_enum_variant)]
-enum AgentBatchCallMessage {
-    Request(Request<AgentRequest>),
-    Notification(Notification<AgentNotification>),
-    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
-}
-
-/// Messages that a client can include in a JSON-RPC batch call to an agent.
-#[cfg(feature = "unstable_protocol_v2")]
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
-#[schemars(inline)]
-#[allow(clippy::large_enum_variant)]
-enum ClientBatchCallMessage {
-    Request(Request<ClientRequest>),
-    Notification(Notification<ClientNotification>),
-    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
-}
-
 #[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
@@ -105,14 +81,6 @@ enum ClientBatchCallMessage {
 enum AcpTypes {
     Agent(JsonRpcMessage<AgentOutgoingMessage>),
     Client(JsonRpcMessage<ClientOutgoingMessage>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    AgentBatchCall(JsonRpcBatch<AgentBatchCallMessage>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    AgentBatchResponse(JsonRpcBatch<Response<AgentResponse>>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    ClientBatchCall(JsonRpcBatch<ClientBatchCallMessage>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    ClientBatchResponse(JsonRpcBatch<Response<ClientResponse>>),
     ProtocolLevel(JsonRpcMessage<Notification<ProtocolLevelNotification>>),
 }
 
@@ -757,31 +725,22 @@ mod schema_annotation_tests {
 
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
-    fn generated_v2_schema_includes_json_rpc_batch_messages() {
+    fn generated_v2_schema_excludes_json_rpc_batch_messages() {
         let schema = root_schema_value();
+        let titles: Vec<&str> = schema
+            .get("anyOf")
+            .and_then(Value::as_array)
+            .unwrap()
+            .iter()
+            .filter_map(|variant| variant.get("title").and_then(Value::as_str))
+            .collect();
         for title in [
             "AgentBatchCall",
             "AgentBatchResponse",
             "ClientBatchCall",
             "ClientBatchResponse",
         ] {
-            let batch_schema = root_variant_schema(&schema, title);
-            assert_eq!(
-                batch_schema.get("type").and_then(Value::as_str),
-                Some("array")
-            );
-            assert_eq!(
-                batch_schema.get("minItems").and_then(Value::as_u64),
-                Some(1)
-            );
-        }
-
-        for title in ["AgentBatchCall", "ClientBatchCall"] {
-            let batch_schema = root_variant_schema(&schema, title);
-            assert!(
-                schema_contains_ref(batch_schema, "#/$defs/ProtocolLevelNotification"),
-                "missing ProtocolLevelNotification in {title}"
-            );
+            assert!(!titles.contains(&title), "unexpected {title}");
         }
 
         {
@@ -799,22 +758,9 @@ mod schema_annotation_tests {
                 Some("string")
             );
 
-            let protocol_notification = def_schema(&schema, "ProtocolLevelNotification");
-            assert_eq!(
-                protocol_notification
-                    .pointer("/properties/method/type")
-                    .and_then(Value::as_str),
-                Some("string")
-            );
             assert!(
-                protocol_notification
-                    .pointer("/required")
-                    .and_then(Value::as_array)
-                    .is_some_and(|required| required.iter().any(|field| field == "method"))
-            );
-            assert!(
-                schema_contains_ref(protocol_notification, "#/$defs/CancelRequestNotification"),
-                "missing CancelRequestNotification in ProtocolLevelNotification"
+                schema_contains_ref(protocol_level, "#/$defs/CancelRequestNotification"),
+                "missing CancelRequestNotification in ProtocolLevel"
             );
         }
     }
