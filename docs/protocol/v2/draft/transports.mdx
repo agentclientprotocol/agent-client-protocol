@@ -17,8 +17,7 @@ In the **stdio** transport:
 
 - The client launches the agent as a subprocess.
 - The agent reads JSON-RPC messages from its standard input (`stdin`) and sends messages to its standard output (`stdout`).
-- Messages are individual JSON-RPC requests, notifications, responses, or
-  batch arrays.
+- Each message is a single JSON-RPC request, notification, or response object.
 - Messages are delimited by newlines (`\n`), and **MUST NOT** contain embedded newlines.
 - The agent **MAY** write UTF-8 strings to its standard error (`stderr`) for logging purposes. Clients **MAY** capture, forward, or ignore this logging.
 - The agent **MUST NOT** write anything to its `stdout` that is not a valid ACP message.
@@ -49,7 +48,7 @@ When the connection ends, either side treats requests it sent that have no respo
 
 After the `initialize` exchange completes successfully, Agents **MAY** send
 requests and notifications at any time: between Client requests, before a
-pending response, or before or after a batch response. Clients **MUST** be
+pending response, or after a response. Clients **MUST** be
 prepared to handle these messages independently of the responses they are
 awaiting, including when no Client request is pending.
 
@@ -61,50 +60,11 @@ require a valid session.
 
 Transports **MUST** deliver messages in the order they were sent. Receivers
 **MUST** apply a session's `session/update` notifications in the order they are
-received. Entries in one [batch](#json-rpc-batch-messages) have no relative
-order.
+received.
 
-## JSON-RPC Batch Messages
+## No Batches
 
-JSON-RPC 2.0 allows a sender to combine multiple request and notification
-objects in a single batch array. ACP follows the JSON-RPC 2.0 batch rules. A
-client or agent **MAY** send an array filled with Request objects. A Notification
-is a Request object without an `id`, so notification-only and mixed
-request/notification batches are valid.
-
-When receiving a batch call:
-
-- If the batch itself is invalid JSON, return a single `Parse error` response
-  (`code: -32700`) with `id: null`.
-- The batch **MUST** be an array with at least one value. An empty array
-  receives a single `Invalid Request` response (`code: -32600`) with `id: null`,
-  not a response array.
-- The receiver **MAY** process batch entries as concurrent tasks, in any order,
-  and with any degree of parallelism.
-- The receiver **SHOULD** respond with an array containing the corresponding
-  Response objects after all batch Request objects have been processed.
-- A Response object **SHOULD** exist for each Request object, except that there
-  **SHOULD NOT** be any Response object for Notifications.
-- The receiver **MUST NOT** reply to a Notification, including a Notification
-  within a batch.
-- Response objects **MAY** appear in any order within the response array. The
-  sender **SHOULD** match responses to requests by `id`.
-- If there are no Response objects to send, such as for an all-notification
-  batch, the receiver **MUST NOT** return an empty array and **SHOULD** return
-  nothing.
-- Invalid entries in a non-empty batch produce their own `Invalid Request`
-  responses (`code: -32600`) with `id: null`; they do not make the entire batch
-  fail.
-
-Array position does not establish processing order. Senders **MUST NOT** batch
-messages whose correctness depends on their relative processing order, such as
-two `session/update` notifications for the same entity. Send them as separate
-transport messages instead.
-
-Clients and agents **SHOULD NOT** batch lifecycle-sensitive messages such as
-`initialize`, `auth/login`, `session/new`, `session/resume`, and
-`session/prompt`. These messages are easier to reason about as individual
-transport messages and can change which later messages are valid.
+ACP does not use JSON-RPC 2.0 batches. Senders **MUST NOT** send a JSON array of messages, and receivers reject one with a single `-32600` (Invalid Request) response with `id: null`.
 
 ## Custom Transports
 

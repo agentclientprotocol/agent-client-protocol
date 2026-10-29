@@ -241,9 +241,7 @@ parent's roster label:
 
 Updates from the parent and any number of children may be interleaved. Ordering
 is defined by the transport order within each session, subject to the
-announcement requirement above. In v2, Agents **MUST NOT** place an announcement
-and traffic that depends on it in the same JSON-RPC batch, since batch entries
-may be processed in any order.
+announcement requirement above.
 
 Subagents may use Agent-to-Client methods such as filesystem, terminal, and
 permission requests when the Client advertised those capabilities. A subagent
@@ -913,8 +911,6 @@ for child work-state and mutation-capability snapshots:
   updates suffice; no extra announcement phase is needed for already-known
   associations. An Agent can omit capabilities when none are enabled, because
   the effective set starts empty rather than inheriting historical grants.
-- In v2, the response and current snapshots that depend on this boundary
-  **MUST NOT** share a JSON-RPC batch.
 
 Replay **MUST NOT** reissue recorded permission, elicitation, or other
 Agent-to-Client requests. Newly issued requests are live and may proceed once
@@ -1493,6 +1489,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-29: Removed the JSON-RPC batch rules, since ACP v2 no longer uses batches.
 - 2026-10-29: Added optional `cwd` and `additionalDirectories` to
   `subagent_update` so an Agent can report a child that runs outside its
   parent's workspace, such as in its own worktree. Unreported directories are

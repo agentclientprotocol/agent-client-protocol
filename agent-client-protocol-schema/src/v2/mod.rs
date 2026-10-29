@@ -25,7 +25,7 @@ pub(crate) mod schema_util;
 mod terminal;
 mod tool_call;
 
-pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification};
+pub use crate::rpc::{JsonRpcMessage, Notification};
 pub use agent::*;
 pub use client::*;
 pub use content::*;

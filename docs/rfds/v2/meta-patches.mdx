@@ -88,7 +88,7 @@ An object is no longer a complete snapshot of an entity's metadata, so replay ne
 
 - Replay applies metadata patches exactly as live delivery does, in receive order for each entity, and never resets metadata implicitly. An update that replaces another field, such as a message update with `content`, leaves the `_meta` keys it does not mention.
 - Replaying the original updates in order reproduces the stored metadata, provided their removals are kept.
-- To send an entity's current metadata when the Client may already hold some, the Agent removes stale keys. It either sets each one to `null` alongside the current keys, or sends `_meta: null` and then the current object in a later update. The second form is not atomic, even within a JSON-RPC batch, so the Client may briefly hold no metadata.
+- To send an entity's current metadata when the Client may already hold some, the Agent removes stale keys. It either sets each one to `null` alongside the current keys, or sends `_meta: null` and then the current object in a later update. The second form is not atomic, so the Client may briefly hold no metadata.
 - When the current metadata is empty, the Agent sends `_meta: null`, not `{}`.
 - When the Client is known to hold no metadata for the entity, the current object alone is enough.
 - Intermediaries that combine updates **MUST** keep removals and clears. Replacing a clear followed by an object with just that object is wrong when earlier metadata may exist.

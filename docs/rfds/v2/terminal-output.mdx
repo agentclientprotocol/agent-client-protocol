@@ -115,8 +115,6 @@ Add a `terminal_output_chunk` session update:
 
 Chunk boundaries have no text or terminal meaning. A chunk may split a UTF-8 code point or ANSI escape sequence, so terminal emulators and transcript decoders retain parser state between chunks. `_meta`, when present, is optional chunk-scoped metadata; omission and `null` both mean no chunk metadata was provided.
 
-JSON-RPC batch entries may be processed in any order. Agents therefore **MUST NOT** put more than one `terminal_update` or `terminal_output_chunk` for the same `terminalId` in one batch when their application order affects the result.
-
 This initial design does not add byte offsets or sequence numbers. Replacement snapshots provide the replay, correction, and resynchronization operation, while chunks provide the efficient live append operation.
 
 ### Command permission subjects
@@ -196,6 +194,7 @@ Display-only terminal output has a small safe fallback: decode the bytes, saniti
 
 ## Revision history
 
+- 2026-10-29: Removed the batch ordering rule, since ACP v2 no longer uses JSON-RPC batches.
 - 2026-10-27: Added an optional `size` with `cols` and `rows` to `terminal_update`.
 - 2026-10-13: A top-level `_meta` object now patches stored metadata by key, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-14: Initial draft.
