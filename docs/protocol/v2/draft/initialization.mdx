@@ -252,6 +252,12 @@ support `session/set_config_option`.
   empty object means the Agent supports deleting sessions from `session/list`.
 </ResponseField>
 
+<ResponseField name="fork" type="SessionForkCapabilities Object">
+  **Unstable.** The [`session/fork`](/rfds/session-fork) method is available.
+  Omitted or `null` both mean the Agent does not advertise support. Supplying `
+  {}` means the Agent supports forking sessions.
+</ResponseField>
+
 <ResponseField
   name="additionalDirectories"
   type="SessionAdditionalDirectoriesCapabilities Object"
@@ -308,6 +314,13 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
   The Agent supports connecting to MCP servers over HTTP. Omitted or `null`
   means the Agent does not advertise support. Supplying `{}` means the Agent
   supports HTTP MCP server transports.
+</ResponseField>
+
+<ResponseField name="acp" type="McpAcpCapabilities Object">
+  **Unstable.** The Agent supports the `acp` MCP server transport, where MCP
+  messages travel over the ACP connection with `mcp/message`. See the [MCP over
+  ACP RFD](/rfds/mcp-over-acp). Omitted or `null` means the Agent does not
+  advertise support.
 </ResponseField>
 
 <Card icon="shield-check" horizontal href="/protocol/v2/draft/authentication">
