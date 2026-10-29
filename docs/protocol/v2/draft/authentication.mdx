@@ -206,7 +206,7 @@ For a `terminal` method, the Client:
 3. Presents the terminal to the user and waits for the process to exit. Exit
    status zero signals success; a non-zero status, termination without an exit
    status, or cancellation signals failure.
-4. On success, closes the existing ACP connection, starts and initializes a new one, resumes with `session/resume` any sessions it wants to keep, then retries an operation rejected for requiring authentication. For an already-inserted prompt, see
+4. On success, retries an operation rejected for requiring authentication. The Client **SHOULD** first close the existing ACP connection, start and initialize a new one, and resume with `session/resume` any sessions it wants to keep, since the running Agent may not pick up the new credentials. It **MAY** instead retry on the existing connection first, and reconnect only if the retry still fails with `auth_required`. For an already-inserted prompt, see
    [Authentication failures during session work](#authentication-failures-during-session-work).
 
 The descriptor cannot provide a command. The Client derives the command from its
