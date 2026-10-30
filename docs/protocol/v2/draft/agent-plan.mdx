@@ -120,7 +120,7 @@ Plan file URIs **MUST** be absolute.
 
 ## Removing Plans
 
-Agents can remove a plan by sending `plan_removed` with the plan ID. Clients without unstable plan operations may not act on `plan_removed`; to clear the plan for them too, Agents can first send an `items` update with `entries: []`:
+Agents can remove a plan by sending `plan_removed` with the plan ID:
 
 ```json
 {
@@ -135,6 +135,8 @@ Agents can remove a plan by sending `plan_removed` with the plan ID. Clients wit
   }
 }
 ```
+
+Clients without unstable plan operations may not act on `plan_removed`. To clear the plan for them too, Agents can first send an `items` update with `entries: []`.
 
 ## Extensibility
 
