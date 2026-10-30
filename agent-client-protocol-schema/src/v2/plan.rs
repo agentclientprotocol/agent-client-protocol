@@ -103,7 +103,8 @@ pub enum PlanUpdateContent {
     ///
     /// Receivers that do not understand this content type should preserve the
     /// raw payload when storing, replaying, proxying, or forwarding plans, and
-    /// otherwise ignore it or display it generically.
+    /// otherwise ignore it or display it generically. It still replaces any earlier
+    /// content for the same `planId`.
     #[serde(untagged)]
     Other(OtherPlanUpdateContent),
 }

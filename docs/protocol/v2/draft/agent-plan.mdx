@@ -120,7 +120,7 @@ Plan file URIs **MUST** be absolute.
 
 ## Removing Plans
 
-Agents can remove a plan by sending `plan_removed` with the plan ID:
+Agents can remove a plan by sending `plan_removed` with the plan ID. Clients without unstable plan operations may not act on `plan_removed`; to clear the plan for them too, Agents can first send an `items` update with `entries: []`:
 
 ```json
 {
@@ -177,7 +177,7 @@ Custom or future status values can be used when Clients can preserve or display 
 
 As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same `sessionUpdate: "plan_update"` structure and `planId`.
 
-Each `plan_update` replaces the whole plan with that `planId`, whatever its `type`, including when the type differs from the previous update.
+Each `plan_update` replaces the whole plan with that `planId`, whatever its `type`, including when the type differs from the previous update. A Client that doesn't understand the new `type` still treats the update as replacing that plan, so it stops showing the previous content.
 
 For item-based plans, the Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current contents of that plan completely. An empty `entries` array empties the plan. Clients **MAY** hide an empty plan.
 
