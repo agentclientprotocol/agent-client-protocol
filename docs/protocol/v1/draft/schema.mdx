@@ -1241,6 +1241,89 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
+<a id="session-set_title"></a>
+### <span class="font-mono">session/set_title</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Sets the title of a session.
+
+This method is only available if the agent advertises the `sessionCapabilities.title` capability.
+
+The session does not need to be active on the connection. The agent stores the
+title and returns the stored title, which may be normalized.
+
+#### <span class="font-mono">SetSessionTitleRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for setting the title of a session.
+
+Only available if the Agent supports the `sessionCapabilities.title` capability.
+
+The session does not need to be active on the connection. Any session the Agent would
+return from `session/list` can be retitled. A session that does not exist gets `-32002`.
+
+The Agent responds only after it has stored the title. After a successful response, the
+Agent SHOULD NOT replace the title with one it generates automatically.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to retitle.
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  The new title for the session.
+
+Required and non-null. Omission and explicit `null` are both invalid. The Agent MAY
+normalize the title before storing it, for example by trimming whitespace or
+truncating it. The Agent rejects a title that fails its validation, including one
+that is empty after normalization, with `-32602`.
+
+</ResponseField>
+
+#### <span class="font-mono">SetSessionTitleResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from setting the title of a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="title" type={"string"} required>
+  The title the Agent stored.
+
+This differs from the requested title if the Agent normalized it. Clients SHOULD
+display this value rather than the one they sent.
+
+</ResponseField>
+
 ## Client
 
 Defines the interface that ACP-compliant clients must implement.
@@ -6029,6 +6112,20 @@ Optional. Omitted or `null` both mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports `systemPrompt` in `append` mode.
 
 </ResponseField>
+<ResponseField name="title" type={<><span><a href="#sessiontitlecapabilities">SessionTitleCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `session/set_title`.
+
+Agents report titles through `session/list` and `session_info_update` without this
+capability. It only advertises that Clients can set titles.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports setting session titles.
+
+</ResponseField>
 
 ## <span class="font-mono">SessionCloseCapabilities</span>
 
@@ -6665,6 +6762,30 @@ Capabilities for the `override` system prompt mode.
 
 Supplying `\{\}` means the agent supports replacing its built-in default
 instructions with the client-provided system prompt.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">SessionTitleCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for Client-set session titles.
+
+Supplying `\{\}` means the agent supports `session/set_title`. Agents report titles
+through `session/list` and `session_info_update` without this capability.
 
 **Type:** Object
 

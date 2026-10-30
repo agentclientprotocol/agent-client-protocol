@@ -257,6 +257,14 @@ support `session/set_config_option`.
   empty object means the Agent supports forking sessions.
 </ResponseField>
 
+<ResponseField name="title" type="SessionTitleCapabilities Object">
+  **Unstable.** The [`session/set_title`](/rfds/session-set-title) method is
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means Clients can set session titles. Agents report
+  titles through `session/list` and `session_info_update` without this
+  capability.
+</ResponseField>
+
 <ResponseField
   name="additionalDirectories"
   type="SessionAdditionalDirectoriesCapabilities Object"

@@ -313,6 +313,14 @@ Optionally, they **MAY** support other session methods and notifications by spec
   Supplying `{ "mode": { "override": {} } }` also advertises `override` mode.
 </ResponseField>
 
+<ResponseField name="title" type="SessionTitleCapabilities Object">
+  **Unstable.** The [`session/set_title`](/rfds/session-set-title) method is
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means Clients can set session titles. Agents report
+  titles through `session/list` and `session_info_update` without this
+  capability.
+</ResponseField>
+
 <Note>
   `session/load` is still handled by the top-level `load_session` capability.
   This will be unified in future versions of the protocol.
