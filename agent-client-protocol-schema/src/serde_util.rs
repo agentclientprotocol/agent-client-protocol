@@ -122,6 +122,9 @@ mod default_on_null_tests {
             $check::<v1::KillTerminalResponse>();
             $check::<v1::WaitForTerminalExitResponse>();
 
+            #[cfg(feature = "unstable_auth_status")]
+            $check::<v1::AuthStatusRequest>();
+
             #[cfg(feature = "unstable_llm_providers")]
             {
                 $check::<v1::ListProvidersRequest>();
@@ -140,6 +143,9 @@ mod default_on_null_tests {
                 $check::<v2::CloseSessionResponse>();
                 $check::<v2::ListSessionsRequest>();
                 $check::<v2::DeleteSessionResponse>();
+
+                #[cfg(feature = "unstable_auth_status")]
+                $check::<v2::AuthStatusRequest>();
 
                 #[cfg(feature = "unstable_llm_providers")]
                 {

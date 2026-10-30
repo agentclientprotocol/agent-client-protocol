@@ -131,6 +131,77 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 
+<a id="auth-status"></a>
+### <span class="font-mono">auth/status</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Queries the agent's current authentication state.
+
+This method is only available if the agent advertises the `auth.status` capability.
+It MUST NOT change any agent state.
+
+#### <span class="font-mono">AuthStatusRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for the `auth/status` method.
+
+Queries the agent's current authentication state without changing it.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+#### <span class="font-mono">AuthStatusResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to the `auth/status` method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="accounts" type={<a href="#authaccount">AuthAccount[]</a>} >
+  The accounts the agent has configured, for display.
+
+Optional. Omitted and empty are equivalent and mean no accounts are reported.
+Agents that hold credentials for several providers or accounts SHOULD list each
+of them and mark the ones in effect with `active`.
+
+</ResponseField>
+<ResponseField name="state" type={<a href="#authstate">AuthState</a>} required>
+  Whether the agent can start sessions without the user signing in first.
+
+This is the only field clients should act on. Clients MUST treat values they
+do not recognize as `unknown`.
+
+</ResponseField>
+
 ### <span class="font-mono">initialize</span>
 
 Establishes the connection with a client and negotiates protocol capabilities.
@@ -1409,6 +1480,57 @@ Clients are typically code editors (IDEs, text editors) that provide the interfa
 between users and AI agents. They manage the environment, handle user interactions,
 and control access to resources.
 
+<a id="auth-status_update"></a>
+### <span class="font-mono">auth/status_update</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification that the agent's authentication state changed.
+
+Only sent by agents that advertise the `auth.status` capability.
+
+#### <span class="font-mono">AuthStatusUpdateNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Notification sent by the agent when its authentication status changes.
+
+Carries the same fields as the `auth/status` response. Agents that advertise the
+`auth.status` capability MAY send it at any time after `initialize`, and SHOULD only
+send it when the reported status differs from the last one sent on the connection.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="accounts" type={<a href="#authaccount">AuthAccount[]</a>} >
+  The accounts the agent has configured, for display.
+
+Optional. Omitted and empty are equivalent and mean no accounts are reported.
+Agents that hold credentials for several providers or accounts SHOULD list each
+of them and mark the ones in effect with `active`.
+
+</ResponseField>
+<ResponseField name="state" type={<a href="#authstate">AuthState</a>} required>
+  Whether the agent can start sessions without the user signing in first.
+
+This is the only field clients should act on. Clients MUST treat values they
+do not recognize as `unknown`.
+
+</ResponseField>
+
 <a id="elicitation-complete"></a>
 ### <span class="font-mono">elicitation/complete</span>
 
@@ -2059,6 +2181,17 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="status" type={<><span><a href="#authstatuscapabilities">AuthStatusCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports the `auth/status` method.
+
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports the `auth/status` method.
+
+</ResponseField>
 
 ## <span class="font-mono">AgentCapabilities</span>
 
@@ -2263,6 +2396,62 @@ Omitted and `null` are equivalent and mean no annotations are provided.
   MIME type describing the encoded media payload.
 </ResponseField>
 
+## <span class="font-mono">AuthAccount</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+An account or credential the agent has configured, such as a signed-in user
+account or an API key.
+
+All fields are display information only. Clients MUST NOT use them as stable
+account identifiers, and SHOULD NOT log them or send them elsewhere, such as to
+telemetry.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="active" type={"boolean | null"} >
+  Whether the agent currently uses this account by default.
+
+Several accounts MAY be active, for example one per provider.
+
+Optional. Omitted and `null` are equivalent and mean the agent does not indicate whether this account is in effect.
+
+</ResponseField>
+<ResponseField name="email" type={"string | null"} >
+  Email address of the user.
+
+Optional. Omitted and `null` are equivalent and mean no email is reported.
+
+</ResponseField>
+<ResponseField name="label" type={"string"} required>
+  Human-readable name for the account, suitable for display on its own,
+for example `Claude Max`, `OpenAI API key`, or `Vertex AI`.
+</ResponseField>
+<ResponseField name="name" type={"string | null"} >
+  Display name of the user, such as a username or full name.
+
+Optional. Omitted and `null` are equivalent and mean no name is reported.
+
+</ResponseField>
+<ResponseField name="organization" type={"string | null"} >
+  Display name of the organization, team, or workspace the account is using.
+
+Optional. Omitted and `null` are equivalent and mean no organization is reported.
+
+</ResponseField>
+
 ## <span class="font-mono">AuthMethod</span>
 
 Describes an available authentication method.
@@ -2455,6 +2644,65 @@ base launch configuration.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name of the authentication method.
+</ResponseField>
+
+## <span class="font-mono">AuthState</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The agent's overall authentication state.
+
+**Type:** Union
+
+<ResponseField name="authenticated" type="string">
+  Credentials are configured. This does not guarantee that they are valid.
+</ResponseField>
+
+<ResponseField name="unauthenticated" type="string">
+  The user needs to sign in. This includes credentials that are missing,
+  expired, or known to be invalid.
+</ResponseField>
+
+<ResponseField name="not_required" type="string">
+  No authentication is needed, for example because the agent uses a local model.
+</ResponseField>
+
+<ResponseField name="unknown" type="string">
+  The agent cannot currently determine the state.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future authentication state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+## <span class="font-mono">AuthStatusCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Auth status capabilities supported by the agent.
+
+Supplying `\{\}` means the agent supports the `auth/status` method.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
 </ResponseField>
 
 ## <span class="font-mono">AvailableCommand</span>

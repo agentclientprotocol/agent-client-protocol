@@ -17,6 +17,8 @@ use super::{
     ClientCapabilities, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, SessionId,
 };
 
+#[cfg(all(feature = "unstable_auth_status", feature = "schemars"))]
+use super::AUTH_STATUS_UPDATE_NOTIFICATION;
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpNotification};
 
@@ -440,6 +442,397 @@ impl LogoutResponse {
     }
 }
 
+// Auth status
+
+#[cfg(feature = "unstable_auth_status")]
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Request parameters for the `auth/status` method.
+    ///
+    /// Queries the agent's current authentication state without changing it.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_STATUS_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct AuthStatusRequest {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+        /// these keys.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusRequest {
+    /// Builds [`AuthStatusRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response to the `auth/status` method.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_STATUS_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthStatusResponse {
+    /// Whether the agent can start sessions without the user signing in first.
+    ///
+    /// This is the only field clients should act on. Clients MUST treat values they
+    /// do not recognize as `unknown`.
+    pub state: AuthState,
+    /// The accounts the agent has configured, for display.
+    ///
+    /// Optional. Omitted and empty are equivalent and mean no accounts are reported.
+    /// Agents that hold credentials for several providers or accounts SHOULD list each
+    /// of them and mark the ones in effect with `active`.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub accounts: Vec<AuthAccount>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusResponse {
+    /// Builds [`AuthStatusResponse`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(state: AuthState) -> Self {
+        Self {
+            state,
+            accounts: vec![],
+            meta: None,
+        }
+    }
+
+    /// The accounts the agent has configured, for display.
+    #[must_use]
+    pub fn accounts(mut self, accounts: Vec<AuthAccount>) -> Self {
+        self.accounts = accounts;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Notification sent by the agent when its authentication status changes.
+///
+/// Carries the same fields as the `auth/status` response. Agents that advertise the
+/// `auth.status` capability MAY send it at any time after `initialize`, and SHOULD only
+/// send it when the reported status differs from the last one sent on the connection.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = AUTH_STATUS_UPDATE_NOTIFICATION)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthStatusUpdateNotification {
+    /// Whether the agent can start sessions without the user signing in first.
+    ///
+    /// This is the only field clients should act on. Clients MUST treat values they
+    /// do not recognize as `unknown`.
+    pub state: AuthState,
+    /// The accounts the agent has configured, for display.
+    ///
+    /// Optional. Omitted and empty are equivalent and mean no accounts are reported.
+    /// Agents that hold credentials for several providers or accounts SHOULD list each
+    /// of them and mark the ones in effect with `active`.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub accounts: Vec<AuthAccount>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusUpdateNotification {
+    /// Builds [`AuthStatusUpdateNotification`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(state: AuthState) -> Self {
+        Self {
+            state,
+            accounts: vec![],
+            meta: None,
+        }
+    }
+
+    /// The accounts the agent has configured, for display.
+    #[must_use]
+    pub fn accounts(mut self, accounts: Vec<AuthAccount>) -> Self {
+        self.accounts = accounts;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// The agent's overall authentication state.
+#[cfg(feature = "unstable_auth_status")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum AuthState {
+    /// Credentials are configured. This does not guarantee that they are valid.
+    Authenticated,
+    /// The user needs to sign in. This includes credentials that are missing,
+    /// expired, or known to be invalid.
+    Unauthenticated,
+    /// No authentication is needed, for example because the agent uses a local model.
+    NotRequired,
+    /// The agent cannot currently determine the state.
+    Unknown,
+    /// Custom or future authentication state.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// An account or credential the agent has configured, such as a signed-in user
+/// account or an API key.
+///
+/// All fields are display information only. Clients MUST NOT use them as stable
+/// account identifiers, and SHOULD NOT log them or send them elsewhere, such as to
+/// telemetry.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthAccount {
+    /// Human-readable name for the account, suitable for display on its own,
+    /// for example `Claude Max`, `OpenAI API key`, or `Vertex AI`.
+    pub label: String,
+    /// Whether the agent currently uses this account by default.
+    ///
+    /// Several accounts MAY be active, for example one per provider.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not indicate whether this account is in effect.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub active: Option<bool>,
+    /// Display name of the user, such as a username or full name.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no name is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Email address of the user.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no email is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub email: Option<String>,
+    /// Display name of the organization, team, or workspace the account is using.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no organization is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub organization: Option<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthAccount {
+    /// Builds [`AuthAccount`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(label: impl Into<String>) -> Self {
+        Self {
+            label: label.into(),
+            active: None,
+            name: None,
+            email: None,
+            organization: None,
+            meta: None,
+        }
+    }
+
+    /// Whether the agent currently uses this account by default.
+    #[must_use]
+    pub fn active(mut self, active: impl IntoOption<bool>) -> Self {
+        self.active = active.into_option();
+        self
+    }
+
+    /// Display name of the user, such as a username or full name.
+    #[must_use]
+    pub fn name(mut self, name: impl IntoOption<String>) -> Self {
+        self.name = name.into_option();
+        self
+    }
+
+    /// Email address of the user.
+    #[must_use]
+    pub fn email(mut self, email: impl IntoOption<String>) -> Self {
+        self.email = email.into_option();
+        self
+    }
+
+    /// Display name of the organization, team, or workspace the account is using.
+    #[must_use]
+    pub fn organization(mut self, organization: impl IntoOption<String>) -> Self {
+        self.organization = organization.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Auth status capabilities supported by the agent.
+///
+/// Supplying `{}` means the agent supports the `auth/status` method.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct AuthStatusCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusCapabilities {
+    /// Builds an empty [`AuthStatusCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// Authentication-related capabilities supported by the agent.
 #[serde_as]
 #[skip_serializing_none]
@@ -448,6 +841,19 @@ impl LogoutResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentAuthCapabilities {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports the `auth/status` method.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports the `auth/status` method.
+    #[cfg(feature = "unstable_auth_status")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub status: Option<AuthStatusCapabilities>,
     /// Whether the agent supports the logout method.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -473,6 +879,18 @@ impl AgentAuthCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports the `auth/status` method.
+    #[cfg(feature = "unstable_auth_status")]
+    #[must_use]
+    pub fn status(mut self, status: impl IntoOption<AuthStatusCapabilities>) -> Self {
+        self.status = status.into_option();
+        self
     }
 
     /// Whether the agent supports the logout method.
@@ -5501,6 +5919,9 @@ pub struct AgentMethodNames {
     pub session_close: &'static str,
     /// Method for logging out of an authenticated session.
     pub logout: &'static str,
+    /// Method for querying the agent's authentication state.
+    #[cfg(feature = "unstable_auth_status")]
+    pub auth_status: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -5532,6 +5953,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
     logout: LOGOUT_METHOD_NAME,
+    #[cfg(feature = "unstable_auth_status")]
+    auth_status: AUTH_STATUS_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -5578,6 +6001,9 @@ pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
 /// Method name for logging out of an authenticated session.
 pub(crate) const LOGOUT_METHOD_NAME: &str = "logout";
+/// Method name for the `auth/status` request.
+#[cfg(feature = "unstable_auth_status")]
+pub(crate) const AUTH_STATUS_METHOD_NAME: &str = "auth/status";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -5640,6 +6066,16 @@ pub enum ClientRequest {
     /// After a successful logout, all new sessions will require authentication.
     /// There is no guarantee about the behavior of already running sessions.
     LogoutRequest(LogoutRequest),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Queries the agent's current authentication state.
+    ///
+    /// This method is only available if the agent advertises the `auth.status` capability.
+    /// It MUST NOT change any agent state.
+    #[cfg(feature = "unstable_auth_status")]
+    AuthStatusRequest(AuthStatusRequest),
     /// Creates a new conversation session with the agent.
     ///
     /// Sessions represent independent conversation contexts with their own history and state.
@@ -5777,6 +6213,8 @@ impl ClientRequest {
             #[cfg(feature = "unstable_llm_providers")]
             Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
             Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
+            #[cfg(feature = "unstable_auth_status")]
+            Self::AuthStatusRequest(_) => AGENT_METHOD_NAMES.auth_status,
             Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
             Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
             Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
@@ -5825,6 +6263,9 @@ pub enum AgentResponse {
     DisableProviderResponse(#[serde(default)] DisableProviderResponse),
     /// Successful result returned for a `logout` request.
     LogoutResponse(#[serde(default)] LogoutResponse),
+    /// Successful result returned for an `auth/status` request.
+    #[cfg(feature = "unstable_auth_status")]
+    AuthStatusResponse(AuthStatusResponse),
     /// Successful result returned for a `session/new` request.
     NewSessionResponse(NewSessionResponse),
     /// Successful result returned for a `session/load` request.
@@ -7544,6 +7985,90 @@ mod test_serialization {
                 "args": ["auth", 8123]
             }))
             .is_err()
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_status")]
+    #[test]
+    fn auth_status_response_round_trips() {
+        let response = AuthStatusResponse::new(AuthState::Authenticated).accounts(vec![
+            AuthAccount::new("Anthropic API key").active(true),
+            AuthAccount::new("Claude Max").email("user@example.com".to_string()),
+        ]);
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "state": "authenticated",
+                "accounts": [
+                    {
+                        "label": "Anthropic API key",
+                        "active": true
+                    },
+                    {
+                        "label": "Claude Max",
+                        "email": "user@example.com"
+                    }
+                ]
+            })
+        );
+        assert_eq!(
+            serde_json::from_value::<AuthStatusResponse>(json).unwrap(),
+            response
+        );
+        assert_eq!(
+            serde_json::to_value(AuthStatusResponse::new(AuthState::NotRequired)).unwrap(),
+            json!({"state": "not_required"})
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_status")]
+    #[test]
+    fn auth_status_state_is_strict_and_accounts_are_lenient() {
+        assert!(serde_json::from_value::<AuthStatusResponse>(json!({})).is_err());
+        assert!(serde_json::from_value::<AuthStatusResponse>(json!({"state": null})).is_err());
+        assert!(serde_json::from_value::<AuthStatusResponse>(json!({"state": 1})).is_err());
+
+        let response: AuthStatusResponse = serde_json::from_value(json!({
+            "state": "_vendor_state",
+            "accounts": [
+                {"active": true},
+                {
+                    "label": "Vertex AI",
+                    "active": "yes",
+                    "email": ["not", "a", "string"]
+                }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(
+            response,
+            AuthStatusResponse::new(AuthState::Other("_vendor_state".to_string()))
+                .accounts(vec![AuthAccount::new("Vertex AI")])
+        );
+        assert_eq!(
+            serde_json::from_value::<AuthStatusResponse>(
+                json!({"state": "unknown", "accounts": null})
+            )
+            .unwrap(),
+            AuthStatusResponse::new(AuthState::Unknown)
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_status")]
+    #[test]
+    fn auth_status_update_notification_routes() {
+        use crate::v1::{AgentNotification, CLIENT_METHOD_NAMES};
+
+        assert_eq!(AGENT_METHOD_NAMES.auth_status, "auth/status");
+        assert_eq!(CLIENT_METHOD_NAMES.auth_status_update, "auth/status_update");
+        let notification = AgentNotification::AuthStatusUpdateNotification(
+            AuthStatusUpdateNotification::new(AuthState::Unauthenticated),
+        );
+        assert_eq!(notification.method(), "auth/status_update");
+        assert_eq!(
+            serde_json::to_value(&notification).unwrap(),
+            json!({"state": "unauthenticated"})
         );
     }
 }

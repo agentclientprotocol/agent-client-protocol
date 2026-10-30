@@ -11,6 +11,8 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
+#[cfg(feature = "unstable_auth_status")]
+use super::AuthStatusUpdateNotification;
 #[cfg(feature = "unstable_plan_operations")]
 use super::PlanRemoved;
 #[cfg(feature = "unstable_end_turn_token_usage")]
@@ -3579,6 +3581,9 @@ pub struct ClientMethodNames {
     pub elicitation_create: &'static str,
     /// Notification for elicitation completion.
     pub elicitation_complete: &'static str,
+    /// Notification for authentication status changes.
+    #[cfg(feature = "unstable_auth_status")]
+    pub auth_status_update: &'static str,
 }
 
 /// Constant containing all client method names.
@@ -3589,6 +3594,8 @@ pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     mcp_message: MCP_MESSAGE_METHOD_NAME,
     elicitation_create: ELICITATION_CREATE_METHOD_NAME,
     elicitation_complete: ELICITATION_COMPLETE_NOTIFICATION,
+    #[cfg(feature = "unstable_auth_status")]
+    auth_status_update: AUTH_STATUS_UPDATE_NOTIFICATION,
 };
 
 /// Notification name for session updates.
@@ -3599,6 +3606,9 @@ pub(crate) const SESSION_REQUEST_PERMISSION_METHOD_NAME: &str = "session/request
 pub(crate) const ELICITATION_CREATE_METHOD_NAME: &str = "elicitation/create";
 /// Notification name for elicitation completion.
 pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete";
+/// Notification name for authentication status changes.
+#[cfg(feature = "unstable_auth_status")]
+pub(crate) const AUTH_STATUS_UPDATE_NOTIFICATION: &str = "auth/status_update";
 
 /// All possible requests that an agent can send to a client.
 ///
@@ -3710,6 +3720,15 @@ pub enum AgentNotification {
     ///
     /// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/elicitation#url-completion)
     CompleteElicitationNotification(Box<CompleteElicitationNotification>),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Notification that the agent's authentication state changed.
+    ///
+    /// Only sent by agents that advertise the `auth.status` capability.
+    #[cfg(feature = "unstable_auth_status")]
+    AuthStatusUpdateNotification(Box<AuthStatusUpdateNotification>),
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
@@ -3727,6 +3746,8 @@ impl AgentNotification {
         match self {
             Self::UpdateSessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
             Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
+            #[cfg(feature = "unstable_auth_status")]
+            Self::AuthStatusUpdateNotification(_) => CLIENT_METHOD_NAMES.auth_status_update,
             Self::ExtNotification(ext_notification) => &ext_notification.method,
         }
     }

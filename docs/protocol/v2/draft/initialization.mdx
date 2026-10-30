@@ -212,6 +212,13 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
   `auth/login` or `auth/logout`.
 </ResponseField>
 
+<ResponseField name="auth.status" type="AuthStatusCapabilities Object">
+  **Unstable.** The [`auth/status`](/rfds/get-auth-state) method and the
+  `auth/status_update` notification are available. Omitted or `null` both mean
+  the Agent does not advertise support. Supplying an empty object means the
+  Agent supports them.
+</ResponseField>
+
 <ResponseField name="providers" type="ProvidersCapabilities Object">
   **Unstable.** The Agent supports `providers/list`, `providers/set`, and
   `providers/disable`. Omitted or `null` means unsupported. Supplying `{}` means
