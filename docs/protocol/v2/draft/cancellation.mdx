@@ -54,7 +54,7 @@ Requests can also be cancelled internally by the executing party without receivi
 
 When internal cancellation occurs, the executing party **SHOULD**:
 
-- Send the same `-32800` (Cancelled) error response as if `$/cancel_request` was received
+- Send the same response it would send for `$/cancel_request`: the method's defined cancellation result where one exists (an inserted prompt's `messageId`, a `cancelled` permission outcome, or an elicitation `cancel` action), otherwise `-32800` (Request Cancelled)
 - Ensure consistent behavior regardless of cancellation source
 
 Both kinds of cancellation answer `session/prompt` with `-32800` only before the user message is inserted. Once it is inserted, the Agent responds successfully with its `messageId`, and the work it started is stopped with [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) or ends with the matching [stop reason](/protocol/v2/draft/prompt-lifecycle#stop-reasons). See [Prompt Accepted](/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted).
