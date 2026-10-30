@@ -144,9 +144,9 @@ Agents that implement only v1 may not accept a repeated `initialize`. To change 
 
 Capabilities describe features supported by the Client and the Agent.
 
-All capabilities included in the `initialize` request are **OPTIONAL**. Clients and Agents **SHOULD** support all possible combinations of their peer's capabilities.
+All capabilities included in the `initialize` request or response are **OPTIONAL**. Clients and Agents **SHOULD** support all possible combinations of their peer's capabilities.
 
-The introduction of new capabilities is not considered a breaking change. Therefore, Clients and Agents **MUST** treat all capabilities omitted in the `initialize` request as **UNSUPPORTED**.
+The introduction of new capabilities is not considered a breaking change. Therefore, Clients and Agents **MUST** treat all capabilities omitted in the `initialize` request or response as **UNSUPPORTED**.
 
 Capabilities may advertise top-level method surfaces or nested features that
 only apply within a supported surface.
