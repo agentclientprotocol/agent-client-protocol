@@ -1,6 +1,7 @@
 //! Proxy chain types: messages exchanged between a conductor and the proxies it manages.
 //!
-//! Ordinary clients and agents never send or receive these messages. See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+//! Ordinary clients and agents never send or receive these messages.
+//! See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 
 use std::sync::Arc;
 

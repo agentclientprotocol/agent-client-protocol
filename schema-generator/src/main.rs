@@ -781,6 +781,46 @@ mod schema_annotation_tests {
         }
     }
 
+    #[cfg(feature = "unstable")]
+    #[test]
+    fn generated_unstable_schema_has_separate_proxy_side() {
+        let schema = root_schema_value();
+        let proxy = root_variant_schema(&schema, "Proxy");
+        for (union, members) in [
+            (
+                "ProxyRequest",
+                &["InitializeProxyRequest", "ProxySuccessorRequest"][..],
+            ),
+            (
+                "ProxyResponse",
+                &["InitializeProxyResponse", "ProxySuccessorResponse"][..],
+            ),
+            ("ProxyNotification", &["ProxySuccessorNotification"][..]),
+        ] {
+            assert!(
+                schema_contains_ref(proxy, &format!("#/$defs/{union}")),
+                "missing {union} in Proxy"
+            );
+            for member in members {
+                assert!(
+                    schema_contains_ref(def_schema(&schema, union), &format!("#/$defs/{member}")),
+                    "missing {member} in {union}"
+                );
+                assert_eq!(
+                    def_schema(&schema, member)["x-side"].as_str(),
+                    Some("proxy"),
+                    "{member} must be on the proxy side"
+                );
+            }
+        }
+        for union in ["ClientRequest", "AgentRequest"] {
+            assert!(
+                !schema_contains_ref(def_schema(&schema, union), "#/$defs/ProxySuccessorRequest"),
+                "{union} must not include proxy messages"
+            );
+        }
+    }
+
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
     fn generated_v2_schema_excludes_json_rpc_batch_messages() {
@@ -1065,7 +1105,7 @@ mod schema_annotation_tests {
             .unwrap_or_else(|| panic!("missing schema definition {def_name}"))
     }
 
-    #[cfg(feature = "unstable_protocol_v2")]
+    #[cfg(any(feature = "unstable", feature = "unstable_protocol_v2"))]
     fn root_variant_schema<'a>(schema: &'a Value, title: &str) -> &'a Value {
         schema
             .get("anyOf")
