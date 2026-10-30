@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.28.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.27.0...schema-v1.28.0) - 2026-10-30
+
+### Added
+
+- *(unstable)* report subagent working directories ([#2593](https://github.com/agentclientprotocol/agent-client-protocol/pull/2593))
+
+### Fixed
+
+- *(schema)* allow non-ISO currency units such as credits ([#2621](https://github.com/agentclientprotocol/agent-client-protocol/pull/2621))
+
 ## [1.27.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.26.0...schema-v1.27.0) - 2026-10-27
 
 ### Added
