@@ -893,6 +893,16 @@ v2 makes the whole schema forward-compatible by convention:
 
 stdio remains the primary transport and is unchanged. Each message is a single JSON-RPC object; ACP does not use JSON-RPC batches, and receivers reject an array with `-32600`. Apply a session's `session/update` notifications in the order received. See [Transports](/protocol/v2/transports#no-batches).
 
+## Errors
+
+Several error rules that were SHOULD in v1 are MUST in v2, and v2 adds one. Agents and Clients **MUST**:
+
+- respond with `-32601` to a method they don't implement, or to a capability-gated method they didn't advertise
+- respond with `-32002`, with `data.sessionId`, to a session-scoped request for a session that doesn't exist or isn't active on the connection
+- reject a request other than `initialize` that arrives before initialization completes with `-32600`, and also an `initialize` repeated after another request
+
+See [Errors](/protocol/v2/error).
+
 A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of the core v2 protocol surface. See the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
 
 ## Migration checklist: Agents
@@ -913,6 +923,7 @@ A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) i
 14. **MCP config.** Require and emit `type` discriminators. Reject SSE and unadvertised transports with `-32602`. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
 15. **Slash commands.** Add the `type: "command"` discriminator to each advertised command and the `type: "text"` discriminator to command `input` specifications. Optionally advertise initial commands in setup responses via `availableCommands`, and use complete-replacement `available_commands_update` notifications for later changes.
 16. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists.
+17. **Errors.** Return the now-required [error codes](#errors): `-32601`, `-32002` with `data.sessionId`, and `-32600` before initialization or for a late `initialize`.
 
 ## Migration checklist: Clients
 
