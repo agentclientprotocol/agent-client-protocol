@@ -221,7 +221,7 @@ See [Errors](/protocol/v2/error) for the error codes ACP uses and when to use th
 
 Unless explicitly defined otherwise in the schema, ACP-defined JSON object property keys use `camelCase`. String values carried by discriminator fields use `snake_case`. The JSON-RPC envelope fields (`jsonrpc`, `id`, `method`, `params`, `result`, and `error`) follow the JSON-RPC 2.0 specification.
 
-An optional field that is omitted and the same field set to `null` are equivalent, unless the field says otherwise. Upsert updates are the exception: there an omitted field leaves the stored value unchanged and `null` clears it.
+For an optional field whose schema allows `null`, omitting it and setting it to `null` are equivalent, unless the field says otherwise. Optional fields whose schema does not allow `null`, such as most arrays and objects, are omitted rather than sent as `null`. Upsert updates are the exception: there an omitted field leaves the stored value unchanged and `null` clears it.
 
 Selected enum-like fields and tagged unions can define custom or future fallbacks. For those fields, `_`-prefixed values are reserved for implementation-specific extensions, while unknown non-underscore values are reserved for future ACP variants.
 
