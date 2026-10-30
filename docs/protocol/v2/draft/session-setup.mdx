@@ -540,7 +540,7 @@ The root set declares the session's scope. It confines shell commands only when 
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agents to access external tools and data sources. When creating a session, Clients **MAY** include connection details for MCP servers that the Agent should connect to.
 
-MCP servers can be connected to using different transports. Agents advertise supported transports during initialization using `session.mcp.stdio`, `session.mcp.http`, and any extension-specific transport capabilities. Agents **MUST** reject a request with a transport they don't support with `-32602`, including a transport they did not advertise and v1's `sse`.
+MCP servers can be connected to using different transports. Agents advertise supported transports during initialization using `session.mcp.stdio`, `session.mcp.http`, the unstable `session.mcp.acp` (MCP over the ACP connection; see the [MCP over ACP RFD](/rfds/mcp-over-acp)), and any extension-specific transport capabilities. Agents **MUST** reject a request with a transport they don't support with `-32602`, including a transport they did not advertise and v1's `sse`.
 
 Each server `name` **MUST** be unique within `mcpServers`. Agents reject duplicates with `-32602`.
 
