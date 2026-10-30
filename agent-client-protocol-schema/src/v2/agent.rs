@@ -5606,10 +5606,13 @@ pub(crate) const AUTH_LOGOUT_METHOD_NAME: &str = "auth/logout";
 pub enum ClientRequest {
     /// Establishes the connection with a client and negotiates protocol capabilities.
     ///
-    /// This method is called once at the beginning of the connection to:
+    /// This method is called at the beginning of the connection, before any other request, to:
     /// - Negotiate the protocol version to use
     /// - Exchange capability information between client and agent
     /// - Determine available authentication methods
+    ///
+    /// The Client may repeat it before its first other request; the latest successful
+    /// `initialize` is authoritative.
     ///
     /// The agent should respond with its supported protocol version and capabilities.
     ///
