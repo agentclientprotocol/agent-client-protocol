@@ -100,7 +100,7 @@ pub enum ContentBlock {
     ///
     /// Requires the `audio` prompt capability when included in prompts.
     Audio(AudioContent),
-    /// References to resources that the agent can access.
+    /// References to resources that the receiver may be able to read.
     ///
     /// All agents MUST support resource links in prompts.
     ResourceLink(ResourceLink),

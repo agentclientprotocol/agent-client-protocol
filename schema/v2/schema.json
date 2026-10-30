@@ -656,7 +656,7 @@
           ]
         },
         {
-          "description": "References to resources that the agent can access.\n\nAll agents MUST support resource links in prompts.",
+          "description": "References to resources that the receiver may be able to read.\n\nAll agents MUST support resource links in prompts.",
           "type": "object",
           "properties": {
             "type": {
