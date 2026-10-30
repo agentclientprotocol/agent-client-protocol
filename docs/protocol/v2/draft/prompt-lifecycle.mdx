@@ -263,7 +263,7 @@ The Client sends a user message with `session/prompt`:
 
     Clients **MUST NOT** send an empty `prompt` array. Agents **MAY** reject one with `-32602` without inserting it.
 
-    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/draft/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/draft/initialization). Agents **MUST** reject a prompt containing a content type they did not advertise or don't understand with `-32602`, without inserting it. Custom content types need a [custom capability](/protocol/v2/draft/extensibility#advertising-custom-capabilities), such as an entry in `capabilities.session.prompt._meta`.
+    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/draft/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/draft/initialization). Agents **MUST** reject a prompt containing a content type that is neither baseline (`text`, `resource_link`) nor advertised, or that they don't understand with `-32602`, without inserting it. Custom content types need a [custom capability](/protocol/v2/draft/extensibility#advertising-custom-capabilities), such as an entry in `capabilities.session.prompt._meta`.
 
     <Card icon="comments" horizontal href="/protocol/v2/draft/content">
       Learn more about Content
