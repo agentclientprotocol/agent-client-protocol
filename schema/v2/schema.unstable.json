@@ -443,6 +443,18 @@
           "description": "Raw output returned by the tool.",
           "x-deserialize-default-on-error": true
         },
+        "capabilities": {
+          "description": "Client-initiated controls this tool call currently supports, such as cancellation.\n\nOmission leaves the capabilities unchanged, `null` clears them, and an object replaces\nthe whole previous value. A new tool call starts with none.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
@@ -520,7 +532,7 @@
       "description": "Execution status of a tool call.\n\nTool calls progress through different statuses during their lifecycle.\n\nSee protocol docs: [Status](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#status)",
       "anyOf": [
         {
-          "description": "The tool call hasn't started running yet because the input is either\nstreaming or we're awaiting approval.",
+          "description": "The tool call hasn't started running yet, for example because its input is\nstreaming, it is awaiting approval, or it is scheduled to run later.",
           "type": "string",
           "const": "pending"
         },
@@ -528,6 +540,11 @@
           "description": "The tool call is currently running.",
           "type": "string",
           "const": "in_progress"
+        },
+        {
+          "description": "The tool call has started, is not running now, and will not continue until\nsomething resumes it. It may return to `in_progress` any number of times.",
+          "type": "string",
+          "const": "paused"
         },
         {
           "description": "The tool call completed successfully.",
@@ -1643,6 +1660,42 @@
         }
       },
       "required": ["path"]
+    },
+    "ToolCallCapabilities": {
+      "description": "Client-initiated controls a tool call currently supports.\n\nA display-only hint: a malformed value falls back to no controls.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-tool-calls)",
+      "type": "object",
+      "properties": {
+        "cancel": {
+          "description": "Permits the Client to cancel this tool call with `tool_call/cancel`.\n\nOmitted and `null` are equivalent and mean unsupported. An object (including `{}`)\nmeans supported. Agents SHOULD stop advertising it once the tool call reaches a final status.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallCancelCapability"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "ToolCallCancelCapability": {
+      "description": "Capability to cancel a tool call with `tool_call/cancel`.\n\nSupplying `{}` advertises support. An omitted or `null` `cancel` does not.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "ToolCallPermissionSubject": {
       "description": "Permission request details for a tool call.",
@@ -2820,6 +2873,24 @@
                   "allOf": [
                     {
                       "$ref": "#/$defs/CloseSessionResponse"
+                    }
+                  ]
+                },
+                {
+                  "title": "CancelToolCallResponse",
+                  "description": "Successful result returned for a `tool_call/cancel` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelToolCallResponse"
+                    }
+                  ]
+                },
+                {
+                  "title": "CancelTerminalResponse",
+                  "description": "Successful result returned for a `terminal/cancel` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelTerminalResponse"
                     }
                   ]
                 },
@@ -4794,10 +4865,181 @@
         }
       ]
     },
+    "BackgroundWork": {
+      "description": "One piece of work running independently of the session's foreground work.\n\nItems reference entities the Client already tracks. The Agent MUST announce each item\nbefore the first snapshot that lists it, and MUST report a terminal's `exitStatus` or a\ntool call's final status before the snapshot that removes it. Each piece of work is\nlisted once: process-backed work is listed as its terminal, not also as its tool call.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)",
+      "anyOf": [
+        {
+          "description": "A process that keeps running after its tool call returned control to the model.\nLive until its `terminal_update` reports `exitStatus`.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "terminal"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/BackgroundTerminal"
+            }
+          ]
+        },
+        {
+          "description": "Work started by a tool call that continues without a process of its own, such as\na watcher, a workflow, or a scheduled wakeup. `pending` and `paused` tool calls\nstay listed.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "tool_call"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/BackgroundToolCall"
+            }
+          ]
+        },
+        {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA detached subagent session that has anything running: its state is not `idle`, or\nits own `background` list is non-empty or not reported.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "subagent"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/BackgroundSubagent"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future background work.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAn unknown item still means background work is running, even when the Client\ncannot show what it is.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "Custom or future background work type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "terminal"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "tool_call"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "subagent"
+                  }
+                },
+                "required": ["type"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "BackgroundTerminal": {
+      "description": "A listed terminal running in the background.",
+      "type": "object",
+      "properties": {
+        "terminalId": {
+          "description": "The ID of the listed terminal.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["terminalId"]
+    },
+    "BackgroundToolCall": {
+      "description": "A listed tool call whose work continues in the background.",
+      "type": "object",
+      "properties": {
+        "toolCallId": {
+          "description": "The ID of the listed tool call.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["toolCallId"]
+    },
+    "BackgroundSubagent": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA listed subagent session associated with this session through `subagent_update`.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The ID of the listed session.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"]
+    },
     "RunningStateUpdate": {
       "description": "Foreground work is in progress.",
       "type": "object",
       "properties": {
+        "background": {
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/BackgroundWork"
+          },
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -5070,6 +5312,14 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "background": {
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/BackgroundWork"
+          },
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -5247,6 +5497,14 @@
       "description": "The foreground workflow as a whole is blocked on user action.\n\nAgents SHOULD report this state when foreground work cannot progress without\nuser action. Pending permissions or elicitations alone do not imply this\nstate if other foreground work can progress, or if the requests belong only\nto independent background activity. Once reported, agents MUST report\n`running` when progress resumes, or `idle` if the work ends without resuming.\nResponding to one request does not itself imply `running`.",
       "type": "object",
       "properties": {
+        "background": {
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/BackgroundWork"
+          },
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -5259,6 +5517,14 @@
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe Agent cannot currently determine foreground activity.\n\nReport this when activity becomes unobservable, not merely because the session\nhas been quiet. The Client MUST stop presenting the previous state as confirmed\ncurrent activity, but may retain it as last known. A later state replaces this\nsnapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities. Capabilities are updated separately.",
       "type": "object",
       "properties": {
+        "background": {
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/BackgroundWork"
+          },
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -5331,6 +5597,34 @@
       },
       "x-side": "agent",
       "x-method": "session/close"
+    },
+    "CancelToolCallResponse": {
+      "description": "Response from cancelling a tool call.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "x-side": "agent",
+      "x-method": "tool_call/cancel"
+    },
+    "CancelTerminalResponse": {
+      "description": "Response from cancelling a terminal.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "x-side": "agent",
+      "x-method": "terminal/cancel"
     },
     "SetSessionConfigOptionResponse": {
       "description": "Response to `session/set_config_option` method.",
@@ -6313,6 +6607,42 @@
       },
       "required": ["cols", "rows"]
     },
+    "TerminalCapabilities": {
+      "description": "Client-initiated controls a terminal currently supports.\n\nA display-only hint: a malformed value falls back to no controls.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-terminals)",
+      "type": "object",
+      "properties": {
+        "cancel": {
+          "description": "Permits the Client to cancel this terminal with `terminal/cancel`.\n\nOmitted and `null` are equivalent and mean unsupported. An object (including `{}`)\nmeans supported. Agents SHOULD stop advertising it once the terminal reports `exitStatus`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TerminalCancelCapability"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "TerminalCancelCapability": {
+      "description": "Capability to cancel a terminal with `terminal/cancel`.\n\nSupplying `{}` advertises support. An omitted or `null` `cancel` does not.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
     "TerminalUpdate": {
       "description": "An upsert for the stored state of an agent-owned terminal.\n\nOnly `terminalId` is required. Other fields have patch\nsemantics: omitted fields leave the stored value unchanged, `null` clears\nit, and concrete values replace it. A concrete `_meta` object instead\npatches the stored metadata by top-level key. When the terminal ID is new,\nomitted fields start unknown.",
       "type": "object",
@@ -6371,6 +6701,18 @@
           "anyOf": [
             {
               "$ref": "#/$defs/TerminalSize"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "capabilities": {
+          "description": "Client-initiated controls this terminal currently supports, such as cancellation.\n\nOmission leaves the capabilities unchanged, `null` clears them, and an object replaces\nthe whole previous value. A new terminal starts with none.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TerminalCapabilities"
             },
             {
               "type": "null"
@@ -7471,6 +7813,24 @@
                   ]
                 },
                 {
+                  "title": "CancelToolCallRequest",
+                  "description": "Cancels one tool call without cancelling the rest of the session's work.\n\nThis method is only available while the tool call advertises `capabilities.cancel`.\nThe response means the Agent accepted the cancellation. A final `tool_call_update`\nconfirms it.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelToolCallRequest"
+                    }
+                  ]
+                },
+                {
+                  "title": "CancelTerminalRequest",
+                  "description": "Stops one terminal's process without cancelling the rest of the session's work.\n\nThis method is only available while the terminal advertises `capabilities.cancel`.\nThe response means the Agent accepted the cancellation. A `terminal_update` with\n`exitStatus` confirms it.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/CancelTerminalRequest"
+                    }
+                  ]
+                },
+                {
                   "title": "SetSessionConfigOptionRequest",
                   "description": "Sets the current value for a session configuration option.",
                   "allOf": [
@@ -8527,6 +8887,68 @@
       "required": ["sessionId"],
       "x-side": "agent",
       "x-method": "session/close"
+    },
+    "CancelToolCallRequest": {
+      "description": "Request parameters for cancelling one tool call.\n\nClients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.\nThe Agent responds once it has accepted the cancellation. The response does not mean\nthe work has stopped. The Agent confirms it with a `tool_call_update` to a final status, normally `cancelled`, or `completed` or `failed` if the work finished first. The Agent responds with `-32602` if the tool call is\nunknown, already final, or not cancellable. Cancelling a tool call does not change the foreground\nstate by itself.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-tool-calls)",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The ID of the session that owns the tool call.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "toolCallId": {
+          "description": "The ID of the tool call to cancel.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId", "toolCallId"],
+      "x-side": "agent",
+      "x-method": "tool_call/cancel"
+    },
+    "CancelTerminalRequest": {
+      "description": "Request parameters for cancelling one terminal.\n\nClients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.\nThe Agent responds once it has accepted the cancellation. The response does not mean\nthe work has stopped. The Agent confirms it with a `terminal_update` that sets `exitStatus`. Cancelling stops the process but does not release the terminal, and does not change the status of a tool call that references it. The Agent responds with `-32602` if the terminal is\nunknown, has already exited, or not cancellable. Cancelling a terminal does not change the foreground\nstate by itself.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-terminals)",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The ID of the session that owns the terminal.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "terminalId": {
+          "description": "The ID of the terminal to cancel.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/TerminalId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId", "terminalId"],
+      "x-side": "agent",
+      "x-method": "terminal/cancel"
     },
     "SetSessionConfigOptionRequest": {
       "description": "Request parameters for setting a session configuration option.\n\nAgents MUST support this method for any session where they advertise config options.\nAgents MUST reject an unknown `configId` or invalid value with `-32602` and leave the\nconfiguration unchanged.\n\nSee protocol docs: [Session Config Options](https://agentclientprotocol.com/protocol/v2/draft/session-config-options#setting-a-config-option)",

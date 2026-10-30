@@ -166,6 +166,46 @@ Session remains idle; no foreground work started or ended.
 
 A permission request or [elicitation](/protocol/v2/draft/elicitation) does not by itself change the foreground state. If it blocks foreground work, the Agent **SHOULD** report `requires_action`. If it belongs only to independent background activity, the session may remain `idle`. Resolving a request does not itself imply `running`: the state changes only if foreground activity changes. See [Waiting for User Action](#waiting-for-user-action) and [Requesting Permission](/protocol/v2/draft/tool-calls#requesting-permission).
 
+### Background work
+
+Background work is session-owned work running independently of foreground work. It is represented by entities the Client already tracks:
+
+- **Terminals.** A process that keeps running after its tool call returns control to the model, such as a backgrounded shell or dev server, is a [terminal](/protocol/v2/draft/tool-calls#display-only-terminals). It is live until its `terminal_update` reports `exitStatus`. While it is listed, the Agent **SHOULD** keep its output current whenever it can read the process output. Output is not a liveness signal: a Client **MUST NOT** treat a terminal as hung or exited because its output is missing or stale.
+- **Tool calls.** Work without a process of its own, such as a watcher, a workflow, or a scheduled wakeup, keeps reporting [status](/protocol/v2/draft/tool-calls#status) on its tool call. `pending` and `paused` tool calls are still live.
+- **Subagent sessions.** A background child keeps reporting through its [subagent](/rfds/subagents) association and `state`.
+
+Background work is work the user can reason about: something the user or the model started, which the user may want to stop or leave to finish. The Agent **SHOULD NOT** list housekeeping it starts on its own, such as memory consolidation. If housekeeping needs to be visible, the Agent represents it as a tool call.
+
+`running`, `requires_action`, `idle`, and `unknown` state updates carry an optional `background` list of the work currently running independently of foreground work:
+
+```json
+{
+  "sessionUpdate": "state_update",
+  "state": "idle",
+  "stopReason": "end_turn",
+  "background": [
+    { "type": "terminal", "terminalId": "term_003" },
+    { "type": "tool_call", "toolCallId": "call_012" },
+    { "type": "subagent", "sessionId": "sess_child_4" }
+  ]
+}
+```
+
+- **It is a snapshot.** A concrete list replaces the previous one, and `[]` means no background work is running.
+- **Omitted or `null` means not reported**, not that nothing is running. An Agent that reports background work **MUST** include `background` on every `state_update` for the session. If a later snapshot omits it, or it is malformed, the Client treats background work as unknown until a list is reported again.
+- **The Agent re-sends the state when the list changes.** When background work starts or ends, the Agent **SHOULD** send a repeated `state_update` with the current state and the updated list. A repeated snapshot is not a [state transition](#state-transitions), and a repeated `idle` without a new stop reason is not a new completion.
+- **Items are announced before they are listed and finalized before they are removed.** The Agent **MUST** send a `terminal_update` for a terminal, a `tool_call_update` for a tool call, or a `subagent_update` for a child, before the first snapshot that lists it. It **MUST** send a terminal's `exitStatus` or a tool call's final status before the snapshot that removes it.
+- **Follow-up work is reported with the removal.** When finished background work starts new foreground work, the Agent **SHOULD** report `running` in the same snapshot that removes the item, or earlier. It **SHOULD NOT** send `idle` with an empty list followed immediately by `running`.
+- **Only background work is listed, and only once.** A terminal or tool call that foreground work is waiting on is foreground work and is not listed. Process-backed work is listed as its terminal, and the Agent **MUST NOT** also list a tool call whose only live work is a listed terminal.
+- **Unknown items still count.** An item with an unknown `type` does not invalidate the list. It still means background work is running.
+- **A background child is listed while it has anything running.** A detached child is listed while its state is not `idle`, or while its own `background` list is non-empty or not reported. An `idle` child with no background work of its own is not listed, even though it remains associated.
+
+The Client uses the list to tell:
+
+- **Whether the session is quiet.** Nothing is running when the state is `idle` and `background` is `[]`. When the list only contains `pending` or `paused` tool calls, work is scheduled or suspended but nothing is running now. A Client that frees resources when a session becomes quiet **SHOULD** wait a short grace period after the snapshot that empties the list, since finished work may start a follow-up.
+- **What closing will stop**, so it can warn before [`session/close`](/protocol/v2/draft/session-setup#closing-active-sessions).
+- **Which unfinished tool calls and terminals are still live.** Once the session is `idle`, a Client **MAY** treat a `pending`, `in_progress`, or `paused` tool call, or a terminal without `exitStatus`, that is not in the latest reported list as abandoned. A tool call that references a listed terminal is live. A Client **MUST NOT** treat anything as abandoned when `background` is not reported.
+
 ## Prompt lifecycle
 
 The diagram shows one possible ordering. See [Insertion and ordering](#insertion-and-ordering).
@@ -946,7 +986,7 @@ When foreground work ends because something failed, the Agent **MUST** report `i
 
 `error` belongs to the `error` stop reason. Beside any other stop reason it is an unknown field. Clients may show `message` to the user and can handle `code` as they would for an error response: for example, `-32000` (authentication required) can prompt the user to authenticate before sending another prompt.
 
-Before reporting the failure, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Sending the prompt again submits a new message.
+Before reporting the failure, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. Listed [background work](#background-work), and tool calls that reference a listed terminal, are not part of the failed work and keep running. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Sending the prompt again submits a new message.
 
 The `error` stop reason is only for failures that end foreground work:
 
@@ -992,7 +1032,7 @@ closure or cancellation, and does not resolve pending requests or automatically
 revoke child mutation capabilities. The Agent updates those capabilities
 separately if a control becomes unavailable.
 
-Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state.
+Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state. Each state may carry a [`background`](#background-work) list of that work.
 
 Unless the Client has advertised support for a custom or future state, Agents **MUST** still report `running`, `requires_action`, and `idle` where the [state transitions](#state-transitions) require them. A Client that receives a state it doesn't recognize **MUST NOT** treat it as `idle` or present the previous state as confirmed, and shows a generic busy state until a known state arrives.
 
@@ -1121,15 +1161,17 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 }
 ```
 
-`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. A `session/prompt` received after `session/cancel` is not cancelled by it. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Background work is not covered, but the Agent **MAY** stop it too.
+`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. A `session/prompt` received after `session/cancel` is not cancelled by it. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list.
 
-The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification. This mark is a local display hint: the Agent gives those tool calls their [final status](/protocol/v2/draft/tool-calls#status), and its updates replace the mark.
+The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification. It **SHOULD** skip tool calls in the latest `background` list and tool calls that reference a listed terminal. This mark is a local display hint: the Agent gives those tool calls their [final status](/protocol/v2/draft/tool-calls#status), and its updates replace the mark.
 
-The Client **MUST** respond to pending `session/request_permission` requests in
-the cancelled session with the `cancelled` outcome. Requests already answered
-do not require another response. The Client can't tell foreground requests from
-background ones, so this covers every pending request in the session. The Agent
-treats `cancelled` for background work as a denial. For selective cancellation of related
+The Client **MUST** respond to pending `session/request_permission` requests for
+the cancelled foreground work with the `cancelled` outcome. Requests already
+answered do not require another response. The Client tells them apart through
+the request's `subject`: it answers with `cancelled` every pending request whose
+`subject` does not reference work in the latest `background` list, including
+requests without a `subject`. Requests for listed work stay open, and the Agent
+cancels any that no longer apply with `$/cancel_request`. For selective cancellation of related
 elicitation requests, see [Elicitation Cancellation](/protocol/v2/draft/elicitation#session-cancellation).
 
 When the Agent receives this notification, it **SHOULD** stop all language model requests and all tool call invocations as soon as possible.

@@ -263,6 +263,8 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   prompt fields or decline according to policy with the `cancelled` outcome.
 </ParamField>
 
+A permission request for listed [background work](/protocol/v2/draft/prompt-lifecycle#background-work) **SHOULD** reference the listed item in `subject`, by `toolCallId` or `terminalId`. The Agent **MUST** list that work before sending the request. On `session/cancel`, such requests stay open. See [Cancellation](/protocol/v2/draft/prompt-lifecycle#cancellation).
+
 Clients apply a `tool_call` subject's `toolCall` to their stored tool call
 exactly like a [`tool_call_update`](#reporting) notification, in the order it was
 received relative to `session/update` notifications and before showing the
@@ -389,12 +391,17 @@ option `name` describes it.
 Tool calls progress through different statuses during their lifecycle:
 
 <ResponseField name="pending">
-  The tool call hasn't started running yet because the input is either streaming
-  or awaiting approval
+  The tool call hasn't started running yet, for example because its input is
+  streaming, it is awaiting approval, or it is scheduled to run later
 </ResponseField>
 
 <ResponseField name="in_progress">
   The tool call is currently running
+</ResponseField>
+
+<ResponseField name="paused">
+  The tool call has started, is not running now, and will not continue until
+  something resumes it
 </ResponseField>
 
 <ResponseField name="completed">
@@ -409,7 +416,45 @@ Tool calls progress through different statuses during their lifecycle:
 
 Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`. Unknown non-underscore statuses are reserved for future ACP variants. Clients treat a tool call with an unrecognized status as still in progress.
 
-`completed`, `failed`, and `cancelled` are final. When foreground work ends, whether it finished, was [cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), or failed, the Agent **SHOULD** give each of that work's unfinished tool calls a final status. If a tool call's [permission request](#requesting-permission) is rejected or answered with `cancelled`, the Agent reports the tool call as `cancelled` or `failed` rather than leaving it `pending`.
+Clients **SHOULD** show `in_progress` as active, `pending` as waiting or scheduled, and `paused` as paused. Statuses never go back to `pending`: a scheduled wakeup goes from `pending` to `completed` when it fires, and the work it triggers is new foreground work. `in_progress` and `paused` may alternate any number of times. How work is paused and resumed is up to the Agent.
+
+`completed`, `failed`, and `cancelled` are final. When foreground work ends, whether it finished, was [cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), or failed, the Agent **SHOULD** give each of that work's unfinished tool calls a final status. Tool calls in the session's [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list are not part of that work. If a tool call's [permission request](#requesting-permission) is rejected or answered with `cancelled`, the Agent reports the tool call as `cancelled` or `failed` rather than leaving it `pending`.
+
+### Cancelling tool calls
+
+A tool call can advertise that the Client may cancel it on its own, without cancelling the rest of the session's work. `tool_call_update` carries an optional `capabilities` field:
+
+```json
+{
+  "sessionUpdate": "tool_call_update",
+  "toolCallId": "call_012",
+  "status": "in_progress",
+  "capabilities": {
+    "cancel": {}
+  }
+}
+```
+
+`capabilities` is a nullable patch: omitted leaves it unchanged, `null` clears it, and an object replaces the whole previous value. Within it, an omitted or `null` `cancel` means unsupported, and `{}` advertises support. A `pending` or `paused` tool call may advertise it too, for example to delete a scheduled job. The Agent **SHOULD** stop advertising `cancel` once the tool call reaches a final status.
+
+The Client cancels the tool call with a `tool_call/cancel` request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tool_call/cancel",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "toolCallId": "call_012"
+  }
+}
+```
+
+- The Client **MUST NOT** send it unless the tool call currently advertises `capabilities.cancel`.
+- The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the work has stopped. The Agent confirms that with a `tool_call_update` to a final status, normally `cancelled`, and may send `completed` or `failed` if the work finished first.
+- The Agent responds with `-32602` if the tool call is unknown, already final, or not cancellable.
+- Cancelling a tool call does not change the foreground state by itself. This works for foreground tool calls too, so a user can stop one long-running step without cancelling the rest of the work.
 
 ## Content
 
@@ -533,6 +578,30 @@ Clients **MAY** bound how much output they keep, for example by dropping the
 oldest bytes. A later `output` snapshot replaces whatever they kept.
 
 Terminal output is Agent content. Clients **SHOULD** render it so that it cannot write the clipboard, send input or query responses, or open links without user action, and sanitizers **SHOULD** keep state across chunks.
+
+#### Cancelling terminals
+
+A terminal may keep running after its tool call returns control to the model, as [background work](/protocol/v2/draft/prompt-lifecycle#background-work). The tool call that started it keeps referencing the terminal, so the Client can show its output in place. Terminals are display-only except for one opt-in control: `terminal_update` carries an optional `capabilities` field with the same shape and patch rules as on tool calls.
+
+```json
+{
+  "sessionUpdate": "terminal_update",
+  "terminalId": "term_003",
+  "command": "npm run dev",
+  "capabilities": {
+    "cancel": {}
+  }
+}
+```
+
+The Agent **SHOULD** stop advertising `cancel` once the terminal reports `exitStatus`. The Client stops the process with a `terminal/cancel` request with the `sessionId` and `terminalId`:
+
+- The Client **MUST NOT** send it unless the terminal currently advertises `capabilities.cancel`.
+- The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the process has stopped. The Agent confirms that with a `terminal_update` that sets `exitStatus`.
+- The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not cancellable.
+- Cancelling stops the process but does not release the terminal: its output remains available for display and replay. It does not change the foreground state or the status of any tool call that references the terminal.
+
+Input, resize, and other interactive control remain out of scope.
 
 ### Diffs
 

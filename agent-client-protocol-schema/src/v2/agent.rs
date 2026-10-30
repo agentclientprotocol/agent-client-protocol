@@ -16,7 +16,7 @@ use serde_with::{DefaultOnError, DefaultOnNull, VecSkipError, serde_as, skip_ser
 
 use super::{
     AbsolutePath, AvailableCommand, ClientCapabilities, ContentBlock, Error, ExtNotification,
-    ExtRequest, ExtResponse, MessageId, Meta, SessionId,
+    ExtRequest, ExtResponse, MessageId, Meta, SessionId, TerminalId, ToolCallId,
 };
 use crate::{IntoOption, ProtocolVersion};
 
@@ -2301,6 +2301,206 @@ pub enum SessionStatus {
     /// `saved`.
     #[serde(untagged)]
     Other(String),
+}
+
+// Cancel tool call
+
+/// Request parameters for cancelling one tool call.
+///
+/// Clients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.
+/// The Agent responds once it has accepted the cancellation. The response does not mean
+/// the work has stopped. The Agent confirms it with a `tool_call_update` to a final status, normally `cancelled`, or `completed` or `failed` if the work finished first. The Agent responds with `-32602` if the tool call is
+/// unknown, already final, or not cancellable. Cancelling a tool call does not change the foreground
+/// state by itself.
+///
+/// See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TOOL_CALL_CANCEL_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CancelToolCallRequest {
+    /// The ID of the session that owns the tool call.
+    pub session_id: SessionId,
+    /// The ID of the tool call to cancel.
+    pub tool_call_id: ToolCallId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CancelToolCallRequest {
+    /// Builds [`CancelToolCallRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>, tool_call_id: impl Into<ToolCallId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            tool_call_id: tool_call_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+crate::serde_util::default_on_null! {
+    /// Response from cancelling a tool call.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TOOL_CALL_CANCEL_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct CancelToolCallResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+impl CancelToolCallResponse {
+    /// Builds [`CancelToolCallResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Cancel terminal
+
+/// Request parameters for cancelling one terminal.
+///
+/// Clients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.
+/// The Agent responds once it has accepted the cancellation. The response does not mean
+/// the work has stopped. The Agent confirms it with a `terminal_update` that sets `exitStatus`. Cancelling stops the process but does not release the terminal, and does not change the status of a tool call that references it. The Agent responds with `-32602` if the terminal is
+/// unknown, has already exited, or not cancellable. Cancelling a terminal does not change the foreground
+/// state by itself.
+///
+/// See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TERMINAL_CANCEL_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CancelTerminalRequest {
+    /// The ID of the session that owns the terminal.
+    pub session_id: SessionId,
+    /// The ID of the terminal to cancel.
+    pub terminal_id: TerminalId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CancelTerminalRequest {
+    /// Builds [`CancelTerminalRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            terminal_id: terminal_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+crate::serde_util::default_on_null! {
+    /// Response from cancelling a terminal.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TERMINAL_CANCEL_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct CancelTerminalResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+impl CancelTerminalResponse {
+    /// Builds [`CancelTerminalResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 // List sessions
@@ -6811,6 +7011,10 @@ pub struct AgentMethodNames {
     pub session_resume: &'static str,
     /// Method for closing an active session.
     pub session_close: &'static str,
+    /// Method for cancelling one tool call.
+    pub tool_call_cancel: &'static str,
+    /// Method for cancelling one terminal's process.
+    pub terminal_cancel: &'static str,
     /// Method for logging out of an authenticated session.
     pub auth_logout: &'static str,
     /// Method for querying the agent's authentication state.
@@ -6848,6 +7052,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_set_title: SESSION_SET_TITLE_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
+    tool_call_cancel: TOOL_CALL_CANCEL_METHOD_NAME,
+    terminal_cancel: TERMINAL_CANCEL_METHOD_NAME,
     auth_logout: AUTH_LOGOUT_METHOD_NAME,
     #[cfg(feature = "unstable_auth_status")]
     auth_status: AUTH_STATUS_METHOD_NAME,
@@ -6897,6 +7103,10 @@ pub(crate) const SESSION_SET_TITLE_METHOD_NAME: &str = "session/set_title";
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
+/// Method name for cancelling one tool call.
+pub(crate) const TOOL_CALL_CANCEL_METHOD_NAME: &str = "tool_call/cancel";
+/// Method name for cancelling one terminal's process.
+pub(crate) const TERMINAL_CANCEL_METHOD_NAME: &str = "terminal/cancel";
 /// Method name for the `auth/logout` request.
 pub(crate) const AUTH_LOGOUT_METHOD_NAME: &str = "auth/logout";
 /// Method name for the `auth/status` request.
@@ -7073,6 +7283,18 @@ pub enum ClientRequest {
     /// The Agent MUST cancel any ongoing work as if `session/cancel` was called, stop the
     /// session's background work, and then free the resources associated with the session.
     CloseSessionRequest(Box<CloseSessionRequest>),
+    /// Cancels one tool call without cancelling the rest of the session's work.
+    ///
+    /// This method is only available while the tool call advertises `capabilities.cancel`.
+    /// The response means the Agent accepted the cancellation. A final `tool_call_update`
+    /// confirms it.
+    CancelToolCallRequest(Box<CancelToolCallRequest>),
+    /// Stops one terminal's process without cancelling the rest of the session's work.
+    ///
+    /// This method is only available while the terminal advertises `capabilities.cancel`.
+    /// The response means the Agent accepted the cancellation. A `terminal_update` with
+    /// `exitStatus` confirms it.
+    CancelTerminalRequest(Box<CancelTerminalRequest>),
     /// Sets the current value for a session configuration option.
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),
     /// Processes a user prompt within a session.
@@ -7137,6 +7359,8 @@ impl ClientRequest {
             Self::SetSessionTitleRequest(_) => AGENT_METHOD_NAMES.session_set_title,
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
+            Self::CancelToolCallRequest(_) => AGENT_METHOD_NAMES.tool_call_cancel,
+            Self::CancelTerminalRequest(_) => AGENT_METHOD_NAMES.terminal_cancel,
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
             Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
             Self::ExtMethodRequest(ext_request) => &ext_request.method,
@@ -7199,6 +7423,10 @@ pub enum AgentResponse {
     ResumeSessionResponse(#[serde(default)] Box<ResumeSessionResponse>),
     /// Successful result returned for a `session/close` request.
     CloseSessionResponse(#[serde(default)] Box<CloseSessionResponse>),
+    /// Successful result returned for a `tool_call/cancel` request.
+    CancelToolCallResponse(#[serde(default)] Box<CancelToolCallResponse>),
+    /// Successful result returned for a `terminal/cancel` request.
+    CancelTerminalResponse(#[serde(default)] Box<CancelTerminalResponse>),
     /// Successful result returned for a `session/set_config_option` request.
     SetSessionConfigOptionResponse(Box<SetSessionConfigOptionResponse>),
     /// Successful result returned for a `session/prompt` request.
@@ -8115,6 +8343,44 @@ mod test_serialization {
                 "type": "terminal"
             }))
             .is_err()
+        );
+    }
+
+    #[test]
+    fn test_tool_call_and_terminal_cancel_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.tool_call_cancel, "tool_call/cancel");
+        assert_eq!(AGENT_METHOD_NAMES.terminal_cancel, "terminal/cancel");
+        assert_eq!(
+            ClientRequest::CancelToolCallRequest(Box::new(CancelToolCallRequest::new(
+                "sess_abc123",
+                "call_012"
+            )))
+            .method(),
+            "tool_call/cancel"
+        );
+        assert_eq!(
+            ClientRequest::CancelTerminalRequest(Box::new(CancelTerminalRequest::new(
+                "sess_abc123",
+                "term_003"
+            )))
+            .method(),
+            "terminal/cancel"
+        );
+        assert_eq!(
+            serde_json::to_value(CancelToolCallRequest::new("sess_abc123", "call_012")).unwrap(),
+            json!({"sessionId": "sess_abc123", "toolCallId": "call_012"})
+        );
+        assert_eq!(
+            serde_json::to_value(CancelTerminalRequest::new("sess_abc123", "term_003")).unwrap(),
+            json!({"sessionId": "sess_abc123", "terminalId": "term_003"})
+        );
+        assert!(
+            serde_json::from_value::<CancelToolCallRequest>(json!({"sessionId": "sess_abc123"}))
+                .is_err()
+        );
+        assert_eq!(
+            serde_json::to_value(CancelTerminalResponse::new()).unwrap(),
+            json!({})
         );
     }
 

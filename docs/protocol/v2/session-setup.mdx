@@ -340,6 +340,8 @@ history replay and before the resume response. This is required even when
 `replayFrom` is omitted or `null`. The snapshot reports the current foreground
 state after resuming: `idle`, `running`, or `requires_action`.
 
+The snapshot carries the [`background`](/protocol/v2/prompt-lifecycle#background-work) list like any other. Before it, the Agent **MUST** send a current update for each listed item that the requested replay did not already deliver at its current state: a `terminal_update` for each terminal, a `tool_call_update` for each tool call. When no replay was requested, this means all of them.
+
 Agents **MUST NOT** replay historical `state_update` notifications as current
 activity. The snapshot and subsequent live state changes **MUST** be delivered
 in order, without replacing a newer state with a stale snapshot. An idle
@@ -380,7 +382,7 @@ To close an active session, Clients **MUST** call the `session/close` method wit
   The ID of the active session to close.
 </ParamField>
 
-The Agent **MUST** cancel any ongoing work for that session as if [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation) had been called, then free the resources associated with the session. The Client answers pending permission requests with the `cancelled` outcome, as it would after `session/cancel`. Before responding to `session/close`, the Agent **MUST** cancel every pending [elicitation](/protocol/v2/elicitation#session-cancellation) scoped to that session with `$/cancel_request`. Unlike cancellation, closing also stops the session's background work.
+The Agent **MUST** cancel any ongoing work for that session as if [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation) had been called, then free the resources associated with the session. The Client answers pending permission requests with the `cancelled` outcome, as it would after `session/cancel`. Before responding to `session/close`, the Agent **MUST** cancel every pending [elicitation](/protocol/v2/elicitation#session-cancellation) scoped to that session with `$/cancel_request`. Unlike cancellation, closing also stops the session's background work, including everything in the latest [`background`](/protocol/v2/prompt-lifecycle#background-work) list. After a successful close, the Client **SHOULD** treat every listed tool call, and every tool call that references a listed terminal, that has not reported a final status as `cancelled`, and every listed terminal without `exitStatus` as exited with no known exit status. It **MUST** answer any pending permission request for listed work with `cancelled`. The Agent **MAY** send final updates for listed work before responding, but does not have to.
 
 When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
 

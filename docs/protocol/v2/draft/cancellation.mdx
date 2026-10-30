@@ -37,8 +37,9 @@ permission or elicitation request does not automatically cancel the whole
 foreground workflow or determine its state. The Agent applies the aggregate
 [state-transition rules](/protocol/v2/draft/prompt-lifecycle#state-transitions).
 
-On `session/cancel`, Clients **MUST** answer pending permissions in that session
-with the `cancelled` outcome. After cancellation completes, Agents **SHOULD** ignore late
+On `session/cancel`, Clients **MUST** answer pending permissions for the cancelled
+foreground work with the `cancelled` outcome. Requests whose `subject` references
+work in the latest [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list stay open. After cancellation completes, Agents **SHOULD** ignore late
 answers rather than use them to resume the cancelled work. After aborting active
 foreground work and sending its final updates, the Agent **MUST** report `idle`
 with `stopReason: "cancelled"`. No additional completion update is required if

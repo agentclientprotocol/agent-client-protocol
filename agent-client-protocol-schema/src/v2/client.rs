@@ -1636,6 +1636,18 @@ pub enum StateUpdate {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct RunningStateUpdate {
+    /// Work running independently of foreground work, as a complete snapshot.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+    /// background work, not that nothing is running. `[]` means no background work is
+    /// running. An Agent that reports background work MUST include it on every state
+    /// update for the session. A malformed list is treated as not reported.
+    ///
+    /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub background: Option<Vec<BackgroundWork>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -1653,6 +1665,13 @@ impl RunningStateUpdate {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Work running independently of foreground work, as a complete snapshot.
+    #[must_use]
+    pub fn background(mut self, background: impl IntoOption<Vec<BackgroundWork>>) -> Self {
+        self.background = background.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1699,6 +1718,18 @@ pub struct IdleStateUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub usage: Option<Box<Usage>>,
+    /// Work running independently of foreground work, as a complete snapshot.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+    /// background work, not that nothing is running. `[]` means no background work is
+    /// running. An Agent that reports background work MUST include it on every state
+    /// update for the session. A malformed list is treated as not reported.
+    ///
+    /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub background: Option<Vec<BackgroundWork>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -1734,6 +1765,13 @@ impl IdleStateUpdate {
     #[must_use]
     pub fn usage(mut self, usage: impl IntoOption<Usage>) -> Self {
         self.usage = usage.into_option().map(Box::new);
+        self
+    }
+
+    /// Work running independently of foreground work, as a complete snapshot.
+    #[must_use]
+    pub fn background(mut self, background: impl IntoOption<Vec<BackgroundWork>>) -> Self {
+        self.background = background.into_option();
         self
     }
 
@@ -1807,6 +1845,18 @@ fn idle_state_update_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct RequiresActionStateUpdate {
+    /// Work running independently of foreground work, as a complete snapshot.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+    /// background work, not that nothing is running. `[]` means no background work is
+    /// running. An Agent that reports background work MUST include it on every state
+    /// update for the session. A malformed list is treated as not reported.
+    ///
+    /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub background: Option<Vec<BackgroundWork>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -1824,6 +1874,13 @@ impl RequiresActionStateUpdate {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Work running independently of foreground work, as a complete snapshot.
+    #[must_use]
+    pub fn background(mut self, background: impl IntoOption<Vec<BackgroundWork>>) -> Self {
+        self.background = background.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1859,6 +1916,18 @@ impl RequiresActionStateUpdate {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct UnknownStateUpdate {
+    /// Work running independently of foreground work, as a complete snapshot.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+    /// background work, not that nothing is running. `[]` means no background work is
+    /// running. An Agent that reports background work MUST include it on every state
+    /// update for the session. A malformed list is treated as not reported.
+    ///
+    /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub background: Option<Vec<BackgroundWork>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -1876,6 +1945,13 @@ impl UnknownStateUpdate {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Work running independently of foreground work, as a complete snapshot.
+    #[must_use]
+    pub fn background(mut self, background: impl IntoOption<Vec<BackgroundWork>>) -> Self {
+        self.background = background.into_option();
+        self
     }
 
     /// Sets optional metadata for this state snapshot.
@@ -1962,6 +2038,258 @@ fn other_state_update_schema(schema: &mut Schema) {
         schema,
         "state",
         KNOWN_STATE_UPDATE_STATES,
+    );
+}
+
+/// One piece of work running independently of the session's foreground work.
+///
+/// Items reference entities the Client already tracks. The Agent MUST announce each item
+/// before the first snapshot that lists it, and MUST report a terminal's `exitStatus` or a
+/// tool call's final status before the snapshot that removes it. Each piece of work is
+/// listed once: process-backed work is listed as its terminal, not also as its tool call.
+///
+/// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum BackgroundWork {
+    /// A process that keeps running after its tool call returned control to the model.
+    /// Live until its `terminal_update` reports `exitStatus`.
+    Terminal(BackgroundTerminal),
+    /// Work started by a tool call that continues without a process of its own, such as
+    /// a watcher, a workflow, or a scheduled wakeup. `pending` and `paused` tool calls
+    /// stay listed.
+    ToolCall(BackgroundToolCall),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A detached subagent session that has anything running: its state is not `idle`, or
+    /// its own `background` list is non-empty or not reported.
+    #[cfg(feature = "unstable_subagents")]
+    Subagent(BackgroundSubagent),
+    /// Custom or future background work.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// An unknown item still means background work is running, even when the Client
+    /// cannot show what it is.
+    #[serde(untagged)]
+    Other(OtherBackgroundWork),
+}
+
+/// A listed terminal running in the background.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct BackgroundTerminal {
+    /// The ID of the listed terminal.
+    pub terminal_id: TerminalId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl BackgroundTerminal {
+    /// Builds [`BackgroundTerminal`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
+        Self {
+            terminal_id: terminal_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// A listed tool call whose work continues in the background.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct BackgroundToolCall {
+    /// The ID of the listed tool call.
+    pub tool_call_id: ToolCallId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl BackgroundToolCall {
+    /// Builds [`BackgroundToolCall`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
+        Self {
+            tool_call_id: tool_call_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A listed subagent session associated with this session through `subagent_update`.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct BackgroundSubagent {
+    /// The ID of the listed session.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl BackgroundSubagent {
+    /// Builds [`BackgroundSubagent`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Custom or future background work payload.
+///
+/// This preserves the unknown `type` discriminator and the rest of the item so Clients
+/// can store, replay, proxy, or forward it.
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_background_work_schema))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherBackgroundWork {
+    /// Custom or future background work type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub kind: String,
+    /// Additional fields from the unknown item.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+impl OtherBackgroundWork {
+    /// Builds [`OtherBackgroundWork`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(kind: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            kind: kind.into(),
+            fields,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OtherBackgroundWork {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let kind = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(kind) = kind else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if KNOWN_BACKGROUND_WORK_TYPES.contains(&kind.as_str()) {
+            return Err(serde::de::Error::custom(format!(
+                "known background work `{kind}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { kind, fields })
+    }
+}
+
+const KNOWN_BACKGROUND_WORK_TYPES: &[&str] = &[
+    "terminal",
+    "tool_call",
+    #[cfg(feature = "unstable_subagents")]
+    "subagent",
+];
+
+#[cfg(feature = "schemars")]
+fn other_background_work_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_BACKGROUND_WORK_TYPES,
     );
 }
 
@@ -3755,6 +4083,58 @@ impl AgentNotification {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn background_list_round_trips_on_state_updates() {
+        use serde_json::json;
+        let idle = super::StateUpdate::Idle(super::IdleStateUpdate::new().background(vec![
+            super::BackgroundWork::Terminal(super::BackgroundTerminal::new("term_003")),
+            super::BackgroundWork::ToolCall(super::BackgroundToolCall::new("call_012")),
+        ]));
+        let wire = json!({
+            "state": "idle",
+            "background": [
+                { "type": "terminal", "terminalId": "term_003" },
+                { "type": "tool_call", "toolCallId": "call_012" }
+            ]
+        });
+        assert_eq!(serde_json::to_value(&idle).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<super::StateUpdate>(wire).unwrap(),
+            idle
+        );
+
+        let empty = super::RunningStateUpdate::new().background(vec![]);
+        assert_eq!(
+            serde_json::to_value(&empty).unwrap(),
+            json!({ "background": [] })
+        );
+    }
+
+    #[test]
+    fn background_list_keeps_unknown_items_and_drops_malformed_lists() {
+        use serde_json::json;
+        let parsed: super::RunningStateUpdate = serde_json::from_value(json!({
+            "background": [{ "type": "_cron", "schedule": "* * * * *" }]
+        }))
+        .unwrap();
+        let Some([super::BackgroundWork::Other(other)]) = parsed.background.as_deref() else {
+            panic!("expected one unknown item: {parsed:?}");
+        };
+        assert_eq!(other.kind, "_cron");
+        assert_eq!(other.fields["schedule"], json!("* * * * *"));
+
+        for background in [
+            json!(null),
+            json!("oops"),
+            json!([{ "type": "terminal" }]),
+            json!([{ "type": "tool_call", "toolCallId": "call_1" }, { "type": "terminal", "terminalId": 7 }]),
+        ] {
+            let parsed: super::IdleStateUpdate =
+                serde_json::from_value(json!({ "background": background })).unwrap();
+            assert_eq!(parsed.background, None, "{background}");
+        }
+    }
 
     #[test]
     fn replacement_lists_reject_non_arrays_instead_of_clearing() {

@@ -46,7 +46,7 @@ sequenceDiagram
 
 A session exists from `session/new` until the Agent discards it. Agents choose how long to keep sessions: for example, they may not store a session that was never prompted, may expire old sessions, or may remove one through [`session/delete`](/protocol/v2/draft/session-delete). `session/list` and `session/resume` only see sessions the Agent still has, and resuming one it no longer has fails with `-32002`.
 
-On a connection, a session is **active** from a successful `session/new`, `session/resume`, or, when supported, `session/fork` (for the new session) until `session/close` or the end of the connection. Agents **SHOULD NOT** discard a session while it is active, except through `session/delete`, which closes it first.
+On a connection, a session is **active** from a successful `session/new`, `session/resume`, or, when supported, `session/fork` (for the new session) until `session/close` or the end of the connection. A forked session starts with no background work: unfinished tool calls and running terminals copied into its history are not live, and its state snapshots report `background: []` until it starts its own. Agents **SHOULD NOT** discard a session while it is active, except through `session/delete`, which closes it first.
 
 - Session-scoped requests such as `session/prompt` and `session/set_config_option` require an active session. Otherwise the Agent responds with `-32002`. See [Unknown Sessions](/protocol/v2/draft/error#unknown-sessions). Agents ignore `session/cancel` for a session that isn't active.
 - Closing a session ends it on the connection but doesn't discard it. Whether a closed session stays listed and resumable depends on how long the Agent keeps it.
@@ -343,6 +343,8 @@ history replay and before the resume response. This is required even when
 state after resuming: `idle`, `running`, or `requires_action`, or the draft
 `unknown` state when activity is unobservable.
 
+The snapshot carries the [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list like any other. Before it, the Agent **MUST** send a current update for each listed item that the requested replay did not already deliver at its current state: a `terminal_update` for each terminal, a `tool_call_update` for each tool call, and a `subagent_update` for each child. When no replay was requested, this means all of them.
+
 Agents **MUST NOT** replay historical `state_update` notifications as current
 activity. The snapshot and subsequent live state changes **MUST** be delivered
 in order, without replacing a newer state with a stale snapshot. An idle
@@ -386,7 +388,7 @@ with the session ID:
 
 The Agent **MUST** cancel any ongoing work for that session as if
 [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) had been called, then free the
-resources associated with the session. The Client answers pending permission requests with the `cancelled` outcome, as it would after `session/cancel`. Before responding to `session/close`, the Agent **MUST** cancel every pending [elicitation](/protocol/v2/draft/elicitation#session-cancellation) scoped to that session with `$/cancel_request`. Unlike cancellation, closing also stops the session's background work.
+resources associated with the session. The Client answers pending permission requests with the `cancelled` outcome, as it would after `session/cancel`. Before responding to `session/close`, the Agent **MUST** cancel every pending [elicitation](/protocol/v2/draft/elicitation#session-cancellation) scoped to that session with `$/cancel_request`. Unlike cancellation, closing also stops the session's background work, including everything in the latest [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list. After a successful close, the Client **SHOULD** treat every listed tool call, and every tool call that references a listed terminal, that has not reported a final status as `cancelled`, and every listed terminal without `exitStatus` as exited with no known exit status. It **MUST** answer any pending permission request for listed work with `cancelled`. The Agent **MAY** send final updates for listed work before responding, but does not have to.
 
 When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
 

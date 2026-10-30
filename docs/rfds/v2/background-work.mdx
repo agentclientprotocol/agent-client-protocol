@@ -368,6 +368,7 @@ Not in this RFD. The `background` list belongs on the session-level `state_updat
 
 ## Revision history
 
+- 2026-10-30: Phase 1 landed: the schema changes are in the v2 schema, with the item types named `BackgroundTerminal`, `BackgroundToolCall`, `BackgroundSubagent`, and `OtherBackgroundWork`, and the protocol docs describe the `background` list, `paused`, and both cancel methods.
 - 2026-10-27: Added a `paused` tool call status. Defined background work as work the user can reason about, so agent-internal housekeeping is not listed. Unknown item types still count as background work. Agents keep listed terminals' output current. Permission requests for background work reference the listed item, and `session/cancel` answers every other request. Noted that claude-agent-acp must declare `perTaskStopAffordance`.
 - 2026-10-26: Terminals are background work in their own right. A backgrounded process is listed as its terminal, whether its launching tool call completes or stays `in_progress`, and terminals can advertise `capabilities.cancel` and be stopped with `terminal/cancel`. Added ordering rules: items are announced before they are listed, final statuses come before removal, and follow-up work reports `running` with the removal. Defined when background subagents are listed, how Clients handle a list that stops being reported, and a grace period before releasing quiet sessions. Added a v1 FAQ.
 - 2026-10-21: Initial draft.

@@ -168,6 +168,8 @@ mod default_on_null_tests {
                 $check::<v2::CloseSessionResponse>();
                 $check::<v2::ListSessionsRequest>();
                 $check::<v2::DeleteSessionResponse>();
+                $check::<v2::CancelToolCallResponse>();
+                $check::<v2::CancelTerminalResponse>();
 
                 #[cfg(feature = "unstable_auth_status")]
                 $check::<v2::AuthStatusRequest>();

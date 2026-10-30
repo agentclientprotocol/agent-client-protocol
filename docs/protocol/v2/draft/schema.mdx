@@ -1611,6 +1611,120 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 
+<a id="terminal-cancel"></a>
+### <span class="font-mono">terminal/cancel</span>
+
+Stops one terminal's process without cancelling the rest of the session's work.
+
+This method is only available while the terminal advertises `capabilities.cancel`.
+The response means the Agent accepted the cancellation. A `terminal_update` with
+`exitStatus` confirms it.
+
+#### <span class="font-mono">CancelTerminalRequest</span>
+
+Request parameters for cancelling one terminal.
+
+Clients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.
+The Agent responds once it has accepted the cancellation. The response does not mean
+the work has stopped. The Agent confirms it with a `terminal_update` that sets `exitStatus`. Cancelling stops the process but does not release the terminal, and does not change the status of a tool call that references it. The Agent responds with `-32602` if the terminal is
+unknown, has already exited, or not cancellable. Cancelling a terminal does not change the foreground
+state by itself.
+
+See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-terminals)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session that owns the terminal.
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  The ID of the terminal to cancel.
+</ResponseField>
+
+#### <span class="font-mono">CancelTerminalResponse</span>
+
+Response from cancelling a terminal.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+<a id="tool_call-cancel"></a>
+### <span class="font-mono">tool_call/cancel</span>
+
+Cancels one tool call without cancelling the rest of the session's work.
+
+This method is only available while the tool call advertises `capabilities.cancel`.
+The response means the Agent accepted the cancellation. A final `tool_call_update`
+confirms it.
+
+#### <span class="font-mono">CancelToolCallRequest</span>
+
+Request parameters for cancelling one tool call.
+
+Clients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.
+The Agent responds once it has accepted the cancellation. The response does not mean
+the work has stopped. The Agent confirms it with a `tool_call_update` to a final status, normally `cancelled`, or `completed` or `failed` if the work finished first. The Agent responds with `-32602` if the tool call is
+unknown, already final, or not cancellable. Cancelling a tool call does not change the foreground
+state by itself.
+
+See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-tool-calls)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session that owns the tool call.
+</ResponseField>
+<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
+  The ID of the tool call to cancel.
+</ResponseField>
+
+#### <span class="font-mono">CancelToolCallResponse</span>
+
+Response from cancelling a tool call.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
 ## Client
 
 Defines the interface that ACP-compliant clients must implement.
@@ -3134,6 +3248,184 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} required>
   Commands the agent can execute.
+</ResponseField>
+
+## <span class="font-mono">BackgroundSubagent</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A listed subagent session associated with this session through `subagent_update`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the listed session.
+</ResponseField>
+
+## <span class="font-mono">BackgroundTerminal</span>
+
+A listed terminal running in the background.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  The ID of the listed terminal.
+</ResponseField>
+
+## <span class="font-mono">BackgroundToolCall</span>
+
+A listed tool call whose work continues in the background.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
+  The ID of the listed tool call.
+</ResponseField>
+
+## <span class="font-mono">BackgroundWork</span>
+
+One piece of work running independently of the session's foreground work.
+
+Items reference entities the Client already tracks. The Agent MUST announce each item
+before the first snapshot that lists it, and MUST report a terminal's `exitStatus` or a
+tool call's final status before the snapshot that removes it. Each piece of work is
+listed once: process-backed work is listed as its terminal, not also as its tool call.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
+
+**Type:** Union
+
+<ResponseField name="terminal" type="object">
+A process that keeps running after its tool call returned control to the model.
+Live until its `terminal_update` reports `exitStatus`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="terminalId" type={<a href="#terminalid">TerminalId</a>} required>
+  The ID of the listed terminal.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"terminal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="tool_call" type="object">
+Work started by a tool call that continues without a process of its own, such as
+a watcher, a workflow, or a scheduled wakeup. `pending` and `paused` tool calls
+stay listed.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
+  The ID of the listed tool call.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"tool_call"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="subagent" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A detached subagent session that has anything running: its state is not `idle`, or
+its own `background` list is non-empty or not reported.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the listed session.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"subagent"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future background work.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+An unknown item still means background work is running, even when the Client
+cannot show what it is.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future background work type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">BlobResourceContents</span>
@@ -5215,6 +5507,17 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
+
+</ResponseField>
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
@@ -7099,6 +7402,17 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
+
+</ResponseField>
 
 ## <span class="font-mono">ResourceLink</span>
 
@@ -7201,6 +7515,17 @@ metadata to their interactions. Omitted and `null` are equivalent and mean no me
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
 </ResponseField>
 
@@ -8374,6 +8699,17 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
+
+</ResponseField>
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"running"`.
 </ResponseField>
@@ -8392,6 +8728,17 @@ metadata to their interactions. Omitted and `null` are equivalent and mean no me
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
 </ResponseField>
 <ResponseField name="state" type={"string"} required>
@@ -8561,6 +8908,17 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
+
+</ResponseField>
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"requires_action"`.
 </ResponseField>
@@ -8584,6 +8942,17 @@ metadata to their interactions. Omitted and `null` are equivalent and mean no me
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
 </ResponseField>
 <ResponseField name="state" type={"string"} required>
@@ -8665,6 +9034,13 @@ MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#toolcallcapabilities">ToolCallCapabilities</a></span><span> | null</span></>} >
+  Client-initiated controls this tool call currently supports, such as cancellation.
+
+Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+the whole previous value. A new tool call starts with none.
+
+</ResponseField>
 <ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
   Content produced by the tool call.
 </ResponseField>
@@ -8733,6 +9109,13 @@ stored value without merging nested objects. Beyond this patch rule, implementat
 MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#terminalcapabilities">TerminalCapabilities</a></span><span> | null</span></>} >
+  Client-initiated controls this terminal currently supports, such as cancellation.
+
+Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+the whole previous value. A new terminal starts with none.
 
 </ResponseField>
 <ResponseField name="command" type={"string | null"} >
@@ -9315,6 +9698,17 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
+
+</ResponseField>
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"running"`.
 </ResponseField>
@@ -9333,6 +9727,17 @@ metadata to their interactions. Omitted and `null` are equivalent and mean no me
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
 </ResponseField>
 <ResponseField name="state" type={"string"} required>
@@ -9502,6 +9907,17 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
+
+</ResponseField>
 <ResponseField name="state" type={"string"} required>
   The discriminator value. Must be `"requires_action"`.
 </ResponseField>
@@ -9525,6 +9941,17 @@ metadata to their interactions. Omitted and `null` are equivalent and mean no me
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
 </ResponseField>
 <ResponseField name="state" type={"string"} required>
@@ -9955,6 +10382,53 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 
+## <span class="font-mono">TerminalCancelCapability</span>
+
+Capability to cancel a terminal with `terminal/cancel`.
+
+Supplying `\{\}` advertises support. An omitted or `null` `cancel` does not.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">TerminalCapabilities</span>
+
+Client-initiated controls a terminal currently supports.
+
+A display-only hint: a malformed value falls back to no controls.
+
+See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-terminals)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="cancel" type={<><span><a href="#terminalcancelcapability">TerminalCancelCapability</a></span><span> | null</span></>} >
+  Permits the Client to cancel this terminal with `terminal/cancel`.
+
+Omitted and `null` are equivalent and mean unsupported. An object (including `\{\}`)
+means supported. Agents SHOULD stop advertising it once the terminal reports `exitStatus`.
+
+</ResponseField>
+
 ## <span class="font-mono">TerminalExitStatus</span>
 
 Exit information for an agent-owned terminal.
@@ -10103,6 +10577,13 @@ MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
 
 </ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#terminalcapabilities">TerminalCapabilities</a></span><span> | null</span></>} >
+  Client-initiated controls this terminal currently supports, such as cancellation.
+
+Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+the whole previous value. A new terminal starts with none.
+
+</ResponseField>
 <ResponseField name="command" type={"string | null"} >
   The command being run.
 </ResponseField>
@@ -10222,6 +10703,53 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="anyOf" type={<a href="#enumoption">EnumOption[]</a>} required>
   Titled enum options. Must contain at least one option.
+</ResponseField>
+
+## <span class="font-mono">ToolCallCancelCapability</span>
+
+Capability to cancel a tool call with `tool_call/cancel`.
+
+Supplying `\{\}` advertises support. An omitted or `null` `cancel` does not.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">ToolCallCapabilities</span>
+
+Client-initiated controls a tool call currently supports.
+
+A display-only hint: a malformed value falls back to no controls.
+
+See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-tool-calls)
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="cancel" type={<><span><a href="#toolcallcancelcapability">ToolCallCancelCapability</a></span><span> | null</span></>} >
+  Permits the Client to cancel this tool call with `tool_call/cancel`.
+
+Omitted and `null` are equivalent and mean unsupported. An object (including `\{\}`)
+means supported. Agents SHOULD stop advertising it once the tool call reaches a final status.
+
 </ResponseField>
 
 ## <span class="font-mono">ToolCallContent</span>
@@ -10442,12 +10970,17 @@ See protocol docs: [Status](https://agentclientprotocol.com/protocol/v2/draft/to
 **Type:** Union
 
 <ResponseField name="pending" type="string">
-  The tool call hasn't started running yet because the input is either streaming
-  or we're awaiting approval.
+  The tool call hasn't started running yet, for example because its input is
+  streaming, it is awaiting approval, or it is scheduled to run later.
 </ResponseField>
 
 <ResponseField name="in_progress" type="string">
   The tool call is currently running.
+</ResponseField>
+
+<ResponseField name="paused" type="string">
+  The tool call has started, is not running now, and will not continue until
+  something resumes it. It may return to `in_progress` any number of times.
 </ResponseField>
 
 <ResponseField name="completed" type="string">
@@ -10503,6 +11036,13 @@ stored value without merging nested objects. Beyond this patch rule, implementat
 MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#toolcallcapabilities">ToolCallCapabilities</a></span><span> | null</span></>} >
+  Client-initiated controls this tool call currently supports, such as cancellation.
+
+Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+the whole previous value. A new tool call starts with none.
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#toolcallcontent">ToolCallContent[]</a></span><span> | null</span></>} >
@@ -10641,6 +11181,17 @@ metadata to their interactions. Omitted and `null` are equivalent and mean no me
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="background" type={<><span><a href="#backgroundwork">BackgroundWork[]</a></span><span> | null</span></>} >
+  Work running independently of foreground work, as a complete snapshot.
+
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
+background work, not that nothing is running. `[]` means no background work is
+running. An Agent that reports background work MUST include it on every state
+update for the session. A malformed list is treated as not reported.
+
+See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
 </ResponseField>
 

@@ -182,6 +182,104 @@ impl TerminalExitStatus {
     }
 }
 
+/// Client-initiated controls a terminal currently supports.
+///
+/// A display-only hint: a malformed value falls back to no controls.
+///
+/// See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct TerminalCapabilities {
+    /// Permits the Client to cancel this terminal with `terminal/cancel`.
+    ///
+    /// Omitted and `null` are equivalent and mean unsupported. An object (including `{}`)
+    /// means supported. Agents SHOULD stop advertising it once the terminal reports `exitStatus`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub cancel: Option<TerminalCancelCapability>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl TerminalCapabilities {
+    /// Builds an empty capability set. Cancellation is not advertised.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets or removes permission to cancel this terminal.
+    #[must_use]
+    pub fn cancel(mut self, cancel: impl IntoOption<TerminalCancelCapability>) -> Self {
+        self.cancel = cancel.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Capability to cancel a terminal with `terminal/cancel`.
+///
+/// Supplying `{}` advertises support. An omitted or `null` `cancel` does not.
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct TerminalCancelCapability {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl TerminalCancelCapability {
+    /// Builds an empty capability object advertising cancellation support.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// An upsert for the stored state of an agent-owned terminal.
 ///
 /// Only `terminalId` is required. Other fields have patch
@@ -225,6 +323,14 @@ pub struct TerminalUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub size: MaybeUndefined<TerminalSize>,
+    /// Client-initiated controls this terminal currently supports, such as cancellation.
+    ///
+    /// Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+    /// the whole previous value. A new terminal starts with none.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub capabilities: MaybeUndefined<TerminalCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
@@ -254,6 +360,7 @@ impl TerminalUpdate {
             output: MaybeUndefined::Undefined,
             exit_status: MaybeUndefined::Undefined,
             size: MaybeUndefined::Undefined,
+            capabilities: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
     }
@@ -293,6 +400,16 @@ impl TerminalUpdate {
         self
     }
 
+    /// Sets, clears, or leaves unchanged the Client-initiated controls.
+    #[must_use]
+    pub fn capabilities(
+        mut self,
+        capabilities: impl IntoMaybeUndefined<TerminalCapabilities>,
+    ) -> Self {
+        self.capabilities = capabilities.into_maybe_undefined();
+        self
+    }
+
     /// Patches, clears, or leaves unchanged terminal metadata.
     ///
     /// A concrete object patches stored metadata by top-level key. See
@@ -325,6 +442,9 @@ impl TerminalUpdate {
         }
         if !update.size.is_undefined() {
             self.size = update.size;
+        }
+        if !update.capabilities.is_undefined() {
+            self.capabilities = update.capabilities;
         }
         apply_meta_update(&mut self.meta, update.meta);
     }
@@ -426,6 +546,33 @@ impl TerminalOutputChunk {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn terminal_capabilities_patch_and_tolerate_malformed_values() {
+        use serde_json::json;
+        let update = TerminalUpdate::new("term_003")
+            .capabilities(TerminalCapabilities::new().cancel(TerminalCancelCapability::new()));
+        assert_eq!(
+            serde_json::to_value(&update).unwrap(),
+            json!({ "terminalId": "term_003", "capabilities": { "cancel": {} } })
+        );
+
+        let mut stored = update;
+        stored.apply_update(TerminalUpdate::new("term_003"));
+        assert!(stored.capabilities.is_value());
+        stored.apply_update(TerminalUpdate::new("term_003").capabilities(MaybeUndefined::Null));
+        assert!(stored.capabilities.is_null());
+
+        for bad in [json!("yes"), json!(1)] {
+            let parsed: TerminalUpdate =
+                serde_json::from_value(json!({ "terminalId": "term_003", "capabilities": bad }))
+                    .unwrap();
+            assert!(parsed.capabilities.is_undefined());
+        }
+        let parsed: TerminalCapabilities =
+            serde_json::from_value(json!({ "cancel": "yes" })).unwrap();
+        assert_eq!(parsed.cancel, None);
+    }
 
     #[test]
     fn terminal_size_is_an_optional_patch_field() {

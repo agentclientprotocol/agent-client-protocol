@@ -70,6 +70,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Do not use JSON-RPC 2.0 batches. Each transport message is a single request, notification, or response, and receivers reject an array with `-32600`, as MCP does since 2025-06-18.
 - Make [enums and tagged unions open](./enum-variant-extension.mdx) where a safe fallback exists: `_`-prefixed values are for extensions, and other unknown values are reserved for future ACP versions.
 - Add the `cancelled` status for tool calls and plan entries.
+- Add [background work](./background-work.mdx): a `paused` tool call status, opt-in `capabilities.cancel` on tool calls and terminals with `tool_call/cancel` and `terminal/cancel`, and a `background` list on state snapshots.
 - Allow initial `configOptions` and `availableCommands` in `session/new` and `session/resume` responses, and add `type` discriminators to commands (`command`) and command input (`text`).
 - Reject `initialize` with `-32022` (Unsupported protocol version) when no supported version is at or below the requested one, with the requested and supported versions in the error data.
 - Require a `type` discriminator on `session/set_config_option` values, and rename the config option `group` field to `groupId`.
@@ -129,6 +130,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-10-30: Added the v2 Background Work changes to the change list now that they are in the v2 schema.
 - 2026-10-30: Added the config option `type`/`groupId` changes and the `usage_update.cost` patch semantics to the change list.
 - 2026-10-29: Scoped the v2 Preview to the RFDs with breaking changes. Remote Transports and other additive work no longer block v2, and transport-specific reliability requirements belong to each transport.
 - 2026-10-29: Dropped JSON-RPC batches from v2, following MCP.

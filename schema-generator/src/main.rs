@@ -2362,6 +2362,8 @@ starting with '$/' it is free to ignore the notification."
                     .or_else(|| self.agent.get("CancelNotification"))
                     .unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
+                "tool_call/cancel" => self.agent.get("CancelToolCallRequest").unwrap(),
+                "terminal/cancel" => self.agent.get("CancelTerminalRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "auth/logout" => self.agent.get("LogoutAuthRequest").unwrap(),
                 "auth/status" => self.agent.get("AuthStatusRequest").unwrap(),

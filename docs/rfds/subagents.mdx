@@ -1017,6 +1017,9 @@ The Client **SHOULD** optimistically mark the cancelled session's unfinished
 tool calls as cancelled, as specified for [v1 prompt cancellation](/protocol/v1/prompt-turn#cancellation)
 and [v2 work cancellation](/protocol/v2/prompt-lifecycle#cancellation), and a
 descendant's once that descendant reports `idle` with `stopReason: "cancelled"`.
+In v2, it **SHOULD** skip tool calls in that session's latest
+[`background`](./v2/background-work.mdx) list and tool calls that reference a
+listed terminal, since that work keeps running.
 It **SHOULD** still accept subsequent Agent updates for those calls. This local
 presentation is not a new v1 wire-level tool status.
 
@@ -1489,6 +1492,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-10-30: In v2, optimistic cancellation skips tool calls in the session's `background` list, following the v2 Background Work RFD.
 - 2026-10-29: Removed the JSON-RPC batch rules, since ACP v2 no longer uses batches.
 - 2026-10-29: Added optional `cwd` and `additionalDirectories` to
   `subagent_update` so an Agent can report a child that runs outside its

@@ -20,6 +20,8 @@
     "session_set_title": "session/set_title",
     "session_resume": "session/resume",
     "session_close": "session/close",
+    "tool_call_cancel": "tool_call/cancel",
+    "terminal_cancel": "terminal/cancel",
     "auth_logout": "auth/logout",
     "auth_status": "auth/status"
   },
