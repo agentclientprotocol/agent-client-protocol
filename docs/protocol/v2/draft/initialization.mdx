@@ -258,6 +258,14 @@ support `session/set_config_option`.
   empty object means the Agent supports deleting sessions from `session/list`.
 </ResponseField>
 
+<ResponseField name="archive" type="SessionArchiveCapabilities Object">
+  **Unstable.** The `session/archive` and `session/unarchive` methods, the
+  `archived` filter on `session/list`, and `archived` on listed sessions are
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means the Agent supports them. See [Archived
+  Sessions](/protocol/v2/draft/session-list#archived-sessions-unstable).
+</ResponseField>
+
 <ResponseField name="fork" type="SessionForkCapabilities Object">
   **Unstable.** The [`session/fork`](/rfds/session-fork) method is available.
   Omitted or `null` both mean the Agent does not advertise support. Supplying an

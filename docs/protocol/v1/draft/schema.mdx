@@ -500,6 +500,69 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
+<a id="session-archive"></a>
+### <span class="font-mono">session/archive</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Archives a session, hiding it from default `session/list` results.
+
+This method is only available if the agent advertises the `sessionCapabilities.archive` capability.
+
+#### <span class="font-mono">ArchiveSessionRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for archiving a session.
+
+Only available if the Agent supports the `sessionCapabilities.archive` capability.
+
+Archiving hides the session from default `session/list` results. It keeps the session ID
+and saved history. If the session is active, the Agent MUST cancel any ongoing work and
+free the session's resources as if `session/close` had been called, then archive it.
+Archiving an archived session succeeds. A session that does not exist gets `-32002`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to archive.
+</ResponseField>
+
+#### <span class="font-mono">ArchiveSessionResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from archiving a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+
 <a id="session-cancel"></a>
 ### <span class="font-mono">session/cancel</span>
 
@@ -771,6 +834,18 @@ metadata to their interactions. Implementations MUST NOT make assumptions about 
 these keys.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="archived" type={<><span><a href="#sessionarchivefilter">SessionArchiveFilter</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Filter sessions by archive state.
+
+Optional. Omitted and `null` are equivalent and mean `exclude`. Only send this when
+the Agent advertises the `sessionCapabilities.archive` capability. The filter combines with `cwd` and
+applies before pagination. Clients keep the same value when following `nextCursor`.
 
 </ResponseField>
 <ResponseField name="cursor" type={"string | null"} >
@@ -1463,6 +1538,70 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   Whether the Agent has the session in memory.
 
 Required. Clients MUST treat a value they do not recognize as `saved`.
+
+</ResponseField>
+
+<a id="session-unarchive"></a>
+### <span class="font-mono">session/unarchive</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Unarchives a session, returning it to default `session/list` results.
+
+This method is only available if the agent advertises the `sessionCapabilities.archive` capability.
+
+#### <span class="font-mono">UnarchiveSessionRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for unarchiving a session.
+
+Only available if the Agent supports the `sessionCapabilities.archive` capability.
+
+Unarchiving returns the session to default `session/list` results with the same ID and
+saved history. It never loads or resumes the session. Clients that want to continue an
+archived session SHOULD unarchive it before calling `session/load` or `session/resume`.
+Unarchiving a session that is not archived succeeds. A session that does not exist
+gets `-32002`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The ID of the session to unarchive.
+</ResponseField>
+
+#### <span class="font-mono">UnarchiveSessionResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from unarchiving a session.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
 
@@ -6322,6 +6461,64 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 
+## <span class="font-mono">SessionArchiveCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for `session/archive` and `session/unarchive`.
+
+Supplying `\{\}` means the agent supports both methods, the `archived` filter on
+`session/list`, and `SessionInfo.archived`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">SessionArchiveFilter</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Which sessions `session/list` returns based on their archive state.
+
+Unknown values are preserved so they can be stored, proxied, or forwarded. An Agent MUST
+return `-32602` for a value it does not support rather than treating it as `exclude`.
+
+**Type:** Union
+
+<ResponseField name="exclude" type="string">
+  Only sessions that are not archived. This is the default.
+</ResponseField>
+
+<ResponseField name="include" type="string">
+  Both archived sessions and sessions that are not archived.
+</ResponseField>
+
+<ResponseField name="only" type="string">
+  Only archived sessions.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future archive filter.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
 ## <span class="font-mono">SessionCancelCapabilities</span>
 
 **UNSTABLE**
@@ -6379,6 +6576,18 @@ supported session lifecycle requests.
 Agents that also support `session/list` may return
 `SessionInfo.additionalDirectories` to report the complete ordered
 additional-root list associated with a listed session.
+
+</ResponseField>
+<ResponseField name="archive" type={<><span><a href="#sessionarchivecapabilities">SessionArchiveCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `session/archive` and `session/unarchive`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports both methods, the `archived` filter on
+`session/list`, and `SessionInfo.archived`. Agents that advertise it MUST also advertise `sessionCapabilities.list`.
 
 </ResponseField>
 <ResponseField name="close" type={<><span><a href="#sessionclosecapabilities">SessionCloseCapabilities</a></span><span> | null</span></>} >
@@ -6802,6 +7011,17 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 When present, this is the complete ordered additional-root list reported
 by the Agent. Omitted and empty values are equivalent: the response
 reports no additional roots.
+
+</ResponseField>
+<ResponseField name="archived" type={"boolean | null"} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the session is archived.
+
+Optional. Omitted and `null` are equivalent and mean the archive state is not reported.
+Agents that advertise the `sessionCapabilities.archive` capability MUST include it on every listed session.
 
 </ResponseField>
 <ResponseField name="cwd" type={"string"} required>

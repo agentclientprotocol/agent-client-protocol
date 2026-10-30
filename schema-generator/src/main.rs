@@ -2257,6 +2257,8 @@ starting with '$/' it is free to ignore the notification."
                 "session/list" => self.agent.get("ListSessionsRequest").unwrap(),
                 "session/delete" => self.agent.get("DeleteSessionRequest").unwrap(),
                 "session/fork" => self.agent.get("ForkSessionRequest").unwrap(),
+                "session/archive" => self.agent.get("ArchiveSessionRequest").unwrap(),
+                "session/unarchive" => self.agent.get("UnarchiveSessionRequest").unwrap(),
                 "session/status" => self.agent.get("SessionStatusRequest").unwrap(),
                 "session/set_title" => self.agent.get("SetSessionTitleRequest").unwrap(),
                 "session/resume" => self.agent.get("ResumeSessionRequest").unwrap(),

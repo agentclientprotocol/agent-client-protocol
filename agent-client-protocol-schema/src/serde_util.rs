@@ -37,11 +37,25 @@ use serde_with::{DeserializeAs, de::DeserializeAsWrap};
 ///
 /// Opt in explicitly. Implementing `Default` alone does not change wire behavior.
 macro_rules! default_on_null {
+    // Copies one field from the wire struct, keeping only the field's `#[cfg]`
+    // attributes so feature-gated fields compile with the feature off.
+    (@assign $payload:ident $wire:ident $field:ident []) => {
+        $payload.$field = $wire.$field;
+    };
+    (@assign $payload:ident $wire:ident $field:ident [[cfg $($condition:tt)*] $($rest:tt)*]) => {
+        #[cfg $($condition)*]
+        {
+            $crate::serde_util::default_on_null!(@assign $payload $wire $field [$($rest)*]);
+        }
+    };
+    (@assign $payload:ident $wire:ident $field:ident [[$($other:tt)*] $($rest:tt)*]) => {
+        $crate::serde_util::default_on_null!(@assign $payload $wire $field [$($rest)*]);
+    };
     (
         $(#[$attribute:meta])*
         $visibility:vis struct $payload:ident {
             $(
-                $(#[$field_attribute:meta])*
+                $(#[$($field_attribute:tt)*])*
                 $field_visibility:vis $field:ident: $field_type:ty
             ),* $(,)?
         }
@@ -49,7 +63,7 @@ macro_rules! default_on_null {
         $(#[$attribute])*
         $visibility struct $payload {
             $(
-                $(#[$field_attribute])*
+                $(#[$($field_attribute)*])*
                 $field_visibility $field: $field_type,
             )*
         }
@@ -60,7 +74,7 @@ macro_rules! default_on_null {
                 #[derive(serde::Deserialize)]
                 struct Wire {
                     $(
-                        $(#[$field_attribute])*
+                        $(#[$($field_attribute)*])*
                         $field_visibility $field: $field_type,
                     )*
                 }
@@ -68,13 +82,18 @@ macro_rules! default_on_null {
                 struct NonNull;
 
                 impl<'de> serde_with::DeserializeAs<'de, $payload> for NonNull {
+                    #[allow(clippy::field_reassign_with_default)]
                     fn deserialize_as<D: serde::Deserializer<'de>>(
                         deserializer: D,
                     ) -> Result<$payload, D::Error> {
                         let wire = <Wire as serde::Deserialize>::deserialize(deserializer)?;
-                        Ok($payload {
-                            $($field: wire.$field,)*
-                        })
+                        let mut payload = <$payload as Default>::default();
+                        $(
+                            $crate::serde_util::default_on_null!(
+                                @assign payload wire $field [$([$($field_attribute)*])*]
+                            );
+                        )*
+                        Ok(payload)
                     }
                 }
 
@@ -125,6 +144,12 @@ mod default_on_null_tests {
             #[cfg(feature = "unstable_auth_status")]
             $check::<v1::AuthStatusRequest>();
 
+            #[cfg(feature = "unstable_session_archive")]
+            {
+                $check::<v1::ArchiveSessionResponse>();
+                $check::<v1::UnarchiveSessionResponse>();
+            }
+
             #[cfg(feature = "unstable_llm_providers")]
             {
                 $check::<v1::ListProvidersRequest>();
@@ -146,6 +171,12 @@ mod default_on_null_tests {
 
                 #[cfg(feature = "unstable_auth_status")]
                 $check::<v2::AuthStatusRequest>();
+
+                #[cfg(feature = "unstable_session_archive")]
+                {
+                    $check::<v2::ArchiveSessionResponse>();
+                    $check::<v2::UnarchiveSessionResponse>();
+                }
 
                 #[cfg(feature = "unstable_llm_providers")]
                 {

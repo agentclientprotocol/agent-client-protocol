@@ -14,6 +14,8 @@
     "session_list": "session/list",
     "session_delete": "session/delete",
     "session_fork": "session/fork",
+    "session_archive": "session/archive",
+    "session_unarchive": "session/unarchive",
     "session_status": "session/status",
     "session_set_title": "session/set_title",
     "session_resume": "session/resume",

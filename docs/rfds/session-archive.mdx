@@ -109,7 +109,7 @@ Extend `session/list` with an optional `archived` filter:
 | `include`                     | Unarchived and archived. |
 | `only`                        | Archived only.           |
 
-Agents that advertise `archive` **MUST** support all three values. Any other value is rejected with `Invalid params` (`-32602`) rather than falling back to the default, so a Client never silently receives the wrong view.
+Agents that advertise `archive` **MUST** support all three values. The filter is an open string enum: values beginning with `_` are reserved for implementation-specific extensions, and other unknown values for future ACP variants. An Agent rejects any value it does not support with `Invalid params` (`-32602`) rather than falling back to the default, so a Client never silently receives the wrong view.
 
 The filter combines with `cwd` and applies before pagination. Clients keep the same `cwd` and `archived` values when following `nextCursor`; changing either starts a new pagination sequence.
 
@@ -164,29 +164,13 @@ Include archived sessions alongside unarchived sessions:
 }
 ```
 
-Add an optional boolean `archived` to:
-
-- **`SessionInfo`:** Omission and `null` are equivalent and convey no archive-state guarantee. Agents that advertise `archive` **MUST** include a boolean value on every listed session.
-- **`SessionInfoUpdate`:** Omission and `null` are equivalent and leave the archive state unchanged. Unlike `title`, `null` does not clear anything, because every session is either archived or not. Agents **SHOULD** report changes through existing `session_info_update` notifications to Clients that have the session open. Listing remains the source of truth after reconnecting; no global subscription is introduced.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "session/update",
-  "params": {
-    "sessionId": "sess_abc123",
-    "update": {
-      "sessionUpdate": "session_info_update",
-      "archived": true
-    }
-  }
-}
-```
+Add an optional boolean `archived` to `SessionInfo`. Omission and `null` are equivalent and convey no archive-state guarantee. Agents that advertise `archive` **MUST** include a boolean value on every listed session.
 
 ### Semantics
 
 - **Preservation:** Both operations preserve the ID and saved conversation. Archive state persists with session history across connections and restarts; ordinary retention policies still apply.
-- **Archiving closes active sessions:** If the session is active, `session/archive` **MUST** cancel any ongoing work and free the session's resources as if [`session/close`](/protocol/v1/session-setup#closing-active-sessions) had been called, then archive it. This does not require the `close` capability. Agents **SHOULD** send the `archived: true` `session_info_update` to Clients with the session open before closing it. `session/unarchive` never loads or resumes a session.
+- **Archiving closes active sessions:** If the session is active, `session/archive` **MUST** cancel any ongoing work and free the session's resources as if [`session/close`](/protocol/v1/session-setup#closing-active-sessions) had been called, then archive it. This does not require the `close` capability. `session/unarchive` never loads or resumes a session.
+- **Session status:** Because archiving closes the session, an Agent that supports [`session/status`](/rfds/session-status) reports an archived session as `saved`.
 - **Loading archived sessions:** Closing, loading, or resuming does not change archive state. Agents **MAY** reject `session/load` or `session/resume` for an archived session. Clients that want to continue an archived session **SHOULD** call `session/unarchive` first; they already know the state from `SessionInfo.archived`.
 - **Idempotency:** Archiving an archived session, or unarchiving an unarchived session, succeeds. Neither method requires the session to be active on the current connection.
 - **Unknown sessions:** Unknown, deleted, or expired sessions return `Resource not found` (`-32002`). This differs from `session/delete`, which succeeds silently for unknown sessions because its end state ("not listed") already holds. Neither archive state can hold for a session that doesn't exist, so silently succeeding would hide stale or mistyped IDs.
@@ -228,11 +212,16 @@ Clients usually show archived sessions in their own view, which needs archived-o
 - **A single `session/setArchived` method with a boolean:** Equivalent in power, but two methods match the rest of the session lifecycle methods and keep each request's intent obvious.
 - **A general session-metadata editing method:** Larger in scope than this proposal needs.
 
-### What needs discussion?
+### Why is there no `archived` field on `session_info_update`?
 
-- **Discovery:** Should listing archived sessions have its own capability for Agents that support neither mutation?
+The Client that archives a session learns the result from the response, and `session/unarchive` never loads a session, so no Client is attached to hear about it. The only remaining audience is other Clients attached to a session when it is archived, and ACP doesn't define multiple Clients sharing a session yet (see the [Multi-Client Session Attach RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/533)). `session/list` is the source of truth. The field can be added later without breaking anything once multi-client attach exists.
+
+### Why is there no separate capability for listing archived sessions?
+
+An Agent that can't archive sessions has no archived sessions of its own, so a list-only capability would only serve Agents that mirror another tool's archive. That can be added later as a sub-capability of `archive` without breaking existing implementations.
 
 ## Revision history
 
+- 2026-10-30: Make the `archived` list filter an open enum, drop `archived` from `session_info_update`, resolve the list-only capability question, and note the interaction with `session/status`.
 - 2026-10-28: Archiving closes active sessions; three-value `archived` list filter; clarified null handling, errors, deletion, and subagent sessions; removed the `updatedAt` requirement.
 - 2026-09-14: Initial proposal.

@@ -223,3 +223,39 @@ after the first meaningful exchange to auto-generate a title.
 1. Client calls `session/list` to discover available sessions
 2. User selects a session from the list
 3. Client calls [`session/load`](/protocol/v1/session-setup#loading-sessions) with the chosen `sessionId` to resume the conversation
+
+## Archived sessions (unstable)
+
+Agents that advertise `sessionCapabilities.archive` support `session/archive`, `session/unarchive`, the `archived` filter on `session/list`, and `archived` on each listed session. Agents that advertise it **MUST** also advertise `sessionCapabilities.list`. Clients **MUST NOT** use any of them unless the Agent advertises the capability. See the [RFD](/rfds/session-archive).
+
+Archiving hides a session from default `session/list` results. Unarchiving returns it. Both keep the session ID and saved history, and both take only a `sessionId` and return an empty result:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "session/archive",
+  "params": {
+    "sessionId": "sess_abc123"
+  }
+}
+```
+
+The `archived` filter on `session/list` selects sessions by archive state:
+
+| Value                         | Sessions returned           |
+| ----------------------------- | --------------------------- |
+| Omitted, `null`, or `exclude` | Only sessions not archived. |
+| `include`                     | Archived and not archived.  |
+| `only`                        | Only archived sessions.     |
+
+Agents **MUST** reject a value they don't support with `-32602` rather than falling back to `exclude`. The filter combines with `cwd` and applies before pagination. Clients keep the same `cwd` and `archived` values when following `nextCursor`.
+
+Agents that advertise the capability **MUST** include a boolean `archived` on every listed session.
+
+- If the session is loaded, `session/archive` cancels any ongoing work and frees the session's resources as if [`session/close`](/protocol/v1/draft/session-setup#closing-active-sessions) had been called, then archives it. This does not require the `close` capability.
+- `session/unarchive` never loads or resumes a session. Clients that want to continue an archived session **SHOULD** unarchive it before calling `session/load` or `session/resume`. Agents **MAY** reject `session/load` or `session/resume` for an archived session.
+- Archive state persists across connections and restarts. Closing, loading, or resuming a session does not change it.
+- Because archiving closes the session, [`session/status`](/rfds/session-status) reports an archived session as `saved`.
+- Archiving an archived session, or unarchiving one that isn't archived, succeeds. A session that does not exist gets `-32002`.
+- Deleted sessions are excluded from every filter value, and unarchiving does not restore them.

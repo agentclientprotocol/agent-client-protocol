@@ -62,5 +62,6 @@ Agents **SHOULD** reject any request other than `initialize` that arrives before
 
 - `session/fork` of a session that does not exist gets `-32002`, as for [unknown sessions](#unknown-sessions).
 - `session/status` of a session the Agent does not know gets `-32002`, with `data.sessionId` set to the requested ID. A session that exists but isn't loaded is not an error. The Agent reports its status.
+- `session/archive` and `session/unarchive` of a session that does not exist get `-32002`. Unlike `session/delete`, they don't succeed silently. An `archived` filter value the Agent does not support gets `-32602`. See [Archived Sessions](/protocol/v1/draft/session-list#archived-sessions-unstable).
 - `session/set_title` of a session that does not exist gets `-32002`. The session doesn't have to be loaded. A title the Agent rejects gets `-32602`.
 - A `systemPrompt` the Agent cannot apply gets an error, `-32602` recommended. See [System Prompt](/protocol/v1/draft/session-setup#system-prompt-unstable).

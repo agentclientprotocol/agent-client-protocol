@@ -2374,6 +2374,18 @@ crate::serde_util::default_on_null! {
         /// Omitted and `null` are equivalent and mean the first page is requested.
         #[serde(default)]
         pub cursor: Option<SessionListCursor>,
+        /// **UNSTABLE**
+        ///
+        /// This capability is not part of the spec yet, and may be removed or changed at any point.
+        ///
+        /// Filter sessions by archive state.
+        ///
+        /// Optional. Omitted and `null` are equivalent and mean `exclude`. Only send this when
+        /// the Agent advertises the `session.archive` capability. The filter combines with `cwd` and
+        /// applies before pagination. Clients keep the same value when following `nextCursor`.
+        #[cfg(feature = "unstable_session_archive")]
+        #[serde(default)]
+        pub archived: Option<SessionArchiveFilter>,
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
         /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
         /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -2405,6 +2417,18 @@ impl ListSessionsRequest {
     #[must_use]
     pub fn cursor(mut self, cursor: impl IntoOption<SessionListCursor>) -> Self {
         self.cursor = cursor.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Filter sessions by archive state.
+    #[cfg(feature = "unstable_session_archive")]
+    #[must_use]
+    pub fn archived(mut self, archived: impl IntoOption<SessionArchiveFilter>) -> Self {
+        self.archived = archived.into_option();
         self
     }
 
@@ -2571,6 +2595,253 @@ impl DeleteSessionResponse {
     }
 }
 
+// Archive session
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for archiving a session.
+///
+/// Only available if the Agent supports the `session.archive` capability.
+///
+/// Archiving hides the session from default `session/list` results. It keeps the session ID
+/// and saved history. If the session is active, the Agent MUST cancel any ongoing work and
+/// free the session's resources as if `session/close` had been called, then archive it.
+/// Archiving an archived session succeeds. A session that does not exist gets `-32002`.
+///
+#[cfg(feature = "unstable_session_archive")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_ARCHIVE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ArchiveSessionRequest {
+    /// The ID of the session to archive.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl ArchiveSessionRequest {
+    /// Builds [`ArchiveSessionRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response from archiving a session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_ARCHIVE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct ArchiveSessionResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl ArchiveSessionResponse {
+    /// Builds [`ArchiveSessionResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for unarchiving a session.
+///
+/// Only available if the Agent supports the `session.archive` capability.
+///
+/// Unarchiving returns the session to default `session/list` results with the same ID and
+/// saved history. It never loads or resumes the session. Clients that want to continue an
+/// archived session SHOULD unarchive it before calling `session/resume`.
+/// Unarchiving a session that is not archived succeeds. A session that does not exist
+/// gets `-32002`.
+///
+#[cfg(feature = "unstable_session_archive")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_UNARCHIVE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnarchiveSessionRequest {
+    /// The ID of the session to unarchive.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl UnarchiveSessionRequest {
+    /// Builds [`UnarchiveSessionRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response from unarchiving a session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_UNARCHIVE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct UnarchiveSessionResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl UnarchiveSessionResponse {
+    /// Builds [`UnarchiveSessionResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Which sessions `session/list` returns based on their archive state.
+///
+/// Unknown values are preserved so they can be stored, proxied, or forwarded. An Agent MUST
+/// return `-32602` for a value it does not support rather than treating it as `exclude`.
+#[cfg(feature = "unstable_session_archive")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SessionArchiveFilter {
+    /// Only sessions that are not archived. This is the default.
+    #[default]
+    Exclude,
+    /// Both archived sessions and sessions that are not archived.
+    Include,
+    /// Only archived sessions.
+    Only,
+    /// Custom or future archive filter.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
 /// Information about a session returned by session/list
 #[serde_as]
 #[skip_serializing_none]
@@ -2607,6 +2878,19 @@ pub struct SessionInfo {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
     #[serde(default)]
     pub updated_at: Option<String>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the session is archived.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the archive state is not reported.
+    /// Agents that advertise the `session.archive` capability MUST include it on every listed session.
+    #[cfg(feature = "unstable_session_archive")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub archived: Option<bool>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -2629,6 +2913,8 @@ impl SessionInfo {
             additional_directories: vec![],
             title: None,
             updated_at: None,
+            #[cfg(feature = "unstable_session_archive")]
+            archived: None,
             meta: None,
         }
     }
@@ -2655,6 +2941,18 @@ impl SessionInfo {
     #[must_use]
     pub fn updated_at(mut self, updated_at: impl IntoOption<String>) -> Self {
         self.updated_at = updated_at.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the session is archived.
+    #[cfg(feature = "unstable_session_archive")]
+    #[must_use]
+    pub fn archived(mut self, archived: impl IntoOption<bool>) -> Self {
+        self.archived = archived.into_option();
         self
     }
 
@@ -5302,6 +5600,20 @@ pub struct SessionCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Whether the agent supports `session/archive` and `session/unarchive`.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports both methods, the `archived` filter on
+    /// `session/list`, and `SessionInfo.archived`.
+    #[cfg(feature = "unstable_session_archive")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub archive: Option<SessionArchiveCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Whether the agent supports `session/status`.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
@@ -5420,6 +5732,22 @@ impl SessionCapabilities {
     #[must_use]
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
         self.fork = fork.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/archive` and `session/unarchive`.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports both methods, the `archived` filter on
+    /// `session/list`, and `SessionInfo.archived`.
+    #[cfg(feature = "unstable_session_archive")]
+    #[must_use]
+    pub fn archive(mut self, archive: impl IntoOption<SessionArchiveCapabilities>) -> Self {
+        self.archive = archive.into_option();
         self
     }
 
@@ -5762,6 +6090,53 @@ pub struct SessionForkCapabilities {
 #[cfg(feature = "unstable_session_fork")]
 impl SessionForkCapabilities {
     /// Builds an empty [`SessionForkCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for `session/archive` and `session/unarchive`.
+///
+/// Supplying `{}` means the agent supports both methods, the `archived` filter on
+/// `session/list`, and `SessionInfo.archived`.
+#[cfg(feature = "unstable_session_archive")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionArchiveCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl SessionArchiveCapabilities {
+    /// Builds an empty [`SessionArchiveCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -6420,6 +6795,12 @@ pub struct AgentMethodNames {
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
     pub session_fork: &'static str,
+    /// Method for archiving a session.
+    #[cfg(feature = "unstable_session_archive")]
+    pub session_archive: &'static str,
+    /// Method for unarchiving a session.
+    #[cfg(feature = "unstable_session_archive")]
+    pub session_unarchive: &'static str,
     /// Method for checking the status of a session.
     #[cfg(feature = "unstable_session_status")]
     pub session_status: &'static str,
@@ -6457,6 +6838,10 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_delete: SESSION_DELETE_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
+    #[cfg(feature = "unstable_session_archive")]
+    session_archive: SESSION_ARCHIVE_METHOD_NAME,
+    #[cfg(feature = "unstable_session_archive")]
+    session_unarchive: SESSION_UNARCHIVE_METHOD_NAME,
     #[cfg(feature = "unstable_session_status")]
     session_status: SESSION_STATUS_METHOD_NAME,
     #[cfg(feature = "unstable_session_set_title")]
@@ -6496,6 +6881,12 @@ pub(crate) const SESSION_DELETE_METHOD_NAME: &str = "session/delete";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
 pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
+/// Method name for archiving a session.
+#[cfg(feature = "unstable_session_archive")]
+pub(crate) const SESSION_ARCHIVE_METHOD_NAME: &str = "session/archive";
+/// Method name for unarchiving a session.
+#[cfg(feature = "unstable_session_archive")]
+pub(crate) const SESSION_UNARCHIVE_METHOD_NAME: &str = "session/unarchive";
 /// Method name for checking the status of a session.
 #[cfg(feature = "unstable_session_status")]
 pub(crate) const SESSION_STATUS_METHOD_NAME: &str = "session/status";
@@ -6632,6 +7023,24 @@ pub enum ClientRequest {
     /// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
     /// The client can prompt it without calling `session/resume` first.
     ForkSessionRequest(Box<ForkSessionRequest>),
+    #[cfg(feature = "unstable_session_archive")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Archives a session, hiding it from default `session/list` results.
+    ///
+    /// This method is only available if the agent advertises the `session.archive` capability.
+    ArchiveSessionRequest(Box<ArchiveSessionRequest>),
+    #[cfg(feature = "unstable_session_archive")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Unarchives a session, returning it to default `session/list` results.
+    ///
+    /// This method is only available if the agent advertises the `session.archive` capability.
+    UnarchiveSessionRequest(Box<UnarchiveSessionRequest>),
     #[cfg(feature = "unstable_session_status")]
     /// **UNSTABLE**
     ///
@@ -6718,6 +7127,10 @@ impl ClientRequest {
             Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
+            #[cfg(feature = "unstable_session_archive")]
+            Self::ArchiveSessionRequest(_) => AGENT_METHOD_NAMES.session_archive,
+            #[cfg(feature = "unstable_session_archive")]
+            Self::UnarchiveSessionRequest(_) => AGENT_METHOD_NAMES.session_unarchive,
             #[cfg(feature = "unstable_session_status")]
             Self::SessionStatusRequest(_) => AGENT_METHOD_NAMES.session_status,
             #[cfg(feature = "unstable_session_set_title")]
@@ -6770,6 +7183,12 @@ pub enum AgentResponse {
     /// Successful result returned for a `session/fork` request.
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(Box<ForkSessionResponse>),
+    /// Successful result returned for a `session/archive` request.
+    #[cfg(feature = "unstable_session_archive")]
+    ArchiveSessionResponse(#[serde(default)] Box<ArchiveSessionResponse>),
+    /// Successful result returned for a `session/unarchive` request.
+    #[cfg(feature = "unstable_session_archive")]
+    UnarchiveSessionResponse(#[serde(default)] Box<UnarchiveSessionResponse>),
     /// Successful result returned for a `session/status` request.
     #[cfg(feature = "unstable_session_status")]
     SessionStatusResponse(Box<SessionStatusResponse>),
@@ -7844,6 +8263,85 @@ mod test_serialization {
         for params in [json!({}), json!({"sessionId": null})] {
             assert!(serde_json::from_value::<SessionStatusRequest>(params).is_err());
         }
+    }
+
+    #[cfg(feature = "unstable_session_archive")]
+    #[test]
+    fn test_session_archive_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_archive, "session/archive");
+        assert_eq!(AGENT_METHOD_NAMES.session_unarchive, "session/unarchive");
+        assert_eq!(
+            ClientRequest::ArchiveSessionRequest(Box::new(ArchiveSessionRequest::new(
+                "sess_abc123"
+            )))
+            .method(),
+            "session/archive"
+        );
+        assert_eq!(
+            ClientRequest::UnarchiveSessionRequest(Box::new(UnarchiveSessionRequest::new(
+                "sess_abc123"
+            )))
+            .method(),
+            "session/unarchive"
+        );
+        assert_eq!(
+            serde_json::to_value(ArchiveSessionRequest::new("sess_abc123")).unwrap(),
+            json!({"sessionId": "sess_abc123"})
+        );
+        assert_eq!(
+            serde_json::to_value(UnarchiveSessionResponse::new()).unwrap(),
+            json!({})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().archive(SessionArchiveCapabilities::new())
+            )
+            .unwrap(),
+            json!({"archive": {}})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                ListSessionsRequest::new()
+                    .cwd("/home/user/project")
+                    .archived(SessionArchiveFilter::Only)
+            )
+            .unwrap(),
+            json!({"cwd": "/home/user/project", "archived": "only"})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionInfo::new("sess_abc123", "/home/user/project").archived(true)
+            )
+            .unwrap(),
+            json!({"sessionId": "sess_abc123", "cwd": "/home/user/project", "archived": true})
+        );
+    }
+
+    #[cfg(feature = "unstable_session_archive")]
+    #[test]
+    fn test_session_archive_filter_is_strict_and_open() {
+        for (value, expected) in [
+            (json!(null), None),
+            (json!("include"), Some(SessionArchiveFilter::Include)),
+            (
+                json!("_recent"),
+                Some(SessionArchiveFilter::Other("_recent".to_string())),
+            ),
+        ] {
+            let request =
+                serde_json::from_value::<ListSessionsRequest>(json!({"archived": value})).unwrap();
+            assert_eq!(request.archived, expected);
+        }
+        for value in [json!(true), json!(1), json!({})] {
+            assert!(
+                serde_json::from_value::<ListSessionsRequest>(json!({"archived": value})).is_err()
+            );
+        }
+        let info = serde_json::from_value::<SessionInfo>(
+            json!({"sessionId": "sess_abc123", "cwd": "/home/user/project", "archived": "yes"}),
+        )
+        .unwrap();
+        assert_eq!(info.archived, None);
     }
 
     #[test]
