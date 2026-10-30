@@ -276,7 +276,7 @@ Each entry in `authMethods` now uses `methodId` instead of `id`, and carries a r
 }
 ```
 
-Because `type: "agent"` defines a protocol-driven login flow, including this entry in an initialize response requires the Agent to support both `auth/login` and `auth/logout`.
+Because this entry makes `authMethods` non-empty, the Agent must support both `auth/login` and `auth/logout`; `type: "agent"` is the method type that uses `auth/login`'s protocol-driven flow.
 
 Stable v2 defines two types: `agent` and `terminal`. Custom types **MUST** begin with `_`. Unknown values without a leading `_` are reserved for future ACP versions.
 

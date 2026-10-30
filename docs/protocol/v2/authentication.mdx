@@ -80,8 +80,7 @@ authentication-related extensions, not the availability of the baseline
 }
 ```
 
-Because this response contains an `agent` authentication method, the Agent **MUST**
-support both `auth/login` and `auth/logout`.
+Because this response has a non-empty `authMethods` list, the Agent **MUST** support both `auth/login` and `auth/logout`.
 
 ### Authentication method types
 
