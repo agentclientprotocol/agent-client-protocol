@@ -51,6 +51,7 @@ On a connection, a session is **active** from a successful `session/new`, `sessi
 - Session-scoped requests such as `session/prompt` and `session/set_config_option` require an active session. Otherwise the Agent responds with `-32002`; see [Unknown Sessions](/protocol/v2/draft/error#unknown-sessions). Agents ignore `session/cancel` for a session that isn't active.
 - Closing a session ends it on the connection but doesn't discard it. Whether a closed session stays listed and resumable depends on how long the Agent keeps it.
 - Resuming a session that is already active on the connection synchronizes it again, like any resume. Ongoing work continues, and the request's MCP servers and workspace roots replace the previous ones.
+- Whether a session can be active on more than one connection at once is up to the Agent. An Agent that doesn't allow it **MAY** reject a `session/resume` for a session active on another connection, or end the session's activity on that other connection as if it were closed, for example when a Client reconnects before the Agent notices the old connection is gone.
 - When the connection ends, its sessions stop being active. The Agent **MAY** continue or cancel their foreground work. A later `session/resume` reports the outcome in its [current-state snapshot](#current-state-synchronization).
 
 ## Creating a Session
