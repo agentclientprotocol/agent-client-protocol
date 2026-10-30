@@ -5035,7 +5035,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
-  Environment variables to set when launching the MCP server.
+  Environment variables to set when launching the MCP server. Names MUST be unique;
+Agents reject duplicates with `-32602`.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
@@ -5172,7 +5173,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
-  Environment variables to set when launching the MCP server.
+  Environment variables to set when launching the MCP server. Names MUST be unique;
+Agents reject duplicates with `-32602`.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.

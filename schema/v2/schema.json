@@ -6416,7 +6416,7 @@
           "x-deserialize-default-on-null": true
         },
         "env": {
-          "description": "Environment variables to set when launching the MCP server.",
+          "description": "Environment variables to set when launching the MCP server. Names MUST be unique;\nAgents reject duplicates with `-32602`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"

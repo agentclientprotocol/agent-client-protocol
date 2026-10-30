@@ -3140,7 +3140,8 @@ pub struct McpServerStdio {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
-    /// Environment variables to set when launching the MCP server.
+    /// Environment variables to set when launching the MCP server. Names MUST be unique;
+    /// Agents reject duplicates with `-32602`.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -3177,7 +3178,8 @@ impl McpServerStdio {
         self
     }
 
-    /// Environment variables to set when launching the MCP server.
+    /// Environment variables to set when launching the MCP server. Names MUST be unique;
+    /// Agents reject duplicates with `-32602`.
     #[must_use]
     pub fn env(mut self, env: Vec<EnvVariable>) -> Self {
         self.env = env;
