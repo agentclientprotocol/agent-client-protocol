@@ -294,7 +294,7 @@ interface AuthStatusUpdateNotification {
 
 3. **Local checks preferred**: The agent MAY determine auth state from locally available information (config files, environment variables, stored tokens) or by making external API calls. Agents SHOULD keep `auth/status` fast; if a check would block, they SHOULD answer `unknown` and send `auth/status_update` once the check completes. `authenticated` means credentials are present, NOT that they are guaranteed to be valid.
 
-4. **No side effects**: Calling `auth/status` MUST NOT modify any agent state. It is a pure query.
+4. **No side effects**: Calling `auth/status` MUST NOT modify any agent state. It is a pure query. Agents MUST NOT reject `auth/status` with `auth_required` (`-32000`), since it is how a Client learns that authentication is required.
 
 5. **Overall state**: The top-level `state` describes whether the agent can start a session with its default configuration without the user signing in. Agents with several accounts report `authenticated` if the accounts in effect are usable, even if others are not.
 

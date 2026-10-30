@@ -160,7 +160,7 @@ Queries the agent's current authentication state without changing it.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT make assumptions about values at these keys.
+Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -181,7 +181,7 @@ Response to the `auth/status` method.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT make assumptions about values at these keys.
+Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -1346,7 +1346,7 @@ send it when the reported status differs from the last one sent on the connectio
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT make assumptions about values at these keys.
+Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -2024,7 +2024,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Whether the agent supports the `auth/status` method.
 
-Optional. Omitted or `null` both mean the agent does not advertise support.
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports the `auth/status` method.
 
 </ResponseField>
@@ -2252,7 +2252,7 @@ telemetry.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT make assumptions about values at these keys.
+Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -2535,7 +2535,7 @@ Supplying `\{\}` means the agent supports the `auth/status` method.
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT make assumptions about values at these keys.
+Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 

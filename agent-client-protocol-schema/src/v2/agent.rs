@@ -461,7 +461,7 @@ crate::serde_util::default_on_null! {
     pub struct AuthStatusRequest {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
         /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-        /// Implementations MUST NOT make assumptions about values at these keys.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
         /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
@@ -474,15 +474,15 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusRequest {
-    /// Builds [`AuthStatusRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`AuthStatusRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -522,7 +522,7 @@ pub struct AuthStatusResponse {
     pub accounts: Vec<AuthAccount>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -534,7 +534,7 @@ pub struct AuthStatusResponse {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusResponse {
-    /// Builds [`AuthStatusResponse`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthStatusResponse`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(state: AuthState) -> Self {
         Self {
@@ -552,8 +552,8 @@ impl AuthStatusResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -597,7 +597,7 @@ pub struct AuthStatusUpdateNotification {
     pub accounts: Vec<AuthAccount>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -609,7 +609,7 @@ pub struct AuthStatusUpdateNotification {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusUpdateNotification {
-    /// Builds [`AuthStatusUpdateNotification`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthStatusUpdateNotification`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(state: AuthState) -> Self {
         Self {
@@ -627,8 +627,8 @@ impl AuthStatusUpdateNotification {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -720,7 +720,7 @@ pub struct AuthAccount {
     pub organization: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -732,7 +732,7 @@ pub struct AuthAccount {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthAccount {
-    /// Builds [`AuthAccount`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthAccount`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(label: impl Into<String>) -> Self {
         Self {
@@ -774,8 +774,8 @@ impl AuthAccount {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -801,7 +801,7 @@ impl AuthAccount {
 pub struct AuthStatusCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -813,15 +813,15 @@ pub struct AuthStatusCapabilities {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusCapabilities {
-    /// Builds an empty [`AuthStatusCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`AuthStatusCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -849,7 +849,7 @@ pub struct AgentAuthCapabilities {
     ///
     /// Whether the agent supports the `auth/status` method.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports the `auth/status` method.
     #[cfg(feature = "unstable_auth_status")]
     #[serde_as(deserialize_as = "DefaultOnError")]

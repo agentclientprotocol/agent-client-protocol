@@ -280,6 +280,13 @@ Note: This transport has been deprecated by the MCP spec.
   available.
 </ResponseField>
 
+<ResponseField name="status" type="AuthStatusCapabilities Object">
+  **Unstable.** The [`auth/status`](/rfds/get-auth-state) method and the
+  `auth/status_update` notification are available. Omitted or `null` both mean
+  the Agent does not advertise support. Supplying an empty object means the
+  Agent supports them.
+</ResponseField>
+
 <Card icon="shield-check" horizontal href="/protocol/v1/draft/authentication">
   Learn more about Authentication
 </Card>

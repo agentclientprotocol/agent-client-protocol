@@ -476,7 +476,7 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusRequest {
-    /// Builds [`AuthStatusRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`AuthStatusRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -536,7 +536,7 @@ pub struct AuthStatusResponse {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusResponse {
-    /// Builds [`AuthStatusResponse`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthStatusResponse`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(state: AuthState) -> Self {
         Self {
@@ -611,7 +611,7 @@ pub struct AuthStatusUpdateNotification {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusUpdateNotification {
-    /// Builds [`AuthStatusUpdateNotification`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthStatusUpdateNotification`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(state: AuthState) -> Self {
         Self {
@@ -734,7 +734,7 @@ pub struct AuthAccount {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthAccount {
-    /// Builds [`AuthAccount`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthAccount`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(label: impl Into<String>) -> Self {
         Self {
@@ -815,7 +815,7 @@ pub struct AuthStatusCapabilities {
 
 #[cfg(feature = "unstable_auth_status")]
 impl AuthStatusCapabilities {
-    /// Builds an empty [`AuthStatusCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`AuthStatusCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
