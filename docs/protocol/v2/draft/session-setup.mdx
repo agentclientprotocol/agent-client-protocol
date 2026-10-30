@@ -411,8 +411,7 @@ same empty result. Clients **SHOULD** treat a `-32002` response to
 
 Agents that advertise `session.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
-expand the session's effective workspace root set. The supported stable requests
-are `session/new` and `session/resume`.
+expand the session's effective workspace root set. The supported stable requests are `session/new` and `session/resume`. When supported, `session/fork` also accepts `additionalDirectories` with the same rules; its list is the complete root set for the new session and is not inherited from the source session.
 
 ```json
 {
@@ -544,7 +543,7 @@ MCP servers can be connected to using different transports. Agents advertise sup
 
 Each server `name` **MUST** be unique within `mcpServers`. Agents reject duplicates with `-32602`.
 
-On `session/resume`, `mcpServers` is the complete set of Client-provided servers for the session; omitted and `[]` mean none. Agents **SHOULD NOT** restore servers from earlier `session/new` or `session/resume` requests. MCP servers the Agent is configured with independently of ACP are unaffected.
+On `session/resume`, `mcpServers` is the complete set of Client-provided servers for the session; omitted and `[]` mean none. Agents **SHOULD NOT** restore servers from earlier `session/new` or `session/resume` requests. MCP servers the Agent is configured with independently of ACP are unaffected. The same applies to `session/fork`: its `mcpServers` is the complete set for the new session, not inherited from the source session.
 
 ### Transport Types
 
