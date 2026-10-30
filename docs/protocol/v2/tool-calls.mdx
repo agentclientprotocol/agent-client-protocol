@@ -116,9 +116,6 @@ unchanged. See [Metadata Patches](/protocol/v2/extensibility#metadata-patches).
 Use `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection. Display-only terminal bytes use `terminal_output_chunk` instead.
-For `name` specifically, omission leaves the existing name unchanged, `null`
-clears it, and a string sets or replaces it. On a new tool call, omission and
-`null` both result in no name.
 
 `rawInput` and `rawOutput` follow the same patch rule, even though `null` is
 also a valid arbitrary JSON value: omission leaves the stored value unchanged,
