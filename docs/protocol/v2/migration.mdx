@@ -758,7 +758,7 @@ Retained user messages **MUST** preserve the ID returned by `session/prompt`. Ag
 
 ### Consistent lifecycle requests
 
-`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Omitting it and sending `[]` are equivalent. Both responses **MAY** include the session's `configOptions` and initial `availableCommands`. Neither carries `modes` anymore.
+`session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Omitting it and sending `[]` are equivalent. Both responses carry the session's `configOptions` and `availableCommands`, and an Agent whose session has either **MUST** include them, since the response replaces the Client's lists. Neither carries `modes` anymore.
 
 `additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list. Omitting the field or sending `[]` activates no additional roots rather than restoring previous ones.
 
