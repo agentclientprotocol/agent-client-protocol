@@ -2348,7 +2348,7 @@ pub enum SessionConfigKind {
     ///
     /// Clients that do not understand this option type should preserve the raw
     /// payload when storing, replaying, proxying, or forwarding configuration
-    /// data, and otherwise ignore the option or display it generically.
+    /// data, and otherwise ignore the option. The Agent keeps using its `currentValue`.
     #[serde(untagged)]
     Other(OtherSessionConfigKind),
 }
