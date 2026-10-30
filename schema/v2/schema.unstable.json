@@ -3701,7 +3701,7 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4274,7 +4274,7 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4307,7 +4307,7 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "Initial session configuration options.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"

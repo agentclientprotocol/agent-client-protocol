@@ -957,6 +957,10 @@ pub struct NewSessionResponse {
     /// Used in all subsequent requests for this conversation.
     pub session_id: SessionId,
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -995,6 +999,10 @@ impl NewSessionResponse {
     }
 
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
@@ -1160,6 +1168,10 @@ pub struct ForkSessionResponse {
     /// Unique identifier for the newly created forked session.
     pub session_id: SessionId,
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1199,6 +1211,10 @@ impl ForkSessionResponse {
     }
 
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
@@ -1526,6 +1542,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct ResumeSessionResponse {
         /// Initial session configuration options.
+        ///
+        /// Optional. Omitted or empty means no config options are advertised.
+        /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+        /// Later `config_option_update` notifications replace this list.
         #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1560,6 +1580,10 @@ impl ResumeSessionResponse {
     }
 
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;

@@ -706,6 +706,11 @@ Later `available_commands_update` notifications replace this list.
 </ResponseField>
 <ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
   Initial session configuration options.
+
+Optional. Omitted or empty means no config options are advertised.
+Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Later `config_option_update` notifications replace this list.
+
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   Unique identifier for the newly created forked session.
@@ -869,6 +874,11 @@ Later `available_commands_update` notifications replace this list.
 </ResponseField>
 <ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
   Initial session configuration options.
+
+Optional. Omitted or empty means no config options are advertised.
+Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Later `config_option_update` notifications replace this list.
+
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   Unique identifier for the created session.
@@ -1096,6 +1106,11 @@ Later `available_commands_update` notifications replace this list.
 </ResponseField>
 <ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
   Initial session configuration options.
+
+Optional. Omitted or empty means no config options are advertised.
+Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Later `config_option_update` notifications replace this list.
+
 </ResponseField>
 
 <a id="session-set_config_option"></a>
