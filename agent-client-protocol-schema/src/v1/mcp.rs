@@ -15,17 +15,17 @@ use super::{McpServerAcpId, Meta};
 ///
 /// An inner MCP error, distinct from an outer ACP binding or runtime error.
 ///
-/// `code` and `message` are required and non-null. `data` is optional;
-/// explicit `null` is preserved separately from an omitted key.
+/// `code` and `message` are required and non-null. `data` is optional.
+/// Explicit `null` is preserved separately from an omitted key.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct McpError {
-    /// Inner MCP error code; never an ACP error code.
+    /// Inner MCP error code. Never an ACP error code.
     pub code: i32,
     /// Inner MCP error message.
     pub message: String,
-    /// Optional error data; explicit null is retained.
+    /// Optional error data. Explicit null is retained.
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub data: MaybeUndefined<Value>,
     /// Additional fields on the inner MCP error object.
@@ -64,9 +64,9 @@ impl McpError {
 /// Outer ACP errors are reserved for binding and runtime failures.
 ///
 /// Both branches require their carrier key. An error must be a non-null object.
-/// Unknown outer fields are ignored; inner result and error fields are preserved.
-/// Carrier `_meta` is optional; null or invalid values are treated as absent.
-/// Senders must include exactly one outcome; receivers prefer `result` if both are present.
+/// Unknown outer fields are ignored. Inner result and error fields are preserved.
+/// Carrier `_meta` is optional. Null or invalid values are treated as absent.
+/// Senders must include exactly one outcome. Receivers prefer `result` if both are present.
 #[serde_as]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -182,7 +182,7 @@ pub struct MessageMcpRequest {
 }
 
 impl MessageMcpRequest {
-    /// Builds [`MessageMcpRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`MessageMcpRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         server_id: impl Into<McpServerAcpId>,
@@ -229,7 +229,7 @@ impl MessageMcpRequest {
 /// Notification parameters for `mcp/message`.
 ///
 /// Sent by the provider to the consumer for an active request (including
-/// subscription acknowledgements and updates); the outer envelope has no `id`.
+/// subscription acknowledgements and updates). The outer envelope has no `id`.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -262,7 +262,7 @@ pub struct MessageMcpNotification {
 }
 
 impl MessageMcpNotification {
-    /// Builds [`MessageMcpNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`MessageMcpNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         server_id: impl Into<McpServerAcpId>,

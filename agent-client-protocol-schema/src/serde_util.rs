@@ -2,16 +2,16 @@
 //!
 //! ## Payload adapters
 //!
-//! - [`default_on_null`] — opt a defaultable payload into accepting null.
+//! - [`default_on_null`]: opt a defaultable payload into accepting null.
 //!
 //! ## Types
 //!
-//! - [`MaybeUndefined<T>`] — three-state: undefined (key absent), null, or value.
+//! - [`MaybeUndefined<T>`]: three-state: undefined (key absent), null, or value.
 //!
 //! ## Builder traits
 //!
-//! - [`IntoOption<T>`] — ergonomic conversion into `Option<T>` for builder methods.
-//! - [`IntoMaybeUndefined<T>`] — ergonomic conversion into `MaybeUndefined<T>` for builder methods.
+//! - [`IntoOption<T>`]: ergonomic conversion into `Option<T>` for builder methods.
+//! - [`IntoMaybeUndefined<T>`]: ergonomic conversion into `MaybeUndefined<T>` for builder methods.
 //!
 //! `MaybeUndefined` based on: <https://docs.rs/async-graphql/latest/src/async_graphql/types/maybe_undefined.rs.html>
 use std::{
@@ -32,10 +32,10 @@ use serde_with::{DeserializeAs, de::DeserializeAsWrap};
 /// Declare the normal derives except `Deserialize` inside this macro. A private
 /// wire type derives deserialization from the same fields and attributes, so
 /// there is no second field definition to maintain and no public helper methods.
-/// `DefaultOnNull` wraps only deserialization of the entire payload; serialization
+/// `DefaultOnNull` wraps only deserialization of the entire payload. Serialization
 /// and JSON Schema are still derived directly on the public type.
 ///
-/// Opt in explicitly; implementing `Default` alone does not change wire behavior.
+/// Opt in explicitly. Implementing `Default` alone does not change wire behavior.
 macro_rules! default_on_null {
     (
         $(#[$attribute:meta])*

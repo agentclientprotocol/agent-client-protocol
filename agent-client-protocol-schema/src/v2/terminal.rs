@@ -46,7 +46,7 @@ pub struct Terminal {
     pub terminal_id: TerminalId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -87,7 +87,7 @@ pub struct TerminalOutput {
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -143,7 +143,7 @@ pub struct TerminalExitStatus {
     pub signal: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -226,11 +226,11 @@ pub struct TerminalUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub size: MaybeUndefined<TerminalSize>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
     /// stored value without merging nested objects. Beyond this patch rule, implementations
-    /// MUST NOT make assumptions about values at these keys.
+    /// MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
@@ -295,7 +295,7 @@ impl TerminalUpdate {
 
     /// Patches, clears, or leaves unchanged terminal metadata.
     ///
-    /// A concrete object patches stored metadata by top-level key; see
+    /// A concrete object patches stored metadata by top-level key. See
     /// [`apply_meta_update`].
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
@@ -346,7 +346,7 @@ pub struct TerminalSize {
     pub rows: u16,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -368,8 +368,8 @@ impl TerminalSize {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -394,7 +394,7 @@ pub struct TerminalOutputChunk {
     pub data: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This metadata is scoped to the chunk and does not patch stored metadata.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)

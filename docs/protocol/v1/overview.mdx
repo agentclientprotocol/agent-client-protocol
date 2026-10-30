@@ -9,10 +9,10 @@ The Agent Client Protocol allows [Agents](#agent) and [Clients](#client) to comm
 
 The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification with two types of messages:
 
-- **Methods**: Request-response pairs that expect a result or error
-- **Notifications**: One-way messages that don't expect a response
+- Methods are request-response pairs that expect a result or error.
+- Notifications are one-way messages that don't expect a response.
 
-## Message Flow
+## Message flow
 
 A typical flow follows this pattern:
 
@@ -20,7 +20,7 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client: completes an advertised authentication flow if required; for example,
+- Client: completes an advertised authentication flow if required. For example,
   `authenticate` for an Agent-handled method or launch and reconnect for a
   terminal method
 
@@ -46,7 +46,7 @@ A typical flow follows this pattern:
 
 Agents are programs that use generative AI to autonomously modify code. They typically run as subprocesses of the Client.
 
-### Baseline Methods
+### Baseline methods
 
 <ResponseField
   name="initialize"
@@ -77,7 +77,7 @@ Agents are programs that use generative AI to autonomously modify code. They typ
   [Send user prompts](/protocol/v1/prompt-turn#1-user-message) to the Agent.
 </ResponseField>
 
-### Optional Methods
+### Optional methods
 
 <ResponseField
   name="session/load"
@@ -117,7 +117,7 @@ Agents are programs that use generative AI to autonomously modify code. They typ
 
 Clients provide the interface between users and agents. They are typically code editors (IDEs, text editors) but can also be other UIs for interacting with agents. Clients manage the environment, handle user interactions, and control access to resources.
 
-### Baseline Methods
+### Baseline methods
 
 <ResponseField
   name="session/request_permission"
@@ -127,7 +127,7 @@ Clients provide the interface between users and agents. They are typically code 
   for tool calls.
 </ResponseField>
 
-### Optional Methods
+### Optional methods
 
 <ResponseField
   name="fs/read_text_file"
@@ -221,7 +221,7 @@ Clients provide the interface between users and agents. They are typically code 
 - All file paths in the protocol **MUST** be absolute.
 - Line numbers are 1-based
 
-## Error Handling
+## Error handling
 
 All methods follow standard JSON-RPC 2.0 [error handling](https://www.jsonrpc.org/specification#error_object):
 
@@ -237,19 +237,19 @@ Unless explicitly defined otherwise in the schema, ACP-defined JSON object prope
 
 ## Extensibility
 
-The protocol provides built-in mechanisms for adding custom functionality while maintaining compatibility:
+Implementations can extend the protocol without breaking compatibility:
 
 - Add custom data using `_meta` fields
 - Create custom methods by prefixing their name with underscore (`_`)
 - Advertise custom capabilities during initialization
 
-Learn about [protocol extensibility](/protocol/v1/extensibility) to understand how to use these mechanisms.
+See [Extensibility](/protocol/v1/extensibility) for details.
 
-## Next Steps
+## Next steps
 
-- Read the [Security Considerations](/protocol/v1/security) before shipping an Agent or Client
-- Learn about [Initialization](/protocol/v1/initialization) to understand version and capability negotiation
-- Understand [Session Setup](/protocol/v1/session-setup) for creating and loading sessions
-- Review the [Prompt Turn](/protocol/v1/prompt-turn) lifecycle
-- Explore [Extensibility](/protocol/v1/extensibility) to add custom features
-- Check your agent implementation with the [Test Compatibility Kit](/libraries/testing)
+- [Security Considerations](/protocol/v1/security) covers the trust model. Read it before shipping an Agent or Client.
+- [Initialization](/protocol/v1/initialization) covers version and capability negotiation.
+- [Session Setup](/protocol/v1/session-setup) covers creating and loading sessions.
+- [Prompt Turn](/protocol/v1/prompt-turn) covers the prompt turn lifecycle.
+- [Extensibility](/protocol/v1/extensibility) covers custom data, methods, and capabilities.
+- The [Test Compatibility Kit](/libraries/testing) checks an Agent implementation against the protocol.

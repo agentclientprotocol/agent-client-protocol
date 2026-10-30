@@ -1,7 +1,7 @@
 //! Tool calls represent actions that language models request agents to perform.
 //!
-//! When an LLM determines it needs to interact with external systems—like reading files,
-//! running code, or fetching data—it generates tool calls that the agent executes on its behalf.
+//! Examples include reading a file or running a command. The agent executes the tool call on
+//! the model's behalf and reports its progress to the client.
 //!
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v1/tool-calls)
 use std::{path::PathBuf, sync::Arc};
@@ -84,7 +84,7 @@ pub struct ToolCall {
 }
 
 impl ToolCall {
-    /// Builds [`ToolCall`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ToolCall`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>, title: impl Into<String>) -> Self {
         Self {
@@ -224,7 +224,7 @@ pub struct ToolCallUpdate {
 }
 
 impl ToolCallUpdate {
-    /// Builds [`ToolCallUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ToolCallUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>, fields: ToolCallUpdateFields) -> Self {
         Self {
@@ -305,7 +305,7 @@ pub struct ToolCallUpdateFields {
 }
 
 impl ToolCallUpdateFields {
-    /// Builds [`ToolCallUpdateFields`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ToolCallUpdateFields`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -591,7 +591,7 @@ pub struct Content {
 }
 
 impl Content {
-    /// Builds [`Content`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Content`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(content: impl Into<ContentBlock>) -> Self {
         Self {
@@ -639,7 +639,7 @@ pub struct Terminal {
 }
 
 impl Terminal {
-    /// Builds [`Terminal`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Terminal`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -694,7 +694,7 @@ pub struct Diff {
 }
 
 impl Diff {
-    /// Builds [`Diff`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Diff`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<PathBuf>, new_text: impl Into<String>) -> Self {
         Self {
@@ -757,7 +757,7 @@ pub struct ToolCallLocation {
 }
 
 impl ToolCallLocation {
-    /// Builds [`ToolCallLocation`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ToolCallLocation`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {

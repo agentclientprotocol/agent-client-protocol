@@ -3,11 +3,11 @@ title: "Session List"
 description: "Discovering existing sessions"
 ---
 
-The `session/list` method allows Clients to discover sessions known to an Agent. Clients can use this to display session history and switch between sessions.
+The `session/list` method returns the sessions an Agent knows about. Clients use it to show session history and let users switch between sessions.
 
-Agents can also push session metadata updates to Clients in real-time via the `session_info_update` notification, keeping session titles and metadata in sync without polling.
+Agents can also send a `session_info_update` notification when a session's title or metadata changes, so Clients don't have to poll.
 
-Before listing sessions, Clients **MUST** first complete the [initialization](/protocol/v2/draft/initialization) phase. Agents that support the `session` method surface **MUST** support `session/list`.
+Before listing sessions, Clients **MUST** first complete the [initialization](/protocol/v2/draft/initialization) phase. Agents that advertise `capabilities.session` **MUST** support `session/list`.
 
 <br />
 
@@ -42,7 +42,7 @@ additional workspace roots for listed sessions.
   [`session/delete`](/protocol/v2/draft/session-delete).
 </Note>
 
-## Listing Sessions
+## Listing sessions
 
 Clients discover existing sessions by calling the `session/list` method with optional filtering and pagination parameters:
 
@@ -61,9 +61,9 @@ Clients discover existing sessions by calling the `session/list` method with opt
 All parameters are optional. A request with an empty `params` object returns the first page of sessions.
 
 <ParamField path="cwd" type="string">
-  Filter sessions by working directory. Must be an absolute path; Agents reject
+  Filter sessions by working directory. Must be an absolute path. Agents reject
   a relative path with `-32602`. Only sessions whose `cwd` is this same
-  directory are returned; sessions in subdirectories or with it in
+  directory are returned. Sessions in subdirectories or with it in
   `additionalDirectories` don't match. Agents **MAY** normalize paths when
   comparing, for example ignoring a trailing separator.
 </ParamField>
@@ -87,8 +87,8 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
         "title": "Implement session list API",
         "updatedAt": "2025-10-29T14:22:15Z",
         "_meta": {
-          "messageCount": 12,
-          "hasErrors": false
+          "com.example/messageCount": 12,
+          "com.example/hasErrors": false
         }
       },
       {
@@ -121,7 +121,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     <ResponseField name="additionalDirectories" type="string[]">
       If the Agent advertises `session.additionalDirectories`, it
       **MAY** include this field to report the complete ordered additional-root list
-      associated with the listed session. Omitted, `null`, and empty values are equivalent: this `SessionInfo` response reports no additional roots.
+      associated with the listed session. Omitted and empty values are equivalent: this `SessionInfo` response reports no additional roots.
       Clients **MUST NOT** merge this field with prior values or infer additional
       roots from agent-specific state.
     </ResponseField>
@@ -151,15 +151,15 @@ When no sessions match the criteria, the Agent **MUST** return an empty `session
 
 `session/list` uses cursor-based pagination. The request includes an optional `cursor`, and the response includes `nextCursor` when more results are available.
 
-- Clients **MUST** treat a missing `nextCursor` as the end of results
-- Clients **MUST** treat cursors as opaque tokens — do not parse, modify, or persist them
+- Clients **MUST** treat a missing `nextCursor` as the end of results. Only an omitted or `null` `nextCursor` ends the results. An empty string is a valid cursor
+- Clients **MUST NOT** assume a fixed page size
+- Clients **MUST** treat cursors as opaque tokens, which means not parsing, modifying, or persisting them
 - Agents **MUST** return `-32602` if the cursor is invalid
 - Agents **SHOULD** enforce reasonable page sizes internally
 
-## Updating Session Metadata
+## Updating session metadata
 
-Agents **SHOULD** send a `session_info_update` notification via `session/update`
-to attached Clients whenever session metadata changes, including changes
+Agents **SHOULD** send a `session_info_update` notification via `session/update` on each connection where the session is [active](/protocol/v2/draft/session-setup#session-lifecycle) whenever session metadata changes, including changes
 requested by a Client. The same response and notification ordering guidance as
 [`config_option_update`](/protocol/v2/draft/session-config-options#from-the-agent)
 applies here.
@@ -174,15 +174,15 @@ applies here.
       "sessionUpdate": "session_info_update",
       "title": "Implement user authentication",
       "_meta": {
-        "tags": ["feature", "auth"],
-        "priority": "high"
+        "com.example/tags": ["feature", "auth"],
+        "com.example/priority": "high"
       }
     }
   }
 }
 ```
 
-All fields are optional. Only include fields that have changed; omitted fields are left unchanged. Set a nullable field to `null` to clear it.
+All fields are optional. Only include fields that have changed. Omitted fields are left unchanged. Set a nullable field to `null` to clear it.
 
 <ResponseField name="title" type="string | null">
   Human-readable title for the session. Set to `null` to clear.
@@ -193,7 +193,7 @@ All fields are optional. Only include fields that have changed; omitted fields a
 </ResponseField>
 
 <ResponseField name="_meta" type="object | null">
-  Agent-specific metadata patch. Omit to leave unchanged; set to `null` to
+  Agent-specific metadata patch. Omit to leave unchanged. Set to `null` to
   clear. An object patches the stored metadata by top-level key. See [Metadata
   Patches](/protocol/v2/draft/extensibility#metadata-patches).
 </ResponseField>
@@ -204,13 +204,12 @@ immutable after session setup, and ACP does not currently define mid-session
 mutation for `additionalDirectories`. Agents typically send this notification
 after the first meaningful exchange to auto-generate a title.
 
-The Agent sends these updates to Clients with the session currently attached
-through `session/new`, `session/resume`, or, when supported, `session/fork`. Clients can refresh metadata for
+The Agent sends these updates on each connection where the session is [active](/protocol/v2/draft/session-setup#session-lifecycle). Clients can refresh metadata for
 other sessions through `session/list`.
 
-## Interaction with Other Session Methods
+## Interaction with other session methods
 
-`session/list` is a discovery mechanism only — it does **not** restore or modify sessions:
+`session/list` only discovers sessions. It does **not** restore or modify them:
 
 1. Client calls `session/list` to discover available sessions
 2. User selects a session from the list

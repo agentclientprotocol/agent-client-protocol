@@ -51,13 +51,17 @@ This deliberately differs from MCP 2026-07-28, where an
 empty elicitation capability retains the original form-only meaning. ACP
 requires each supported mode to be explicit.
 
+An Agent that forwards elicitation for an MCP server **MUST NOT** copy the Client's capability object to that server unchanged. It advertises each mode the Client supports explicitly, and omits the MCP `elicitation` capability when the Client advertises no modes.
+
 Agents **MUST NOT** request a mode the Client has not advertised. Agents
 **SHOULD** provide a graceful fallback when the required mode is unavailable.
+
+If an Agent sends `elicitation/create` anyway, a Client with no `elicitation` capability (omitted or `null`) responds with `-32601`, as for any [capability-gated method](/protocol/v2/draft/error#unknown-methods) it did not advertise. A Client that advertised `elicitation` but not the requested mode responds with `-32602` (Invalid params).
 
 ## Creating an elicitation
 
 The Agent sends an `elicitation/create` request directly over the ACP
-connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly; it does
+connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly. It does
 not apply MCP's omitted-mode form default.
 
 Scope is represented with flattened fields. Exactly one of `sessionId` or
@@ -76,7 +80,7 @@ Agents **MUST** bind each elicitation and related state to the receiving Client
 connection and, when authentication exists, the verified user identity. A
 `sessionId` alone or an unverified Client-provided identity is not sufficient.
 
-### Foreground State
+### Foreground state
 
 A session-scoped elicitation follows the aggregate
 [foreground-state contract](/protocol/v2/draft/prompt-lifecycle#waiting-for-user-action).
@@ -156,7 +160,7 @@ refresh tokens, private keys, recovery codes, or payment credentials. Ordinary
 profile information such as a name, email address, or username is not
 categorically prohibited. Agents **MUST** use URL mode for sensitive
 interactions. If the Client does not support URL mode, the Agent **MUST NOT**
-fall back to form mode; it **MUST** use another safe flow or fail the operation.
+fall back to form mode. It **MUST** use another safe flow or fail the operation.
 
 ### URL mode
 
@@ -192,8 +196,8 @@ The Client responds with one of three actions:
 
 Agents **MUST** handle an unknown action as `cancel`.
 
-The `content` field is optional on `accept`; receivers treat omission and `null`
-equivalently. It is only meaningful for `accept`; receivers ignore it for
+The `content` field is optional on `accept`. Receivers treat omission and `null`
+equivalently. It is only meaningful for `accept`. Receivers ignore it for
 `decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD** conform to the requested schema. Receivers accept any JSON value in `content` and validate it against the schema, so an unexpected value invalidates only that property, not the whole response. For an accepted URL elicitation, clients
 normally omit `content` because the interaction happens out of band.
 
@@ -212,10 +216,7 @@ send that notification only to the same Client that received the original
 request and include the original `elicitationId`. Clients **MUST** ignore
 unknown or already-completed IDs. On receiving it, Clients **MAY** retry the original operation, update the UI, or otherwise continue. They **SHOULD** still let the user retry or cancel if the notification never arrives.
 
-Requests using a mode the Client has not advertised produce JSON-RPC `-32602`
-(Invalid params).
-
-## Session Cancellation
+## Session cancellation
 
 [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) does not
 automatically cancel every elicitation scoped to the session. `sessionId` and
@@ -228,6 +229,8 @@ An elicitation can depend on the affected work with or without a `toolCallId`.
 Clients handle individual cancellation using the existing request-cancellation
 rules rather than infer it from session scope. Request-scoped elicitations
 outside the session are unaffected by `session/cancel`.
+
+[`session/close`](/protocol/v2/draft/session-setup#closing-active-sessions) is different: before responding, the Agent **MUST** cancel every pending elicitation scoped to that session. Clients **SHOULD** dismiss elicitation UI for a closed session.
 
 Clients **SHOULD** dismiss interaction UI they know is no longer relevant.
 An accepted URL interaction may continue externally after its create request
@@ -262,8 +265,7 @@ rules to ACP.
 - Clients **SHOULD NOT** render a URL as clickable in any elicitation field
   except the `url` field of a URL-mode request, subject to the restrictions
   above.
-- The Agent **MUST** verify that the authenticated user who started the
-  elicitation is the same user who completes the external interaction.
+- When the Agent has an authenticated user, it **MUST** verify that the user who started the elicitation is the same user who completes the external interaction. Without one, such as during `auth/login`, the Agent **MUST** tie completion to the elicitation it issued and the connection it issued it on, for example with an unguessable single-use `state` value in the URL, and **MUST NOT** apply the result to a different connection.
 
 See the [schema reference](/protocol/v2/draft/schema#elicitation%2Fcreate) for
 the complete request and response types.

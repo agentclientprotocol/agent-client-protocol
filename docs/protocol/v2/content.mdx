@@ -3,7 +3,7 @@ title: "Content"
 description: "Understanding content blocks in the Agent Client Protocol"
 ---
 
-Content blocks represent displayable information that flows through the Agent Client Protocol. They provide a structured way to handle various types of user-facing content—whether it's text from language models, images for analysis, or embedded resources for context.
+A content block is one piece of user-facing content: text, an image, audio, a link to a resource, or an embedded resource.
 
 Content blocks appear in:
 
@@ -11,19 +11,21 @@ Content blocks appear in:
 - Language model output reported through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications as message updates or streamed chunks
 - Progress updates and results from [tool calls](/protocol/v2/tool-calls), including streamed tool-call content chunks
 
-## Content Types
+## Content types
 
 Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) and [URIs and Remote Resources](/protocol/v2/security#uris-and-remote-resources).
 
-ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2026-07-28 `ContentBlock`](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content, `_meta` on icons, and the open `type` fallback described below.
+ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2026-07-28 `ContentBlock`](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content, `_meta` on icons and annotations, extensible `Role` and `IconTheme` values, and the open `type` fallback described below.
 
 A content type from a later MCP revision that ACP doesn't define isn't forwarded as is. Agents convert it to a supported type, such as an embedded resource, or omit it.
 
-Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants. In prompts, Clients send only content types the Agent advertised, including custom types advertised through a [custom capability](/protocol/v2/extensibility#advertising-custom-capabilities), and Agents reject others with `-32602`.
+Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants. In prompts, Clients send only baseline content types (`text` and `resource_link`) and content types the Agent advertised, including custom types advertised through a [custom capability](/protocol/v2/extensibility#advertising-custom-capabilities), and Agents reject others with `-32602`.
 
 When displaying Agent output, Clients **SHOULD** show text content. For image, audio, resource, and resource link content they can't render, Clients **SHOULD** show a placeholder with whatever identifies it, such as its name, title, URI, or MIME type, and **SHOULD NOT** drop it silently. Agents that need content to reach the user in a particular form **SHOULD** also include it as text.
 
-### Text Content
+`annotations` are hints with [MCP semantics](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations). In `audience`, `user` means the person using the Client and `assistant` means the Agent's model. `priority` ranges from 0 (least important) to 1 (most important). Clients **MAY** collapse or hide content whose `audience` doesn't include `user`, which is an exception to the display rule above.
+
+### Text content
 
 Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) for raw HTML.
 
@@ -45,7 +47,7 @@ All Agents **MUST** support text content blocks when included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Image Content <Icon icon="asterisk" size="14" />
+### Image content <Icon icon="asterisk" size="14" />
 
 Images can be included for visual context or analysis.
 
@@ -78,7 +80,7 @@ included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Audio Content <Icon icon="asterisk" size="14" />
+### Audio content <Icon icon="asterisk" size="14" />
 
 Audio data for transcription or analysis.
 
@@ -107,7 +109,7 @@ included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Embedded Resource <Icon icon="asterisk" size="14" />
+### Embedded resource <Icon icon="asterisk" size="14" />
 
 Complete resource contents embedded directly in the message.
 
@@ -169,9 +171,9 @@ included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Resource Link
+### Resource link
 
-References to resources that the Agent can access.
+References to resources that the receiver may be able to read.
 
 All Agents **MUST** support resource links when included in prompts.
 

@@ -1,7 +1,7 @@
-//! Execution plans for complex tasks that require multiple steps.
+//! Execution plans for multi-step tasks.
 //!
-//! Plans are strategies that agents share with clients through session updates,
-//! providing real-time visibility into their thinking and progress.
+//! A plan is the agent's list of steps for a task. Agents send plans to clients
+//! through session updates and update them as work progresses.
 //!
 //! See: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
 
@@ -44,7 +44,7 @@ pub struct PlanUpdate {
     pub plan: PlanUpdateContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -55,15 +55,15 @@ pub struct PlanUpdate {
 }
 
 impl PlanUpdate {
-    /// Builds [`PlanUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan: PlanUpdateContent) -> Self {
         Self { plan, meta: None }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -103,7 +103,8 @@ pub enum PlanUpdateContent {
     ///
     /// Receivers that do not understand this content type should preserve the
     /// raw payload when storing, replaying, proxying, or forwarding plans, and
-    /// otherwise ignore it or display it generically.
+    /// otherwise ignore it or display it generically. It still replaces any earlier
+    /// content for the same `planId`.
     #[serde(untagged)]
     Other(OtherPlanUpdateContent),
 }
@@ -243,7 +244,7 @@ pub struct PlanItems {
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -254,7 +255,7 @@ pub struct PlanItems {
 }
 
 impl PlanItems {
-    /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanItems`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -265,8 +266,8 @@ impl PlanItems {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -296,7 +297,7 @@ pub struct PlanFile {
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -308,7 +309,7 @@ pub struct PlanFile {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanFile {
-    /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanFile`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
@@ -319,8 +320,8 @@ impl PlanFile {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -349,7 +350,7 @@ pub struct PlanMarkdown {
     pub content: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -361,7 +362,7 @@ pub struct PlanMarkdown {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
-    /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanMarkdown`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
@@ -372,8 +373,8 @@ impl PlanMarkdown {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -400,7 +401,7 @@ pub struct PlanRemoved {
     pub plan_id: PlanId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -412,7 +413,7 @@ pub struct PlanRemoved {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
-    /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanRemoved`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>) -> Self {
         Self {
@@ -422,8 +423,8 @@ impl PlanRemoved {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -454,7 +455,7 @@ pub struct PlanEntry {
     pub status: PlanEntryStatus,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -465,7 +466,7 @@ pub struct PlanEntry {
 }
 
 impl PlanEntry {
-    /// Builds [`PlanEntry`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanEntry`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         content: impl Into<String>,
@@ -481,8 +482,8 @@ impl PlanEntry {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]

@@ -295,7 +295,7 @@
       "x-method": "fs/write_text_file"
     },
     "SessionId": {
-      "description": "A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v1/session-setup#session-id)",
+      "description": "A unique identifier for a conversation session between a client and agent.\n\nEach session has its own context, conversation history, and state, so one\nagent can run several independent sessions.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v1/session-setup#session-id)",
       "type": "string"
     },
     "ReadTextFileRequest": {
@@ -597,7 +597,7 @@
       }
     },
     "ContentBlock": {
-      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/content)",
+      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), so agents can\nforward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/content)",
       "oneOf": [
         {
           "description": "Text content. May be plain text or formatted with Markdown.\n\nAll agents MUST support text content blocks in prompts.\nClients SHOULD render this text as Markdown.",
@@ -2728,7 +2728,7 @@
       "type": "string"
     },
     "AuthMethodTerminal": {
-      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success; any other termination signals failure.\nThe client MUST NOT pass this method to `authenticate`.",
+      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success. Any other termination signals failure.\nThe client MUST NOT pass this method to `authenticate`.",
       "type": "object",
       "properties": {
         "id": {
@@ -2744,7 +2744,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.",
+          "description": "Optional human-readable description of this authentication method.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2790,7 +2790,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.",
+          "description": "Optional human-readable description of this authentication method.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2808,11 +2808,11 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
+          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn't present.",
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
+          "description": "Intended for UI and end-user contexts, so it should be readable by people.\n\nIf not provided, the name should be used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -4211,7 +4211,7 @@
       "required": ["configOptions"]
     },
     "SessionInfoUpdate": {
-      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.",
+      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nClients can use it to keep session titles and state current.",
       "type": "object",
       "properties": {
         "title": {
@@ -4779,7 +4779,7 @@
       "type": "object",
       "properties": {
         "compaction": {
-          "description": "Support for ID-addressed context compaction updates. Omitted or `null`\nmeans unsupported; `{}` advertises the complete compaction contract.",
+          "description": "Support for ID-addressed context compaction updates. Omitted or `null`\nmeans unsupported. `{}` advertises the complete compaction contract.",
           "anyOf": [
             {
               "$ref": "#/$defs/CompactionCapabilities"

@@ -9,7 +9,7 @@ Agents can advertise a set of slash commands that users can invoke. These comman
 
 ### Initial commands
 
-The Agent **MAY** include `availableCommands` in the `session/new` and `session/resume` responses, alongside `configOptions` when supported. This lets the Client display commands as soon as [session setup](/protocol/v2/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
+An Agent with commands **MUST** include them in `availableCommands` in the `session/new` and `session/resume` responses, alongside `configOptions` when supported, since a setup response replaces the Client's command list. This lets the Client display commands as soon as [session setup](/protocol/v2/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
 
 For example, a `session/new` response can advertise a command with text input:
 
@@ -107,7 +107,7 @@ Each command carries a required `type` discriminator. Currently the only type is
   Optional input specification for the command
 </ResponseField>
 
-Command entries can add custom or future `type` values. Custom command types **MUST** begin with `_`; unknown non-underscore command types are reserved for future ACP variants. Every command type carries `name` and `description`. Clients that don't understand a command type should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise either ignore it or display it as a plain command using its `name` and `description`. Entries without a `type`, or with a known `type` that doesn't match its schema, are invalid and are skipped like any other invalid command item.
+Command entries can add custom or future `type` values. Custom command types **MUST** begin with `_`. Unknown non-underscore command types are reserved for future ACP variants. Every command type carries `name` and `description`. Clients that don't understand a command type should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise either ignore it or display it as a plain command using its `name` and `description`. Entries without a `type`, or with a known `type` that doesn't match its schema, are invalid and are skipped like any other invalid command item.
 
 ### AvailableCommandInput
 
@@ -117,11 +117,11 @@ Currently supports text input with `type: "text"`:
   A hint to display when the input hasn't been provided yet
 </ResponseField>
 
-Command input specifications can add custom or future `type` values. Custom input types **MUST** begin with `_`; unknown non-underscore input types are reserved for future ACP variants. Clients that cannot render an input specification should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise display the command without structured input.
+Command input specifications can add custom or future `type` values. Custom input types **MUST** begin with `_`. Unknown non-underscore input types are reserved for future ACP variants. Clients that cannot render an input specification should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise display the command without structured input.
 
 ## Dynamic updates
 
-The Agent can update the list of available commands at any time during a session by sending another `available_commands_update` notification. Each notification replaces the list previously advertised in a setup response or notification, including `[]` to clear it. This allows commands to be added based on context, removed when no longer relevant, or modified with updated descriptions.
+The Agent can update the list of available commands at any time during a session by sending another `available_commands_update` notification. Each notification replaces the list previously advertised in a setup response or notification, including `[]` to clear it. Agents can use this to add commands as context changes, remove commands that no longer apply, or update descriptions.
 
 ## Running commands
 
@@ -144,13 +144,13 @@ Commands are included as regular user messages in prompt requests:
 }
 ```
 
-A prompt invokes a command when its first text block starts with `/` followed by the command `name`. The rest of that text block, after the name and any following whitespace, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
+A prompt invokes a command when its first text block starts with `/` followed by the command `name`. The Agent decides how to interpret the prompt. Clients recognizing a command for highlighting or completion **SHOULD** require the name to be followed by whitespace or the end of the text block, so `/web foo` matches `web`, `/webfoo` does not, and `/web-search foo` matches `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
 
 The same [prompt insertion contract](/protocol/v2/prompt-lifecycle#2-prompt-accepted) applies to commands: the successful response returns the inserted user message's `messageId`, and the Agent reports that message through a `user_message` update or `user_message_chunk` updates with the same ID.
 
 If a command is handled locally and the runtime does not record it, the adapter inserts a live-only user message into the ACP conversation. It need not wait for a runtime insertion event or keep a permanent transcript entry. If the command is retained and replayed later, it uses the same message ID and is not executed again.
 
-For example, an adapter can report a locally handled `/compact` as a live-only user message containing `/compact`, even if the runtime records only a summary. The ACP user message represents the command invocation; it need not match the runtime's transcript or expanded instructions.
+For example, an adapter can report a locally handled `/compact` as a live-only user message containing `/compact`, even if the runtime records only a summary. The ACP user message represents the command invocation. It need not match the runtime's transcript or expanded instructions.
 
 Local handling still uses the
 [foreground lifecycle](/protocol/v2/prompt-lifecycle#work-boundaries-and-local-commands).

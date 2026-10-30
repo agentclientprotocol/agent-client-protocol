@@ -82,7 +82,7 @@ The patch fields are:
 
 - `command`: the human-readable command being run. Agents **SHOULD** include it on the first update when the terminal represents a command. It is descriptive and does not ask the Client to execute anything.
 - `cwd`: the command's working directory. Every supplied path **MUST** be absolute.
-- `size`: the terminal size the command runs with, in character cells, with required `cols` and `rows`. It is optional. When present, Clients **SHOULD** render output at this size so that column layouts, progress bars, and cursor-positioned output display as the program wrote them. Without it, Clients choose a size.
+- `size`: the terminal size the command runs with, in character cells, with required `cols` and `rows`. It is optional. When present, Clients can render output at this size so that column layouts, progress bars, and cursor-positioned output display as the program wrote them. Without it, Clients choose a size.
 - `output`: an authoritative replacement snapshot containing required `data`. `data` is RFC 4648 base64-encoded bytes and has JSON Schema `contentEncoding: "base64"`. A concrete snapshot is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. It replaces all previously stored bytes, and Clients **MUST NOT** merge or splice bytes from the previous snapshot into it. Later chunks append to the replacement. Optional nullable `output._meta` is scoped to that snapshot; omission and `null` are equivalent and mean no snapshot metadata was provided.
 - `exitStatus`: a concrete object marks the terminal as exited. Its `exitCode`, `signal`, and `_meta` fields are optional and nullable; omission and `null` are equivalent and mean that value was not provided. Agents should use conventional platform signal names. POSIX examples include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use platform-specific names. `exitStatus._meta` is scoped to that exit information. `exitStatus: null` clears a previously reported exit status.
 - The top-level `_meta` is terminal-scoped. Omission and `null` follow the same patch semantics as the other update fields, and a concrete object patches the stored metadata by top-level key, as defined by [Metadata Patches](./meta-patches.mdx).
@@ -194,6 +194,7 @@ Display-only terminal output has a small safe fallback: decode the bytes, saniti
 
 ## Revision history
 
+- 2026-10-30: `size` is a rendering hint; Clients can render at it rather than SHOULD.
 - 2026-10-29: Removed the batch ordering rule, since ACP v2 no longer uses JSON-RPC batches.
 - 2026-10-27: Added an optional `size` with `cols` and `rows` to `terminal_update`.
 - 2026-10-26: Noted the opt-in `terminal/cancel` control added by [Background Work](./background-work.mdx).

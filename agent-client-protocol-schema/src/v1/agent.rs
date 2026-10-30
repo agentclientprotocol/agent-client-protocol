@@ -64,7 +64,7 @@ pub struct InitializeRequest {
 }
 
 impl InitializeRequest {
-    /// Builds [`InitializeRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`InitializeRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(protocol_version: ProtocolVersion) -> Self {
         Self {
@@ -149,7 +149,7 @@ pub struct InitializeResponse {
 }
 
 impl InitializeResponse {
-    /// Builds [`InitializeResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`InitializeResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(protocol_version: ProtocolVersion) -> Self {
         Self {
@@ -205,10 +205,9 @@ impl InitializeResponse {
 #[non_exhaustive]
 pub struct Implementation {
     /// Intended for programmatic or logical use, but can be used as a display
-    /// name fallback if title isn’t present.
+    /// name fallback if title isn't present.
     pub name: String,
-    /// Intended for UI and end-user contexts — optimized to be human-readable
-    /// and easily understood.
+    /// Intended for UI and end-user contexts, so it should be readable by people.
     ///
     /// If not provided, the name should be used for display.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -231,7 +230,7 @@ pub struct Implementation {
 }
 
 impl Implementation {
-    /// Builds [`Implementation`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Implementation`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, version: impl Into<String>) -> Self {
         Self {
@@ -242,8 +241,7 @@ impl Implementation {
         }
     }
 
-    /// Intended for UI and end-user contexts — optimized to be human-readable
-    /// and easily understood.
+    /// Intended for UI and end-user contexts, so it should be readable by people.
     ///
     /// If not provided, the name should be used for display.
     #[must_use]
@@ -293,7 +291,7 @@ pub struct AuthenticateRequest {
 }
 
 impl AuthenticateRequest {
-    /// Builds [`AuthenticateRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`AuthenticateRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method_id: impl Into<AuthMethodId>) -> Self {
         Self {
@@ -338,7 +336,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl AuthenticateResponse {
-    /// Builds [`AuthenticateResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`AuthenticateResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -384,7 +382,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl LogoutRequest {
-    /// Builds [`LogoutRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`LogoutRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -426,7 +424,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl LogoutResponse {
-    /// Builds [`LogoutResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`LogoutResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -877,7 +875,7 @@ pub struct AgentAuthCapabilities {
 }
 
 impl AgentAuthCapabilities {
-    /// Builds an empty [`AgentAuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`AgentAuthCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -936,7 +934,7 @@ pub struct LogoutCapabilities {
 }
 
 impl LogoutCapabilities {
-    /// Builds an empty [`LogoutCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`LogoutCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1027,7 +1025,7 @@ impl AuthMethod {
         }
     }
 
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[must_use]
     pub fn description(&self) -> Option<&str> {
         match self {
@@ -1064,7 +1062,7 @@ pub struct AuthMethodAgent {
     pub id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1082,7 +1080,7 @@ pub struct AuthMethodAgent {
 }
 
 impl AuthMethodAgent {
-    /// Builds [`AuthMethodAgent`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthMethodAgent`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
@@ -1093,7 +1091,7 @@ impl AuthMethodAgent {
         }
     }
 
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -1117,7 +1115,7 @@ impl AuthMethodAgent {
 /// The client runs the configured agent program as a separate interactive
 /// process for the user to authenticate via a TUI. Agents MUST advertise this
 /// method only when the client enabled its terminal authentication capability.
-/// A zero exit status signals success; any other termination signals failure.
+/// A zero exit status signals success. Any other termination signals failure.
 /// The client MUST NOT pass this method to `authenticate`.
 #[serde_as]
 #[skip_serializing_none]
@@ -1130,7 +1128,7 @@ pub struct AuthMethodTerminal {
     pub id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1159,7 +1157,7 @@ pub struct AuthMethodTerminal {
 }
 
 impl AuthMethodTerminal {
-    /// Builds [`AuthMethodTerminal`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthMethodTerminal`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
@@ -1187,7 +1185,7 @@ impl AuthMethodTerminal {
         self
     }
 
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -1259,7 +1257,7 @@ pub struct NewSessionRequest {
 }
 
 impl NewSessionRequest {
-    /// Builds [`NewSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`NewSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(cwd: impl Into<PathBuf>) -> Self {
         Self {
@@ -1350,7 +1348,7 @@ pub struct NewSessionResponse {
 }
 
 impl NewSessionResponse {
-    /// Builds [`NewSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`NewSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1431,7 +1429,7 @@ pub struct LoadSessionRequest {
     ///
     /// System-level instructions for the loaded session.
     ///
-    /// Optional. Omitted and `null` are equivalent; the Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
     /// system prompt it stored with the session or use its default instructions.
     /// Clients MUST only send this when the Agent advertises
     /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -1452,7 +1450,7 @@ pub struct LoadSessionRequest {
 }
 
 impl LoadSessionRequest {
-    /// Builds [`LoadSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`LoadSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
@@ -1540,7 +1538,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl LoadSessionResponse {
-    /// Builds [`LoadSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`LoadSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1622,7 +1620,7 @@ pub struct ForkSessionRequest {
     ///
     /// System-level instructions for the forked session.
     ///
-    /// Optional. Omitted and `null` are equivalent; the Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
     /// system prompt it stored with the source session or use its default
     /// instructions. Clients MUST only send this when the Agent advertises
     /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -1644,7 +1642,7 @@ pub struct ForkSessionRequest {
 
 #[cfg(feature = "unstable_session_fork")]
 impl ForkSessionRequest {
-    /// Builds [`ForkSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ForkSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
@@ -1738,7 +1736,7 @@ pub struct ForkSessionResponse {
 
 #[cfg(feature = "unstable_session_fork")]
 impl ForkSessionResponse {
-    /// Builds [`ForkSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ForkSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1821,7 +1819,7 @@ pub struct ResumeSessionRequest {
     ///
     /// System-level instructions for the resumed session.
     ///
-    /// Optional. Omitted and `null` are equivalent; the Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
     /// system prompt it stored with the session or use its default instructions.
     /// Clients MUST only send this when the Agent advertises
     /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -1842,7 +1840,7 @@ pub struct ResumeSessionRequest {
 }
 
 impl ResumeSessionRequest {
-    /// Builds [`ResumeSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ResumeSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
@@ -1930,7 +1928,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl ResumeSessionResponse {
-    /// Builds [`ResumeSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ResumeSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1999,7 +1997,7 @@ pub struct CloseSessionRequest {
 }
 
 impl CloseSessionRequest {
-    /// Builds [`CloseSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`CloseSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -2044,7 +2042,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl CloseSessionResponse {
-    /// Builds [`CloseSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`CloseSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2096,7 +2094,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl ListSessionsRequest {
-    /// Builds [`ListSessionsRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ListSessionsRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2160,7 +2158,7 @@ pub struct ListSessionsResponse {
 }
 
 impl ListSessionsResponse {
-    /// Builds [`ListSessionsResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ListSessionsResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(sessions: Vec<SessionInfo>) -> Self {
         Self {
@@ -2217,7 +2215,7 @@ pub struct DeleteSessionRequest {
 }
 
 impl DeleteSessionRequest {
-    /// Builds [`DeleteSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`DeleteSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -2262,7 +2260,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl DeleteSessionResponse {
-    /// Builds [`DeleteSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`DeleteSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2325,7 +2323,7 @@ pub struct SessionInfo {
 }
 
 impl SessionInfo {
-    /// Builds [`SessionInfo`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionInfo`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<PathBuf>) -> Self {
         Self {
@@ -2400,7 +2398,7 @@ pub struct SessionModeState {
 }
 
 impl SessionModeState {
-    /// Builds [`SessionModeState`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionModeState`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         current_mode_id: impl Into<SessionModeId>,
@@ -2457,7 +2455,7 @@ pub struct SessionMode {
 }
 
 impl SessionMode {
-    /// Builds [`SessionMode`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionMode`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(id: impl Into<SessionModeId>, name: impl Into<String>) -> Self {
         Self {
@@ -2529,7 +2527,7 @@ pub struct SetSessionModeRequest {
 }
 
 impl SetSessionModeRequest {
-    /// Builds [`SetSessionModeRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`SetSessionModeRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, mode_id: impl Into<SessionModeId>) -> Self {
         Self {
@@ -2571,7 +2569,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl SetSessionModeResponse {
-    /// Builds [`SetSessionModeResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`SetSessionModeResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2669,7 +2667,7 @@ pub struct SessionConfigSelectOption {
 }
 
 impl SessionConfigSelectOption {
-    /// Builds [`SessionConfigSelectOption`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigSelectOption`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(value: impl Into<SessionConfigValueId>, name: impl Into<String>) -> Self {
         Self {
@@ -2728,7 +2726,7 @@ pub struct SessionConfigSelectGroup {
 }
 
 impl SessionConfigSelectGroup {
-    /// Builds [`SessionConfigSelectGroup`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigSelectGroup`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         group: impl Into<SessionConfigGroupId>,
@@ -2793,7 +2791,7 @@ pub struct SessionConfigSelect {
 }
 
 impl SessionConfigSelect {
-    /// Builds [`SessionConfigSelect`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigSelect`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         current_value: impl Into<SessionConfigValueId>,
@@ -2818,7 +2816,7 @@ pub struct SessionConfigBoolean {
 }
 
 impl SessionConfigBoolean {
-    /// Builds [`SessionConfigBoolean`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigBoolean`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(current_value: bool) -> Self {
         Self { current_value }
@@ -2903,7 +2901,7 @@ pub struct SessionConfigOption {
 }
 
 impl SessionConfigOption {
-    /// Builds [`SessionConfigOption`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigOption`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         id: impl Into<SessionConfigId>,
@@ -3092,7 +3090,7 @@ pub struct SetSessionConfigOptionRequest {
 }
 
 impl SetSessionConfigOptionRequest {
-    /// Builds [`SetSessionConfigOptionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`SetSessionConfigOptionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -3145,7 +3143,7 @@ pub struct SetSessionConfigOptionResponse {
 }
 
 impl SetSessionConfigOptionResponse {
-    /// Builds [`SetSessionConfigOptionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`SetSessionConfigOptionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(config_options: Vec<SessionConfigOption>) -> Self {
         Self {
@@ -3233,7 +3231,7 @@ pub struct McpServerHttp {
 }
 
 impl McpServerHttp {
-    /// Builds [`McpServerHttp`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`McpServerHttp`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
         Self {
@@ -3292,7 +3290,7 @@ pub struct McpServerSse {
 }
 
 impl McpServerSse {
-    /// Builds [`McpServerSse`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`McpServerSse`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
         Self {
@@ -3384,7 +3382,7 @@ pub struct McpServerAcp {
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 impl McpServerAcp {
-    /// Builds [`McpServerAcp`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`McpServerAcp`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, id: impl Into<McpServerAcpId>) -> Self {
         Self {
@@ -3439,7 +3437,7 @@ pub struct McpServerStdio {
 }
 
 impl McpServerStdio {
-    /// Builds [`McpServerStdio`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`McpServerStdio`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, command: impl Into<PathBuf>) -> Self {
         Self {
@@ -3502,7 +3500,7 @@ pub struct EnvVariable {
 }
 
 impl EnvVariable {
-    /// Builds [`EnvVariable`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`EnvVariable`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
@@ -3549,7 +3547,7 @@ pub struct HttpHeader {
 }
 
 impl HttpHeader {
-    /// Builds [`HttpHeader`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`HttpHeader`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
@@ -3596,7 +3594,7 @@ pub struct SystemPrompt {
     ///
     /// Required on the wire, so every request states its mode. In Rust,
     /// Unknown
-    /// values are preserved; Agents MUST return an error
+    /// values are preserved. Agents MUST return an error
     /// for modes they do not support.
     pub mode: SystemPromptMode,
     /// The system prompt content.
@@ -3620,9 +3618,9 @@ pub struct SystemPrompt {
 
 #[cfg(feature = "unstable_session_system_prompt")]
 impl SystemPrompt {
-    /// Builds [`SystemPrompt`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SystemPrompt`] with the required fields set. Optional fields start unset or empty.
     ///
-    /// `mode` starts as [`SystemPromptMode::Append`]; use [`SystemPrompt::mode`]
+    /// `mode` starts as [`SystemPromptMode::Append`]. Use [`SystemPrompt::mode`]
     /// to request another mode.
     #[must_use]
     pub fn new(content: Vec<ContentBlock>) -> Self {
@@ -3737,7 +3735,7 @@ pub struct PromptRequest {
 }
 
 impl PromptRequest {
-    /// Builds [`PromptRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`PromptRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, prompt: Vec<ContentBlock>) -> Self {
         Self {
@@ -3795,7 +3793,7 @@ pub struct PromptResponse {
 }
 
 impl PromptResponse {
-    /// Builds [`PromptResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`PromptResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(stop_reason: StopReason) -> Self {
         Self {
@@ -3906,7 +3904,7 @@ pub struct Usage {
 
 #[cfg(feature = "unstable_end_turn_token_usage")]
 impl Usage {
-    /// Builds [`Usage`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Usage`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(total_tokens: u64, input_tokens: u64, output_tokens: u64) -> Self {
         Self {
@@ -4019,7 +4017,7 @@ pub struct ProviderCurrentConfig {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ProviderCurrentConfig {
-    /// Builds [`ProviderCurrentConfig`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ProviderCurrentConfig`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
         Self {
@@ -4103,7 +4101,7 @@ pub struct ProviderInfo {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ProviderInfo {
-    /// Builds [`ProviderInfo`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ProviderInfo`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         provider_id: impl Into<ProviderId>,
@@ -4162,7 +4160,7 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ListProvidersRequest {
-    /// Builds [`ListProvidersRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ListProvidersRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4210,7 +4208,7 @@ pub struct ListProvidersResponse {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ListProvidersResponse {
-    /// Builds [`ListProvidersResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ListProvidersResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(providers: Vec<ProviderInfo>) -> Self {
         Self {
@@ -4271,7 +4269,7 @@ pub struct SetProviderRequest {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl SetProviderRequest {
-    /// Builds [`SetProviderRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`SetProviderRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         provider_id: impl Into<ProviderId>,
@@ -4337,7 +4335,7 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl SetProviderResponse {
-    /// Builds [`SetProviderResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`SetProviderResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4385,7 +4383,7 @@ pub struct DisableProviderRequest {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl DisableProviderRequest {
-    /// Builds [`DisableProviderRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`DisableProviderRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(provider_id: impl Into<ProviderId>) -> Self {
         Self {
@@ -4436,7 +4434,7 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl DisableProviderResponse {
-    /// Builds [`DisableProviderResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`DisableProviderResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4520,7 +4518,7 @@ pub struct AgentCapabilities {
 }
 
 impl AgentCapabilities {
-    /// Builds an empty [`AgentCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`AgentCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4613,7 +4611,7 @@ pub struct ProvidersCapabilities {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ProvidersCapabilities {
-    /// Builds an empty [`ProvidersCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ProvidersCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4731,7 +4729,7 @@ pub struct SessionCapabilities {
 }
 
 impl SessionCapabilities {
-    /// Builds an empty [`SessionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4858,7 +4856,7 @@ pub struct SessionListCapabilities {
 }
 
 impl SessionListCapabilities {
-    /// Builds an empty [`SessionListCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionListCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4898,7 +4896,7 @@ pub struct SessionDeleteCapabilities {
 }
 
 impl SessionDeleteCapabilities {
-    /// Builds an empty [`SessionDeleteCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionDeleteCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4941,7 +4939,7 @@ pub struct SessionAdditionalDirectoriesCapabilities {
 }
 
 impl SessionAdditionalDirectoriesCapabilities {
-    /// Builds an empty [`SessionAdditionalDirectoriesCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionAdditionalDirectoriesCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4996,7 +4994,7 @@ pub struct SessionSystemPromptCapabilities {
 
 #[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptCapabilities {
-    /// Builds an empty [`SessionSystemPromptCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionSystemPromptCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5062,7 +5060,7 @@ pub struct SessionSystemPromptModeCapabilities {
 
 #[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptModeCapabilities {
-    /// Builds an empty [`SessionSystemPromptModeCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionSystemPromptModeCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5123,7 +5121,7 @@ pub struct SessionSystemPromptOverrideCapabilities {
 
 #[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptOverrideCapabilities {
-    /// Builds an empty [`SessionSystemPromptOverrideCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionSystemPromptOverrideCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5169,7 +5167,7 @@ pub struct SessionForkCapabilities {
 
 #[cfg(feature = "unstable_session_fork")]
 impl SessionForkCapabilities {
-    /// Builds an empty [`SessionForkCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionForkCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5209,7 +5207,7 @@ pub struct SessionResumeCapabilities {
 }
 
 impl SessionResumeCapabilities {
-    /// Builds an empty [`SessionResumeCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionResumeCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5249,7 +5247,7 @@ pub struct SessionCloseCapabilities {
 }
 
 impl SessionCloseCapabilities {
-    /// Builds an empty [`SessionCloseCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionCloseCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5317,7 +5315,7 @@ pub struct PromptCapabilities {
 }
 
 impl PromptCapabilities {
-    /// Builds an empty [`PromptCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`PromptCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5400,7 +5398,7 @@ pub struct McpCapabilities {
 }
 
 impl McpCapabilities {
-    /// Builds an empty [`McpCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`McpCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5910,7 +5908,7 @@ pub struct CancelNotification {
 }
 
 impl CancelNotification {
-    /// Builds [`CancelNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`CancelNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {

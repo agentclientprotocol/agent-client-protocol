@@ -64,7 +64,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Add [whole-message updates](./message-updates.mdx) for `user_message`, `agent_message`, and `agent_thought` alongside streamed chunks. Message updates are upserts keyed by `messageId`; their `content` arrays replace current message content, while chunks append to the current content.
 - Apply the top-level `_meta` of upsert updates as a [metadata patch](./meta-patches.mdx): omission leaves it unchanged, `null` clears it, and an object patches stored metadata by top-level key, where a key set to `null` is removed and any other value replaces that key whole.
 - Require [message IDs](../message-id.mdx) on streamed message chunks.
-- Acknowledge [prompt insertion](./prompt.mdx) by returning the inserted user message's `messageId` from `session/prompt`, without waiting for foreground work to finish. Live user-message updates use the same ID; retention remains optional.
+- Acknowledge [prompt insertion](./prompt.mdx) by returning the inserted user message's `messageId` from `session/prompt`, without waiting for foreground work to finish. Live user-message updates use the same ID; retention remains optional. Prompts sent during active work are inserted or held in order, not rejected.
 - Report foreground activity with [`state_update`](./prompt.mdx) (`running`, `idle`, `requires_action`), and move the stop reason from the `session/prompt` response to the idle update.
 - Report [failures after prompt insertion](./prompt.mdx#report-failures-after-insertion) by ending foreground work with an idle `state_update` whose `stopReason` is `error`, carrying an optional JSON-RPC error object. A JSON-RPC error on `session/prompt` always means the message was not inserted.
 - Do not use JSON-RPC 2.0 batches. Each transport message is a single request, notification, or response, and receivers reject an array with `-32600`, as MCP does since 2025-06-18.
@@ -72,6 +72,8 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Add the `cancelled` status for tool calls and plan entries.
 - Allow initial `configOptions` and `availableCommands` in `session/new` and `session/resume` responses, and add `type` discriminators to commands (`command`) and command input (`text`).
 - Reject `initialize` with `-32022` (Unsupported protocol version) when no supported version is at or below the requested one, with the requested and supported versions in the error data.
+- Require a `type` discriminator on `session/set_config_option` values, and rename the config option `group` field to `groupId`.
+- Make `usage_update.cost` a patch field: omitted leaves it unchanged and `null` clears it.
 - Make `mcpServers` optional on session setup requests.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
@@ -127,6 +129,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-10-30: Added the config option `type`/`groupId` changes and the `usage_update.cost` patch semantics to the change list.
 - 2026-10-29: Scoped the v2 Preview to the RFDs with breaking changes. Remote Transports and other additive work no longer block v2, and transport-specific reliability requirements belong to each transport.
 - 2026-10-29: Dropped JSON-RPC batches from v2, following MCP.
 - 2026-10-29: Reconciled the v2 change list with the migration guide, adding open enums, `state_update`, `cancelled` statuses, setup-response commands, `-32022`, optional `mcpServers`, and the auth method descriptor changes. ID examples now use stable fields only.

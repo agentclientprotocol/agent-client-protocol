@@ -21,38 +21,38 @@ Failed requests return a [JSON-RPC 2.0 error object](https://www.jsonrpc.org/spe
 }
 ```
 
-## Error Codes
+## Error codes
 
-| Code     | Message                      | Meaning                                                                                                                  |
-| -------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `-32700` | Parse error                  | The message is not valid JSON.                                                                                           |
-| `-32600` | Invalid request              | The message is not a valid request object, or a request other than `initialize` arrived before initialization.           |
-| `-32601` | Method not found             | The receiver does not implement the method.                                                                              |
-| `-32602` | Invalid params               | The parameters are malformed or contain a value the receiver does not support.                                           |
-| `-32603` | Internal error               | The receiver failed unexpectedly.                                                                                        |
-| `-32800` | Request cancelled            | The request was [cancelled](/protocol/v2/cancellation).                                                                  |
-| `-32000` | Authentication required      | The request requires [authentication](/protocol/v2/authentication) first.                                                |
-| `-32002` | Resource not found           | A referenced resource, such as a session, does not exist.                                                                |
-| `-32022` | Unsupported protocol version | The Agent supports no [protocol version](/protocol/v2/initialization#version-negotiation) at or below the requested one. |
+| Code     | Message                      | Meaning                                                                                                                                                         |
+| -------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-32700` | Parse error                  | The message is not valid JSON.                                                                                                                                  |
+| `-32600` | Invalid request              | The message is not a valid request object, a request other than `initialize` arrived before initialization, or `initialize` was repeated after another request. |
+| `-32601` | Method not found             | The receiver does not implement the method.                                                                                                                     |
+| `-32602` | Invalid params               | The parameters are malformed or contain a value the receiver does not support.                                                                                  |
+| `-32603` | Internal error               | The receiver failed unexpectedly.                                                                                                                               |
+| `-32800` | Request cancelled            | The request was [cancelled](/protocol/v2/cancellation).                                                                                                         |
+| `-32000` | Authentication required      | The request requires [authentication](/protocol/v2/authentication) first, or an `auth/login` attempt failed.                                                    |
+| `-32002` | Resource not found           | A referenced resource, such as a session, does not exist.                                                                                                       |
+| `-32022` | Unsupported protocol version | The Agent supports no [protocol version](/protocol/v2/initialization#version-negotiation) at or below the requested one.                                        |
 
 Receivers **MUST** treat an unrecognized code as a generic failure. Implementation-specific errors **SHOULD** use codes outside `-32768` to `-32000` and `-32899` to `-32800`, which are reserved for JSON-RPC and ACP. ACP takes `-32800` (Request cancelled) from the second range, which LSP also reserves.
 
-## Common Cases
+## Common cases
 
-### Unknown Methods
+### Unknown methods
 
 A receiver that does not implement a method, or receives a capability-gated method it did not advertise, **MUST** respond with `-32601`. This applies to custom and standard methods alike. Notifications can't be answered, so receivers **SHOULD** ignore unknown ones.
 
-### Invalid Parameters
+### Invalid parameters
 
 Malformed parameters and unsupported values get `-32602`. For example, an invalid `session/list` cursor, or in `session/set_config_option` an unknown `configId`, an invalid value, or a value `type` that is unsupported or doesn't match the option.
 
-### Unknown Sessions
+### Unknown sessions
 
 If a session-scoped request names a session that does not exist or is not active on the connection, the Agent **MUST** respond with `-32002` and set `data.sessionId` to the requested ID. A session is active once it is created or resumed on the connection, until it is closed or the connection ends. See [Session Lifecycle](/protocol/v2/session-setup#session-lifecycle).
 
-This applies to `session/prompt` and `session/set_config_option`, and to `session/resume` of a session that does not exist or was deleted. Closing or deleting a session that does not exist still succeeds; see [Closing Active Sessions](/protocol/v2/session-setup#closing-active-sessions) and [Deleting Sessions](/protocol/v2/session-delete).
+This applies to `session/prompt` and `session/set_config_option`, and to `session/resume` of a session that does not exist or was deleted. `session/close` and `session/delete` are exceptions: Agents **SHOULD** still return success when closing a session that does not exist or is not active, or deleting one that does not exist. Clients **SHOULD** treat a `-32002` response to either as success. See [Closing Active Sessions](/protocol/v2/session-setup#closing-active-sessions) and [Deleting Sessions](/protocol/v2/session-delete).
 
-### Requests Before Initialization
+### Requests before initialization
 
 Agents **MUST** reject any request other than `initialize` that arrives before initialization completes with `-32600`, and ignore notifications. They also reject an `initialize` repeated after another request with `-32600`. See [Before Initialization Completes](/protocol/v2/initialization#before-initialization-completes).

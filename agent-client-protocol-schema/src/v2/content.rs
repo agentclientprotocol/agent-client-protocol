@@ -1,11 +1,8 @@
-//! Content blocks for representing various types of information in the Agent Client Protocol.
+//! Content blocks: the text, images, audio, and resources that appear in prompts,
+//! session updates, and tool call results.
 //!
-//! This module defines the core content types used throughout the protocol for communication
-//! between agents and clients. Content blocks provide a flexible, extensible way to represent
-//! text, images, audio, and other resources in prompts, responses, and tool call results.
-//!
-//! The content block structure is designed to be compatible with the Model Context Protocol (MCP),
-//! allowing seamless integration between ACP and MCP-based tools.
+//! The content block structure is compatible with the Model Context Protocol (MCP), so agents
+//! can forward MCP tool output without converting it.
 //!
 //! See: [Content](https://agentclientprotocol.com/protocol/v2/content)
 
@@ -68,17 +65,14 @@ impl_media_type_option_conversion!(Cow<'_, str>);
 
 /// Content blocks represent displayable information in the Agent Client Protocol.
 ///
-/// They provide a structured way to handle various types of user-facing content—whether
-/// it's text from language models, images for analysis, or embedded resources for context.
-///
 /// Content blocks appear in:
 /// - User prompts sent via `session/prompt`
 /// - Language model output reported through `session/update` notifications as
 ///   message updates or streamed chunks
 /// - Progress updates and results from tool calls
 ///
-/// This structure is compatible with the Model Context Protocol (MCP), enabling
-/// agents to seamlessly forward content from MCP tool outputs without transformation.
+/// This structure is compatible with the Model Context Protocol (MCP), so agents can
+/// forward content from MCP tool outputs without transformation.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -100,7 +94,7 @@ pub enum ContentBlock {
     ///
     /// Requires the `audio` prompt capability when included in prompts.
     Audio(AudioContent),
-    /// References to resources that the agent can access.
+    /// References to resources that the receiver may be able to read.
     ///
     /// All agents MUST support resource links in prompts.
     ResourceLink(ResourceLink),
@@ -214,7 +208,7 @@ pub struct TextContent {
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -225,7 +219,7 @@ pub struct TextContent {
 }
 
 impl TextContent {
-    /// Builds [`TextContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`TextContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
@@ -243,8 +237,8 @@ impl TextContent {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -290,7 +284,7 @@ pub struct ImageContent {
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -301,7 +295,7 @@ pub struct ImageContent {
 }
 
 impl ImageContent {
-    /// Builds [`ImageContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`ImageContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<MediaType>) -> Self {
         Self {
@@ -328,8 +322,8 @@ impl ImageContent {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -361,7 +355,7 @@ pub struct AudioContent {
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -372,7 +366,7 @@ pub struct AudioContent {
 }
 
 impl AudioContent {
-    /// Builds [`AudioContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`AudioContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<MediaType>) -> Self {
         Self {
@@ -391,8 +385,8 @@ impl AudioContent {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -420,7 +414,7 @@ pub struct EmbeddedResource {
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -431,7 +425,7 @@ pub struct EmbeddedResource {
 }
 
 impl EmbeddedResource {
-    /// Builds [`EmbeddedResource`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`EmbeddedResource`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(resource: EmbeddedResourceResource) -> Self {
         Self {
@@ -449,8 +443,8 @@ impl EmbeddedResource {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -494,7 +488,7 @@ pub struct TextResourceContents {
     pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -505,7 +499,7 @@ pub struct TextResourceContents {
 }
 
 impl TextResourceContents {
-    /// Builds [`TextResourceContents`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`TextResourceContents`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -524,8 +518,8 @@ impl TextResourceContents {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -558,7 +552,7 @@ pub struct BlobResourceContents {
     pub mime_type: Option<MediaType>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -569,7 +563,7 @@ pub struct BlobResourceContents {
 }
 
 impl BlobResourceContents {
-    /// Builds [`BlobResourceContents`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`BlobResourceContents`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(blob: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -588,8 +582,8 @@ impl BlobResourceContents {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -599,7 +593,7 @@ impl BlobResourceContents {
     }
 }
 
-/// A resource that the server is capable of reading, included in a prompt or tool call result.
+/// A link to a resource that the receiver may be able to read, included in a prompt or tool call result.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -656,7 +650,7 @@ pub struct ResourceLink {
     pub annotations: Option<Annotations>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -667,7 +661,7 @@ pub struct ResourceLink {
 }
 
 impl ResourceLink {
-    /// Builds [`ResourceLink`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`ResourceLink`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(name: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -726,8 +720,8 @@ impl ResourceLink {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -745,7 +739,9 @@ impl ResourceLink {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Icon {
-    /// A standard URI pointing to an icon resource.
+    /// A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI.
+    /// Clients reject other schemes, fetch without credentials, and do not follow
+    /// scheme- or origin-changing redirects.
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub src: String,
     /// Optional MIME type override if the source MIME type is missing or generic.
@@ -775,7 +771,7 @@ pub struct Icon {
     pub theme: Option<IconTheme>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -786,7 +782,7 @@ pub struct Icon {
 }
 
 impl Icon {
-    /// Builds [`Icon`] with the required source URI; optional display hints start unset.
+    /// Builds [`Icon`] with the required source URI. Optional display hints start unset.
     #[must_use]
     pub fn new(src: impl Into<String>) -> Self {
         Self {
@@ -799,8 +795,8 @@ impl Icon {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -867,14 +863,15 @@ pub struct Annotations {
     pub audience: Option<Vec<Role>>,
     /// Timestamp indicating when the underlying resource was last modified.
     ///
-    /// Must be an RFC 3339 formatted string (e.g., "2025-01-12T15:00:58Z").
+    /// Should be an ISO 8601 formatted string (e.g., "2025-01-12T15:00:58Z"), as in MCP.
     ///
     /// Omitted and `null` are equivalent and mean the modification time is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub last_modified: Option<String>,
-    /// Relative importance of this content when clients choose what to surface.
+    /// Relative importance of this content when clients choose what to surface, from 0 (least
+    /// important) to 1 (most important).
     ///
     /// Omitted and `null` are equivalent and mean no priority is specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -884,7 +881,7 @@ pub struct Annotations {
     pub priority: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -952,8 +949,8 @@ impl Annotations {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
@@ -1173,7 +1170,8 @@ mod tests {
 
         assert_eq!(json["properties"]["priority"]["minimum"], 0);
         assert_eq!(json["properties"]["priority"]["maximum"], 1);
-        assert_eq!(json["properties"]["lastModified"]["format"], "date-time");
+        // MCP allows any ISO 8601 string, so ACP does not narrow it to `date-time`.
+        assert!(json["properties"]["lastModified"].get("format").is_none());
     }
 
     #[cfg(feature = "schemars")]

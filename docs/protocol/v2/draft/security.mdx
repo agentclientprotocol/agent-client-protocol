@@ -3,7 +3,7 @@ title: "Security Considerations"
 description: "Trust model and security guidance for Agents and Clients"
 ---
 
-This page describes ACP's trust model and security guidance that spans features. Guidance for a single feature is on that feature's page; see [Feature Guidance](#feature-guidance).
+This page describes ACP's trust model and security guidance that spans features. Guidance for a single feature is on that feature's page. See [Feature Guidance](#feature-guidance).
 
 ## Trust Model
 
@@ -14,7 +14,7 @@ This page describes ACP's trust model and security guidance that spans features.
 
 Out of scope: a malicious Agent binary, detecting prompt injection, and operating-system sandboxing.
 
-## Rendering Agent Content
+## Rendering Agent content
 
 This applies to all Agent-authored display text, including messages, thoughts, tool calls, plans, commands, config options, notices, session titles, authentication methods, permission requests, and elicitations.
 
@@ -27,14 +27,15 @@ This applies to all Agent-authored display text, including messages, thoughts, t
 - Clients **SHOULD** keep Agent [slash commands](/protocol/v2/draft/slash-commands) distinguishable from their own commands.
 - Clients **MAY** bound or throttle permission requests, elicitations, and output.
 
-## URIs and Remote Resources
+## URIs and remote resources
 
 This applies to `uri` on images, resource links, and embedded resources, to icon `src`, and to URLs in Markdown.
 
 - Clients **SHOULD** render images from `data` and **SHOULD NOT** fetch Agent-supplied remote URIs without user action. A request can leak data through its URL.
+- Icon `src` is the only URI a Client may fetch without user action. For icons, as in MCP, Clients **MUST** accept only `https:` and `data:` URIs and reject other schemes, including `file:`. They **MUST** fetch without credentials, **MUST NOT** follow redirects that change the scheme or origin, and **MUST** apply these checks to every redirect hop. Clients that display icons **MUST** support PNG and JPEG.
 - Automatic fetches **SHOULD** use only `https:` or `data:` URIs, **SHOULD NOT** carry credentials, **SHOULD** refuse loopback and private-network targets, and **SHOULD** bound the response size.
 - Clients **SHOULD NOT** run scripts in SVG images from Agent content.
-- Clients **SHOULD NOT** read a `file:` URI from Agent content outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
+- Apart from icons, which never use `file:`, Clients **SHOULD NOT** read a `file:` URI from Agent content outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
 - Agents **SHOULD** apply the root set and these fetch rules to URIs in prompts.
 
 ## Credentials
@@ -42,7 +43,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 - Implementations **SHOULD NOT** put credentials in `_meta`, including `traceparent`, `tracestate`, and `baggage`. [Preserving unknown values](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants) does not require storing or replaying credentials.
 - Session, message, tool-call, and terminal IDs are not credentials.
 
-## Prompt Injection
+## Prompt injection
 
 - Agents **SHOULD** treat embedded resources, files, tool results, and MCP results as data, not as user instructions.
 - Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
@@ -53,13 +54,13 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 
 - An intermediary between the Client and the Agent, such as a proxy, can read and change every message, and each side treats it as the other. Clients **SHOULD** only use intermediaries the user trusts.
 - Intermediaries **SHOULD NOT** answer permission requests or elicitations for the user except under user-configured policy, and **SHOULD** forward `subject` unchanged.
-- An Agent serving more than one user **SHOULD** scope `session/list`, `session/resume`, permission requests, and elicitations to the user that owns the session.
+- An Agent serving more than one user **SHOULD** scope `session/list`, every request that names a session (such as `session/resume`, `session/delete`, and `session/fork`), permission requests, and elicitations to the user that owns the session. It treats another user's session as one that does not exist, so it is not listed, resuming it fails with `-32002`, and deleting it does nothing. Such an Agent **SHOULD** also authorize `cwd`, `additionalDirectories`, and `mcpServers` against the requesting user, and **SHOULD NOT** launch stdio MCP servers that user isn't permitted to run.
 
 ## Transports
 
 [Custom transports](/protocol/v2/draft/transports#custom-transports) **SHOULD** document their security considerations, including how peers authenticate.
 
-## Feature Guidance
+## Feature guidance
 
 - [Workspace roots](/protocol/v2/draft/session-setup#workspace-root-security)
 - [Terminal authentication](/protocol/v2/draft/authentication#launch-safety)
@@ -68,11 +69,11 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 - [Display-only terminals](/protocol/v2/draft/tool-calls#display-only-terminals) and [diffs](/protocol/v2/draft/tool-calls#diffs)
 - [Elicitation](/protocol/v2/draft/elicitation#user-interaction-requirements) and [URL security](/protocol/v2/draft/elicitation#url-security)
 
-## Residual Risk
+## Residual risk
 
 A user can approve a harmful operation, prompt injection can steer operations the user allowed, and an Agent can act without asking.
 
-## Unstable Features
+## Unstable features
 
 - A [system prompt](/protocol/v2/draft/session-setup#system-prompt-unstable) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.
 - Clients **SHOULD NOT** read a plan file `uri` outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.

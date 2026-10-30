@@ -197,7 +197,6 @@
             "pages": [
               "rfds/session-fork",
               "rfds/proxy-chains",
-              "rfds/diff-delete",
               "rfds/custom-llm-endpoint",
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",

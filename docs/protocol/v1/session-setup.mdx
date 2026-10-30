@@ -3,7 +3,7 @@ title: "Session Setup"
 description: "Creating and loading sessions"
 ---
 
-Sessions represent a specific conversation or thread between the [Client](/protocol/v1/overview#client) and [Agent](/protocol/v1/overview#agent). Each session maintains its own context, conversation history, and state, allowing multiple independent interactions with the same Agent.
+Sessions represent a specific conversation or thread between the [Client](/protocol/v1/overview#client) and [Agent](/protocol/v1/overview#agent). Each session has its own context, conversation history, and state, so one Agent can run several independent sessions.
 
 Before creating a session, Clients **MUST** first complete the [initialization](/protocol/v1/initialization) phase to establish protocol compatibility and capabilities.
 
@@ -44,7 +44,7 @@ sequenceDiagram
 
 <br />
 
-## Creating a Session
+## Creating a session
 
 Clients create a new session by calling the `session/new` method with:
 
@@ -82,11 +82,11 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 }
 ```
 
-## Loading Sessions
+## Loading sessions
 
 Agents that support the `loadSession` capability allow Clients to resume previous conversations with history replay. This feature enables persistence across restarts and sharing sessions between different Client instances.
 
-### Checking Support
+### Checking support
 
 Before attempting to load a session, Clients **MUST** verify that the Agent supports this capability by checking the `loadSession` field in the `initialize` response:
 
@@ -105,7 +105,7 @@ Before attempting to load a session, Clients **MUST** verify that the Agent supp
 
 If `loadSession` is `false` or not present, the Agent does not support loading sessions and Clients **MUST NOT** attempt to call `session/load`.
 
-### Loading a Session
+### Loading a session
 
 To load an existing session, Clients **MUST** call the `session/load` method with:
 
@@ -202,11 +202,11 @@ The response **MAY** also include initial mode, model, or session configuration 
 
 The Client can then continue sending prompts as if the session was never interrupted.
 
-## Resuming Sessions
+## Resuming sessions
 
 Agents that advertise `sessionCapabilities.resume` allow Clients to reconnect to an existing session without replaying the conversation history.
 
-### Checking Support
+### Checking support
 
 Before attempting to resume a session, Clients **MUST** verify that the Agent supports this capability by checking for the `sessionCapabilities.resume` field in the `initialize` response:
 
@@ -227,7 +227,7 @@ Before attempting to resume a session, Clients **MUST** verify that the Agent su
 
 If `sessionCapabilities.resume` is not present, the Agent does not support resuming sessions and Clients **MUST NOT** attempt to call `session/resume`.
 
-### Resuming a Session
+### Resuming a session
 
 To resume an existing session without replaying prior messages, Clients **MUST** call the `session/resume` method with:
 
@@ -267,11 +267,11 @@ Unlike `session/load`, the Agent **MUST NOT** replay the conversation history vi
 
 The response **MAY** also include initial mode, model, or session configuration state when those features are supported by the Agent.
 
-## Closing Active Sessions
+## Closing active sessions
 
 Agents that advertise `sessionCapabilities.close` allow Clients to tell the Agent to cancel any ongoing work for a session and free any resources associated with that active session.
 
-### Checking Support
+### Checking support
 
 Before attempting to close a session, Clients **MUST** verify that the Agent supports this capability by checking the `sessionCapabilities.close` field in the `initialize` response:
 
@@ -292,7 +292,7 @@ Before attempting to close a session, Clients **MUST** verify that the Agent sup
 
 If `sessionCapabilities.close` is not present, the Agent does not support closing sessions and Clients **MUST NOT** attempt to call `session/close`.
 
-### Closing a Session
+### Closing a session
 
 To close an active session, Clients **MUST** call the `session/close` method with the session ID:
 
@@ -328,7 +328,7 @@ example because it was already closed, the Agent **SHOULD** respond with the
 same empty result. Clients **SHOULD** treat a `-32002` response to
 `session/close` as a successful close. See [Unknown Sessions](/protocol/v1/error#unknown-sessions).
 
-## Additional Workspace Roots
+## Additional workspace roots
 
 Agents that advertise `sessionCapabilities.additionalDirectories` allow Clients
 to include `additionalDirectories` on supported session lifecycle requests to
@@ -357,7 +357,7 @@ When present, `additionalDirectories` has the following behavior:
 - `cwd` remains the primary working directory and the base for relative paths
 - each `additionalDirectories` entry **MUST** be an absolute path
 - omitting the field or providing an empty array activates no additional roots for the resulting session
-- on `session/load` and `session/resume`, Clients must send the full intended additional-root list again; that list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
+- on `session/load` and `session/resume`, Clients must send the full intended additional-root list again. That list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `sessionCapabilities.additionalDirectories`.
 
@@ -373,7 +373,7 @@ Clients use this ID to:
 - Resume previous sessions via `session/resume` (if the Agent supports the `sessionCapabilities.resume` capability)
 - Close active sessions via `session/close` (if the Agent supports the `sessionCapabilities.close` capability)
 
-## Working Directory
+## Working directory
 
 The `cwd` (current working directory) parameter establishes the primary file system context for the session. This directory:
 
@@ -384,7 +384,7 @@ The `cwd` (current working directory) parameter establishes the primary file sys
 
 When `sessionCapabilities.additionalDirectories` is in use, the session's effective root set is `[cwd, ...additionalDirectories]`. This root set **SHOULD** serve as a boundary for tool operations on the file system.
 
-### Workspace Root Security
+### Workspace root security
 
 The root set declares the session's scope. It confines shell commands only when a sandbox enforces it.
 
@@ -392,7 +392,7 @@ The root set declares the session's scope. It confines shell commands only when 
 - Agents **SHOULD NOT** treat model output, Agent content, or replayed history as granting access outside the root set. Access outside it goes through a permission request.
 - Implementations that enforce the root set **SHOULD** check the resolved path at the time of use, compare paths by component, and fail closed.
 
-## MCP Servers
+## MCP servers
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) allows Agents to access external tools and data sources. When creating a session, Clients **MAY** include connection details for MCP servers that the Agent should connect to.
 
@@ -400,9 +400,9 @@ MCP servers can be connected to using different transports. All Agents **MUST** 
 
 While they are not required to by the spec, new Agents **SHOULD** support the HTTP transport to ensure compatibility with modern MCP servers.
 
-### Transport Types
+### Transport types
 
-#### Stdio Transport
+#### Stdio transport
 
 All Agents **MUST** support connecting to MCP servers via stdio (standard input/output). This is the default transport mechanism.
 
@@ -447,7 +447,7 @@ Example stdio transport configuration:
 }
 ```
 
-#### HTTP Transport
+#### HTTP transport
 
 When the Agent supports `mcpCapabilities.http`, Clients can specify MCP servers configurations using the HTTP transport.
 
@@ -496,7 +496,7 @@ Example HTTP transport configuration:
 }
 ```
 
-#### SSE Transport
+#### SSE transport
 
 When the Agent supports `mcpCapabilities.sse`, Clients can specify MCP servers configurations using the SSE transport.
 
@@ -543,7 +543,7 @@ Example SSE transport configuration:
 }
 ```
 
-### Checking Transport Support
+### Checking transport support
 
 Before using HTTP or SSE transports, Clients **MUST** verify the Agent's capabilities during initialization:
 

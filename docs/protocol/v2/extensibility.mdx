@@ -3,9 +3,9 @@ title: "Extensibility"
 description: "Adding custom data and capabilities"
 ---
 
-The Agent Client Protocol provides built-in extension mechanisms that allow implementations to add custom functionality while maintaining compatibility with the core protocol. These mechanisms ensure that Agents and Clients can innovate without breaking interoperability.
+Implementations can add custom behavior without breaking peers that don't know about it. They can attach custom data in `_meta` fields, define custom methods and enum values whose names start with `_`, and advertise custom capabilities during initialization.
 
-## Experimental Features and Negotiation
+## Experimental features and negotiation
 
 **Stability**, **support**, and **forward compatibility** are separate:
 
@@ -18,11 +18,11 @@ features in `schema/v2/schema.unstable.json`. There is no connection-wide
 "unstable schema" flag. Implementations **MUST NOT** infer peer support from
 their own schema selection, generated types, or local feature flags.
 
-### When a Capability Is Required
+### When a capability is required
 
 Each feature defines its negotiation requirements, whether stable or experimental:
 
-- **Optional operations requiring peer participation** need an advertised capability or another explicitly documented negotiation mechanism. Callers **MUST** follow that feature's requirements; an omitted or `null` support marker means unsupported.
+- **Optional operations requiring peer participation** need an advertised capability or another explicitly documented negotiation mechanism. Callers **MUST** follow that feature's requirements. An omitted or `null` support marker means unsupported.
 - **Informational additions with a safe fallback** may be sent without a capability when the feature explicitly permits it. A receiver may ignore or generically display them. Senders **MUST NOT** depend on feature-specific presentation, acknowledgement, or action.
 - **Local feature flags** control implementation and rollout. They neither advertise peer support nor replace a required capability.
 
@@ -30,8 +30,8 @@ For example:
 
 | Feature                                                                                                                     | Negotiation and receiver behavior                                                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Session deletion](/protocol/v2/session-delete)                                                                             | The Agent advertises `session.delete`; Clients must not call `session/delete` without it.                                                   |
-| [Elicitation](/protocol/v2/elicitation#checking-support)                                                                    | The Client advertises each supported mode under `elicitation`; Agents must not request other modes.                                         |
+| [Session deletion](/protocol/v2/session-delete)                                                                             | The Agent advertises `session.delete`. Clients must not call `session/delete` without it.                                                   |
+| [Elicitation](/protocol/v2/elicitation#checking-support)                                                                    | The Client advertises each supported mode under `elicitation`. Agents must not request other modes.                                         |
 | [Notices](/protocol/v2/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/prompt-lifecycle#session-compaction) | No Client capability is required in v2. Clients without feature-specific handling may preserve, ignore, or generically display the updates. |
 
 These rules are specific to v2. Features with capability gates in v1 retain
@@ -64,7 +64,7 @@ or displaying it generically.
 Payload validation and capability checks are separate. A schema-valid request
 is not necessarily supported or permitted on the connection.
 
-## The `_meta` Field
+## The `_meta` field
 
 Protocol object types that define a `_meta` field can use it to attach custom information. This includes requests, responses, notifications, and nested object types such as content blocks, tool calls, plan entries, and capability objects. Primitive types and object types that do not define `_meta` cannot carry it.
 
@@ -91,15 +91,16 @@ Protocol object types that define a `_meta` field can use it to attach custom in
 }
 ```
 
-Clients may propagate fields to the agent for correlation purposes, such as `requestId`. The following root-level keys in `_meta` **SHOULD** be reserved for [W3C trace context](https://www.w3.org/TR/trace-context/) to guarantee interop with existing MCP implementations and OpenTelemetry tooling:
+Clients may propagate fields to the agent for correlation purposes, using a namespaced key such as `com.example/requestId`. The following root-level keys in `_meta` are reserved, as in MCP, for interop with MCP implementations and OpenTelemetry tooling. When present, their values **MUST** use the corresponding W3C format:
 
-- `traceparent`
-- `tracestate`
-- `baggage`
+- `traceparent` and `tracestate`: [W3C Trace Context](https://www.w3.org/TR/trace-context/)
+- `baggage`: [W3C Baggage](https://www.w3.org/TR/baggage/)
+
+Other unprefixed `_meta` keys, and keys whose prefix has `agentclientprotocol` as its second label (such as `io.agentclientprotocol/<name>`), are reserved for ACP. Keys and prefixes that MCP reserves keep their MCP meaning, and Agents preserve them when forwarding MCP content. Extension keys **SHOULD** use a reverse-DNS prefix the implementer controls, as described below.
 
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
 
-### Metadata Patches
+### Metadata patches
 
 Upsert updates carry a top-level `_meta` that the Client stores with the entity they create or update: `tool_call_update` (including the `toolCall` of a permission request's `tool_call` subject), `terminal_update`, `user_message`, `agent_message`, `agent_thought`, `session_info_update`, and `compaction_update`. Clients apply this `_meta` as a patch, one top-level key at a time, using the same rule as the update's other fields:
 
@@ -142,13 +143,13 @@ the stored `_meta` becomes:
 }
 ```
 
-A key set to `null` never holds stored data, including on the first update for an entity, so a key cannot store a literal JSON `null`; an extension that needs one can wrap it, for example `{ "value": null }`. Stored metadata with no keys is the same as no metadata. Because each top-level key is replaced whole, the implementation that owns a key, such as an extension using a namespaced key, can set, replace, or remove it without knowing the other keys. This does not resolve conflicts between writers: updates to the same key apply in receive order, and `_meta: null` clears every key.
+A key set to `null` never holds stored data, including on the first update for an entity, so a key cannot store a literal JSON `null`. An extension that needs one can wrap it, for example `{ "value": null }`. Stored metadata with no keys is the same as no metadata. Because each top-level key is replaced whole, the implementation that owns a key, such as an extension using a namespaced key, can set, replace, or remove it without knowing the other keys. This does not resolve conflicts between writers: updates to the same key apply in receive order, and `_meta: null` clears every key.
 
 Replay and resynchronization apply these patches exactly as live delivery does and never reset metadata implicitly. An update that replaces another field, such as a message update with `content`, leaves the `_meta` keys it does not mention. To send the current metadata of an entity the Client may already hold, the Agent removes stale keys: it either sets each one to `null` alongside the current keys, or sends `_meta: null` and then the current object in a later update. The second form is not atomic, so the Client may briefly hold no metadata. Send `_meta: null`, not `{}`, when the current metadata is empty. Intermediaries that combine updates **MUST** keep removals and clears.
 
 Other `_meta` fields are not patches, including the `_meta` of `plan_update`. Metadata on requests, responses, notification params, chunks, content items, snapshots, and other nested objects describes only the object that carries it, and a key set to `null` there is ordinary data. Do not copy such metadata into a patch unchanged, for example from a `session/list` entry into a `session_info_update`: its `null` key values would become removals. Put data about a single notification, rather than the entity, in the `session/update` notification's `params._meta`.
 
-## Unknown Object Fields
+## Unknown object fields
 
 Receivers **MUST** ignore unrecognized properties of protocol-defined objects, including properties nested within capability objects. An otherwise valid message **MUST NOT** be rejected solely because it contains unrecognized properties. Ignoring a property means not assigning protocol behavior to it. It does not imply support for the feature it describes.
 
@@ -156,16 +157,16 @@ This rule does not relax validation of known properties or change their document
 
 Ignoring an unknown property means not interpreting it. Implementations are not required to remove it from the message.
 
-## Extension Methods
+## Extension methods
 
-The protocol reserves any method name starting with an underscore (`_`) for custom extensions. This allows implementations to add new functionality without the risk of conflicting with future protocol versions. Names starting with `$/` are reserved for protocol-level messages such as [`$/cancel_request`](/protocol/v2/cancellation), and all other names are reserved for ACP.
+The protocol reserves any method name starting with an underscore (`_`) for custom extensions, so custom methods can't conflict with methods added in future protocol versions. Names starting with `$/` are reserved for protocol-level messages such as [`$/cancel_request`](/protocol/v2/cancellation), and all other names are reserved for ACP.
 
 Extension methods follow standard [JSON-RPC 2.0](https://www.jsonrpc.org/specification) semantics:
 
 - **[Requests](https://www.jsonrpc.org/specification#request_object)** - Include an `id` field and expect a response
 - **[Notifications](https://www.jsonrpc.org/specification#notification)** - Omit the `id` field and are one-way
 
-### Custom Requests
+### Custom requests
 
 In addition to the requests specified by the protocol, implementations **MAY** expose and call custom JSON-RPC requests as long as their name starts with an underscore (`_`).
 
@@ -210,7 +211,7 @@ If the receiving end doesn't recognize the custom method name, it **MUST** respo
 
 To avoid such cases, extensions **SHOULD** advertise their [custom capabilities](#advertising-custom-capabilities) so that callers can check their availability first and adapt their behavior or interface accordingly.
 
-### Custom Notifications
+### Custom notifications
 
 Custom notifications are regular JSON-RPC notifications that start with an underscore (`_`). Like all notifications, they omit the `id` field:
 
@@ -226,7 +227,7 @@ Custom notifications are regular JSON-RPC notifications that start with an under
 
 Unlike with custom requests, implementations **SHOULD** ignore any notification they don't recognize, whether it is custom or from a later ACP version.
 
-## Enum and Tagged-Union Variants
+## Enum and tagged-union variants
 
 ACP also reserves `_`-prefixed values for implementation-specific extensions in enum-like fields and tagged unions that define a custom or future fallback.
 
@@ -235,7 +236,7 @@ ACP also reserves `_`-prefixed values for implementation-specific extensions in 
 - Extensions **MUST NOT** define custom non-underscore values.
 - Implementations **MUST NOT** treat unknown non-underscore values as custom extensions.
 
-This rule applies only where the schema defines a fallback path. Most enums and tagged unions have one. These are closed, and receivers reject values outside them:
+This rule applies only where the schema defines a fallback path. Most enums and tagged unions have one. The following are closed, and receivers reject values outside them:
 
 - `ElicitationSchema.type`, which is always `object`.
 - Embedded resource contents, which are text or blob contents, as in MCP.
@@ -244,17 +245,17 @@ This rule applies only where the schema defines a fallback path. Most enums and 
 
 When storing, replaying, proxying, or forwarding data, implementations **SHOULD** preserve unknown values and any raw tagged-union payloads. When displaying an unknown value, implementations **SHOULD** fall back to generic UI behavior that matches the field's purpose.
 
-## Advertising Custom Capabilities
+## Advertising custom capabilities
 
 Implementations **SHOULD** advertise support for extensions and their methods using namespaced entries in capability objects' `_meta` fields:
 
-- Use `capabilities._meta` for independent extension surfaces or extensions that apply across capability groups.
+- Use `capabilities._meta` for standalone extensions or extensions that apply across capability groups.
 - Use a nested capability object's `_meta`, where that object defines one, for extensions scoped to that capability. For example, an extension to session prompting belongs in `capabilities.session.prompt._meta`.
 - Creating a standard capability object to carry `_meta` still advertises the standard support associated with that object. An Agent **MUST NOT** send `capabilities.session: { "_meta": ... }` unless it supports all seven baseline session methods.
 
 To avoid collisions with other extensions, follow [MCP's naming convention](https://modelcontextprotocol.io/specification/2026-07-28/basic/index): prefix extension names with dot-separated labels in reverse-DNS order of a domain you control, followed by `/`. For example, use `com.example/<name>` for `_meta` keys, including capability entries, and `_com.example/<name>` for custom methods and custom enum values.
 
-Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Use the same metadata location and namespaced key on both sides of an extension's negotiation.
+Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Both sides advertise an extension under the same namespaced key, each using the nested capability object's `_meta` where its side has one and `capabilities._meta` otherwise. An extension's documentation states where each side advertises it.
 
 For example, an Agent can advertise an independent workspace extension without advertising session support:
 
@@ -279,4 +280,4 @@ For example, an Agent can advertise an independent workspace extension without a
 }
 ```
 
-This allows implementations to negotiate custom features during initialization without breaking compatibility with standard Clients and Agents.
+Implementations can then negotiate custom features during initialization without breaking standard Clients and Agents.

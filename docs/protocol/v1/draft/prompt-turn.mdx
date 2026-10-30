@@ -7,7 +7,7 @@ A prompt turn represents a complete interaction cycle between the [Client](/prot
 
 Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v1/draft/initialization) phase and [session setup](/protocol/v1/draft/session-setup).
 
-## Session Updates
+## Session updates
 
 Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
 
@@ -44,9 +44,9 @@ incoming messages between sessions, separately from user-facing responses and
 tool calls. The outer `params.sessionId` identifies the transcript being
 updated. Every message and chunk requires a `messageId` scoped to that
 transcript. Optional `senderSessionId` and `recipientSessionId` on
-`session_message` identify the participants; chunks carry only content.
+`session_message` identify the participants. Chunks carry only content.
 Include them on the first `session_message` when available, before the first
-chunk of a streamed message; later updates may omit them or add missing
+chunk of a streamed message. Later updates may omit them or add missing
 identities.
 
 For example, an incoming message in the child can name its participants, then
@@ -83,10 +83,10 @@ stream its content:
 }
 ```
 
-Every chunk carries one normal `ContentBlock`; later chunks append content
+Every chunk carries one normal `ContentBlock`. Later chunks append content
 for the same `messageId`. `session_message` can supply a whole
 `content` array to replace accumulated content. Its optional `content` and
-`_meta` fields leave prior values unchanged when omitted; `null` clears them.
+`_meta` fields leave prior values unchanged when omitted. `null` clears them.
 `content: []` also clears content. Chunk metadata is local to the chunk, not a
 message-level patch.
 
@@ -96,16 +96,14 @@ presentation and add links when the metadata arrives. Participant IDs follow the
 The two views have independent message IDs. Optional `senderMessageId` on the
 incoming view and `recipientMessageId` on the outgoing view name the other
 view's `messageId`, so a Client can go from either view to the other. They
-follow the participant-ID rules and can arrive in a later `session_message`; Clients must
+follow the participant-ID rules and can arrive in a later `session_message`. Clients must
 not link views by equal IDs alone. The Agent reports each side only
-when observed; Clients must not synthesize an incoming entry from an outgoing
+when observed. Clients must not synthesize an incoming entry from an outgoing
 one or forward the content themselves. Neither view acknowledges completed
 recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
 for participant registration, history gaps, and ownership rules.
 
-## The Prompt Turn Lifecycle
-
-A prompt turn follows a structured flow that enables rich interactions between the user, Agent, and any connected tools.
+## The prompt turn lifecycle
 
 <br />
 
@@ -150,7 +148,7 @@ sequenceDiagram
 
 ```
 
-### 1. User Message
+### 1. User message
 
 The turn begins when the Client sends a `session/prompt`:
 
@@ -193,11 +191,11 @@ The turn begins when the Client sends a `session/prompt`:
 
 </ParamField>
 
-### 2. Agent Processing
+### 2. Agent processing
 
 Upon receiving the prompt request, the Agent processes the user's message and sends it to the language model, which **MAY** respond with text content, tool calls, or both.
 
-### 3. Agent Reports Output
+### 3. Agent reports output
 
 The Agent reports the model's output to the Client via `session/update` notifications. This may include the Agent's plan for accomplishing the task:
 
@@ -262,7 +260,7 @@ The Agent then reports text responses from the model:
 
 #### Message IDs
 
-The Agent **MAY** include an opaque, unique `messageId` on message chunks. Chunks with the same `messageId` belong to the same message; a changed `messageId` indicates a new message.
+The Agent **MAY** include an opaque, unique `messageId` on message chunks. Chunks with the same `messageId` belong to the same message. A changed `messageId` indicates a new message.
 
 If the model requested tool calls, these are also reported immediately:
 
@@ -283,7 +281,7 @@ If the model requested tool calls, these are also reported immediately:
 }
 ```
 
-#### Session Notices
+#### Session notices
 
 The Agent **MUST NOT** send `notice` updates unless the Client advertised support
 by supplying `clientCapabilities.session.notices: {}` in its `initialize`
@@ -322,8 +320,8 @@ notice presentation without inferring additional behavior from them.
 
 `title` is required, non-null, non-empty plain text suitable for a compact
 presentation. `description` is optional, nullable plain text with supporting
-detail; omission and `null` both mean no description. `_meta` is an optional,
-nullable object scoped to this event; omission and `null` both mean no event
+detail. Omission and `null` both mean no description. `_meta` is an optional,
+nullable object scoped to this event. Omission and `null` both mean no event
 metadata. Unlike compaction patch fields, these fields do not update or clear
 an earlier notice.
 
@@ -335,7 +333,7 @@ fatal-error reporting.
 
 Clients own presentation and dismissal. They may use a toast, banner, inline
 status region, notification center, or another accessible surface, and may
-coalesce repeated notices. Severity is only a presentation hint; even `error`
+coalesce repeated notices. Severity is only a presentation hint. Even `error`
 does not fail a request, stop foreground work, change session state, or imply a
 prompt stop reason. Dismissal is local and produces no acknowledgement or
 removal event.
@@ -345,7 +343,7 @@ independent live event, not conversation history, and **SHOULD NOT** be included
 in session replay. If a condition remains relevant after reconnecting, the
 Agent may emit a new notice.
 
-#### Session Compaction
+#### Session compaction
 
 The Agent **MUST NOT** send `compaction_update` or
 `compaction_summary_chunk` unless the Client advertised support by supplying
@@ -360,7 +358,7 @@ ID-addressed compaction entity, and follows normal message-history semantics.
 
 When the Client advertises support, the Agent **MAY** report context compaction
 as one persistent, ID-addressed timeline entity. A single `compaction_update`
-with `status: "completed"` is sufficient; reporting progress is optional.
+with `status: "completed"` is sufficient. Reporting progress is optional.
 Summary content is also optional. It may be sent all at once in the `summary`
 field or streamed using `compaction_summary_chunk` for the same `compactionId`.
 
@@ -391,7 +389,7 @@ optional fields, then apply the notification.
 The first notification fixes the entity's timeline position in receive
 order: it follows previously received timeline content and precedes content
 first received later. Later updates and chunks for an ID-addressed entity patch
-it in place; they do not move or split it around the compaction.
+it in place. They do not move or split it around the compaction.
 
 | `status`      | Meaning                                      |
 | ------------- | -------------------------------------------- |
@@ -403,7 +401,7 @@ it in place; they do not move or split it around the compaction.
 The Agent **MUST** report a terminal status when a reported compaction ends.
 
 `status` is an open string enum. Values beginning with `_` are reserved for
-implementation-specific extensions; other unknown values are reserved for
+implementation-specific extensions. Other unknown values are reserved for
 future ACP statuses. Clients preserve unknown strings and present a generic
 state without inferring lifecycle or control behavior.
 
@@ -471,7 +469,7 @@ it, and a concrete value replaces it. On a first-seen ID, omission and `null`
 both start with no value. `summary: []` also clears the summary.
 
 Clients apply updates and chunks in receive order for each ID. Chunks append
-to the current summary; a concrete `summary` replaces all previously
+to the current summary. A concrete `summary` replaces all previously
 accumulated content, and any subsequent chunks append to that replacement.
 `summary: null` or `summary: []` clears accumulated content, including partial
 output before failure or cancellation.
@@ -491,11 +489,11 @@ or clearing summary patches as needed to avoid duplicating content the Client
 already holds.
 
 Compaction does not instruct the Client to discard earlier conversation
-history; collapsing it is a local presentation choice. It also does not replace
+history. Collapsing it is a local presentation choice. It also does not replace
 [`usage_update`](#session-usage-updates), which reports current context-window
-utilization and cost rather than a compaction boundary.
+usage and cost rather than a compaction boundary.
 
-#### Session Usage Updates
+#### Session usage updates
 
 The Agent **MAY** also report current session context and cumulative cost state with a `usage_update`:
 
@@ -520,7 +518,7 @@ The Agent **MAY** also report current session context and cumulative cost state 
 
 `used` and `size` are required and non-null token counts for the current session context. `cost` is optional and, if present, `amount` and `currency` are required. `currency` is the unit of `amount`: an ISO 4217 currency code such as `"USD"` for money, or another unit such as `"credits"`.
 
-### 4. Check for Completion
+### 4. Check for completion
 
 If there are no pending tool calls, the turn ends and the Agent **MUST** respond to the original `session/prompt` request with a `StopReason`:
 
@@ -536,7 +534,7 @@ If there are no pending tool calls, the turn ends and the Agent **MUST** respond
 
 Agents **MAY** stop the turn at any point by returning the corresponding [`StopReason`](#stop-reasons).
 
-### 5. Tool Invocation and Status Reporting
+### 5. Tool invocation and status reporting
 
 Before proceeding with execution, the Agent **MAY** request permission from the Client via the `session/request_permission` method.
 
@@ -559,7 +557,7 @@ Once permission is granted (if required), the Agent **SHOULD** invoke the tool a
 
 As the tool runs, the Agent **MAY** send additional updates, providing real-time feedback about tool execution progress.
 
-While tools execute on the Agent, they **MAY** leverage Client capabilities such as the file system (`fs`) methods to access resources within the Client's environment.
+While tools execute on the Agent, they **MAY** use Client capabilities such as the file system (`fs`) methods to access resources within the Client's environment.
 
 When the tool completes, the Agent sends another update with the final status and any content:
 
@@ -591,13 +589,13 @@ When the tool completes, the Agent sends another update with the final status an
   Learn more about Tool Calls
 </Card>
 
-### 6. Continue Conversation
+### 6. Continue conversation
 
 The Agent sends the tool results back to the language model as another request.
 
 The cycle returns to [step 2](#2-agent-processing), continuing until the language model completes its response without requesting additional tool calls or the turn gets stopped by the Agent or cancelled by the Client.
 
-## Stop Reasons
+## Stop reasons
 
 When an Agent stops a turn, it must specify the corresponding `StopReason`:
 

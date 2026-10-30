@@ -92,7 +92,7 @@ Clients and Agents **MUST** agree on a protocol version and act according to its
 
 See [Capabilities](#capabilities) to learn how non-breaking features are introduced.
 
-### Version Negotiation
+### Version negotiation
 
 The `initialize` request **MUST** include the latest protocol version the Client supports.
 
@@ -114,11 +114,11 @@ Capabilities may specify the availability of protocol methods, notifications, or
 
 Implementations can also [advertise custom capabilities](/protocol/v1/extensibility#advertising-custom-capabilities) using the `_meta` field to indicate support for protocol extensions.
 
-### Client Capabilities
+### Client capabilities
 
 The Client **SHOULD** specify whether it supports the following capabilities:
 
-#### Terminal Authentication
+#### Terminal authentication
 
 <ParamField path="auth.terminal" type="boolean">
   The Client can reproduce the configured Agent invocation in an interactive
@@ -130,7 +130,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Terminal Authentication
 </Card>
 
-#### File System
+#### File system
 
 <ParamField path="readTextFile" type="boolean">
   The `fs/read_text_file` method is available.
@@ -169,7 +169,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Elicitation
 </Card>
 
-#### Boolean Config Options
+#### Boolean config options
 
 <ParamField
   path="session.configOptions.boolean"
@@ -184,7 +184,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Config Options
 </Card>
 
-#### Session Compaction
+#### Session compaction
 
 <ParamField path="session.compaction" type="CompactionCapabilities Object">
   The Client supports ID-addressed `compaction_update` and
@@ -202,7 +202,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Compaction
 </Card>
 
-#### Session Notices
+#### Session notices
 
 <ParamField path="session.notices" type="NoticeCapabilities Object">
   The Client can present live `notice` session updates to the user. This field
@@ -216,7 +216,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Notices
 </Card>
 
-### Agent Capabilities
+### Agent capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
 
@@ -265,7 +265,7 @@ Note: This transport has been deprecated by the MCP spec.
 
 </ResponseField>
 
-#### Authentication Capabilities
+#### Authentication capabilities
 
 <ResponseField name="logout" type="LogoutCapabilities Object">
   The [`logout`](/protocol/v1/authentication#logging-out) method is available.
@@ -275,7 +275,7 @@ Note: This transport has been deprecated by the MCP spec.
   Learn more about Authentication
 </Card>
 
-#### Session Capabilities
+#### Session capabilities
 
 As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
 
@@ -301,19 +301,19 @@ Optionally, they **MAY** support other session methods and notifications by spec
   This will be unified in future versions of the protocol.
 </Note>
 
-## Implementation Information
+## Implementation information
 
 Both Clients and Agents **SHOULD** provide information about their implementation in the `clientInfo` and `agentInfo` fields respectively. Both take the following three fields:
 
 <ParamField path="name" type="string" required>
   Intended for programmatic or logical use, but can be used as a display name
-  fallback if title isn’t present.
+  fallback if title isn't present.
 </ParamField>
 
 <ParamField path="title" type="string">
-  Intended for UI and end-user contexts — optimized to be human-readable and
-  easily understood. Optional; omitted and `null` are equivalent. If not
-  provided, the name should be used for display.
+  Intended for UI and end-user contexts, so it should be readable by people.
+  Optional. Omitted and `null` are equivalent. If not provided, the name should
+  be used for display.
 </ParamField>
 
 <ParamField path="version" type="string" required>

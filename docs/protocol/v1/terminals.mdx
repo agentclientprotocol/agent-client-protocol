@@ -5,7 +5,7 @@ description: "Executing and managing terminal commands"
 
 The terminal methods allow Agents to execute shell commands within the Client's environment. These methods enable Agents to run build processes, execute scripts, and interact with command-line tools while providing real-time output streaming and process control.
 
-## Checking Support
+## Checking support
 
 Before attempting to use terminal methods, Agents **MUST** verify that the Client supports this capability by checking the [Client Capabilities](/protocol/v1/initialization#client-capabilities) field in the Client's `initialize` request:
 
@@ -25,7 +25,7 @@ Before attempting to use terminal methods, Agents **MUST** verify that the Clien
 
 If `terminal` is `false` or not present, the Agent **MUST NOT** attempt to call any terminal methods.
 
-## Executing Commands
+## Executing commands
 
 The `terminal/create` method starts a command in a new terminal:
 
@@ -101,7 +101,7 @@ The Client returns a Terminal ID immediately without waiting for completion:
 }
 ```
 
-This allows the command to run in the background while the Agent performs other operations.
+The command keeps running in the background while the Agent does other work.
 
 After creating the terminal, the Agent can use the `terminal/wait_for_exit` method to wait for the command to complete.
 
@@ -110,7 +110,7 @@ After creating the terminal, the Agent can use the `terminal/wait_for_exit` meth
   longer needed.
 </Note>
 
-## Embedding in Tool Calls
+## Embedding in tool calls
 
 Terminals can be embedded directly in [tool calls](/protocol/v1/tool-calls) to provide real-time output to users:
 
@@ -139,7 +139,7 @@ Terminals can be embedded directly in [tool calls](/protocol/v1/tool-calls) to p
 
 When a terminal is embedded in a tool call, the Client displays live output as it's generated and continues to display it even after the terminal is released.
 
-## Getting Output
+## Getting output
 
 The `terminal/output` method retrieves the current terminal output without waiting for the command to complete:
 
@@ -188,7 +188,7 @@ The Client responds with the current output and exit status (if the command has 
 
 </ResponseField>
 
-## Waiting for Exit
+## Waiting for exit
 
 The `terminal/wait_for_exit` method returns once the command completes:
 
@@ -225,7 +225,7 @@ The Client responds once the command exits:
   The signal that terminated the process (may be null if exited normally)
 </ResponseField>
 
-## Killing Commands
+## Killing commands
 
 The `terminal/kill` method terminates a command without releasing the terminal:
 
@@ -248,7 +248,7 @@ After killing a command, the terminal remains valid and can be used with:
 
 The Agent **MUST** still call `terminal/release` when it's done using it.
 
-### Building a Timeout
+### Building a timeout
 
 Agents can implement command timeouts by combining terminal methods:
 
@@ -261,7 +261,7 @@ Agents can implement command timeouts by combining terminal methods:
    - Include the output in the response to the model
 5. Call `terminal/release` when done
 
-## Releasing Terminals
+## Releasing terminals
 
 The `terminal/release` kills the command if still running and releases all resources:
 

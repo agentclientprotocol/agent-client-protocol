@@ -3,7 +3,7 @@ title: "Content"
 description: "Understanding content blocks in the Agent Client Protocol"
 ---
 
-Content blocks represent displayable information that flows through the Agent Client Protocol. They provide a structured way to handle various types of user-facing content—whether it's text from language models, images for analysis, or embedded resources for context.
+A content block is one piece of user-facing content: text, an image, audio, a link to a resource, or an embedded resource.
 
 Content blocks appear in:
 
@@ -11,13 +11,13 @@ Content blocks appear in:
 - Language model output streamed through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications
 - Progress updates and results from [tool calls](/protocol/v1/tool-calls)
 
-## Content Types
+## Content types
 
 Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v1/security#rendering-agent-content) and [URIs and Remote Resources](/protocol/v1/security#uris-and-remote-resources).
 
 ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2025-06-18 `ContentBlock`](https://modelcontextprotocol.io/specification/2025-06-18/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content.
 
-### Text Content
+### Text content
 
 Text may be plain text or Markdown. Clients **SHOULD** render it as Markdown. See [Rendering Agent Content](/protocol/v1/security#rendering-agent-content) for raw HTML.
 
@@ -39,7 +39,7 @@ All Agents **MUST** support text content blocks when included in prompts.
   more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
 </ParamField>
 
-### Image Content <Icon icon="asterisk" size="14" />
+### Image content <Icon icon="asterisk" size="14" />
 
 Images can be included for visual context or analysis.
 
@@ -72,7 +72,7 @@ prompts.
   more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
 </ParamField>
 
-### Audio Content <Icon icon="asterisk" size="14" />
+### Audio content <Icon icon="asterisk" size="14" />
 
 Audio data for transcription or analysis.
 
@@ -101,7 +101,7 @@ prompts.
   more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
 </ParamField>
 
-### Embedded Resource <Icon icon="asterisk" size="14" />
+### Embedded resource <Icon icon="asterisk" size="14" />
 
 Complete resource contents embedded directly in the message.
 
@@ -163,7 +163,7 @@ prompts.
   more](https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations).
 </ParamField>
 
-### Resource Link
+### Resource link
 
 References to resources that the Agent can access.
 

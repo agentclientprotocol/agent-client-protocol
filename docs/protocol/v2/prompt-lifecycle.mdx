@@ -3,13 +3,13 @@ title: "Prompt Lifecycle"
 description: "How prompts, state updates, and completion fit together"
 ---
 
-A prompt starts or contributes to [foreground work](#foreground-and-background-work) in a session. Foreground work can also start without a prompt, such as when the Agent follows up on a background task that finished; it reports the same states either way. The [Agent](/protocol/v2/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
+A prompt starts or contributes to [foreground work](#foreground-and-background-work) in a session. Foreground work can also start without a prompt, such as when the Agent follows up on a background task that finished. It reports the same states either way. The [Agent](/protocol/v2/overview#agent) may continue that work until it reports `idle`, including across multiple model exchanges and tool invocations.
 
-`session/prompt` lasts until the Agent inserts the user message into the ACP conversation. This is what acceptance means for a prompt. The response returns that message's `messageId`; the Agent reports its content and placement, foreground state, output, and completion through `session/update` notifications.
+`session/prompt` lasts until the Agent inserts the user message into the ACP conversation. This is what acceptance means for a prompt. The response returns that message's `messageId`. The Agent reports its content and placement, foreground state, output, and completion through `session/update` notifications.
 
 Before sending prompts, Clients **MUST** first complete the [initialization](/protocol/v2/initialization) phase and [session setup](/protocol/v2/session-setup).
 
-## Session Updates
+## Session updates
 
 Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
 
@@ -57,13 +57,13 @@ Messages, tool calls, terminals, plans, and compactions are entities that the Ag
 | Plan          | `plan_update`                                   | `planId`       |
 | Compaction    | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
 
-An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, and Agent thoughts are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`; they remain two distinct entities.
+An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, and Agent thoughts are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`. They remain two distinct entities.
 
-The Agent **MUST NOT** reuse an ID for a different entity of the same type within a session. Clients **MUST** key entities by both type and ID. An update applies only to the entity of its own type: an `agent_thought` whose `messageId` matches an existing Agent message creates or updates a thought and leaves the message unchanged. Likewise, a field that references an entity identifies an entity of one specific type; for example, the `messageId` returned by `session/prompt` identifies a user message.
+The Agent **MUST NOT** reuse an ID for a different entity of the same type within a session. Clients **MUST** key entities by both type and ID. An update applies only to the entity of its own type: an `agent_thought` whose `messageId` matches an existing Agent message creates or updates a thought and leaves the message unchanged. Likewise, a field that references an entity identifies an entity of one specific type. For example, the `messageId` returned by `session/prompt` identifies a user message.
 
 An update or chunk for an ID the Client hasn't seen creates the entity with its defaults and then applies, so a chunk can arrive before any full update. Clients **MUST NOT** drop it. An entity's first update or chunk fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks patch the entity in place without moving it, including after the session reports `idle`. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, may ignore its position.
 
-## Foreground and Background Work
+## Foreground and background work
 
 **Foreground work** is the Agent's active response or workflow in the session, including model processing, tool execution, and waiting for user action needed to continue that work. The Agent **MUST** treat that work as foreground whether it was started by a user prompt or by the Agent, for example to pursue an ongoing goal, continue earlier work, or act on a completed background task.
 
@@ -95,11 +95,9 @@ Session remains idle; no foreground work started or ended.
 
 A permission request or [elicitation](/protocol/v2/elicitation) does not by itself change the foreground state. If it blocks foreground work, the Agent **SHOULD** report `requires_action`. If it belongs only to independent background activity, the session may remain `idle`. Resolving a request does not itself imply `running`: the state changes only if foreground activity changes. See [Waiting for User Action](#waiting-for-user-action) and [Requesting Permission](/protocol/v2/tool-calls#requesting-permission).
 
-## Prompt Lifecycle
+## Prompt lifecycle
 
-A typical prompt-driven flow enables rich interactions between the user, Agent, and any connected tools.
-
-The diagram shows one possible ordering; see [Insertion and ordering](#insertion-and-ordering).
+The diagram shows one possible ordering. See [Insertion and ordering](#insertion-and-ordering).
 
 <br />
 
@@ -155,7 +153,7 @@ sequenceDiagram
 
 ```
 
-### 1. User Message
+### 1. User message
 
 The Client sends a user message with `session/prompt`:
 
@@ -190,7 +188,9 @@ The Client sends a user message with `session/prompt`:
 <ParamField path="prompt" type="ContentBlock[]" required>
     The contents of the user message, e.g. text, images, files, etc.
 
-    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/initialization). Agents **MUST** reject a prompt containing a content type they did not advertise or don't understand with `-32602`, without inserting it. Custom content types need a [custom capability](/protocol/v2/extensibility#advertising-custom-capabilities), such as an entry in `capabilities.session.prompt._meta`.
+    Clients **MUST NOT** send an empty `prompt` array. Agents **MAY** reject one with `-32602` without inserting it.
+
+    Clients **MUST** restrict types of content according to the [Prompt Capabilities](/protocol/v2/initialization#session-prompt-capabilities) established during [initialization](/protocol/v2/initialization). Agents **MUST** reject a prompt containing a content type that is neither baseline (`text`, `resource_link`) nor advertised, or that they don't understand with `-32602`, without inserting it. Custom content types need a [custom capability](/protocol/v2/extensibility#advertising-custom-capabilities), such as an entry in `capabilities.session.prompt._meta`.
 
     <Card icon="comments" horizontal href="/protocol/v2/content">
       Learn more about Content
@@ -198,11 +198,11 @@ The Client sends a user message with `session/prompt`:
 
 </ParamField>
 
-### 2. Prompt Accepted
+### 2. Prompt accepted
 
 **Acceptance means insertion**: the Agent has logically added a user message to the ACP conversation, with a `messageId` and a position relative to other messages. Receipt, queueing, and assigning an ID are not insertion.
 
-The Agent **MUST** respond successfully once the message is inserted, without waiting for foreground work to finish, and **MUST NOT** do so before insertion. Once inserted, it **MUST NOT** return an error response, even if failure or [request cancellation](/protocol/v2/cancellation) occurs before the response is sent. It returns the `messageId`; subsequent work outcomes are reported as described in [Failures](#failures) and [Cancellation](#cancellation).
+The Agent **MUST** respond successfully once the message is inserted, without waiting for foreground work to finish, and **MUST NOT** do so before insertion. Once inserted, it **MUST NOT** return an error response, even if failure or [request cancellation](/protocol/v2/cancellation) occurs before the response is sent. It returns the `messageId`. Subsequent work outcomes are reported as described in [Failures](#failures) and [Cancellation](#cancellation).
 
 An adapter can use a runtime's user-message echo or insertion event as evidence of insertion. For a [locally handled command](/protocol/v2/slash-commands#running-commands) that the runtime does not record, it can instead insert a live-only ACP user message.
 
@@ -220,7 +220,7 @@ The response contains the inserted user message's agent-generated `messageId`:
 
 <ResponseField name="messageId" type="MessageId" required>
   The opaque ID of the inserted user message. This field is a required, non-null
-  string; omission and explicit `null` are invalid.
+  string. Omission and explicit `null` are invalid.
 </ResponseField>
 
 The Agent **MUST** also report the inserted user message through a `user_message` update with the full `content` array or streamed `user_message_chunk` updates. All updates for that message **MUST** use the returned `messageId` and **MUST NOT** precede insertion. Clients **MUST** tolerate the updates arriving before or after the response.
@@ -245,19 +245,19 @@ The Agent **MUST** also report the inserted user message through a `user_message
 }
 ```
 
-The Client uses the JSON-RPC response ID to identify its submission, then associates it with `(sessionId, messageId)`. If the message update arrived first, the Client reconciles with that existing message rather than creating a duplicate. Agents **MUST** assign distinct message IDs to distinct inserted submissions, even if their content is identical; Clients must not infer the association from content or arrival order.
+The Client uses the JSON-RPC response ID to identify its submission, then associates it with `(sessionId, messageId)`. If the message update arrived first, the Client reconciles with that existing message rather than creating a duplicate. Agents **MUST** assign distinct message IDs to distinct inserted submissions, even if their content is identical. Clients must not infer the association from content or arrival order.
 
 Insertion is not a promise of durable storage or model consumption. Every inserted input, including a locally handled command, is reported live, but Agents are not required to persist it or retain it for any minimum period. If the message is retained and replayed, the Agent **MUST** use the same ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
 
 A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. The response has no fixed order relative to other session updates: the `user_message` acknowledgment, Agent output, and even the `idle` `state_update` that ends the resulting work may arrive before or after it. Clients **MUST NOT** infer ordering between them. If the response is lost, the submission's outcome remains uncertain: replay may omit live-only or discarded messages, and a retry can create another submission.
 
-The same insertion boundary applies when [closing the session](/protocol/v2/session-setup#closing-active-sessions) cancels a pending prompt: if closing prevents insertion, the request receives `-32800` (Request Cancelled); if the message has already been inserted, it receives a successful `messageId` response. Prompt responses need not precede the close response.
+The same insertion boundary applies when [closing the session](/protocol/v2/session-setup#closing-active-sessions) cancels a pending prompt: if closing prevents insertion, the request receives `-32800` (Request Cancelled). If the message has already been inserted, it receives a successful `messageId` response. Prompt responses need not precede the close response.
 
 #### Insertion and ordering
 
 `running` reports foreground work, not insertion. It may precede insertion, the prompt response, and user-message updates, for example while a foreground hook runs. It does not acknowledge a pending prompt's insertion.
 
-#### Prompts During Active Work
+#### Prompts during active work
 
 Clients **MAY** send `session/prompt` in any state, including while foreground work is `running` or `requires_action`. The Agent either inserts the prompt right away or holds it and inserts it later. Held prompts are inserted in the order they were received. What inserting during active work means, such as steering the current turn or starting the next one, is up to the Agent. Agents **MUST NOT** reject a prompt only because foreground work is active.
 
@@ -269,7 +269,7 @@ If a request is rejected before insertion, including by a hook or early failure,
 
 The [foreground lifecycle](#foreground-and-background-work) applies independently of the request outcome: report `idle` when no foreground work remains, not merely because a prompt was rejected. A failed foreground hook can therefore require both a prompt error response and an idle update. If no foreground work started, rejection requires no state transition.
 
-### 3. Agent Reports Output
+### 3. Agent reports output
 
 When foreground work starts, the Agent **MUST** report its active state. Usually
 this is a `state_update` notification with `state: "running"`. Work that starts
@@ -363,7 +363,7 @@ The Agent can report the model's text response as an `agent_message` update with
 
 The Agent **MUST** include an opaque `messageId` on message updates and message chunks.
 
-User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged, `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content.
+User, agent, and thought messages can each be reported either as a message update with a full `content` array or as streamed chunks. `user_message`, `agent_message`, and `agent_thought` updates are upserts keyed by `messageId`: omitted `content` leaves the existing message content unchanged (or empty for a new `messageId`), `content: null` clears it, and concrete `content` arrays replace the previous content. Chunk updates with the same `messageId` append content.
 
 A chunk for a `messageId` the Client hasn't seen creates the message with empty content, then appends to it. Clients apply message updates and chunks in the order they are received for each `messageId`:
 
@@ -375,7 +375,7 @@ A chunk for a `messageId` the Client hasn't seen creates the message with empty 
   top-level key, even when the same update replaces `content`, as described in [Metadata Patches](/protocol/v2/extensibility#metadata-patches). A chunk's `_meta`, when present, is
   chunk-scoped.
 
-For example, if an Agent sends `agent_message` with `content: [A]`, then sends `agent_message_chunk` with `B`, the rendered message content is `[A, B]`. If it later sends another `agent_message` with `content: [C]`, the rendered content becomes `[C]`; the earlier full content and chunks are replaced. Subsequent chunks append to `[C]`.
+For example, if an Agent sends `agent_message` with `content: [A]`, then sends `agent_message_chunk` with `B`, the rendered message content is `[A, B]`. If it later sends another `agent_message` with `content: [C]`, the rendered content becomes `[C]`. The earlier full content and chunks are replaced. Subsequent chunks append to `[C]`.
 
 For streaming agent text, the Agent can use `agent_message_chunk` updates:
 
@@ -397,7 +397,7 @@ For streaming agent text, the Agent can use `agent_message_chunk` updates:
 }
 ```
 
-The Agent can report internal reasoning with the same message-update or chunk patterns. `agent_thought` updates patch fields for the same thought `messageId`; `agent_thought_chunk` updates append new content.
+The Agent can report internal reasoning with the same message-update or chunk patterns. `agent_thought` updates patch fields for the same thought `messageId`. `agent_thought_chunk` updates append new content.
 
 ```json
 {
@@ -438,12 +438,12 @@ If the model requested tool calls, these are also reported immediately:
 }
 ```
 
-#### Session Notices
+#### Session notices
 
 No Client capability is required in v2. Clients that do not implement `notice`
 may preserve it through the [unknown-update
 fallback](/protocol/v2/extensibility#enum-and-tagged-union-variants) and
-ignore it or present it generically; this does not give it replay semantics.
+ignore it or present it generically. This does not give it replay semantics.
 This is [capability-free informational delivery](/protocol/v2/extensibility#experimental-features-and-negotiation),
 not an advertisement that the Client will display the notice.
 
@@ -475,8 +475,8 @@ notice presentation without inferring additional behavior from them.
 
 `title` is required, non-null, non-empty plain text suitable for a compact
 presentation. `description` is optional, nullable plain text with supporting
-detail; omission and `null` both mean no description. `_meta` is an optional,
-nullable object scoped to this event; omission and `null` both mean no event
+detail. Omission and `null` both mean no description. `_meta` is an optional,
+nullable object scoped to this event. Omission and `null` both mean no event
 metadata. Unlike compaction patch fields, these fields do not update or clear
 an earlier notice.
 
@@ -487,7 +487,7 @@ task completion, or fatal-error reporting.
 
 Clients own presentation and dismissal. They may use a toast, banner, inline
 status region, notification center, or another accessible surface, and may
-coalesce repeated notices. Severity is only a presentation hint; even `error`
+coalesce repeated notices. Severity is only a presentation hint. Even `error`
 does not fail a request, stop foreground work, change session state, or imply a
 prompt stop reason. Dismissal is local and produces no acknowledgement or
 removal event.
@@ -497,7 +497,7 @@ independent live event, not conversation history, and **SHOULD NOT** be included
 in session replay. If a condition remains relevant after reconnecting, the
 Agent may emit a new notice.
 
-#### Session Compaction
+#### Session compaction
 
 No Client capability is required in v2. Clients without compaction-specific
 handling may preserve, ignore, or generically display these informational updates
@@ -505,7 +505,7 @@ under the [v2 negotiation rules](/protocol/v2/extensibility#experimental-feature
 
 The Agent **MAY** report context compaction as one persistent, ID-addressed
 timeline entity. A single `compaction_update` with `status: "completed"` is
-sufficient; reporting progress is optional. Summary content is also optional.
+sufficient. Reporting progress is optional. Summary content is also optional.
 It may be sent all at once in the `summary` field or streamed using
 `compaction_summary_chunk` for the same `compactionId`.
 
@@ -535,7 +535,7 @@ optional fields, then apply the notification.
 
 As for every [entity](#entity-ids), the first notification fixes the
 compaction's timeline position. Later updates and chunks for other entities
-patch them in place; they do not move or split them around the compaction.
+patch them in place. They do not move or split them around the compaction.
 
 | `status`      | Meaning                                      |
 | ------------- | -------------------------------------------- |
@@ -547,7 +547,7 @@ patch them in place; they do not move or split them around the compaction.
 The Agent **MUST** report a terminal status when a reported compaction ends.
 
 `status` is an open string enum. Values beginning with `_` are reserved for
-implementation-specific extensions; other unknown values are reserved for
+implementation-specific extensions. Other unknown values are reserved for
 future ACP statuses. Clients preserve unknown strings and present a generic
 state without inferring lifecycle or control behavior.
 
@@ -613,11 +613,11 @@ The following `compaction_update` fields are optional, nullable patches:
 For each patch field, omission leaves the stored value unchanged, `null` clears
 it, and a concrete value replaces it. On a first-seen ID, omission and `null`
 both start with no value. `summary: []` also clears the summary. A `_meta`
-object patches the stored metadata by top-level key instead of replacing it;
-see [Metadata Patches](/protocol/v2/extensibility#metadata-patches).
+object patches the stored metadata by top-level key instead of replacing it.
+See [Metadata Patches](/protocol/v2/extensibility#metadata-patches).
 
 Clients apply updates and chunks in receive order for each ID. Chunks append
-to the current summary; a concrete `summary` replaces all previously
+to the current summary. A concrete `summary` replaces all previously
 accumulated content, and any subsequent chunks append to that replacement.
 `summary: null` or `summary: []` clears accumulated content, including partial
 output before failure or cancellation.
@@ -632,11 +632,11 @@ was not otherwise user-visible.
 Compactions are replayed like other session entities. See [Replay Contents](/protocol/v2/session-setup#replay-contents).
 
 Compaction does not instruct the Client to discard earlier conversation
-history; collapsing it is a local presentation choice. It also does not replace
+history. Collapsing it is a local presentation choice. It also does not replace
 [`usage_update`](#session-usage-updates), which reports current context-window
-utilization and cost rather than a compaction boundary.
+usage and cost rather than a compaction boundary.
 
-#### Session Usage Updates
+#### Session usage updates
 
 The Agent **MAY** also report current session context and cumulative cost state with a `usage_update`:
 
@@ -661,7 +661,7 @@ The Agent **MAY** also report current session context and cumulative cost state 
 
 `used` and `size` are required and non-null token counts for the current session context. `cost` is a patch field: omitting it leaves the last reported cost unchanged, `null` clears it, and a value replaces it, including when the currency differs. A value requires `amount` and `currency`. `currency` is the unit of `amount`: an ISO 4217 currency code such as `"USD"` for money, or another unit such as `"credits"`.
 
-### 4. Report Completion
+### 4. Report completion
 
 When foreground work ends, the Agent **MUST** report `idle` with a `state_update` notification and **SHOULD** include the corresponding [`StopReason`](#stop-reasons):
 
@@ -684,7 +684,7 @@ The Agent **MUST** send any pending updates for the foreground work that ended b
 
 Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update. They **SHOULD** include the corresponding [`StopReason`](#stop-reasons).
 
-### 5. Tool Invocation and Status Reporting
+### 5. Tool invocation and status reporting
 
 Before proceeding with execution, the Agent **MAY** request permission from the Client via the `session/request_permission` method.
 
@@ -771,15 +771,15 @@ When the tool completes, the Agent sends another update with the final status an
   Learn more about Tool Calls
 </Card>
 
-### 6. Continue Conversation
+### 6. Continue conversation
 
 The Agent sends the tool results back to the language model as another request.
 
 The cycle returns to [step 3](#3-agent-reports-output), continuing until the language model completes its response without requesting additional tool calls or foreground work is stopped by the Agent or cancelled by the Client.
 
-## Stop Reasons
+## Stop reasons
 
-When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update. If the Agent knows it is idle but cannot determine why the work stopped, it may omit the stop reason. Clients **MUST** recognize `idle` as the end of foreground work even when the stop reason is omitted, `null`, malformed, or unknown; without a recognized stop reason, Clients cannot infer how the work ended.
+When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update. If the Agent knows it is idle but cannot determine why the work stopped, it may omit the stop reason. Clients **MUST** recognize `idle` as the end of foreground work even when the stop reason is omitted, `null`, malformed, or unknown. Without a recognized stop reason, Clients cannot infer how the work ended.
 
 <ResponseField name="end_turn">
   The Agent has finished foreground work, including a locally handled command
@@ -808,7 +808,7 @@ When an Agent stops foreground work, it **SHOULD** specify the corresponding `St
 
 When the Agent stops foreground work for its own reasons, it uses the matching reason: `max_tokens` or `max_turn_requests` for limits, `refusal` for a refusal, and `error` for anything else, such as an internal timeout. `cancelled` means the user or Client chose to stop the work, not that the Agent hit a limit or failed.
 
-Custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`; unknown non-underscore stop reasons are reserved for future ACP variants.
+Custom or future stop reasons can be used when Clients can display a generic stopped state. Custom stop reasons **MUST** begin with `_`. Unknown non-underscore stop reasons are reserved for future ACP variants.
 
 ## Failures
 
@@ -839,7 +839,7 @@ When foreground work ends because something failed, the Agent **MUST** report `i
   omission and `null` both mean the Agent supplied no failure details.
 </ResponseField>
 
-`error` belongs to the `error` stop reason; beside any other stop reason it is an unknown field. Clients may show `message` to the user and can handle `code` as they would for an error response: for example, `-32000` (authentication required) can prompt the user to authenticate before sending another prompt.
+`error` belongs to the `error` stop reason. Beside any other stop reason it is an unknown field. Clients may show `message` to the user and can handle `code` as they would for an error response: for example, `-32000` (authentication required) can prompt the user to authenticate before sending another prompt.
 
 Before reporting the failure, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Sending the prompt again submits a new message.
 
@@ -850,9 +850,9 @@ The `error` stop reason is only for failures that end foreground work:
 - Errors raised while aborting cancelled work are reported with the `cancelled` stop reason, as described in [Cancellation](#cancellation).
 - A failure in background activity while the Agent is `idle` is not a stop reason, since no foreground work ended.
 
-Clients detect a lost connection or an exited Agent process themselves; no update can report them.
+Clients detect a lost connection or an exited Agent process themselves. No update can report them.
 
-## Session States
+## Session states
 
 `state_update` is a snapshot of the session's aggregate foreground activity,
 whether or not a prompt started it. It is not an event for an individual prompt,
@@ -872,7 +872,7 @@ Background activity **MAY** continue and emit other `session/update` notificatio
 
 Unless the Client has advertised support for a custom or future state, Agents **MUST** still report `running`, `requires_action`, and `idle` where the [state transitions](#state-transitions) require them. A Client that receives a state it doesn't recognize **MUST NOT** treat it as `idle` or present the previous state as confirmed, and shows a generic busy state until a known state arrives.
 
-### Initial State and Synchronization
+### Initial state and synchronization
 
 New sessions default to `idle` until a state update reports otherwise. State
 updates may arrive before or after the `session/new` response. Clients
@@ -887,7 +887,7 @@ use that snapshot rather than infer activity from the response or replayed
 content. See [Current-State Synchronization](/protocol/v2/session-setup#current-state-synchronization)
 for ordering and pending interactions.
 
-### State Transitions
+### State transitions
 
 The table describes live state reporting between the three standard states.
 Initial or resume snapshots report the current state without implying a
@@ -917,7 +917,7 @@ not constitute another state transition.
 When an idle transition ends work, the Agent **SHOULD** include its stop reason,
 and **MUST** use `cancelled` when confirming foreground cancellation.
 
-### Waiting for User Action
+### Waiting for user action
 
 `requires_action` means the foreground workflow as a whole is blocked on user
 action. The session remains `running` if other foreground work can
@@ -934,7 +934,7 @@ request may lead to resumed work, a fallback, or completion.
 Agents **SHOULD** ignore responses for work that has already ended rather than
 use them to resume that work.
 
-### Work Boundaries and Local Commands
+### Work boundaries and local commands
 
 When no foreground activity remains, the Agent **MUST** report `idle`. If
 another foreground interval then begins, it reports an active state again,
@@ -950,7 +950,7 @@ idle with no user-action wait uses `running` → `idle` and **SHOULD** use
 notifications substitute for state updates. Foreground work may precede
 insertion. See [Insertion and ordering](#insertion-and-ordering).
 
-### Lifecycle Examples
+### Lifecycle examples
 
 These examples illustrate the lifecycle. Blocked-state examples assume the Agent
 follows the recommendation to report `requires_action`. Start, resume-from-blocked,
@@ -995,14 +995,14 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 }
 ```
 
-`session/cancel` covers foreground work and prompts the Agent has not yet inserted. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`; cancellation does not undo that insertion. Background work is not covered, but the Agent **MAY** stop it too.
+`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. A `session/prompt` received after `session/cancel` is not cancelled by it. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Background work is not covered, but the Agent **MAY** stop it too.
 
 The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification. This mark is a local display hint: the Agent gives those tool calls their [final status](/protocol/v2/tool-calls#status), and its updates replace the mark.
 
 The Client **MUST** respond to pending `session/request_permission` requests in
 the cancelled session with the `cancelled` outcome. Requests already answered
 do not require another response. The Client can't tell foreground requests from
-background ones, so this covers every pending request in the session; the Agent
+background ones, so this covers every pending request in the session. The Agent
 treats `cancelled` for background work as a denial. For selective cancellation of related
 elicitation requests, see [Elicitation Cancellation](/protocol/v2/elicitation#session-cancellation).
 
@@ -1033,7 +1033,3 @@ Agents **MUST** catch these errors and report the semantically meaningful `cance
 The Agent **MAY** send `session/update` notifications with content or tool call updates after receiving the `session/cancel` notification, but it **MUST** ensure that it does so before sending the idle `state_update` session update that reports cancellation.
 
 The Client **SHOULD** still accept tool call updates received after sending `session/cancel`.
-
----
-
-After the Agent reports `idle`, the Client may send another `session/prompt` to continue the conversation, building on the established session context.

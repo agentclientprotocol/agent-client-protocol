@@ -34,7 +34,7 @@ pub struct ExtRequest {
 }
 
 impl ExtRequest {
-    /// Builds [`ExtRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ExtRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {
@@ -58,7 +58,7 @@ pub struct ExtResponse(
 );
 
 impl ExtResponse {
-    /// Builds [`ExtResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ExtResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(params: Arc<RawValue>) -> Self {
         Self(params)
@@ -86,7 +86,7 @@ pub struct ExtNotification {
 }
 
 impl ExtNotification {
-    /// Builds [`ExtNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`ExtNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {
