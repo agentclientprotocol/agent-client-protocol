@@ -2095,6 +2095,129 @@ impl SessionInfo {
     }
 }
 
+// Set session title
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for setting the title of a session.
+///
+/// Only available if the Agent supports the `sessionCapabilities.title` capability.
+///
+/// The session does not need to be active on the connection. Any session the Agent would
+/// return from `session/list` can be retitled. A session that does not exist gets `-32002`.
+///
+/// The Agent responds only after it has stored the title. After a successful response, the
+/// Agent SHOULD NOT replace the title with one it generates automatically.
+#[cfg(feature = "unstable_session_set_title")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_TITLE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetSessionTitleRequest {
+    /// The ID of the session to retitle.
+    pub session_id: SessionId,
+    /// The new title for the session.
+    ///
+    /// Required and non-null. Omission and explicit `null` are both invalid. The Agent MAY
+    /// normalize the title before storing it, for example by trimming whitespace or
+    /// truncating it. The Agent rejects a title that fails its validation, including one
+    /// that is empty after normalization, with `-32602`.
+    pub title: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_set_title")]
+impl SetSessionTitleRequest {
+    /// Builds [`SetSessionTitleRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>, title: impl Into<String>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            title: title.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from setting the title of a session.
+#[cfg(feature = "unstable_session_set_title")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_TITLE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetSessionTitleResponse {
+    /// The title the Agent stored.
+    ///
+    /// This differs from the requested title if the Agent normalized it. Clients SHOULD
+    /// display this value rather than the one they sent.
+    pub title: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_set_title")]
+impl SetSessionTitleResponse {
+    /// Builds [`SetSessionTitleResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 // Session modes
 
 /// The set of modes and the one currently active.
@@ -4439,6 +4562,22 @@ pub struct SessionCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub status: Option<SessionStatusCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/set_title`.
+    ///
+    /// Agents report titles through `session/list` and `session_info_update` without this
+    /// capability. It only advertises that Clients can set titles.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports setting session titles.
+    #[cfg(feature = "unstable_session_set_title")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub title: Option<SessionTitleCapabilities>,
     /// Whether the agent supports `session/resume`.
     ///
     /// Optional. Omitted or `null` both mean the agent does not advertise support.
@@ -4553,6 +4692,24 @@ impl SessionCapabilities {
     #[must_use]
     pub fn status(mut self, status: impl IntoOption<SessionStatusCapabilities>) -> Self {
         self.status = status.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/set_title`.
+    ///
+    /// Agents report titles through `session/list` and `session_info_update` without this
+    /// capability. It only advertises that Clients can set titles.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports setting session titles.
+    #[cfg(feature = "unstable_session_set_title")]
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<SessionTitleCapabilities>) -> Self {
+        self.title = title.into_option();
         self
     }
 
@@ -4985,6 +5142,53 @@ impl SessionStatusCapabilities {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for Client-set session titles.
+///
+/// Supplying `{}` means the agent supports `session/set_title`. Agents report titles
+/// through `session/list` and `session_info_update` without this capability.
+#[cfg(feature = "unstable_session_set_title")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionTitleCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_set_title")]
+impl SessionTitleCapabilities {
+    /// Builds an empty [`SessionTitleCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// Capabilities for the `session/resume` method.
 ///
 /// Supplying `{}` means the agent supports resuming sessions.
@@ -5288,6 +5492,9 @@ pub struct AgentMethodNames {
     /// Method for checking the status of a session.
     #[cfg(feature = "unstable_session_status")]
     pub session_status: &'static str,
+    /// Method for setting the title of a session.
+    #[cfg(feature = "unstable_session_set_title")]
+    pub session_set_title: &'static str,
     /// Method for resuming an existing session.
     pub session_resume: &'static str,
     /// Method for closing an active session.
@@ -5320,6 +5527,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_fork: SESSION_FORK_METHOD_NAME,
     #[cfg(feature = "unstable_session_status")]
     session_status: SESSION_STATUS_METHOD_NAME,
+    #[cfg(feature = "unstable_session_set_title")]
+    session_set_title: SESSION_SET_TITLE_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
     logout: LOGOUT_METHOD_NAME,
@@ -5360,6 +5569,9 @@ pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
 /// Method name for checking the status of a session.
 #[cfg(feature = "unstable_session_status")]
 pub(crate) const SESSION_STATUS_METHOD_NAME: &str = "session/status";
+/// Method name for setting the title of a session.
+#[cfg(feature = "unstable_session_set_title")]
+pub(crate) const SESSION_SET_TITLE_METHOD_NAME: &str = "session/set_title";
 /// Method name for resuming an existing session.
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
@@ -5488,6 +5700,18 @@ pub enum ClientRequest {
     ///
     /// This method is only available if the agent advertises the `sessionCapabilities.status` capability.
     SessionStatusRequest(SessionStatusRequest),
+    #[cfg(feature = "unstable_session_set_title")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Sets the title of a session.
+    ///
+    /// This method is only available if the agent advertises the `sessionCapabilities.title` capability.
+    ///
+    /// The session does not need to be active on the connection. The agent stores the
+    /// title and returns the stored title, which may be normalized.
+    SetSessionTitleRequest(SetSessionTitleRequest),
     /// Resumes an existing session without returning previous messages.
     ///
     /// This method is only available if the agent advertises the `sessionCapabilities.resume` capability.
@@ -5561,6 +5785,8 @@ impl ClientRequest {
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
             #[cfg(feature = "unstable_session_status")]
             Self::SessionStatusRequest(_) => AGENT_METHOD_NAMES.session_status,
+            #[cfg(feature = "unstable_session_set_title")]
+            Self::SetSessionTitleRequest(_) => AGENT_METHOD_NAMES.session_set_title,
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
             Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
@@ -5613,6 +5839,9 @@ pub enum AgentResponse {
     /// Successful result returned for a `session/status` request.
     #[cfg(feature = "unstable_session_status")]
     SessionStatusResponse(SessionStatusResponse),
+    /// Successful result returned for a `session/set_title` request.
+    #[cfg(feature = "unstable_session_set_title")]
+    SetSessionTitleResponse(SetSessionTitleResponse),
     /// Successful result returned for a `session/resume` request.
     ResumeSessionResponse(#[serde(default)] ResumeSessionResponse),
     /// Successful result returned for a `session/close` request.
@@ -6201,6 +6430,60 @@ mod test_serialization {
             })
         );
     }
+    #[cfg(feature = "unstable_session_set_title")]
+    #[test]
+    fn test_session_set_title_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_set_title, "session/set_title");
+        assert_eq!(
+            ClientRequest::SetSessionTitleRequest(SetSessionTitleRequest::new(
+                "sess_abc123",
+                "Investigate OAuth timeout"
+            ))
+            .method(),
+            "session/set_title"
+        );
+        assert_eq!(
+            serde_json::to_value(SetSessionTitleRequest::new(
+                "sess_abc123",
+                "Investigate OAuth timeout"
+            ))
+            .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "title": "Investigate OAuth timeout"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(SetSessionTitleResponse::new("Investigate OAuth timeout"))
+                .unwrap(),
+            json!({
+                "title": "Investigate OAuth timeout"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(SessionCapabilities::new().title(SessionTitleCapabilities::new()))
+                .unwrap(),
+            json!({
+                "title": {}
+            })
+        );
+    }
+
+    #[cfg(feature = "unstable_session_set_title")]
+    #[test]
+    fn test_session_set_title_requires_title() {
+        for params in [
+            json!({"sessionId": "sess_abc123"}),
+            json!({"sessionId": "sess_abc123", "title": null}),
+            json!({"sessionId": "sess_abc123", "title": 42}),
+        ] {
+            assert!(serde_json::from_value::<SetSessionTitleRequest>(params).is_err());
+        }
+        for result in [json!({}), json!({"title": null})] {
+            assert!(serde_json::from_value::<SetSessionTitleResponse>(result).is_err());
+        }
+    }
+
     #[cfg(feature = "unstable_session_status")]
     #[test]
     fn test_session_status_serialization() {

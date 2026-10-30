@@ -32,6 +32,7 @@ unstable = [
     "unstable_plan_operations",
     "unstable_session_fork",
     "unstable_session_status",
+    "unstable_session_set_title",
     "unstable_session_system_prompt",
     "unstable_subagents",
     "unstable_end_turn_token_usage",
@@ -45,6 +46,7 @@ unstable_mcp_over_acp = []
 unstable_plan_operations = []
 unstable_session_fork = []
 unstable_session_status = []
+unstable_session_set_title = []
 unstable_session_system_prompt = []
 unstable_subagents = []
 unstable_end_turn_token_usage = []

@@ -15,6 +15,7 @@
     "session_delete": "session/delete",
     "session_fork": "session/fork",
     "session_status": "session/status",
+    "session_set_title": "session/set_title",
     "session_resume": "session/resume",
     "session_close": "session/close",
     "auth_logout": "auth/logout"
