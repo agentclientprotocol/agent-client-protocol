@@ -21,8 +21,8 @@ requests from clients and execute tasks using language models and tools.
 
 Authenticates the client using the specified authentication method.
 
-Agents MUST support this method when their `initialize` response advertised
-at least one valid authentication method. Clients MUST call this method only
+Agents MUST support this method when their `initialize` response included
+a non-empty `authMethods` list. Clients MUST call this method only
 with a method whose type defines a protocol-driven login flow, and MUST NOT
 call it when `authMethods` was omitted or empty.
 
@@ -40,8 +40,8 @@ Request parameters for the `auth/login` method.
 
 Specifies which authentication method to use.
 
-Agents MUST support this method when their `initialize` response advertised
-at least one valid authentication method. Clients MUST NOT call this method
+Agents MUST support this method when their `initialize` response included
+a non-empty `authMethods` list. Clients MUST NOT call this method
 when `authMethods` was omitted or empty.
 
 **Type:** Object
@@ -83,8 +83,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Logs out of the current authenticated state.
 
-Agents MUST support this method when their `initialize` response advertised
-at least one valid authentication method. Clients MUST NOT call this method
+Agents MUST support this method when their `initialize` response included
+a non-empty `authMethods` list. Clients MUST NOT call this method
 when `authMethods` was omitted or empty.
 
 After a successful logout, authentication-gated requests require the
@@ -97,8 +97,8 @@ Request parameters for the `auth/logout` method.
 
 Terminates the current authenticated session.
 
-Agents MUST support this method when their `initialize` response advertised
-at least one valid authentication method. Clients MUST NOT call this method
+Agents MUST support this method when their `initialize` response included
+a non-empty `authMethods` list. Clients MUST NOT call this method
 when `authMethods` was omitted or empty.
 
 **Type:** Object

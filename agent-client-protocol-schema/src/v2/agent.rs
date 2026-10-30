@@ -258,8 +258,8 @@ impl Implementation {
 ///
 /// Specifies which authentication method to use.
 ///
-/// Agents MUST support this method when their `initialize` response advertised
-/// at least one valid authentication method. Clients MUST NOT call this method
+/// Agents MUST support this method when their `initialize` response included
+/// a non-empty `authMethods` list. Clients MUST NOT call this method
 /// when `authMethods` was omitted or empty.
 #[serde_as]
 #[skip_serializing_none]
@@ -355,8 +355,8 @@ crate::serde_util::default_on_null! {
     ///
     /// Terminates the current authenticated session.
     ///
-    /// Agents MUST support this method when their `initialize` response advertised
-    /// at least one valid authentication method. Clients MUST NOT call this method
+    /// Agents MUST support this method when their `initialize` response included
+    /// a non-empty `authMethods` list. Clients MUST NOT call this method
     /// when `authMethods` was omitted or empty.
     #[serde_as]
     #[skip_serializing_none]
@@ -5617,8 +5617,8 @@ pub enum ClientRequest {
     InitializeRequest(Box<InitializeRequest>),
     /// Authenticates the client using the specified authentication method.
     ///
-    /// Agents MUST support this method when their `initialize` response advertised
-    /// at least one valid authentication method. Clients MUST call this method only
+    /// Agents MUST support this method when their `initialize` response included
+    /// a non-empty `authMethods` list. Clients MUST call this method only
     /// with a method whose type defines a protocol-driven login flow, and MUST NOT
     /// call it when `authMethods` was omitted or empty.
     ///
@@ -5653,8 +5653,8 @@ pub enum ClientRequest {
     DisableProviderRequest(Box<DisableProviderRequest>),
     /// Logs out of the current authenticated state.
     ///
-    /// Agents MUST support this method when their `initialize` response advertised
-    /// at least one valid authentication method. Clients MUST NOT call this method
+    /// Agents MUST support this method when their `initialize` response included
+    /// a non-empty `authMethods` list. Clients MUST NOT call this method
     /// when `authMethods` was omitted or empty.
     ///
     /// After a successful logout, authentication-gated requests require the

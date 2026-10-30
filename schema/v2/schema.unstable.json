@@ -6902,7 +6902,7 @@
                 },
                 {
                   "title": "LoginAuthRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving an `auth_required` (`-32000`) error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving an `auth_required` (`-32000`) error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LoginAuthRequest"
@@ -6938,7 +6938,7 @@
                 },
                 {
                   "title": "LogoutAuthRequest",
-                  "description": "Logs out of the current authenticated state.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.\n\nAfter a successful logout, authentication-gated requests require the\nclient to complete an advertised authentication flow again. There is no\nguarantee about the behavior of already running sessions.",
+                  "description": "Logs out of the current authenticated state.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.\n\nAfter a successful logout, authentication-gated requests require the\nclient to complete an advertised authentication flow again. There is no\nguarantee about the behavior of already running sessions.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LogoutAuthRequest"
@@ -7211,7 +7211,7 @@
       }
     },
     "LoginAuthRequest": {
-      "description": "Request parameters for the `auth/login` method.\n\nSpecifies which authentication method to use.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.",
+      "description": "Request parameters for the `auth/login` method.\n\nSpecifies which authentication method to use.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.",
       "type": "object",
       "properties": {
         "methodId": {
@@ -7314,7 +7314,7 @@
       "x-method": "providers/disable"
     },
     "LogoutAuthRequest": {
-      "description": "Request parameters for the `auth/logout` method.\n\nTerminates the current authenticated session.\n\nAgents MUST support this method when their `initialize` response advertised\nat least one valid authentication method. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.",
+      "description": "Request parameters for the `auth/logout` method.\n\nTerminates the current authenticated session.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST NOT call this method\nwhen `authMethods` was omitted or empty.",
       "type": "object",
       "properties": {
         "_meta": {
