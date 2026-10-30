@@ -219,7 +219,7 @@ Clients **SHOULD**:
 
 ## Default Values and Graceful Degradation
 
-Every configuration option's `currentValue` is the value the Agent uses until the Client changes it. Agents **MUST** be able to operate with it, even if:
+Every configuration option's `currentValue` is the value the Agent is using. It changes only through a `session/set_config_option` response or a `config_option_update` notification. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
