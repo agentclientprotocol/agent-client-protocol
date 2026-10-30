@@ -29,10 +29,10 @@ use crate::IntoOption;
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "proxy", "x-method" = PROXY_INITIALIZE_METHOD_NAME)))]
+#[serde(transparent)]
 #[non_exhaustive]
 pub struct InitializeProxyRequest {
-    /// The `initialize` params, flattened into this request.
-    #[serde(flatten)]
+    /// The `initialize` params, sent unchanged.
     pub initialize: InitializeRequest,
 }
 
@@ -346,7 +346,7 @@ mod tests {
     }
 
     #[test]
-    fn test_initialize_proxy_request_flattens_initialize_params() {
+    fn test_initialize_proxy_request_matches_initialize_params() {
         let request = InitializeProxyRequest::new(InitializeRequest::new(ProtocolVersion::V1));
         let value = serde_json::to_value(&request).unwrap();
         assert_eq!(value, serde_json::to_value(&request.initialize).unwrap());

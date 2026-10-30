@@ -9129,44 +9129,13 @@
     },
     "InitializeProxyRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `proxy/initialize`.\n\nA conductor sends `proxy/initialize` instead of `initialize` to every component that has a\nsuccessor, which tells the component to run as a proxy. The params are the same as\n`initialize`, and the response is an ordinary `InitializeResponse`. A conductor sends\n`initialize` to the final agent.\n\nSee the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).",
-      "type": "object",
-      "properties": {
-        "protocolVersion": {
-          "description": "The latest protocol version supported by the client.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/ProtocolVersion"
-            }
-          ]
-        },
-        "info": {
-          "description": "Information about the implementation sending this initialize request.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/Implementation"
-            }
-          ]
-        },
-        "capabilities": {
-          "description": "Capabilities supported by the client.",
-          "x-deserialize-default-on-error": true,
-          "default": {},
-          "allOf": [
-            {
-              "$ref": "#/$defs/ClientCapabilities"
-            }
-          ]
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["protocolVersion", "info"],
+      "x-method": "proxy/initialize",
       "x-side": "proxy",
-      "x-method": "proxy/initialize"
+      "allOf": [
+        {
+          "$ref": "#/$defs/InitializeRequest"
+        }
+      ]
     },
     "ProxySuccessorRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nParameters of a `proxy/successor` request.\n\nA proxy sends it to forward a message to its successor, and the conductor sends it to\ndeliver a message from the successor to the proxy. The envelope wraps one request: `method`\nand `params` are the wrapped request's method and params.\n\nThe result or error of the wrapped request is returned unchanged as the result or error\nof the `proxy/successor` request.\n\nSee the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).",

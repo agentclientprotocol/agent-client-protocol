@@ -2128,31 +2128,6 @@ successor, which tells the component to run as a proxy. The params are the same 
 
 See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT assign meaning to keys they do not recognize.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="capabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
-  Capabilities supported by the client.
-
-    - Default: `{}`
-
-</ResponseField>
-<ResponseField name="info" type={<a href="#implementation">Implementation</a>} required>
-  Information about the implementation sending this initialize request.
-</ResponseField>
-<ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
-  The latest protocol version supported by the client.
-</ResponseField>
-
 <a id="proxy-successor"></a>
 ### <span class="font-mono">proxy/successor</span>
 
