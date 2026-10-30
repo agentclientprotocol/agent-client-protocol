@@ -760,7 +760,7 @@ Retained user messages **MUST** preserve the ID returned by `session/prompt`. Ag
 
 `session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Omitting it and sending `[]` are equivalent. Both responses **MAY** include the session's `configOptions` and initial `availableCommands`. Neither carries `modes` anymore.
 
-`additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list. Omitting the field or sending `[]` activates no additional roots rather than restoring previous ones.
+`additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list. Omitting the field or sending `[]` activates no additional roots rather than restoring previous ones. The same applies to `mcpServers` on resume.
 
 ### Baseline methods
 
@@ -808,7 +808,9 @@ MCP transport configuration is aligned with the current MCP transport model:
 - Every server config **MUST** carry a `type` discriminator. In v1, stdio configs had no `type` field. In v2 they are `"type": "stdio"`. Unknown transport types can then be carried as extension variants instead of failing to parse.
 - The deprecated HTTP+SSE transport (`"type": "sse"`) is **removed**.
 - Support is advertised per transport under `capabilities.session.mcp`: `stdio` is now an explicit capability (`session.mcp.stdio`), so agents that cannot launch subprocesses can opt out, and `session.mcp.http` covers remote servers.
-- Empty arrays are no longer required: `args` and `env` on stdio configs and `headers` on HTTP configs are optional in v2 (v1 required `args` and `env` even when empty).
+- Each server `name` **MUST** be unique within `mcpServers`, and Agents reject duplicates with `-32602`.
+- On `session/resume`, `mcpServers` is the complete set of Client-provided servers, like `additionalDirectories`; servers from earlier requests are not restored.
+- Empty arrays are no longer required: `args` and `env` on stdio configs and `headers` on HTTP configs are optional in v2 (v1 required `args`, `env`, and `headers` even when empty).
 
 ```json
 {
