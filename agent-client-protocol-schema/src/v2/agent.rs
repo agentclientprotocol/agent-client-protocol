@@ -5711,8 +5711,8 @@ pub enum ClientRequest {
     ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
     ///
-    /// The Agent MUST cancel any ongoing work as if `session/cancel` was called, also stops
-    /// the session's background work, and then frees the resources associated with the session.
+    /// The Agent MUST cancel any ongoing work as if `session/cancel` was called, stop the
+    /// session's background work, and then free the resources associated with the session.
     CloseSessionRequest(Box<CloseSessionRequest>),
     /// Sets the current value for a session configuration option.
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),

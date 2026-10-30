@@ -5972,7 +5972,7 @@
                 },
                 {
                   "title": "CloseSessionRequest",
-                  "description": "Closes an active session and frees up any resources associated with it.\n\nThe Agent MUST cancel any ongoing work as if `session/cancel` was called, also stops\nthe session's background work, and then frees the resources associated with the session.",
+                  "description": "Closes an active session and frees up any resources associated with it.\n\nThe Agent MUST cancel any ongoing work as if `session/cancel` was called, stop the\nsession's background work, and then free the resources associated with the session.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CloseSessionRequest"
