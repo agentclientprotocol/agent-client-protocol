@@ -745,7 +745,9 @@ impl ResourceLink {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Icon {
-    /// A standard URI pointing to an icon resource.
+    /// A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI;
+    /// Clients reject other schemes, fetch without credentials, and do not follow
+    /// scheme- or origin-changing redirects.
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub src: String,
     /// Optional MIME type override if the source MIME type is missing or generic.

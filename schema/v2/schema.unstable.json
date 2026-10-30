@@ -939,7 +939,7 @@
       "type": "object",
       "properties": {
         "src": {
-          "description": "A standard URI pointing to an icon resource.",
+          "description": "A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI;\nClients reject other schemes, fetch without credentials, and do not follow\nscheme- or origin-changing redirects.",
           "type": "string",
           "format": "uri"
         },

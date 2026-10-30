@@ -4466,7 +4466,9 @@ Omitted and `null` are equivalent and mean no sizes are specified.
 
 </ResponseField>
 <ResponseField name="src" type={"string"} required>
-  A standard URI pointing to an icon resource.
+  A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI;
+Clients reject other schemes, fetch without credentials, and do not follow
+scheme- or origin-changing redirects.
 
     - Format: `uri`
 
