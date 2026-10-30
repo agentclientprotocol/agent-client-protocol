@@ -116,6 +116,44 @@
       },
       "required": ["jsonrpc", "method"],
       "x-docs-ignore": true
+    },
+    {
+      "title": "Proxy",
+      "description": "A message (request, response, or notification) with `\"jsonrpc\": \"2.0\"` specified as\n[required by JSON-RPC 2.0 Specification][1].\n\n[1]: https://www.jsonrpc.org/specification#compatibility",
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "enum": ["2.0"]
+        }
+      },
+      "required": ["jsonrpc"],
+      "anyOf": [
+        {
+          "title": "Request",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProxyRequest"
+            }
+          ]
+        },
+        {
+          "title": "Response",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProxyResponse"
+            }
+          ]
+        },
+        {
+          "title": "Notification",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ProxyNotification"
+            }
+          ]
+        }
+      ]
     }
   ],
   "$defs": {
@@ -9212,6 +9250,240 @@
       "required": ["requestId"],
       "x-side": "protocol",
       "x-method": "$/cancel_request"
+    },
+    "ProxyRequest": {
+      "description": "A JSON-RPC request object.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The request id used to correlate the matching response.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequestId"
+            }
+          ]
+        },
+        "method": {
+          "description": "The method name to invoke.",
+          "type": "string"
+        },
+        "params": {
+          "description": "Method-specific request parameters.",
+          "anyOf": [
+            {
+              "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequests exchanged between a conductor and its proxies.\n\nA conductor sends `proxy/initialize` and `proxy/successor` to a proxy. A proxy sends\n`proxy/successor` to its conductor.",
+              "anyOf": [
+                {
+                  "title": "InitializeProxyRequest",
+                  "description": "Initializes a component as a proxy.\n\nSent by a conductor to each component that has a successor, instead of `initialize`.\nThe params and response are the same as for `initialize`.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/InitializeProxyRequest"
+                    }
+                  ]
+                },
+                {
+                  "title": "ProxySuccessorRequest",
+                  "description": "Forwards a request to or from a proxy's successor.\n\nA proxy sends it to its conductor to forward a request downstream. The conductor sends\nit to the proxy to deliver a request from the successor. The wrapped request's result\nor error is returned unchanged.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ProxySuccessorRequest"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "method"],
+      "x-docs-ignore": true
+    },
+    "InitializeProxyRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `proxy/initialize`.\n\nA conductor sends `proxy/initialize` instead of `initialize` to every component that has a\nsuccessor, which tells the component to run as a proxy. The params and the response are\nthe same as for `initialize`. A conductor sends `initialize` to the final agent.\n\nSee the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).",
+      "x-method": "proxy/initialize",
+      "x-side": "proxy",
+      "allOf": [
+        {
+          "$ref": "#/$defs/InitializeRequest"
+        }
+      ]
+    },
+    "ProxySuccessorRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nParameters of a `proxy/successor` request.\n\nA proxy sends it to forward a message to its successor, and the conductor sends it to\ndeliver a message from the successor to the proxy. The envelope wraps one request: `method`\nand `params` are the wrapped request's method and params.\n\nThe result or error of the wrapped request is returned unchanged as the result or error\nof the `proxy/successor` request.\n\nSee the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).",
+      "type": "object",
+      "properties": {
+        "method": {
+          "description": "Method name of the wrapped request.",
+          "type": "string"
+        },
+        "params": {
+          "description": "Params of the wrapped request, forwarded unchanged.\n\nOptional. Omitted and `null` are equivalent and mean the wrapped request has no params.\nThe wrapped request's own `_meta` stays inside these params."
+        },
+        "_meta": {
+          "description": "Metadata for the `proxy/successor` envelope itself, separate from the wrapped\nmessage's `_meta`.\n\nThe _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["method"],
+      "x-side": "proxy",
+      "x-method": "proxy/successor"
+    },
+    "ProxyResponse": {
+      "description": "A JSON-RPC response object.",
+      "anyOf": [
+        {
+          "title": "Result",
+          "description": "A successful JSON-RPC response.",
+          "type": "object",
+          "properties": {
+            "id": {
+              "description": "The id of the request this response answers.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/RequestId"
+                }
+              ]
+            },
+            "result": {
+              "description": "Method-specific response data.",
+              "anyOf": [
+                {
+                  "title": "InitializeProxyResponse",
+                  "description": "Successful result returned for a `proxy/initialize` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/InitializeProxyResponse"
+                    }
+                  ]
+                },
+                {
+                  "title": "ProxySuccessorResponse",
+                  "description": "Successful result returned for a `proxy/successor` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ProxySuccessorResponse"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "required": ["id", "result"]
+        },
+        {
+          "title": "Error",
+          "description": "A failed JSON-RPC response.",
+          "type": "object",
+          "properties": {
+            "id": {
+              "description": "The id of the request this response answers.\n\nRequired. `null` only when the request's id could not be determined, such as\nfor a parse error or an invalid request.",
+              "anyOf": [
+                {
+                  "title": "Number",
+                  "description": "A numeric request ID.",
+                  "type": "integer",
+                  "format": "int64"
+                },
+                {
+                  "title": "Str",
+                  "description": "A string request ID.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "error": {
+              "description": "Method-specific error data.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/Error"
+                }
+              ]
+            }
+          },
+          "required": ["id", "error"]
+        }
+      ],
+      "x-docs-ignore": true
+    },
+    "InitializeProxyResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `proxy/initialize`.\n\nThe same as the `initialize` response. The proxy answers with the capabilities of the\nchain from itself onward.",
+      "x-method": "proxy/initialize",
+      "x-side": "proxy",
+      "allOf": [
+        {
+          "$ref": "#/$defs/InitializeResponse"
+        }
+      ]
+    },
+    "ProxySuccessorResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResult of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.",
+      "x-side": "proxy",
+      "x-method": "proxy/successor"
+    },
+    "ProxyNotification": {
+      "description": "A JSON-RPC notification object.",
+      "type": "object",
+      "properties": {
+        "method": {
+          "description": "The notification method name.",
+          "type": "string"
+        },
+        "params": {
+          "description": "Method-specific notification parameters.",
+          "anyOf": [
+            {
+              "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotifications exchanged between a conductor and its proxies.",
+              "anyOf": [
+                {
+                  "title": "ProxySuccessorNotification",
+                  "description": "Forwards a notification to or from a proxy's successor.\n\nA proxy sends it to its conductor to forward a notification downstream. The conductor\nsends it to the proxy to deliver a notification from the successor.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/ProxySuccessorNotification"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["method"],
+      "x-docs-ignore": true
+    },
+    "ProxySuccessorNotification": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nParameters of a `proxy/successor` notification.\n\nA proxy sends it to forward a message to its successor, and the conductor sends it to\ndeliver a message from the successor to the proxy. The envelope wraps one notification: `method`\nand `params` are the wrapped notification's method and params.\n\nSee the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).",
+      "type": "object",
+      "properties": {
+        "method": {
+          "description": "Method name of the wrapped notification.",
+          "type": "string"
+        },
+        "params": {
+          "description": "Params of the wrapped notification, forwarded unchanged.\n\nOptional. Omitted and `null` are equivalent and mean the wrapped notification has no params.\nThe wrapped notification's own `_meta` stays inside these params."
+        },
+        "_meta": {
+          "description": "Metadata for the `proxy/successor` envelope itself, separate from the wrapped\nmessage's `_meta`.\n\nThe _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["method"],
+      "x-side": "proxy",
+      "x-method": "proxy/successor"
     }
   }
 }

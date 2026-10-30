@@ -2236,6 +2236,147 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The actual update content.
 </ResponseField>
 
+## Proxy
+
+Defines the messages that a conductor and the proxies it manages send each other.
+
+Ordinary clients and agents never send or receive these messages. A conductor sends
+`proxy/initialize` to each proxy and forwards messages between proxies with
+`proxy/successor`.
+
+<a id="proxy-initialize"></a>
+### <span class="font-mono">proxy/initialize</span>
+
+Initializes a component as a proxy.
+
+Sent by a conductor to each component that has a successor, instead of `initialize`.
+The params and response are the same as for `initialize`.
+
+#### <span class="font-mono">InitializeProxyRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `proxy/initialize`.
+
+A conductor sends `proxy/initialize` instead of `initialize` to every component that has a
+successor, which tells the component to run as a proxy. The params and the response are
+the same as for `initialize`. A conductor sends `initialize` to the final agent.
+
+See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+
+#### <span class="font-mono">InitializeProxyResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `proxy/initialize`.
+
+The same as the `initialize` response. The proxy answers with the capabilities of the
+chain from itself onward.
+
+<a id="proxy-successor"></a>
+### <span class="font-mono">proxy/successor</span>
+
+Forwards a request to or from a proxy's successor.
+
+A proxy sends it to its conductor to forward a request downstream. The conductor sends
+it to the proxy to deliver a request from the successor. The wrapped request's result
+or error is returned unchanged.
+
+#### <span class="font-mono">ProxySuccessorNotification</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Parameters of a `proxy/successor` notification.
+
+A proxy sends it to forward a message to its successor, and the conductor sends it to
+deliver a message from the successor to the proxy. The envelope wraps one notification: `method`
+and `params` are the wrapped notification's method and params.
+
+See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata for the `proxy/successor` envelope itself, separate from the wrapped
+message's `_meta`.
+
+The \_meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  Method name of the wrapped notification.
+</ResponseField>
+<ResponseField name="params" type={"any"} >
+  Params of the wrapped notification, forwarded unchanged.
+
+Optional. Omitted and `null` are equivalent and mean the wrapped notification has no params.
+The wrapped notification's own `_meta` stays inside these params.
+
+</ResponseField>
+
+#### <span class="font-mono">ProxySuccessorRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Parameters of a `proxy/successor` request.
+
+A proxy sends it to forward a message to its successor, and the conductor sends it to
+deliver a message from the successor to the proxy. The envelope wraps one request: `method`
+and `params` are the wrapped request's method and params.
+
+The result or error of the wrapped request is returned unchanged as the result or error
+of the `proxy/successor` request.
+
+See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  Metadata for the `proxy/successor` envelope itself, separate from the wrapped
+message's `_meta`.
+
+The \_meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="method" type={"string"} required>
+  Method name of the wrapped request.
+</ResponseField>
+<ResponseField name="params" type={"any"} >
+  Params of the wrapped request, forwarded unchanged.
+
+Optional. Omitted and `null` are equivalent and mean the wrapped request has no params.
+The wrapped request's own `_meta` stays inside these params.
+
+</ResponseField>
+
+#### <span class="font-mono">ProxySuccessorResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Result of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.
+
 ## Protocol Level
 
 Defines the interface that ACP-compliant agents and clients must both implement.

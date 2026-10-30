@@ -31,6 +31,7 @@ unstable = [
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
     "unstable_plan_operations",
+    "unstable_proxy_chains",
     "unstable_session_archive",
     "unstable_session_fork",
     "unstable_session_status",
@@ -47,6 +48,7 @@ unstable_auth_status = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
 unstable_plan_operations = []
+unstable_proxy_chains = []
 unstable_session_archive = []
 unstable_session_fork = []
 unstable_session_status = []

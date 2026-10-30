@@ -42,5 +42,9 @@
   },
   "protocolMethods": {
     "cancel_request": "$/cancel_request"
+  },
+  "proxyMethods": {
+    "proxy_initialize": "proxy/initialize",
+    "proxy_successor": "proxy/successor"
   }
 }

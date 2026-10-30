@@ -296,6 +296,20 @@ Both methods use the same parameters as the standard ACP `InitializeRequest` and
 
 The inner message fields (`method`, `params`) are flattened into the params object. The optional `_meta` belongs to the `proxy/successor` envelope; the wrapped message's own metadata stays in its `params`. Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the outer JSON-RPC envelope, following JSON-RPC conventions.
 
+`params` is optional, and omitting it is equivalent to `null`: the wrapped message has no params. The result or error of a wrapped request **MUST** be returned unchanged as the result or error of the `proxy/successor` request.
+
+### Schema
+
+Both methods are in the v1 and draft v2 schemas behind the `unstable_proxy_chains` feature. Because only conductors and proxies exchange them, they form their own `proxy` side, separate from the agent and client methods, with their own `ProxyRequest`, `ProxyResponse`, and `ProxyNotification` unions and a `proxyMethods` entry in `meta.json`.
+
+| Type                         | Shape                                                               |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `InitializeProxyRequest`     | The version's `InitializeRequest`, unchanged.                       |
+| `InitializeProxyResponse`    | The version's `InitializeResponse`, unchanged.                      |
+| `ProxySuccessorRequest`      | `method` (required string), `params` (optional, any JSON), `_meta`. |
+| `ProxySuccessorNotification` | Same as `ProxySuccessorRequest`.                                    |
+| `ProxySuccessorResponse`     | The wrapped request's result, unchanged.                            |
+
 ### Examples (non-normative)
 
 The following sequence diagrams illustrate common proxy chain scenarios for implementers.
@@ -514,7 +528,7 @@ The benefits of composability typically outweigh the minimal latency costs for h
 
 ### What happens when proxy components crash or misbehave?
 
-The conductor manages component lifecycles:
+This is conductor behavior, not part of the protocol. The reference conductor manages component lifecycles:
 
 - Failed components are restarted automatically where possible
 - Component crashes don't affect the rest of the chain
@@ -565,4 +579,5 @@ Earlier releases of the Rust SDK used the `_proxy/initialize` and `_proxy/succes
 
 - Initial draft based on working implementation in symposium-acp repository.
 - Split MCP-over-ACP transport into [separate RFD](./mcp-over-acp) to enable independent use by any ACP component.
+- **2026-10-30**: Added schema support behind `unstable_proxy_chains` as a separate `proxy` side, required wrapped request results and errors to pass through unchanged, and marked the crash-handling FAQ as conductor behavior.
 - **2026-10-30**: Named the `proxy/successor` metadata field `_meta`, defined how a chain carries one protocol version (including draft v2), and updated the implementation status to the Rust SDK crates.
