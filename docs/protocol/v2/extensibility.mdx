@@ -96,6 +96,8 @@ Clients may propagate fields to the agent for correlation purposes, using a name
 - `traceparent` and `tracestate`: [W3C Trace Context](https://www.w3.org/TR/trace-context/)
 - `baggage`: [W3C Baggage](https://www.w3.org/TR/baggage/)
 
+Other unprefixed `_meta` keys, and keys whose prefix has `agentclientprotocol` as its second label (such as `io.agentclientprotocol/<name>`), are reserved for ACP. Keys and prefixes that MCP reserves keep their MCP meaning, and Agents preserve them when forwarding MCP content. Extension keys **SHOULD** use a reverse-DNS prefix the implementer controls, as described below.
+
 Implementations **MUST NOT** add any custom fields at the root of a type that's part of the specification. All possible names are reserved for future protocol versions.
 
 ### Metadata Patches
