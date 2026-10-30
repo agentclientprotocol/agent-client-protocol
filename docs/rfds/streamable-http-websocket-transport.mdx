@@ -268,7 +268,7 @@ Client                             Server
 - GET `Accept` **MUST** include `text/event-stream` (406 otherwise).
 - POST requests for session-scoped operations **MUST** include both `Acp-Connection-Id` and `Acp-Session-Id` headers.
 - GET requests without `Upgrade: websocket` **MUST** include `Acp-Connection-Id`. If `Acp-Session-Id` is also present, the stream is session-scoped; otherwise it is connection-scoped. An unknown `Acp-Session-Id` for the given connection returns 404.
-- Batch JSON-RPC requests return 501.
+- ACP does not use JSON-RPC batches. A POST body that is a JSON array returns `400 Bad Request` with a single JSON-RPC error response (`-32600`, `id: null`), and none of its entries are processed.
 - HTTP/2 is **REQUIRED** for Streamable HTTP transport.
 
 ### WebSocket Request Flow
@@ -290,7 +290,7 @@ A new connection is created on upgrade. The `Acp-Connection-Id` is returned in t
 
 #### Bidirectional Messaging
 
-All messages are WebSocket text frames containing JSON-RPC. Binary frames are ignored. On disconnect, the server cleans up the connection and any associated sessions.
+All messages are WebSocket text frames containing a single JSON-RPC message. Binary frames are ignored. A frame containing a JSON array gets a single JSON-RPC error response (`-32600`, `id: null`), and none of its entries are processed. On disconnect, the server cleans up the connection and any associated sessions.
 
 ### Unified Endpoint Routing
 
@@ -351,7 +351,7 @@ The agent task is spawned once per connection. Server→client messages are rout
 | GET opens SSE stream                       | ✅ (connection-scoped + session-scoped)     | Compliant (extended) |
 | DELETE terminates session                  | ✅ (terminates connection)                  | Compliant            |
 | 404 for unknown sessions                   | ✅ (unknown connection IDs)                 | Compliant            |
-| Batch requests                             | ❌ (returns 501)                            | Documented deviation |
+| Batch requests                             | ❌ (rejected with `-32600`)                 | Documented deviation |
 | Resumability (Last-Event-ID)               | ❌                                          | Deferred to v2       |
 | Protocol version header                    | ❌                                          | Future work          |
 
@@ -363,7 +363,7 @@ The agent task is spawned once per connection. Server→client messages are rout
 4. **Two-header model**: ACP uses both `Acp-Connection-Id` (for connection identity) and `Acp-Session-Id` (for session identity on POST requests and on the session-scoped GET stream). MCP only uses `Mcp-Session-Id`. This allows ACP to distinguish connection-level state from session-level operations while supporting multiple concurrent sessions on one connection.
 5. **WebSocket extension**: MCP doesn't define WebSocket. ACP adds it as a required client capability. Clients MUST support WebSocket, and servers MAY choose to only support WebSocket connections.
 6. **Cookie support required**: Clients MUST handle cookies on HTTP transports for the duration of the connection, enabling sticky sessions and per-connection server state.
-7. **No batch requests**: Returns 501. May be added later.
+7. **No batch requests**: ACP does not use JSON-RPC batches, so a JSON array is rejected with `400 Bad Request` and a `-32600` error response with `id: null`.
 8. **No resumability yet in reference implementation**: SSE event IDs and `Last-Event-ID` resumption are deferred to v2 (see [Durability and reliability expectations](#durability-and-reliability-expectations)).
 
 ### Implementation Plan
@@ -371,7 +371,7 @@ The agent task is spawned once per connection. Server→client messages are rout
 1. **Phase 1 — Specification** (this RFD): Define the transport spec and align terminology.
 2. **Phase 2 — Reference Implementation** (in progress): Working implementation in Goose (`block/goose`).
 3. **Phase 3 — SDK Support**: Add Streamable HTTP and WebSocket client support to Rust SDK (`sacp`), then TypeScript SDK.
-4. **Phase 4 — Hardening**: Origin validation, `Acp-Protocol-Version`, SSE resumability, batch requests, security audit.
+4. **Phase 4 — Hardening**: Origin validation, `Acp-Protocol-Version`, SSE resumability, security audit.
 
 ## Frequently asked questions
 
@@ -421,6 +421,7 @@ HTTP/2 provides multiplexing, allowing many concurrent POST requests alongside t
 
 ## Revision history
 
+- **2026-10-30**: ACP no longer uses JSON-RPC batches. A JSON array is rejected with a single `-32600` error response with `id: null` (with `400 Bad Request` over HTTP) instead of `501`, and batch support is no longer planned.
 - **2026-10-29**: Clarified that the v2 reliability features are requirements of this transport, not changes to core v2 messages, so the transport does not block v2.
 - **2026-07-02**: Moved to Active to reflect current Transports Working Group focus.
 - **2026-06-05**: Added a "Durability and reliability expectations" section splitting out what implementers can expect in v1 (sessions survive disconnects, session affinity is preserved across reconnects, and reconnect/retry/liveness are the implementer's responsibility with no in-flight message replay) versus v2 (message IDs, stream resumability, defined reconnection semantics, more reliable notification cycles, and standardized keepalive). Marked Last-Event-ID resumability as deferred to v2.
