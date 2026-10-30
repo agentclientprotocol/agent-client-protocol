@@ -182,7 +182,7 @@ applies here.
 }
 ```
 
-All fields are optional. Only include fields that have changed; omitted fields are left unchanged. Set a nullable field to `null` to clear it.
+All fields are optional. Only include fields that have changed; omitted fields are left unchanged. The update sent on `session/resume` is the exception: it carries every field (see [Current-State Synchronization](/protocol/v2/session-setup#current-state-synchronization)). Set a nullable field to `null` to clear it.
 
 <ResponseField name="title" type="string | null">
   Human-readable title for the session. Set to `null` to clear.

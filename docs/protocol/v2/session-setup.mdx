@@ -355,6 +355,8 @@ history replay and before responding, even when `replayFrom` is omitted or
 `null`. This synchronizes current state rather than replaying historical
 configuration or metadata changes.
 
+The resume `session_info_update` is a full snapshot rather than a patch: it includes every field, with `null` for an absent `title` or `updatedAt`. When the Client may hold stale `_meta`, the Agent first sends `_meta: null` and then the current object.
+
 Agents that report usage **MAY** likewise send a current `usage_update` after any requested history replay and before responding.
 
 ## Closing Active Sessions
