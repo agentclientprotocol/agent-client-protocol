@@ -81,7 +81,7 @@ pub enum MessageMcpResponse {
         result: Value,
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
         /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-        /// Implementations MUST NOT make assumptions about values at these keys.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         /// This is ACP metadata, not the inner MCP message's `_meta`.
         ///
         /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
@@ -96,7 +96,7 @@ pub enum MessageMcpResponse {
         error: McpError,
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
         /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-        /// Implementations MUST NOT make assumptions about values at these keys.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         /// This is ACP metadata, not the inner MCP message's `_meta`.
         ///
         /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
@@ -174,7 +174,7 @@ pub struct MessageMcpRequest {
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This is ACP metadata, not the inner MCP message's `_meta`.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
@@ -243,7 +243,7 @@ pub struct MessageMcpNotification {
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT make assumptions about values at these keys.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This is ACP metadata, not the inner MCP message's `_meta`.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
