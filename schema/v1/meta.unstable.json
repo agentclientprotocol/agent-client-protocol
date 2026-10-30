@@ -18,7 +18,8 @@
     "session_fork": "session/fork",
     "session_resume": "session/resume",
     "session_close": "session/close",
-    "logout": "logout"
+    "logout": "logout",
+    "auth_status": "auth/status"
   },
   "clientMethods": {
     "session_request_permission": "session/request_permission",
@@ -32,7 +33,8 @@
     "terminal_kill": "terminal/kill",
     "mcp_message": "mcp/message",
     "elicitation_create": "elicitation/create",
-    "elicitation_complete": "elicitation/complete"
+    "elicitation_complete": "elicitation/complete",
+    "auth_status_update": "auth/status_update"
   },
   "protocolMethods": {
     "cancel_request": "$/cancel_request"

@@ -16,14 +16,16 @@
     "session_fork": "session/fork",
     "session_resume": "session/resume",
     "session_close": "session/close",
-    "auth_logout": "auth/logout"
+    "auth_logout": "auth/logout",
+    "auth_status": "auth/status"
   },
   "clientMethods": {
     "session_request_permission": "session/request_permission",
     "session_update": "session/update",
     "mcp_message": "mcp/message",
     "elicitation_create": "elicitation/create",
-    "elicitation_complete": "elicitation/complete"
+    "elicitation_complete": "elicitation/complete",
+    "auth_status_update": "auth/status_update"
   },
   "protocolMethods": {
     "cancel_request": "$/cancel_request"

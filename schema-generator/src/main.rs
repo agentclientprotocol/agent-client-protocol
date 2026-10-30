@@ -2271,6 +2271,7 @@ starting with '$/' it is free to ignore the notification."
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "auth/logout" => self.agent.get("LogoutAuthRequest").unwrap(),
+                "auth/status" => self.agent.get("AuthStatusRequest").unwrap(),
                 "mcp/message" => self.agent.get("MessageMcpNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
@@ -2297,6 +2298,7 @@ starting with '$/' it is free to ignore the notification."
                 "elicitation/complete" => {
                     self.client.get("CompleteElicitationNotification").unwrap()
                 }
+                "auth/status_update" => self.client.get("AuthStatusUpdateNotification").unwrap(),
                 "mcp/message" => self.client.get("MessageMcpRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }

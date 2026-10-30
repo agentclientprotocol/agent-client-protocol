@@ -2294,6 +2294,15 @@
                   ]
                 },
                 {
+                  "title": "AuthStatusResponse",
+                  "description": "Successful result returned for an `auth/status` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AuthStatusResponse"
+                    }
+                  ]
+                },
+                {
                   "title": "NewSessionResponse",
                   "description": "Successful result returned for a `session/new` request.",
                   "allOf": [
@@ -2870,6 +2879,18 @@
       "description": "Authentication-related capabilities supported by the agent.",
       "type": "object",
       "properties": {
+        "status": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports the `auth/status` method.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports the `auth/status` method.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AuthStatusCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "logout": {
           "description": "Whether the agent supports the logout method.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports the logout method.",
           "anyOf": [
@@ -2882,6 +2903,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "AuthStatusCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAuth status capabilities supported by the agent.\n\nSupplying `{}` means the agent supports the `auth/status` method.",
+      "type": "object",
+      "properties": {
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
           "type": ["object", "null"],
@@ -3236,6 +3269,105 @@
       },
       "x-side": "agent",
       "x-method": "logout"
+    },
+    "AuthStatusResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to the `auth/status` method.",
+      "type": "object",
+      "properties": {
+        "state": {
+          "description": "Whether the agent can start sessions without the user signing in first.\n\nThis is the only field clients should act on. Clients MUST treat values they\ndo not recognize as `unknown`.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthState"
+            }
+          ]
+        },
+        "accounts": {
+          "description": "The accounts the agent has configured, for display.\n\nOptional. Omitted and empty are equivalent and mean no accounts are reported.\nAgents that hold credentials for several providers or accounts SHOULD list each\nof them and mark the ones in effect with `active`.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AuthAccount"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["state"],
+      "x-side": "agent",
+      "x-method": "auth/status"
+    },
+    "AuthState": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe agent's overall authentication state.",
+      "anyOf": [
+        {
+          "description": "Credentials are configured. This does not guarantee that they are valid.",
+          "type": "string",
+          "const": "authenticated"
+        },
+        {
+          "description": "The user needs to sign in. This includes credentials that are missing,\nexpired, or known to be invalid.",
+          "type": "string",
+          "const": "unauthenticated"
+        },
+        {
+          "description": "No authentication is needed, for example because the agent uses a local model.",
+          "type": "string",
+          "const": "not_required"
+        },
+        {
+          "description": "The agent cannot currently determine the state.",
+          "type": "string",
+          "const": "unknown"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future authentication state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "string"
+        }
+      ]
+    },
+    "AuthAccount": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn account or credential the agent has configured, such as a signed-in user\naccount or an API key.\n\nAll fields are display information only. Clients MUST NOT use them as stable\naccount identifiers, and SHOULD NOT log them or send them elsewhere, such as to\ntelemetry.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Human-readable name for the account, suitable for display on its own,\nfor example `Claude Max`, `OpenAI API key`, or `Vertex AI`.",
+          "type": "string"
+        },
+        "active": {
+          "description": "Whether the agent currently uses this account by default.\n\nSeveral accounts MAY be active, for example one per provider.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not indicate whether this account is in effect.",
+          "type": ["boolean", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "name": {
+          "description": "Display name of the user, such as a username or full name.\n\nOptional. Omitted and `null` are equivalent and mean no name is reported.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "email": {
+          "description": "Email address of the user.\n\nOptional. Omitted and `null` are equivalent and mean no email is reported.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "organization": {
+          "description": "Display name of the organization, team, or workspace the account is using.\n\nOptional. Omitted and `null` are equivalent and mean no organization is reported.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["label"]
     },
     "NewSessionResponse": {
       "description": "Response from creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v1/draft/session-setup#creating-a-session)",
@@ -4077,6 +4209,15 @@
                   "allOf": [
                     {
                       "$ref": "#/$defs/CompleteElicitationNotification"
+                    }
+                  ]
+                },
+                {
+                  "title": "AuthStatusUpdateNotification",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the agent's authentication state changed.\n\nOnly sent by agents that advertise the `auth.status` capability.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AuthStatusUpdateNotification"
                     }
                   ]
                 },
@@ -5804,6 +5945,38 @@
       "x-side": "client",
       "x-method": "elicitation/complete"
     },
+    "AuthStatusUpdateNotification": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification sent by the agent when its authentication status changes.\n\nCarries the same fields as the `auth/status` response. Agents that advertise the\n`auth.status` capability MAY send it at any time after `initialize`, and SHOULD only\nsend it when the reported status differs from the last one sent on the connection.",
+      "type": "object",
+      "properties": {
+        "state": {
+          "description": "Whether the agent can start sessions without the user signing in first.\n\nThis is the only field clients should act on. Clients MUST treat values they\ndo not recognize as `unknown`.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/AuthState"
+            }
+          ]
+        },
+        "accounts": {
+          "description": "The accounts the agent has configured, for display.\n\nOptional. Omitted and empty are equivalent and mean no accounts are reported.\nAgents that hold credentials for several providers or accounts SHOULD list each\nof them and mark the ones in effect with `active`.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AuthAccount"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["state"],
+      "x-side": "client",
+      "x-method": "auth/status_update"
+    },
     "ExtNotification": {
       "description": "Allows either side to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)"
     },
@@ -5880,6 +6053,15 @@
                   "allOf": [
                     {
                       "$ref": "#/$defs/LogoutRequest"
+                    }
+                  ]
+                },
+                {
+                  "title": "AuthStatusRequest",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nQueries the agent's current authentication state.\n\nThis method is only available if the agent advertises the `auth.status` capability.\nIt MUST NOT change any agent state.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/AuthStatusRequest"
                     }
                   ]
                 },
@@ -6471,6 +6653,20 @@
       },
       "x-side": "agent",
       "x-method": "logout"
+    },
+    "AuthStatusRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for the `auth/status` method.\n\nQueries the agent's current authentication state without changing it.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "x-side": "agent",
+      "x-method": "auth/status"
     },
     "NewSessionRequest": {
       "description": "Request parameters for creating a new session.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v1/draft/session-setup#creating-a-session)",
