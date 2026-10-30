@@ -7213,7 +7213,7 @@
       "type": "object",
       "properties": {
         "requestId": {
-          "description": "The ID of the request to cancel.",
+          "description": "The ID of the request to cancel: a request that the sender of this notification issued.\nReceivers match it only against requests they received from that sender.",
           "allOf": [
             {
               "$ref": "#/$defs/RequestId"

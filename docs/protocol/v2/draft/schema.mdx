@@ -1840,7 +1840,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="requestId" type={<a href="#requestid">RequestId</a>} required>
-  The ID of the request to cancel.
+  The ID of the request to cancel: a request that the sender of this notification issued.
+Receivers match it only against requests they received from that sender.
 </ResponseField>
 
 ## <span class="font-mono">AbsolutePath</span>

@@ -15,7 +15,8 @@ use crate::IntoOption;
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelRequestNotification {
-    /// The ID of the request to cancel.
+    /// The ID of the request to cancel: a request that the sender of this notification issued.
+    /// Receivers match it only against requests they received from that sender.
     pub request_id: RequestId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.

@@ -9,7 +9,7 @@ The JSON-RPC specification doesn't define any standard mechanism for request can
 
 ## `$/cancel_request` Notification
 
-In order to provide a consistent approach to cancellation, ACP defines a `$/cancel_request` notification that can be sent to cancel requests.
+In order to provide a consistent approach to cancellation, ACP defines a `$/cancel_request` notification that can be sent to cancel requests. Its `requestId` identifies a request that the sender of `$/cancel_request` issued; receivers match it only against requests they received from that sender, since each side chooses its own request IDs.
 
 Cancellation remains optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification.
 
