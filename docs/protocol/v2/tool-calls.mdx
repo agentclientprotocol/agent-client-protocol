@@ -590,6 +590,7 @@ file is a single `move` or `copy` entry, with the edits in `patch`.
   the `---` and `+++` lines, and paths with unusual characters are [quoted as Git
   quotes them](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath). Each path, once unquoted, is the same native absolute path string as the matching `changes` entry, for example `C:\repo\src\a.rs` on Windows.
   Surrounding commit metadata and email envelopes **MUST NOT** be included.
+  Custom formats **MUST** begin with `_`. Clients treat a `patch` with a format they don't recognize as if `patch` were omitted, and render from `changes`.
 
 Git can produce most of this. With `$ROOT` set to the repository root,
 `git diff --src-prefix="$ROOT/" --dst-prefix="$ROOT/"` writes absolute
@@ -612,7 +613,9 @@ header, which is ambiguous when paths contain spaces.
 </ParamField>
 
 <ParamField path="changes[].operation" type="string" required>
-  File operation: `add`, `delete`, `modify`, `move`, or `copy`.
+  File operation: `add`, `delete`, `modify`, `move`, or `copy`. Custom
+  operations **MUST** begin with `_`. Clients show an operation they don't
+  recognize generically, using `path` and `oldPath` when present.
 </ParamField>
 
 <ParamField path="changes[].path" type="string" required>
@@ -625,7 +628,8 @@ header, which is ambiguous when paths contain spaces.
 
 <ParamField path="changes[].fileType" type="string">
   Optional file kind after the operation (for `delete`, of the deleted file):
-  `text`, `binary`, `directory`, or `symlink`.
+  `text`, `binary`, `directory`, or `symlink`. Custom file types **MUST** begin
+  with `_`, and Clients treat a file type they don't recognize as unknown.
 </ParamField>
 
 <ParamField path="changes[].mimeType" type="string">
