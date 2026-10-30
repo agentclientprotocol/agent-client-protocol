@@ -53,7 +53,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 
 - An intermediary between the Client and the Agent, such as a proxy, can read and change every message, and each side treats it as the other. Clients **SHOULD** only use intermediaries the user trusts.
 - Intermediaries **SHOULD NOT** answer permission requests or elicitations for the user except under user-configured policy, and **SHOULD** forward `subject` unchanged.
-- An Agent serving more than one user **SHOULD** scope `session/list`, every request that names a session (such as `session/resume` and `session/delete`), permission requests, and elicitations to the user that owns the session. It treats another user's session as one that does not exist, so it is not listed, resuming it fails with `-32002`, and deleting it does nothing.
+- An Agent serving more than one user **SHOULD** scope `session/list`, every request that names a session (such as `session/resume` and `session/delete`), permission requests, and elicitations to the user that owns the session. It treats another user's session as one that does not exist, so it is not listed, resuming it fails with `-32002`, and deleting it does nothing. Such an Agent **SHOULD** also authorize `cwd`, `additionalDirectories`, and `mcpServers` against the requesting user, and **SHOULD NOT** launch stdio MCP servers that user isn't permitted to run.
 
 ## Transports
 
