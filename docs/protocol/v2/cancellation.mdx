@@ -28,7 +28,7 @@ If the receiver does cancel the request, it sends one of these responses:
 - A successful response, where the method defines one for cancellation: `session/prompt` after its user message is inserted (with its `messageId`), `session/request_permission` with the `cancelled` outcome, or `elicitation/create` with the `cancel` action
 - An error response with code [`-32800` (Request Cancelled)](/protocol/v2/schema#errorcode)
 
-The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
+A sender that stops waiting for a response, for example after a timeout or because the work that needed it ended, **SHOULD** send `$/cancel_request` for that request so the receiver can stop work or dismiss UI. The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
 
 Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios, such as cancellation of [active session work](/protocol/v2/prompt-lifecycle#cancellation).
 
