@@ -23,6 +23,8 @@ Content block `type` values can be custom or future variants when the receiver c
 
 When displaying Agent output, Clients **SHOULD** show text content. For image, audio, resource, and resource link content they can't render, Clients **SHOULD** show a placeholder with whatever identifies it, such as its name, title, URI, or MIME type, and **SHOULD NOT** drop it silently. Agents that need content to reach the user in a particular form **SHOULD** also include it as text.
 
+`annotations` are hints with [MCP semantics](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations). In `audience`, `user` means the person using the Client and `assistant` means the Agent's model. `priority` ranges from 0 (least important) to 1 (most important). Clients **MAY** collapse or hide content whose `audience` doesn't include `user`, which is an exception to the display rule above.
+
 ### Text Content
 
 Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) for raw HTML.

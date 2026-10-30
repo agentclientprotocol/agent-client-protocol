@@ -775,7 +775,7 @@
           "x-deserialize-default-on-error": true
         },
         "priority": {
-          "description": "Relative importance of this content when clients choose what to surface.\n\nOmitted and `null` are equivalent and mean no priority is specified.",
+          "description": "Relative importance of this content when clients choose what to surface, from 0 (least\nimportant) to 1 (most important).\n\nOmitted and `null` are equivalent and mean no priority is specified.",
           "type": ["number", "null"],
           "format": "double",
           "minimum": 0,

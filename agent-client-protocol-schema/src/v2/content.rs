@@ -874,7 +874,8 @@ pub struct Annotations {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub last_modified: Option<String>,
-    /// Relative importance of this content when clients choose what to surface.
+    /// Relative importance of this content when clients choose what to surface, from 0 (least
+    /// important) to 1 (most important).
     ///
     /// Omitted and `null` are equivalent and mean no priority is specified.
     #[serde_as(deserialize_as = "DefaultOnError")]
