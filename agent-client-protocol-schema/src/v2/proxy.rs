@@ -21,9 +21,8 @@ use crate::IntoOption;
 /// Request parameters for `proxy/initialize`.
 ///
 /// A conductor sends `proxy/initialize` instead of `initialize` to every component that has a
-/// successor, which tells the component to run as a proxy. The params are the same as
-/// `initialize`, and the response is an ordinary `InitializeResponse`. A conductor sends
-/// `initialize` to the final agent.
+/// successor, which tells the component to run as a proxy. The params and the response are
+/// the same as for `initialize`. A conductor sends `initialize` to the final agent.
 ///
 /// See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -46,6 +45,38 @@ impl InitializeProxyRequest {
 
 impl From<InitializeRequest> for InitializeProxyRequest {
     fn from(initialize: InitializeRequest) -> Self {
+        Self::new(initialize)
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response to `proxy/initialize`.
+///
+/// The same as the `initialize` response. The proxy answers with the capabilities of the
+/// chain from itself onward.
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "proxy", "x-method" = PROXY_INITIALIZE_METHOD_NAME)))]
+#[serde(transparent)]
+#[non_exhaustive]
+pub struct InitializeProxyResponse {
+    /// The `initialize` response, sent unchanged.
+    pub initialize: InitializeResponse,
+}
+
+impl InitializeProxyResponse {
+    /// Builds [`InitializeProxyResponse`] from the `initialize` response to send.
+    #[must_use]
+    pub fn new(initialize: InitializeResponse) -> Self {
+        Self { initialize }
+    }
+}
+
+impl From<InitializeResponse> for InitializeProxyResponse {
+    fn from(initialize: InitializeResponse) -> Self {
         Self::new(initialize)
     }
 }
@@ -208,6 +239,7 @@ impl ProxySuccessorNotification {
 /// Result of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, From)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "proxy", "x-method" = PROXY_SUCCESSOR_METHOD_NAME)))]
 #[serde(transparent)]
 #[non_exhaustive]
 pub struct ProxySuccessorResponse(
@@ -299,7 +331,7 @@ impl ProxyRequest {
 #[non_exhaustive]
 pub enum ProxyResponse {
     /// Successful result returned for a `proxy/initialize` request.
-    InitializeResponse(Box<InitializeResponse>),
+    InitializeProxyResponse(Box<InitializeProxyResponse>),
     /// Successful result returned for a `proxy/successor` request.
     ProxySuccessorResponse(Box<ProxySuccessorResponse>),
 }
@@ -354,6 +386,14 @@ mod tests {
         assert_eq!(
             ProxyRequest::InitializeProxyRequest(Box::new(request)).method(),
             "proxy/initialize"
+        );
+        let response = InitializeProxyResponse::new(InitializeResponse::new(
+            ProtocolVersion::V2,
+            crate::v2::Implementation::new("proxy", "1.0.0"),
+        ));
+        assert_eq!(
+            serde_json::to_value(&response).unwrap(),
+            serde_json::to_value(&response.initialize).unwrap()
         );
         let parsed: InitializeProxyRequest = serde_json::from_value(value).unwrap();
         assert_eq!(parsed.initialize.protocol_version, ProtocolVersion::V2);

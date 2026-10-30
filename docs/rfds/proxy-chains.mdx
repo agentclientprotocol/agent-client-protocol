@@ -302,12 +302,13 @@ The inner message fields (`method`, `params`) are flattened into the params obje
 
 Both methods are in the v1 and draft v2 schemas behind the `unstable_proxy_chains` feature. Because only conductors and proxies exchange them, they form their own `proxy` side, separate from the agent and client methods, with their own `ProxyRequest`, `ProxyResponse`, and `ProxyNotification` unions and a `proxyMethods` entry in `meta.json`.
 
-| Type                         | Shape                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------- |
-| `InitializeProxyRequest`     | The version's `InitializeRequest` params. The response is `InitializeResponse`. |
-| `ProxySuccessorRequest`      | `method` (required string), `params` (optional, any JSON), `_meta`.             |
-| `ProxySuccessorNotification` | Same as `ProxySuccessorRequest`.                                                |
-| `ProxySuccessorResponse`     | The wrapped request's result, unchanged.                                        |
+| Type                         | Shape                                                               |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `InitializeProxyRequest`     | The version's `InitializeRequest`, unchanged.                       |
+| `InitializeProxyResponse`    | The version's `InitializeResponse`, unchanged.                      |
+| `ProxySuccessorRequest`      | `method` (required string), `params` (optional, any JSON), `_meta`. |
+| `ProxySuccessorNotification` | Same as `ProxySuccessorRequest`.                                    |
+| `ProxySuccessorResponse`     | The wrapped request's result, unchanged.                            |
 
 ### Examples (non-normative)
 

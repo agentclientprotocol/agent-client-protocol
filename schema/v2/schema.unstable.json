@@ -9128,7 +9128,7 @@
       "x-docs-ignore": true
     },
     "InitializeProxyRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `proxy/initialize`.\n\nA conductor sends `proxy/initialize` instead of `initialize` to every component that has a\nsuccessor, which tells the component to run as a proxy. The params are the same as\n`initialize`, and the response is an ordinary `InitializeResponse`. A conductor sends\n`initialize` to the final agent.\n\nSee the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `proxy/initialize`.\n\nA conductor sends `proxy/initialize` instead of `initialize` to every component that has a\nsuccessor, which tells the component to run as a proxy. The params and the response are\nthe same as for `initialize`. A conductor sends `initialize` to the final agent.\n\nSee the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).",
       "x-method": "proxy/initialize",
       "x-side": "proxy",
       "allOf": [
@@ -9179,11 +9179,11 @@
               "description": "Method-specific response data.",
               "anyOf": [
                 {
-                  "title": "InitializeResponse",
+                  "title": "InitializeProxyResponse",
                   "description": "Successful result returned for a `proxy/initialize` request.",
                   "allOf": [
                     {
-                      "$ref": "#/$defs/InitializeResponse"
+                      "$ref": "#/$defs/InitializeProxyResponse"
                     }
                   ]
                 },
@@ -9239,8 +9239,20 @@
       ],
       "x-docs-ignore": true
     },
+    "InitializeProxyResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse to `proxy/initialize`.\n\nThe same as the `initialize` response. The proxy answers with the capabilities of the\nchain from itself onward.",
+      "x-method": "proxy/initialize",
+      "x-side": "proxy",
+      "allOf": [
+        {
+          "$ref": "#/$defs/InitializeResponse"
+        }
+      ]
+    },
     "ProxySuccessorResponse": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResult of a `proxy/successor` request: the wrapped request's result, forwarded unchanged."
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResult of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.",
+      "x-side": "proxy",
+      "x-method": "proxy/successor"
     },
     "ProxyNotification": {
       "description": "A JSON-RPC notification object.",

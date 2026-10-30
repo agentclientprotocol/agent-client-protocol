@@ -2509,11 +2509,21 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Request parameters for `proxy/initialize`.
 
 A conductor sends `proxy/initialize` instead of `initialize` to every component that has a
-successor, which tells the component to run as a proxy. The params are the same as
-`initialize`, and the response is an ordinary `InitializeResponse`. A conductor sends
-`initialize` to the final agent.
+successor, which tells the component to run as a proxy. The params and the response are
+the same as for `initialize`. A conductor sends `initialize` to the final agent.
 
 See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
+
+#### <span class="font-mono">InitializeProxyResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response to `proxy/initialize`.
+
+The same as the `initialize` response. The proxy answers with the capabilities of the
+chain from itself onward.
 
 <a id="proxy-successor"></a>
 ### <span class="font-mono">proxy/successor</span>
@@ -2606,6 +2616,14 @@ Optional. Omitted and `null` are equivalent and mean the wrapped request has no 
 The wrapped request's own `_meta` stays inside these params.
 
 </ResponseField>
+
+#### <span class="font-mono">ProxySuccessorResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Result of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.
 
 ## Protocol Level
 
@@ -6249,14 +6267,6 @@ these keys.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
 
 </ResponseField>
-
-## <span class="font-mono">ProxySuccessorResponse</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Result of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.
 
 ## <span class="font-mono">RequestId</span>
 
