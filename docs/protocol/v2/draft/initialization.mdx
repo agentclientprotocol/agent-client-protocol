@@ -257,6 +257,12 @@ support `session/set_config_option`.
   empty object means the Agent supports forking sessions.
 </ResponseField>
 
+<ResponseField name="status" type="SessionStatusCapabilities Object">
+  **Unstable.** The [`session/status`](/rfds/session-status) method is
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means the Agent supports checking session status.
+</ResponseField>
+
 <ResponseField
   name="additionalDirectories"
   type="SessionAdditionalDirectoriesCapabilities Object"

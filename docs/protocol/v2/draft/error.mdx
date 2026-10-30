@@ -60,5 +60,6 @@ Agents **MUST** reject any request other than `initialize` that arrives before i
 ## Unstable features
 
 - `session/fork` of a session that does not exist gets `-32002`, as for [unknown sessions](#unknown-sessions). The source session only has to exist. It doesn't have to be active on the connection.
+- `session/status` of a session the Agent does not know gets `-32002`, with `data.sessionId` set to the requested ID. A session that exists but isn't active on the connection is not an error. The Agent reports its status.
 - A `systemPrompt` the Agent cannot apply gets an error, `-32602` recommended. See [System Prompt](/protocol/v2/draft/session-setup#system-prompt-unstable).
 - `providers/*` methods called without the [`providers` capability](/protocol/v2/draft/initialization#agent-capabilities) get `-32601`.

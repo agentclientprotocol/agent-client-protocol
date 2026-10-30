@@ -12,8 +12,8 @@ Champion: [@benbrandt](https://github.com/benbrandt)
 
 Add a `session/status` method that lets a Client ask an Agent about a single session without changing anything:
 
-- **Active**: the Agent has this session in memory right now.
-- **Inactive**: the Agent knows this session and it can be resumed, but it is not in memory.
+- **Open**: the Agent has this session in memory right now.
+- **Saved**: the Agent knows this session and it can be resumed, but it is not in memory.
 - **Unknown**: the Agent does not know this session. This is returned as a `-32002` error.
 
 `session/status` never loads, resumes, creates, or changes a session.
@@ -60,7 +60,7 @@ The Agent has the session in memory:
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "status": "active"
+    "status": "open"
   }
 }
 ```
@@ -72,7 +72,7 @@ The Agent knows the session but does not have it in memory:
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "status": "inactive"
+    "status": "saved"
   }
 }
 ```
@@ -95,21 +95,21 @@ The Agent does not know the session:
 
 ### Status values
 
-- `active`: The Agent has this session in memory, for any connection. This does **not** mean the requesting connection is attached to it. A Client that did not create or resume the session on its own connection **MUST** still call `session/resume` (or `session/load` in v1) before sending `session/prompt` or expecting `session/update` notifications.
-- `inactive`: The Agent knows the session and can resume it, but it is not in memory. The Client can call `session/resume` (or `session/load` in v1) to start it.
+- `open`: The Agent has this session in memory, for any connection. This does **not** mean the requesting connection is attached to it. A Client that did not create or resume the session on its own connection **MUST** still call `session/resume` (or `session/load` in v1) before sending `session/prompt` or expecting `session/update` notifications.
+- `saved`: The Agent knows the session and can resume it, but it is not in memory. The Client can call `session/resume` (or `session/load` in v1) to start it.
 
-Clients **MUST** treat a `status` value they don't recognize as `inactive`. That keeps a later status value from being read as permission to skip `session/resume`.
+Clients **MUST** treat a `status` value they don't recognize as `saved`. That keeps a later status value from being read as permission to skip `session/resume`.
 
 ### Foreground state (v2)
 
-In v2, an `active` response **SHOULD** also include `state`: the session's current foreground state, using the same `StateUpdate` snapshot the Agent sends in `state_update` notifications (`running`, `idle`, or `requires_action`). `SubagentUpdate.state` already reuses this snapshot the same way.
+In v2, an `open` response **SHOULD** also include `state`: the session's current foreground state, using the same `StateUpdate` snapshot the Agent sends in `state_update` notifications (`running`, `idle`, or `requires_action`). `SubagentUpdate.state` already reuses this snapshot the same way.
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "status": "active",
+    "status": "open",
     "state": {
       "state": "requires_action"
     }
@@ -128,15 +128,15 @@ If the Agent does not know the session, it **MUST** return error `-32002` (Resou
 ### Contract
 
 - `session/status` **MUST NOT** have side effects. It must not load, resume, create, close, or change the session, and it must not attach the requesting connection to it.
-- Checking whether a session is `active` **SHOULD** be cheap (an in-memory lookup), and Clients may call it often, for example as a routing probe.
-- Telling `inactive` apart from unknown may require a storage lookup. If an Agent cannot do that cheaply, it **MAY** return `inactive` for any session it does not have in memory. A later `session/resume` will then fail with `-32002` if the session does not exist.
-- The result is a snapshot. A session reported `active` may be closed or evicted before the Client's next request, so Clients **MUST** still handle errors from later session methods.
+- Checking whether a session is `open` **SHOULD** be cheap (an in-memory lookup), and Clients may call it often, for example as a routing probe.
+- Telling `saved` apart from unknown may require a storage lookup. If an Agent cannot do that cheaply, it **MAY** return `saved` for any session it does not have in memory. A later `session/resume` will then fail with `-32002` if the session does not exist.
+- The result is a snapshot. A session reported `open` may be closed or evicted before the Client's next request, so Clients **MUST** still handle errors from later session methods.
 
 ## Shiny future
 
 > How will things will play out once this feature exists?
 
-- Routing layers ask each Agent instance for `session/status` to find the one with the session `active`, and send `session/resume` there instead of loading it on the wrong instance.
+- Routing layers ask each Agent instance for `session/status` to find the one with the session `open`, and send `session/resume` there instead of loading it on the wrong instance.
 - Clients reconnecting over a long-lived transport can tell "the Agent still has my session" from "the Agent restarted and the session needs resuming", and show the right thing right away.
 - v2 Clients and dashboards can show whether a session is working, idle, or waiting on the user without attaching to it. For example, they can surface a session blocked on a permission request elsewhere.
 - Agents report unknown session IDs with one error code, which other session methods can adopt too.
@@ -181,7 +181,7 @@ Following the existing naming rules (`session/status` → `session_status`):
 
 - `SessionStatusRequest`: `sessionId` (required), `_meta` (optional).
 - `SessionStatusResponse`: `status` (required), `_meta` (optional). In v2 only, it also has `state` (optional `StateUpdate`, deserialized with `DefaultOnError`, since a fallback just means no foreground state was reported).
-- `SessionStatus`: string enum, `active` | `inactive`, open to future values (see the unrecognized-value rule above).
+- `SessionStatus`: string enum, `open` | `saved`, open to future values (see the unrecognized-value rule above).
 - `SessionStatusCapabilities`: empty object with optional `_meta`, added as `status` on the v1 `SessionCapabilities` and the v2 session capabilities.
 
 ### Plan
@@ -198,13 +198,17 @@ Following the existing naming rules (`session/status` → `session_status`):
 
 `session/resume` attaches the requesting connection and makes the Agent start handling the session. That is what a Client wants once it has decided where the session should run, but not when it is only asking. A routing layer that probes by resuming loads the session on every instance it asks.
 
+### Why `open` and `saved`?
+
+v2 already calls a session "active" on a connection from `session/new`, `session/resume`, or `session/fork` until `session/close` or disconnect. A status of `active` that means "in memory for any connection" would invite Clients to skip `session/resume`. `open` and `saved` follow the session's lifecycle instead: `session/close` frees an `open` session, after which it reads as `saved`, and `session/resume` opens it again. Names describing memory directly, such as `in_memory` or `resident`, and casual pairs such as `hot` / `cold`, were considered and rejected.
+
 ### Why is an unknown session an error instead of a `not_found` status?
 
-`active` and `inactive` are expected answers about a session the Agent knows. An ID the Agent has never seen is a bad request, and other session methods already fail on it. Returning `-32002` here gives that failure one consistent shape instead of a second way to say it.
+`open` and `saved` are expected answers about a session the Agent knows. An ID the Agent has never seen is a bad request, and other session methods already fail on it. Returning `-32002` here gives that failure one consistent shape instead of a second way to say it.
 
-### Does `active` mean I can send `session/prompt` right away?
+### Does `open` mean I can send `session/prompt` right away?
 
-Only if your connection already created or resumed the session. `active` means the Agent has the session in memory, maybe for another connection. Multi-client attach semantics are covered separately in the [Multi-Client Session Attach RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/533).
+Only if your connection already created or resumed the session. `open` means the Agent has the session in memory, maybe for another connection. Multi-client attach semantics are covered separately in the [Multi-Client Session Attach RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/533).
 
 ### Why not add this to `session/list`?
 
@@ -226,5 +230,6 @@ Not yet. Once message IDs and replay cursors are stable, the response could incl
 
 ## Revision history
 
+- 2026-10-30: Rename the status values from `active` / `inactive` to `open` / `saved`, since v2 already uses "active" for a session attached to a connection.
 - 2026-10-26: Reworked to three states (`active` / `inactive` / `-32002` error), dropped the `live` naming so it isn't confused with v2 turn state, pointed recovery at `session/resume`, added v2 capability and connection semantics, added a v2-only `state` foreground snapshot on `active` responses, and made the contract a snapshot rather than a guarantee.
 - 2026-04-15: Initial draft.

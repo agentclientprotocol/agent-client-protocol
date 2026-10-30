@@ -2339,6 +2339,15 @@
                   ]
                 },
                 {
+                  "title": "SessionStatusResponse",
+                  "description": "Successful result returned for a `session/status` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SessionStatusResponse"
+                    }
+                  ]
+                },
+                {
                   "title": "ResumeSessionResponse",
                   "description": "Successful result returned for a `session/resume` request.",
                   "allOf": [
@@ -2702,6 +2711,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "status": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/status`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports checking session status.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionStatusCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "resume": {
           "description": "Whether the agent supports `session/resume`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports resuming sessions.",
           "anyOf": [
@@ -2832,6 +2853,18 @@
     },
     "SessionForkCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/fork` method.\n\nSupplying `{}` means the agent supports forking sessions.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionStatusCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/status` method.\n\nSupplying `{}` means the agent supports checking session status.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -3750,6 +3783,49 @@
       "required": ["sessionId"],
       "x-side": "agent",
       "x-method": "session/fork"
+    },
+    "SessionStatusResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from checking the status of a session.\n\nThe result is a snapshot. A session reported `open` may be closed or evicted before\nthe Client's next request.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "description": "Whether the Agent has the session in memory.\n\nRequired. Clients MUST treat a value they do not recognize as `saved`.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionStatus"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["status"],
+      "x-side": "agent",
+      "x-method": "session/status"
+    },
+    "SessionStatus": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the Agent has a session in memory, as reported by `session/status`.",
+      "anyOf": [
+        {
+          "description": "The Agent has the session in memory, for any connection.\n\nThis does not mean the requesting connection is attached to it. A Client that did\nnot create or resume the session on its own connection MUST still call\n`session/load` or `session/resume` before sending `session/prompt` or expecting\n`session/update` notifications.",
+          "type": "string",
+          "const": "open"
+        },
+        {
+          "description": "The Agent knows the session and can resume it, but does not have it in memory.\n\nThe Client can call `session/load` or `session/resume` to start it.",
+          "type": "string",
+          "const": "saved"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future session status.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants. Clients MUST treat a value they do not recognize as\n`saved`.",
+          "type": "string"
+        }
+      ]
     },
     "ResumeSessionResponse": {
       "description": "Response from resuming an existing session.",
@@ -5929,6 +6005,15 @@
                   ]
                 },
                 {
+                  "title": "SessionStatusRequest",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nChecks whether the Agent has a session in memory, without changing it.\n\nThis method is only available if the agent advertises the `sessionCapabilities.status` capability.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SessionStatusRequest"
+                    }
+                  ]
+                },
+                {
                   "title": "ResumeSessionRequest",
                   "description": "Resumes an existing session without returning previous messages.\n\nThis method is only available if the agent advertises the `sessionCapabilities.resume` capability.\n\nThe agent should resume the session context, allowing the conversation to continue\nwithout replaying the message history (unlike `session/load`).",
                   "allOf": [
@@ -6921,6 +7006,29 @@
       "required": ["sessionId", "cwd"],
       "x-side": "agent",
       "x-method": "session/fork"
+    },
+    "SessionStatusRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for checking the status of a session.\n\nOnly available if the Agent supports the `sessionCapabilities.status` capability.\n\n`session/status` MUST NOT have side effects. The Agent does not load, resume, create,\nclose, or change the session, and does not attach the requesting connection to it.\nA session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The ID of the session to check.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"],
+      "x-side": "agent",
+      "x-method": "session/status"
     },
     "ResumeSessionRequest": {
       "description": "Request parameters for resuming an existing session.\n\nResumes an existing session without returning previous messages (unlike `session/load`).\nThis is useful for agents that can resume sessions but don't implement full session loading.\n\nOnly available if the Agent supports the `sessionCapabilities.resume` capability.",

@@ -313,6 +313,12 @@ Optionally, they **MAY** support other session methods and notifications by spec
   Supplying `{ "mode": { "override": {} } }` also advertises `override` mode.
 </ResponseField>
 
+<ResponseField name="status" type="SessionStatusCapabilities Object">
+  **Unstable.** The [`session/status`](/rfds/session-status) method is
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means the Agent supports checking session status.
+</ResponseField>
+
 <Note>
   `session/load` is still handled by the top-level `load_session` capability.
   This will be unified in future versions of the protocol.

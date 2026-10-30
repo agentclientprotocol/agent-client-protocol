@@ -20,6 +20,9 @@ use super::{
 };
 use crate::{IntoOption, ProtocolVersion};
 
+#[cfg(feature = "unstable_session_status")]
+use super::StateUpdate;
+
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpNotification};
 
@@ -1713,6 +1716,173 @@ impl CloseSessionResponse {
         self.meta = meta.into_option();
         self
     }
+}
+
+// Session status
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for checking the status of a session.
+///
+/// Only available if the Agent supports the `session.status` capability.
+///
+/// `session/status` MUST NOT have side effects. The Agent does not load, resume, create,
+/// close, or change the session, and does not attach the requesting connection to it.
+/// A session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.
+#[cfg(feature = "unstable_session_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_STATUS_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionStatusRequest {
+    /// The ID of the session to check.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_status")]
+impl SessionStatusRequest {
+    /// Builds [`SessionStatusRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from checking the status of a session.
+///
+/// The result is a snapshot. A session reported `open` may be closed or evicted before
+/// the Client's next request.
+#[cfg(feature = "unstable_session_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_STATUS_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionStatusResponse {
+    /// Whether the Agent has the session in memory.
+    ///
+    /// Required. Clients MUST treat a value they do not recognize as `saved`.
+    pub status: SessionStatus,
+    /// The session's current foreground state, as the same snapshot the Agent sends in
+    /// `state_update` notifications.
+    ///
+    /// Optional. Agents SHOULD include it when `status` is `open`. Omitted, `null`, and
+    /// malformed values mean the Agent is not reporting foreground state, and Clients
+    /// MUST NOT read that as `idle`. This is a snapshot, not a new transition. Clients
+    /// MUST NOT count an `idle` snapshot as a new completion.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub state: Option<StateUpdate>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_status")]
+impl SessionStatusResponse {
+    /// Builds [`SessionStatusResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(status: SessionStatus) -> Self {
+        Self {
+            status,
+            state: None,
+            meta: None,
+        }
+    }
+
+    /// The session's current foreground state, as the same snapshot the Agent sends in
+    /// `state_update` notifications.
+    #[must_use]
+    pub fn state(mut self, state: impl IntoOption<StateUpdate>) -> Self {
+        self.state = state.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Whether the Agent has a session in memory, as reported by `session/status`.
+#[cfg(feature = "unstable_session_status")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SessionStatus {
+    /// The Agent has the session in memory, for any connection.
+    ///
+    /// This does not mean the requesting connection is attached to it. A Client that did
+    /// not create or resume the session on its own connection MUST still call
+    /// `session/resume` before sending `session/prompt` or expecting
+    /// `session/update` notifications.
+    Open,
+    /// The Agent knows the session and can resume it, but does not have it in memory.
+    ///
+    /// The Client can call `session/resume` to start it.
+    Saved,
+    /// Custom or future session status.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants. Clients MUST treat a value they do not recognize as
+    /// `saved`.
+    #[serde(untagged)]
+    Other(String),
 }
 
 // List sessions
@@ -4587,6 +4757,19 @@ pub struct SessionCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/status`.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports checking session status.
+    #[cfg(feature = "unstable_session_status")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub status: Option<SessionStatusCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -4680,6 +4863,21 @@ impl SessionCapabilities {
     #[must_use]
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
         self.fork = fork.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/status`.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports checking session status.
+    #[cfg(feature = "unstable_session_status")]
+    #[must_use]
+    pub fn status(mut self, status: impl IntoOption<SessionStatusCapabilities>) -> Self {
+        self.status = status.into_option();
         self
     }
 
@@ -4989,6 +5187,52 @@ pub struct SessionForkCapabilities {
 #[cfg(feature = "unstable_session_fork")]
 impl SessionForkCapabilities {
     /// Builds an empty [`SessionForkCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `session/status` method.
+///
+/// Supplying `{}` means the agent supports checking session status.
+#[cfg(feature = "unstable_session_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionStatusCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_status")]
+impl SessionStatusCapabilities {
+    /// Builds an empty [`SessionStatusCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -5554,6 +5798,9 @@ pub struct AgentMethodNames {
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
     pub session_fork: &'static str,
+    /// Method for checking the status of a session.
+    #[cfg(feature = "unstable_session_status")]
+    pub session_status: &'static str,
     /// Method for resuming an existing session.
     pub session_resume: &'static str,
     /// Method for closing an active session.
@@ -5582,6 +5829,8 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_delete: SESSION_DELETE_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
+    #[cfg(feature = "unstable_session_status")]
+    session_status: SESSION_STATUS_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
     auth_logout: AUTH_LOGOUT_METHOD_NAME,
@@ -5615,6 +5864,9 @@ pub(crate) const SESSION_DELETE_METHOD_NAME: &str = "session/delete";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
 pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
+/// Method name for checking the status of a session.
+#[cfg(feature = "unstable_session_status")]
+pub(crate) const SESSION_STATUS_METHOD_NAME: &str = "session/status";
 /// Method name for resuming an existing session.
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
@@ -5732,6 +5984,15 @@ pub enum ClientRequest {
     /// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
     /// The client can prompt it without calling `session/resume` first.
     ForkSessionRequest(Box<ForkSessionRequest>),
+    #[cfg(feature = "unstable_session_status")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Checks whether the Agent has a session in memory, without changing it.
+    ///
+    /// This method is only available if the agent advertises the `session.status` capability.
+    SessionStatusRequest(Box<SessionStatusRequest>),
     /// Resumes an existing session.
     ///
     /// The agent should resume the session context, allowing the conversation
@@ -5795,6 +6056,8 @@ impl ClientRequest {
             Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
             #[cfg(feature = "unstable_session_fork")]
             Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
+            #[cfg(feature = "unstable_session_status")]
+            Self::SessionStatusRequest(_) => AGENT_METHOD_NAMES.session_status,
             Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
             Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
             Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
@@ -5840,6 +6103,9 @@ pub enum AgentResponse {
     /// Successful result returned for a `session/fork` request.
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(Box<ForkSessionResponse>),
+    /// Successful result returned for a `session/status` request.
+    #[cfg(feature = "unstable_session_status")]
+    SessionStatusResponse(Box<SessionStatusResponse>),
     /// Successful result returned for a `session/resume` request.
     ResumeSessionResponse(#[serde(default)] Box<ResumeSessionResponse>),
     /// Successful result returned for a `session/close` request.
@@ -6791,6 +7057,71 @@ mod test_serialization {
             })
         );
     }
+    #[cfg(feature = "unstable_session_status")]
+    #[test]
+    fn test_session_status_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_status, "session/status");
+        assert_eq!(
+            ClientRequest::SessionStatusRequest(Box::new(SessionStatusRequest::new("sess_abc123")))
+                .method(),
+            "session/status"
+        );
+        assert_eq!(
+            serde_json::to_value(SessionStatusRequest::new("sess_abc123")).unwrap(),
+            json!({"sessionId": "sess_abc123"})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionStatusResponse::new(SessionStatus::Saved)).unwrap(),
+            json!({"status": "saved"})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().status(SessionStatusCapabilities::new())
+            )
+            .unwrap(),
+            json!({"status": {}})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionStatusResponse::new(SessionStatus::Open).state(
+                StateUpdate::RequiresAction(crate::v2::RequiresActionStateUpdate::new())
+            ))
+            .unwrap(),
+            json!({
+                "status": "open",
+                "state": {"state": "requires_action"}
+            })
+        );
+        for state in [json!(null), json!("running"), json!({"state": 7})] {
+            let response = serde_json::from_value::<SessionStatusResponse>(
+                json!({"status": "open", "state": state}),
+            )
+            .unwrap();
+            assert_eq!(response.state, None);
+        }
+    }
+
+    #[cfg(feature = "unstable_session_status")]
+    #[test]
+    fn test_session_status_is_strict_and_open() {
+        let custom =
+            serde_json::from_value::<SessionStatusResponse>(json!({"status": "_suspended"}))
+                .unwrap();
+        assert_eq!(
+            custom.status,
+            SessionStatus::Other("_suspended".to_string())
+        );
+        assert_eq!(
+            serde_json::to_value(&custom).unwrap(),
+            json!({"status": "_suspended"})
+        );
+        for result in [json!({}), json!({"status": null}), json!({"status": 1})] {
+            assert!(serde_json::from_value::<SessionStatusResponse>(result).is_err());
+        }
+        for params in [json!({}), json!({"sessionId": null})] {
+            assert!(serde_json::from_value::<SessionStatusRequest>(params).is_err());
+        }
+    }
+
     #[test]
     fn test_session_additional_directories_serialization() {
         assert_eq!(
