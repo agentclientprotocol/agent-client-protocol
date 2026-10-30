@@ -602,7 +602,7 @@ Example stdio transport configuration:
 }
 ```
 
-Agents **SHOULD** launch stdio servers with the session's `cwd` as the working directory. `env` entries are added to the environment the Agent would otherwise give the process, replacing variables with the same name. Each `env` entry **MUST** have a unique `name`. Agents reject duplicates with `-32602`.
+Agents **SHOULD** launch stdio servers with the session's `cwd` as the working directory. `env` entries are added to the environment the Agent would otherwise give the process, replacing variables with the same name. Each `env` entry **SHOULD** have a unique `name`. Agents **MAY** reject duplicates with `-32602`; otherwise the last entry with a given name wins.
 
 #### HTTP Transport
 
