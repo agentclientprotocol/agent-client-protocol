@@ -230,6 +230,8 @@ Clients handle individual cancellation using the existing request-cancellation
 rules rather than infer it from session scope. Request-scoped elicitations
 outside the session are unaffected by `session/cancel`.
 
+[`session/close`](/protocol/v2/draft/session-setup#closing-active-sessions) is different: before responding, the Agent **MUST** cancel every pending elicitation scoped to that session. Clients **SHOULD** dismiss elicitation UI for a closed session.
+
 Clients **SHOULD** dismiss interaction UI they know is no longer relevant.
 An accepted URL interaction may continue externally after its create request
 has returned. Cancelling foreground work does not guarantee that an external

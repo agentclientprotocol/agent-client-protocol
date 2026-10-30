@@ -386,7 +386,7 @@ with the session ID:
 
 The Agent **MUST** cancel any ongoing work for that session as if
 [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) had been called, then free the
-resources associated with the session. The Client answers pending permission requests and elicitations as it would after `session/cancel`. Unlike cancellation, closing also stops the session's background work.
+resources associated with the session. The Client answers pending permission requests with the `cancelled` outcome, as it would after `session/cancel`. Before responding to `session/close`, the Agent **MUST** cancel every pending [elicitation](/protocol/v2/draft/elicitation#session-cancellation) scoped to that session with `$/cancel_request`. Unlike cancellation, closing also stops the session's background work.
 
 When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
 
