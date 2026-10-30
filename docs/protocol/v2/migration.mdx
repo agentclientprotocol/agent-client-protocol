@@ -893,6 +893,8 @@ v2 makes the whole schema forward-compatible by convention:
 
 stdio remains the primary transport and is unchanged. Each message is a single JSON-RPC object; ACP does not use JSON-RPC batches, and receivers reject an array with `-32600`. Apply a session's `session/update` notifications in the order received. See [Transports](/protocol/v2/transports#no-batches).
 
+A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of the core v2 protocol surface. See the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
+
 ## Errors
 
 Several error rules that were SHOULD in v1 are MUST in v2, and v2 adds one. Agents and Clients **MUST**:
@@ -902,8 +904,6 @@ Several error rules that were SHOULD in v1 are MUST in v2, and v2 adds one. Agen
 - reject a request other than `initialize` that arrives before initialization completes with `-32600`, and also an `initialize` repeated after another request
 
 See [Errors](/protocol/v2/error).
-
-A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of the core v2 protocol surface. See the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
 
 ## Migration checklist: Agents
 
