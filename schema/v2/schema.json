@@ -6375,7 +6375,7 @@
           "format": "uri"
         },
         "headers": {
-          "description": "HTTP headers to set when making requests to the MCP server.",
+          "description": "HTTP headers to set when making requests to the MCP server. Headers the MCP transport\ndefines are owned by the transport, and Agents use the transport's values for them.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/HttpHeader"

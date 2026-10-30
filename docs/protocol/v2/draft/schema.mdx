@@ -4958,7 +4958,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} >
-  HTTP headers to set when making requests to the MCP server.
+  HTTP headers to set when making requests to the MCP server. Headers the MCP transport
+defines are owned by the transport, and Agents use the transport's values for them.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
@@ -5137,7 +5138,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="headers" type={<a href="#httpheader">HttpHeader[]</a>} >
-  HTTP headers to set when making requests to the MCP server.
+  HTTP headers to set when making requests to the MCP server. Headers the MCP transport
+defines are owned by the transport, and Agents use the transport's values for them.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable name identifying this MCP server.
