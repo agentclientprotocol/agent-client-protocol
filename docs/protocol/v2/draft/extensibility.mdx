@@ -256,7 +256,7 @@ Implementations **SHOULD** advertise support for extensions and their methods us
 
 To avoid collisions with other extensions, follow [MCP's naming convention](https://modelcontextprotocol.io/specification/2026-07-28/basic/index): prefix extension names with dot-separated labels in reverse-DNS order of a domain you control, followed by `/`. For example, use `com.example/<name>` for `_meta` keys, including capability entries, and `_com.example/<name>` for custom methods and custom enum values.
 
-Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Use the same metadata location and namespaced key on both sides of an extension's negotiation.
+Custom capability names **MUST NOT** be added as properties directly on either the root capability object or nested protocol-defined capability objects. Both sides advertise an extension under the same namespaced key, each using the nested capability object's `_meta` where its side has one and `capabilities._meta` otherwise. An extension's documentation states where each side advertises it.
 
 For example, an Agent can advertise an independent workspace extension without advertising session support:
 
