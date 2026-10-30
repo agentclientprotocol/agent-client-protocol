@@ -251,6 +251,12 @@ The `proxy/initialize` request has the same parameters as `initialize` and expec
 
 Note: A conductor can be configured to run in either terminal mode (expecting `initialize`) or proxy mode (expecting `proxy/initialize`), enabling nested proxy chains.
 
+### Protocol versions
+
+A chain speaks one ACP protocol version. `proxy/initialize` carries the `initialize` params of the version the client requested, and the version selected in the agent's `initialize` response applies to every component in the chain. A conductor that does not support the requested version selects a lower one, as an Agent would during [version negotiation](/protocol/v2/initialization#version-negotiation).
+
+Proxies and the conductor forward messages without parsing and re-serializing them where they don't need to, so unknown fields and `_meta` survive every hop. On an ACP v2 chain, the rules of that version apply to every hop, including the wrapped messages: request IDs are never `null`, and JSON-RPC batches are not used.
+
 ### MCP-over-ACP support
 
 The [MCP-over-ACP transport](./mcp-over-acp) targets stateless MCP 2026-07-28 only. Requests target a declared `serverId`; a separate logical MCP `requestId` correlates request-scoped notifications and remains unchanged when proxies renumber the outer ACP JSON-RPC ID. There is no MCP connect/disconnect lifecycle.
@@ -283,12 +289,12 @@ Both methods use the same parameters as the standard ACP `InitializeRequest` and
   "params": {
     "method": "<INNER_METHOD>",
     "params": <INNER_PARAMS>,
-    "meta": { ... }            // optional metadata
+    "_meta": { ... }           // optional metadata
   }
 }
 ```
 
-The inner message fields (`method`, `params`) are flattened into the params object. Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the outer JSON-RPC envelope, following JSON-RPC conventions.
+The inner message fields (`method`, `params`) are flattened into the params object. The optional `_meta` belongs to the `proxy/successor` envelope; the wrapped message's own metadata stays in its `params`. Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the outer JSON-RPC envelope, following JSON-RPC conventions.
 
 ### Examples (non-normative)
 
@@ -546,17 +552,17 @@ When `peer` is omitted, the message goes to the default successor (backwards com
 
 ### What's the current implementation status?
 
-A prototype version of this proposal has been implemented and is available on crates.io as the crates:
+This proposal is implemented in the [Rust SDK](https://github.com/agentclientprotocol/rust-sdk), for both ACP v1 and the draft v2 protocol:
 
-- `sacp` -- base ACP protocol SDK
-  - `sacp-tokio` -- adds specific utilities for use with the `tokio` runtime
-- `sacp-proxy` -- extensions for implementing a proxy
-  - `sacp-rmcp` -- adds specific proxy extension traits for bridging to the rmcp crate
-- `sacp-conductor` -- reference conductor implementation
+- `agent-client-protocol` -- proxy roles and the `proxy/initialize` and `proxy/successor` messages
+- `agent-client-protocol-conductor` -- reference conductor implementation
+- `agent-client-protocol-rmcp` -- bridging proxies to the `rmcp` crate
+- `agent-client-protocol-polyfill` -- compatibility proxies, such as MCP-over-ACP for agents without native support
 
-The canonical sources for those crates is currently the [symposium-dev/symposium-acp] repository. However, copies have been upstreamed to the [agentclientprotocol/rust-sdk](https://github.com/agentclientprotocol/rust-sdk/tree/main/src/sacp-conductor) repository and, if and when this RFD is accepted, that will become the canonical home.
+Earlier releases of the Rust SDK used the `_proxy/initialize` and `_proxy/successor` method names.
 
 ## Revision history
 
 - Initial draft based on working implementation in symposium-acp repository.
 - Split MCP-over-ACP transport into [separate RFD](./mcp-over-acp) to enable independent use by any ACP component.
+- **2026-10-30**: Named the `proxy/successor` metadata field `_meta`, defined how a chain carries one protocol version (including draft v2), and updated the implementation status to the Rust SDK crates.
