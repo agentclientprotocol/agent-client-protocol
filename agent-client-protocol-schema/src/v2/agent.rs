@@ -3553,7 +3553,7 @@ pub enum StopReason {
     /// The active work ended because the agent reached the maximum number of tokens.
     MaxTokens,
     /// The active work ended because the agent reached the maximum number of
-    /// allowed agent requests before returning idle.
+    /// model requests for the foreground work.
     MaxTurnRequests,
     /// The active work ended because the agent refused to continue.
     Refusal,

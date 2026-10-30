@@ -5535,7 +5535,7 @@
           "required": ["stopReason"]
         },
         {
-          "description": "The active work ended because the agent reached the maximum number of\nallowed agent requests before returning idle.",
+          "description": "The active work ended because the agent reached the maximum number of\nmodel requests for the foreground work.",
           "type": "object",
           "properties": {
             "stopReason": {
