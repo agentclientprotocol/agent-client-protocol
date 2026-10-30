@@ -1589,9 +1589,13 @@ impl ResumeSessionResponse {
 
 /// Request parameters for closing an active session.
 ///
-/// The agent **must** cancel any ongoing work related to the session (treat it
-/// as if `session/cancel` was called) and then free up any resources associated
-/// with the session.
+/// The Agent MUST cancel any ongoing work related to the session as if `session/cancel`
+/// was called, then free the resources associated with the session. Unlike `session/cancel`,
+/// closing also stops the session's background work. After the close response, the Agent
+/// sends no other messages for the session on that connection.
+///
+/// Closing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD
+/// treat a `-32002` response as a successful close.
 ///
 /// When closing cancels active foreground work, the Agent MUST send the final
 /// updates for that work and the idle `state_update` with `stopReason: "cancelled"`
@@ -5707,8 +5711,8 @@ pub enum ClientRequest {
     ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
     ///
-    /// The agent must cancel any ongoing work (as if `session/cancel` was called)
-    /// and then free up any resources associated with the session.
+    /// The Agent MUST cancel any ongoing work as if `session/cancel` was called, also stops
+    /// the session's background work, and then frees the resources associated with the session.
     CloseSessionRequest(Box<CloseSessionRequest>),
     /// Sets the current value for a session configuration option.
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),

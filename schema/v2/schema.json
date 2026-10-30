@@ -5972,7 +5972,7 @@
                 },
                 {
                   "title": "CloseSessionRequest",
-                  "description": "Closes an active session and frees up any resources associated with it.\n\nThe agent must cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
+                  "description": "Closes an active session and frees up any resources associated with it.\n\nThe Agent MUST cancel any ongoing work as if `session/cancel` was called, also stops\nthe session's background work, and then frees the resources associated with the session.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CloseSessionRequest"
@@ -6610,7 +6610,7 @@
       }
     },
     "CloseSessionRequest": {
-      "description": "Request parameters for closing an active session.\n\nThe agent **must** cancel any ongoing work related to the session (treat it\nas if `session/cancel` was called) and then free up any resources associated\nwith the session.\n\nWhen closing cancels active foreground work, the Agent MUST send the final\nupdates for that work and the idle `state_update` with `stopReason: \"cancelled\"`\nbefore responding successfully to `session/close`. Closing an idle session\ndoes not itself require another idle update.\n\nClosing also cancels pending `session/prompt` requests whose messages have not\nbeen inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the\nAgent MUST answer that request with `-32800` (Request Cancelled). If the message\nhas already been inserted, the Agent MUST respond successfully with its\n`messageId`. Prompt responses need not precede the close response.",
+      "description": "Request parameters for closing an active session.\n\nThe Agent MUST cancel any ongoing work related to the session as if `session/cancel`\nwas called, then free the resources associated with the session. Unlike `session/cancel`,\nclosing also stops the session's background work. After the close response, the Agent\nsends no other messages for the session on that connection.\n\nClosing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD\ntreat a `-32002` response as a successful close.\n\nWhen closing cancels active foreground work, the Agent MUST send the final\nupdates for that work and the idle `state_update` with `stopReason: \"cancelled\"`\nbefore responding successfully to `session/close`. Closing an idle session\ndoes not itself require another idle update.\n\nClosing also cancels pending `session/prompt` requests whose messages have not\nbeen inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the\nAgent MUST answer that request with `-32800` (Request Cancelled). If the message\nhas already been inserted, the Agent MUST respond successfully with its\n`messageId`. Prompt responses need not precede the close response.",
       "type": "object",
       "properties": {
         "sessionId": {
