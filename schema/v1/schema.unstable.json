@@ -7106,7 +7106,7 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\nUnknown\nvalues are preserved. Agents MUST return an error\nfor modes they do not support.",
+          "description": "How the Agent combines `content` with its own instructions.\n\nRequired. Agents MUST return an error for a mode they do not support rather than\ntreating it as `append` or `override`.",
           "allOf": [
             {
               "$ref": "#/$defs/SystemPromptMode"
@@ -7114,7 +7114,7 @@
           ]
         },
         "content": {
-          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept `text` content blocks.\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support.",
+          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept `text` content blocks.\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support.\n\nClients MUST NOT send an empty array. Agents MAY reject one with\n`-32602` without creating, loading, resuming, or forking the session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"

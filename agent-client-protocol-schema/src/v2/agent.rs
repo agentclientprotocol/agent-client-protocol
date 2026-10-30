@@ -4062,6 +4062,9 @@ pub struct SystemPrompt {
     /// Clients MUST NOT send other content block types until a future
     /// capability allows them, and Agents MUST return an error for content
     /// blocks they do not support, including unknown types.
+    ///
+    /// Clients MUST NOT send an empty array. Agents MAY reject one with
+    /// `-32602` without creating, resuming, or forking the session.
     pub content: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.

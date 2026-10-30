@@ -6,6 +6,18 @@ rss: true
 
 This page tracks lifecycle changes for ACP Requests for Dialog. For broader ACP announcements, see [Updates](/updates).
 
+<Update label="October 30, 2026" tags={["Preview"]}>
+## Client-Provided System Prompt RFD moves to Preview stage
+
+The Client-Provided System Prompt RFD has moved to Preview. Clients can send
+`systemPrompt` on session setup in `append` mode, or in `override` mode when the
+Agent advertises it. The protocol implementation covers ACP v1 and v2, and
+implementations have landed in the Claude Agent and Codex adapters. The feature
+remains unstable. Please review the [RFD](/rfds/client-system-prompt) and provide
+Agent/Client interoperability feedback before stabilization.
+
+</Update>
+
 <Update label="October 29, 2026" tags={["Removed"]}>
 ## Delete in Diff RFD removed
 

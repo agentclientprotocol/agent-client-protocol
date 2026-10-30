@@ -7999,7 +7999,7 @@
           ]
         },
         "content": {
-          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept `text` content blocks.\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types.",
+          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept `text` content blocks.\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types.\n\nClients MUST NOT send an empty array. Agents MAY reject one with\n`-32602` without creating, resuming, or forking the session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"

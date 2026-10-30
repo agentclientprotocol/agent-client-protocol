@@ -9637,6 +9637,9 @@ Clients MUST NOT send other content block types until a future
 capability allows them, and Agents MUST return an error for content
 blocks they do not support, including unknown types.
 
+Clients MUST NOT send an empty array. Agents MAY reject one with
+`-32602` without creating, resuming, or forking the session.
+
 </ResponseField>
 <ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
   How the Agent combines `content` with its own instructions.

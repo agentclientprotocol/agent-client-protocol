@@ -3859,10 +3859,8 @@ impl HttpHeader {
 pub struct SystemPrompt {
     /// How the Agent combines `content` with its own instructions.
     ///
-    /// Required on the wire, so every request states its mode. In Rust,
-    /// Unknown
-    /// values are preserved. Agents MUST return an error
-    /// for modes they do not support.
+    /// Required. Agents MUST return an error for a mode they do not support rather than
+    /// treating it as `append` or `override`.
     pub mode: SystemPromptMode,
     /// The system prompt content.
     ///
@@ -3870,6 +3868,9 @@ pub struct SystemPrompt {
     /// Clients MUST NOT send other content block types until a future
     /// capability allows them, and Agents MUST return an error for content
     /// blocks they do not support.
+    ///
+    /// Clients MUST NOT send an empty array. Agents MAY reject one with
+    /// `-32602` without creating, loading, resuming, or forking the session.
     pub content: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
