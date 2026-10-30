@@ -1727,12 +1727,12 @@
           "const": "allow_always"
         },
         {
-          "description": "Reject this operation only this time.",
+          "description": "Reject this operation only this time. The Agent MUST NOT proceed with the operation.",
           "type": "string",
           "const": "reject_once"
         },
         {
-          "description": "Reject this operation and remember the choice.",
+          "description": "Reject this operation and remember the choice. The Agent MUST NOT proceed with the\noperation.",
           "type": "string",
           "const": "reject_always"
         },

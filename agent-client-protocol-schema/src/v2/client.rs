@@ -3111,9 +3111,10 @@ pub enum PermissionOptionKind {
     AllowOnce,
     /// Allow this operation and remember the choice.
     AllowAlways,
-    /// Reject this operation only this time.
+    /// Reject this operation only this time. The Agent MUST NOT proceed with the operation.
     RejectOnce,
-    /// Reject this operation and remember the choice.
+    /// Reject this operation and remember the choice. The Agent MUST NOT proceed with the
+    /// operation.
     RejectAlways,
     /// Custom or future permission option kind.
     ///

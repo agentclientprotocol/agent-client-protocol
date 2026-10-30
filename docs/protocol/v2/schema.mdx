@@ -4824,11 +4824,13 @@ Helps clients choose appropriate icons and UI treatment.
 </ResponseField>
 
 <ResponseField name="reject_once" type="string">
-  Reject this operation only this time.
+  Reject this operation only this time. The Agent MUST NOT proceed with the
+  operation.
 </ResponseField>
 
 <ResponseField name="reject_always" type="string">
-  Reject this operation and remember the choice.
+  Reject this operation and remember the choice. The Agent MUST NOT proceed with
+  the operation.
 </ResponseField>
 
 <ResponseField name="other" type="string">

@@ -337,7 +337,7 @@ When the Client sends [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellat
 }
 ```
 
-Clients also send `cancelled` when the user dismisses the prompt or the Client declines it by policy, including when no `reject_*` option is offered. After a `cancelled` outcome, the Agent **MUST NOT** proceed with the operation.
+Clients also send `cancelled` when the user dismisses the prompt or the Client declines it by policy, including when no `reject_*` option is offered. After a `cancelled` outcome, the Agent **MUST NOT** proceed with the operation. The same applies when the selected option's `kind` is `reject_once` or `reject_always`.
 
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
   The user's decision. Known outcomes are `cancelled` when the [active work was
