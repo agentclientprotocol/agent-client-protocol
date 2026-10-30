@@ -1628,6 +1628,27 @@ pub enum StateUpdate {
     Other(OtherStateUpdate),
 }
 
+impl StateUpdate {
+    /// The snapshot's list of work running independently of foreground work.
+    ///
+    /// `None` means the Agent is not reporting background work, not that nothing is running.
+    /// A custom or future state also returns `None`. Its `background` field, if any, stays in
+    /// [`OtherStateUpdate::fields`].
+    ///
+    /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
+    #[must_use]
+    pub fn background(&self) -> Option<&[BackgroundWork]> {
+        match self {
+            Self::Running(state) => state.background.as_deref(),
+            Self::Idle(state) => state.background.as_deref(),
+            Self::RequiresAction(state) => state.background.as_deref(),
+            #[cfg(feature = "unstable_subagents")]
+            Self::Unknown(state) => state.background.as_deref(),
+            Self::Other(_) => None,
+        }
+    }
+}
+
 /// Foreground work is in progress.
 #[serde_as]
 #[skip_serializing_none]
@@ -4104,11 +4125,28 @@ mod tests {
             idle
         );
 
+        assert_eq!(idle.background().map(<[_]>::len), Some(2));
+
         let empty = super::RunningStateUpdate::new().background(vec![]);
         assert_eq!(
             serde_json::to_value(&empty).unwrap(),
             json!({ "background": [] })
         );
+        assert_eq!(
+            super::StateUpdate::Running(empty).background(),
+            Some(&[][..])
+        );
+        assert_eq!(
+            super::StateUpdate::RequiresAction(super::RequiresActionStateUpdate::new())
+                .background(),
+            None
+        );
+        let custom: super::StateUpdate = serde_json::from_value(json!({
+            "state": "_waiting",
+            "background": [{ "type": "terminal", "terminalId": "term_003" }]
+        }))
+        .unwrap();
+        assert_eq!(custom.background(), None);
     }
 
     #[test]

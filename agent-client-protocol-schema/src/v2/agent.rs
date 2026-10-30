@@ -2308,10 +2308,13 @@ pub enum SessionStatus {
 /// Request parameters for cancelling one tool call.
 ///
 /// Clients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.
+///
 /// The Agent responds once it has accepted the cancellation. The response does not mean
-/// the work has stopped. The Agent confirms it with a `tool_call_update` to a final status, normally `cancelled`, or `completed` or `failed` if the work finished first. The Agent responds with `-32602` if the tool call is
-/// unknown, already final, or not cancellable. Cancelling a tool call does not change the foreground
-/// state by itself.
+/// the work has stopped. The Agent confirms it with a `tool_call_update` to a final
+/// status: normally `cancelled`, or `completed` or `failed` if the work finished first.
+///
+/// The Agent responds with `-32602` if the tool call is unknown, already final, or not
+/// cancellable. Cancelling a tool call does not change the foreground state by itself.
 ///
 /// See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)
 #[serde_as]
@@ -2408,10 +2411,14 @@ impl CancelToolCallResponse {
 /// Request parameters for cancelling one terminal.
 ///
 /// Clients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.
+///
 /// The Agent responds once it has accepted the cancellation. The response does not mean
-/// the work has stopped. The Agent confirms it with a `terminal_update` that sets `exitStatus`. Cancelling stops the process but does not release the terminal, and does not change the status of a tool call that references it. The Agent responds with `-32602` if the terminal is
-/// unknown, has already exited, or not cancellable. Cancelling a terminal does not change the foreground
-/// state by itself.
+/// the work has stopped. The Agent confirms it with a `terminal_update` that sets
+/// `exitStatus`. Cancelling stops the process but does not release the terminal, and does
+/// not change the status of a tool call that references it.
+///
+/// The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not
+/// cancellable. Cancelling a terminal does not change the foreground state by itself.
 ///
 /// See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)
 #[serde_as]

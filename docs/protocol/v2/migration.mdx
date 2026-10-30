@@ -579,7 +579,7 @@ For efficient live output, the Agent sends append updates:
 
 Each chunk's `data` is independently base64-encoded. Decode each chunk separately, then append the resulting bytes in received order for that terminal. Do not concatenate encoded strings before decoding. Chunk boundaries may split UTF-8 code points and ANSI escape sequences, so text and terminal parsers retain state between chunks. A later `terminal_update.output` snapshot replaces all bytes accumulated so far, and subsequent chunks append to that replacement.
 
-A Client may use an isolated terminal emulator, but it only needs to provide a safe sanitized transcript fallback. The terminal is display-only: it has no input, resize, interrupt, kill, wait, release, or execution semantics.
+A Client may use an isolated terminal emulator, but it only needs to provide a safe sanitized transcript fallback. The terminal is display-only: it has no input, resize, interrupt, wait, release, or execution semantics. The one control is opt-in cancellation, where an Agent lets the Client stop the process with [`terminal/cancel`](/protocol/v2/tool-calls#cancelling-terminals).
 
 ## Diff content
 

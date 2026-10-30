@@ -890,10 +890,14 @@ The response means the Agent accepted the cancellation. A `terminal_update` with
 Request parameters for cancelling one terminal.
 
 Clients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.
+
 The Agent responds once it has accepted the cancellation. The response does not mean
-the work has stopped. The Agent confirms it with a `terminal_update` that sets `exitStatus`. Cancelling stops the process but does not release the terminal, and does not change the status of a tool call that references it. The Agent responds with `-32602` if the terminal is
-unknown, has already exited, or not cancellable. Cancelling a terminal does not change the foreground
-state by itself.
+the work has stopped. The Agent confirms it with a `terminal_update` that sets
+`exitStatus`. Cancelling stops the process but does not release the terminal, and does
+not change the status of a tool call that references it.
+
+The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not
+cancellable. Cancelling a terminal does not change the foreground state by itself.
 
 See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)
 
@@ -947,10 +951,13 @@ confirms it.
 Request parameters for cancelling one tool call.
 
 Clients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.
+
 The Agent responds once it has accepted the cancellation. The response does not mean
-the work has stopped. The Agent confirms it with a `tool_call_update` to a final status, normally `cancelled`, or `completed` or `failed` if the work finished first. The Agent responds with `-32602` if the tool call is
-unknown, already final, or not cancellable. Cancelling a tool call does not change the foreground
-state by itself.
+the work has stopped. The Agent confirms it with a `tool_call_update` to a final
+status: normally `cancelled`, or `completed` or `failed` if the work finished first.
+
+The Agent responds with `-32602` if the tool call is unknown, already final, or not
+cancellable. Cancelling a tool call does not change the foreground state by itself.
 
 See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)
 
@@ -7774,7 +7781,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 
-## <span class="font-mono">TerminalCancelCapability</span>
+## <span class="font-mono">TerminalCancelCapabilities</span>
 
 Capability to cancel a terminal with `terminal/cancel`.
 
@@ -7797,7 +7804,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Client-initiated controls a terminal currently supports.
 
-A display-only hint: a malformed value falls back to no controls.
+A malformed value falls back to no controls, so the Client never sends a request the
+Agent did not advertise.
 
 See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)
 
@@ -7813,7 +7821,7 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="cancel" type={<><span><a href="#terminalcancelcapability">TerminalCancelCapability</a></span><span> | null</span></>} >
+<ResponseField name="cancel" type={<><span><a href="#terminalcancelcapabilities">TerminalCancelCapabilities</a></span><span> | null</span></>} >
   Permits the Client to cancel this terminal with `terminal/cancel`.
 
 Omitted and `null` are equivalent and mean unsupported. An object (including `\{\}`)
@@ -8097,7 +8105,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Titled enum options. Must contain at least one option.
 </ResponseField>
 
-## <span class="font-mono">ToolCallCancelCapability</span>
+## <span class="font-mono">ToolCallCancelCapabilities</span>
 
 Capability to cancel a tool call with `tool_call/cancel`.
 
@@ -8120,7 +8128,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Client-initiated controls a tool call currently supports.
 
-A display-only hint: a malformed value falls back to no controls.
+A malformed value falls back to no controls, so the Client never sends a request the
+Agent did not advertise.
 
 See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)
 
@@ -8136,7 +8145,7 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
-<ResponseField name="cancel" type={<><span><a href="#toolcallcancelcapability">ToolCallCancelCapability</a></span><span> | null</span></>} >
+<ResponseField name="cancel" type={<><span><a href="#toolcallcancelcapabilities">ToolCallCancelCapabilities</a></span><span> | null</span></>} >
   Permits the Client to cancel this tool call with `tool_call/cancel`.
 
 Omitted and `null` are equivalent and mean unsupported. An object (including `\{\}`)

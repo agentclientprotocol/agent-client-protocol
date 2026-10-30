@@ -1615,14 +1615,14 @@
       "required": ["path"]
     },
     "ToolCallCapabilities": {
-      "description": "Client-initiated controls a tool call currently supports.\n\nA display-only hint: a malformed value falls back to no controls.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)",
+      "description": "Client-initiated controls a tool call currently supports.\n\nA malformed value falls back to no controls, so the Client never sends a request the\nAgent did not advertise.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)",
       "type": "object",
       "properties": {
         "cancel": {
           "description": "Permits the Client to cancel this tool call with `tool_call/cancel`.\n\nOmitted and `null` are equivalent and mean unsupported. An object (including `{}`)\nmeans supported. Agents SHOULD stop advertising it once the tool call reaches a final status.",
           "anyOf": [
             {
-              "$ref": "#/$defs/ToolCallCancelCapability"
+              "$ref": "#/$defs/ToolCallCancelCapabilities"
             },
             {
               "type": "null"
@@ -1638,7 +1638,7 @@
         }
       }
     },
-    "ToolCallCancelCapability": {
+    "ToolCallCancelCapabilities": {
       "description": "Capability to cancel a tool call with `tool_call/cancel`.\n\nSupplying `{}` advertises support. An omitted or `null` `cancel` does not.",
       "type": "object",
       "properties": {
@@ -5515,14 +5515,14 @@
       "required": ["cols", "rows"]
     },
     "TerminalCapabilities": {
-      "description": "Client-initiated controls a terminal currently supports.\n\nA display-only hint: a malformed value falls back to no controls.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)",
+      "description": "Client-initiated controls a terminal currently supports.\n\nA malformed value falls back to no controls, so the Client never sends a request the\nAgent did not advertise.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)",
       "type": "object",
       "properties": {
         "cancel": {
           "description": "Permits the Client to cancel this terminal with `terminal/cancel`.\n\nOmitted and `null` are equivalent and mean unsupported. An object (including `{}`)\nmeans supported. Agents SHOULD stop advertising it once the terminal reports `exitStatus`.",
           "anyOf": [
             {
-              "$ref": "#/$defs/TerminalCancelCapability"
+              "$ref": "#/$defs/TerminalCancelCapabilities"
             },
             {
               "type": "null"
@@ -5538,7 +5538,7 @@
         }
       }
     },
-    "TerminalCancelCapability": {
+    "TerminalCancelCapabilities": {
       "description": "Capability to cancel a terminal with `terminal/cancel`.\n\nSupplying `{}` advertises support. An omitted or `null` `cancel` does not.",
       "type": "object",
       "properties": {
@@ -6938,7 +6938,7 @@
       "x-method": "session/close"
     },
     "CancelToolCallRequest": {
-      "description": "Request parameters for cancelling one tool call.\n\nClients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.\nThe Agent responds once it has accepted the cancellation. The response does not mean\nthe work has stopped. The Agent confirms it with a `tool_call_update` to a final status, normally `cancelled`, or `completed` or `failed` if the work finished first. The Agent responds with `-32602` if the tool call is\nunknown, already final, or not cancellable. Cancelling a tool call does not change the foreground\nstate by itself.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)",
+      "description": "Request parameters for cancelling one tool call.\n\nClients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.\n\nThe Agent responds once it has accepted the cancellation. The response does not mean\nthe work has stopped. The Agent confirms it with a `tool_call_update` to a final\nstatus: normally `cancelled`, or `completed` or `failed` if the work finished first.\n\nThe Agent responds with `-32602` if the tool call is unknown, already final, or not\ncancellable. Cancelling a tool call does not change the foreground state by itself.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -6969,7 +6969,7 @@
       "x-method": "tool_call/cancel"
     },
     "CancelTerminalRequest": {
-      "description": "Request parameters for cancelling one terminal.\n\nClients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.\nThe Agent responds once it has accepted the cancellation. The response does not mean\nthe work has stopped. The Agent confirms it with a `terminal_update` that sets `exitStatus`. Cancelling stops the process but does not release the terminal, and does not change the status of a tool call that references it. The Agent responds with `-32602` if the terminal is\nunknown, has already exited, or not cancellable. Cancelling a terminal does not change the foreground\nstate by itself.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)",
+      "description": "Request parameters for cancelling one terminal.\n\nClients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.\n\nThe Agent responds once it has accepted the cancellation. The response does not mean\nthe work has stopped. The Agent confirms it with a `terminal_update` that sets\n`exitStatus`. Cancelling stops the process but does not release the terminal, and does\nnot change the status of a tool call that references it.\n\nThe Agent responds with `-32602` if the terminal is unknown, has already exited, or is not\ncancellable. Cancelling a terminal does not change the foreground state by itself.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)",
       "type": "object",
       "properties": {
         "sessionId": {

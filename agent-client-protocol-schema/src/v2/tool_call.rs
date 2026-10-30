@@ -257,7 +257,8 @@ impl ToolCallUpdate {
 
 /// Client-initiated controls a tool call currently supports.
 ///
-/// A display-only hint: a malformed value falls back to no controls.
+/// A malformed value falls back to no controls, so the Client never sends a request the
+/// Agent did not advertise.
 ///
 /// See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)
 #[serde_as]
@@ -274,7 +275,7 @@ pub struct ToolCallCapabilities {
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
-    pub cancel: Option<ToolCallCancelCapability>,
+    pub cancel: Option<ToolCallCancelCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -296,7 +297,7 @@ impl ToolCallCapabilities {
 
     /// Sets or removes permission to cancel this tool call.
     #[must_use]
-    pub fn cancel(mut self, cancel: impl IntoOption<ToolCallCancelCapability>) -> Self {
+    pub fn cancel(mut self, cancel: impl IntoOption<ToolCallCancelCapabilities>) -> Self {
         self.cancel = cancel.into_option();
         self
     }
@@ -321,7 +322,7 @@ impl ToolCallCapabilities {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
-pub struct ToolCallCancelCapability {
+pub struct ToolCallCancelCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -334,7 +335,7 @@ pub struct ToolCallCancelCapability {
     pub meta: Option<Meta>,
 }
 
-impl ToolCallCancelCapability {
+impl ToolCallCancelCapabilities {
     /// Builds an empty capability object advertising cancellation support.
     #[must_use]
     pub fn new() -> Self {
@@ -1181,7 +1182,7 @@ mod tests {
     fn toolcall_capabilities_patch_and_tolerate_malformed_values() {
         use serde_json::json;
         let update = ToolCallUpdate::new("call_012")
-            .capabilities(ToolCallCapabilities::new().cancel(ToolCallCancelCapability::new()));
+            .capabilities(ToolCallCapabilities::new().cancel(ToolCallCancelCapabilities::new()));
         assert_eq!(
             serde_json::to_value(&update).unwrap(),
             json!({ "toolCallId": "call_012", "capabilities": { "cancel": {} } })
