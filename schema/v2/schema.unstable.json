@@ -2732,6 +2732,15 @@
                   ]
                 },
                 {
+                  "title": "SetSessionTitleResponse",
+                  "description": "Successful result returned for a `session/set_title` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetSessionTitleResponse"
+                    }
+                  ]
+                },
+                {
                   "title": "ResumeSessionResponse",
                   "description": "Successful result returned for a `session/resume` request.",
                   "allOf": [
@@ -3026,6 +3035,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "title": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/set_title`.\n\nAgents report titles through `session/list` and `session_info_update` without this\ncapability. It only advertises that Clients can set titles.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports setting session titles.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionTitleCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -3288,6 +3309,18 @@
     },
     "SessionForkCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/fork` method.\n\nSupplying `{}` means the agent supports forking sessions.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionTitleCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for Client-set session titles.\n\nSupplying `{}` means the agent supports `session/set_title`. Agents report titles\nthrough `session/list` and `session_info_update` without this capability.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -4433,6 +4466,25 @@
       "required": ["sessionId"],
       "x-side": "agent",
       "x-method": "session/fork"
+    },
+    "SetSessionTitleResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from setting the title of a session.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "description": "The title the Agent stored.\n\nThis differs from the requested title if the Agent normalized it. Clients SHOULD\ndisplay this value rather than the one they sent.",
+          "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["title"],
+      "x-side": "agent",
+      "x-method": "session/set_title"
     },
     "ResumeSessionResponse": {
       "description": "Response from resuming an existing session.\n\nThe agent MUST send a current `state_update` after any requested history\nreplay and before this response, even without replay. The update reports\nforeground state after resuming. The response alone does not imply `idle`.\n\nSee protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/v2/draft/session-setup#current-state-synchronization)",
@@ -7164,6 +7216,15 @@
                   ]
                 },
                 {
+                  "title": "SetSessionTitleRequest",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSets the title of a session.\n\nThis method is only available if the agent advertises the `session.title` capability.\n\nThe session does not need to be active on the connection. The agent stores the\ntitle and returns the stored title, which may be normalized.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SetSessionTitleRequest"
+                    }
+                  ]
+                },
+                {
                   "title": "ResumeSessionRequest",
                   "description": "Resumes an existing session.\n\nThe agent should resume the session context, allowing the conversation\nto continue. If `replayFrom` is set, the agent should replay\nretained conversation history before responding.",
                   "allOf": [
@@ -7954,6 +8015,33 @@
       "required": ["sessionId", "cwd"],
       "x-side": "agent",
       "x-method": "session/fork"
+    },
+    "SetSessionTitleRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for setting the title of a session.\n\nOnly available if the Agent supports the `session.title` capability.\n\nThe session does not need to be active on the connection. Any session the Agent would\nreturn from `session/list` can be retitled. A session that does not exist gets `-32002`.\n\nThe Agent responds only after it has stored the title. After a successful response, the\nAgent SHOULD NOT replace the title with one it generates automatically.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The ID of the session to retitle.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "title": {
+          "description": "The new title for the session.\n\nRequired and non-null. Omission and explicit `null` are both invalid. The Agent MAY\nnormalize the title before storing it, for example by trimming whitespace or\ntruncating it. The Agent rejects a title that fails its validation, including one\nthat is empty after normalization, with `-32602`.",
+          "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId", "title"],
+      "x-side": "agent",
+      "x-method": "session/set_title"
     },
     "ResumeSessionRequest": {
       "description": "Request parameters for resuming an existing session.\n\nResumes an existing session and optionally replays retained conversation\nhistory according to `replayFrom`.",

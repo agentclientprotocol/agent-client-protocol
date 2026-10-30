@@ -46,7 +46,7 @@ The method is added to both ACP v1 and v2. The request, response, and resulting 
 
 #### Capability
 
-In v1, an Agent advertises support through `agentCapabilities.sessionCapabilities.setTitle` in the `initialize` response:
+In v1, an Agent advertises support through `agentCapabilities.sessionCapabilities.title` in the `initialize` response:
 
 ```json
 {
@@ -56,14 +56,14 @@ In v1, an Agent advertises support through `agentCapabilities.sessionCapabilitie
     "protocolVersion": 1,
     "agentCapabilities": {
       "sessionCapabilities": {
-        "setTitle": {}
+        "title": {}
       }
     }
   }
 }
 ```
 
-In v2, an Agent advertises support through `capabilities.session.setTitle` in the `initialize` response:
+In v2, an Agent advertises support through `capabilities.session.title` in the `initialize` response:
 
 ```json
 {
@@ -73,14 +73,14 @@ In v2, an Agent advertises support through `capabilities.session.setTitle` in th
     "protocolVersion": 2,
     "capabilities": {
       "session": {
-        "setTitle": {}
+        "title": {}
       }
     }
   }
 }
 ```
 
-In both versions, omitting the field or setting it to `null` means the Agent does not support the method, and `{}` means it does. Clients must not call `session/set_title` unless this capability is present.
+In both versions, omitting the field or setting it to `null` means the Agent does not support the method, and `{}` means it does. Clients must not call `session/set_title` unless this capability is present. The capability only covers Client-set titles. Agents report titles through `session/list` and `session_info_update` without it. Later title features, such as an initial title on `session/new`, can add fields to this object.
 
 #### Request and response
 
@@ -212,3 +212,4 @@ The main use case is renaming from a session list, where most sessions are not l
 
 - 2026-08-19: Initial proposal.
 - 2026-10-26: Show v1 and v2 capabilities, return the persisted title in the response, allow normalization, allow retitling sessions that are not loaded, make the notification optional, define errors, and add FAQ.
+- 2026-10-30: Rename the capability from `setTitle` to `title` so later title features can extend the same object.
