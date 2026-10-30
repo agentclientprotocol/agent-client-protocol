@@ -10,6 +10,8 @@ mod ext;
 mod mcp;
 mod plan;
 mod protocol_level;
+#[cfg(feature = "unstable_proxy_chains")]
+mod proxy;
 mod rpc;
 mod tool_call;
 
@@ -25,6 +27,8 @@ pub use ext::*;
 pub use mcp::*;
 pub use plan::*;
 pub use protocol_level::*;
+#[cfg(feature = "unstable_proxy_chains")]
+pub use proxy::*;
 pub use rpc::*;
 pub use serde_json::value::RawValue;
 pub use tool_call::*;
