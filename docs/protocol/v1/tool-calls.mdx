@@ -3,11 +3,11 @@ title: "Tool Calls"
 description: "How Agents report tool call execution"
 ---
 
-Tool calls represent actions that language models request Agents to perform during a [prompt turn](/protocol/v1/prompt-turn). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
+Tool calls are actions the language model asks the Agent to perform during a [prompt turn](/protocol/v1/prompt-turn), such as reading a file or running a command. The Agent executes them on the model's behalf.
 
-Agents report tool calls through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
+Agents report tool calls through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications, which Clients use to show progress and results to users.
 
-While Agents handle the actual execution, they may leverage Client capabilities like [permission requests](#requesting-permission) or [file system access](/protocol/v1/file-system) to provide a richer, more integrated experience.
+Agents may use Client capabilities such as [permission requests](#requesting-permission) and [file system access](/protocol/v1/file-system) while running a tool call.
 
 ## Creating
 
@@ -41,7 +41,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="name" type="string">
   The programmatic name of the invoked tool, such as `read_file`. This
-  identifies which tool is being used; `title` describes this invocation for
+  identifies which tool is being used. `title` describes this invocation for
   users, while `kind` provides a coarse presentation category. If omitted or
   `null` on the initial tool call, no name is provided. Names are opaque,
   informational metadata and do not advertise a capability or grant
@@ -133,7 +133,7 @@ For `name`, a string sets or replaces the tool name. Omission and `null` both
 leave the existing name unchanged, so ACP v1 cannot clear a previously reported
 name.
 
-## Requesting Permission
+## Requesting permission
 
 The Agent **MAY** request permission from the user before executing a tool call by calling the `session/request_permission` method:
 
@@ -213,7 +213,7 @@ If the current prompt turn gets [cancelled](/protocol/v1/prompt-turn#cancellatio
   `optionId` - The ID of the selected permission option
 </ResponseField>
 
-### Permission Options
+### Permission options
 
 Each permission option provided to the Client contains:
 
@@ -274,7 +274,7 @@ Tool calls progress through different statuses during their lifecycle:
 
 Tool calls can produce different types of content:
 
-### Regular Content
+### Regular content
 
 Standard [content blocks](/protocol/v1/content) like text, images, or resources:
 
@@ -336,7 +336,7 @@ When a terminal is embedded in a tool call, the Client displays live output as i
 
 ## Following the Agent
 
-Tool calls can report file locations they're working with, enabling Clients to implement "follow-along" features that track which files the Agent is accessing or modifying in real-time.
+Tool calls can report the file locations they're working with. Clients can use this to follow along, showing which files the Agent is reading or modifying as it works.
 
 ```json
 {

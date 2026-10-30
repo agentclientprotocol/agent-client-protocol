@@ -41,16 +41,16 @@ sequenceDiagram
 
 <br />
 
-## Advertising Authentication
+## Advertising authentication
 
 Agents advertise authentication options in the `authMethods` field of the
 `initialize` response. Every method has a `methodId`, but the Client sends that
 ID to `auth/login` only for a method whose type defines that protocol-driven
 flow.
 
-Returning a non-empty `authMethods` list advertises the authentication surface. Each `methodId` **MUST** be unique within the list. An Agent that does so **MUST** implement both
+Returning a non-empty `authMethods` list advertises `auth/login` and `auth/logout`. Each `methodId` **MUST** be unique within the list. An Agent that does so **MUST** implement both
 `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, the Agent
-does not advertise this surface and Clients **MUST NOT** call either method.
+does not advertise these methods and Clients **MUST NOT** call either one.
 
 `capabilities.auth` is orthogonal to this requirement. It advertises
 authentication-related extensions, not the availability of the baseline
@@ -176,7 +176,7 @@ method's ID:
   `auth/login` flow. Clients **MUST NOT** pass a `terminal` method.
 </ParamField>
 
-`auth/login` may stay pending while the user completes an interactive flow. The Agent can run that flow itself, for example by opening a local browser, or through a URL-mode [elicitation](/protocol/v2/elicitation) scoped to the `auth/login` request with `requestId`. Whether authentication outlasts the connection is up to the Agent; credentials are often stored where other connections can use them.
+`auth/login` may stay pending while the user completes an interactive flow. The Agent can run that flow itself, for example by opening a local browser, or through a URL-mode [elicitation](/protocol/v2/elicitation) scoped to the `auth/login` request with `requestId`. Whether authentication outlasts the connection is up to the Agent. Credentials are often stored where other connections can use them.
 
 On success, the Agent returns an empty result:
 
@@ -204,7 +204,7 @@ For a `terminal` method, the Client:
    variables in the base launch configuration. Every `env` entry **MUST** have a
    unique `name`.
 3. Presents the terminal to the user and waits for the process to exit. Exit
-   status zero signals success; a non-zero status, termination without an exit
+   status zero signals success. A non-zero status, termination without an exit
    status, or cancellation signals failure.
 4. On success, retries an operation rejected for requiring authentication. The Client **SHOULD** first close the existing ACP connection, start and initialize a new one, and resume with `session/resume` any sessions it wants to keep, since the running Agent may not pick up the new credentials. It **MAY** instead retry on the existing connection first, and reconnect only if the retry still fails with `auth_required`. For an already-inserted prompt, see
    [Authentication failures during session work](#authentication-failures-during-session-work).
@@ -212,12 +212,12 @@ For a `terminal` method, the Client:
 The descriptor cannot provide a command. The Client derives the command from its
 own Agent configuration. Agents **SHOULD** provide arguments that enter a
 login-only flow and exit when it completes. ACP does not define an output
-pattern or other in-band success signal; Clients may recognize
+pattern or other in-band success signal. Clients may recognize
 implementation-specific signals only as an extension. The terminal process is
 not the ACP connection, so the Client **MUST NOT** send an `auth/login` request
 for a terminal method.
 
-### Launch Safety
+### Launch safety
 
 - Clients **SHOULD** pass `args` as separate arguments rather than building a shell command line from them, and **SHOULD NOT** offer terminal authentication when the launch target re-parses arguments, such as a remote shell or a Windows batch file.
 - Clients **SHOULD NOT** apply `env` entries that change program lookup, dynamic loading, interpreter or shell startup, or proxy and TLS trust without user approval. Examples include `PATH`, `LD_*`, `DYLD_*`, `NODE_OPTIONS`, `PYTHONPATH`, `BASH_ENV`, `HTTPS_PROXY`, and `SSL_CERT_FILE`.
@@ -242,10 +242,10 @@ insertion or any tool side effects. Clients **SHOULD NOT** automatically resubmi
 an inserted prompt as though it had been rejected. See
 [Failures](/protocol/v2/prompt-lifecycle#failures).
 
-## Logging Out
+## Logging out
 
 The `auth/logout` method allows Clients to end the current authenticated state.
-Clients may call it only when the Agent advertised one or more authentication methods during initialization; there is no separate logout
+Clients may call it only when the Agent advertised one or more authentication methods during initialization. There is no separate logout
 capability marker.
 
 ```json
@@ -270,7 +270,7 @@ On success, the Agent returns an empty result:
 After a successful `auth/logout`, authentication-gated requests will require the
 user to complete one of the advertised authentication flows again.
 
-## Active Sessions
+## Active sessions
 
 The protocol does not guarantee what happens to already-running sessions after
 `auth/logout`. Agents may terminate them, keep them running, or return

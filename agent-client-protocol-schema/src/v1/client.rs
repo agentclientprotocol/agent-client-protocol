@@ -68,7 +68,7 @@ pub struct SessionNotification {
 }
 
 impl SessionNotification {
-    /// Builds [`SessionNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`SessionNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, update: SessionUpdate) -> Self {
         Self {
@@ -200,7 +200,7 @@ pub struct SessionMessageChunk {
     pub message_id: MessageId,
     /// A single content block appended to the message.
     pub content: ContentBlock,
-    /// Optional and nullable chunk-scoped metadata; omitted or `null` means none.
+    /// Optional and nullable chunk-scoped metadata. Omitted or `null` means none.
     ///
     /// Implementations MUST NOT make assumptions about values in `_meta`.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -246,14 +246,14 @@ pub struct SessionMessage {
     pub message_id: MessageId,
     /// The sending session.
     ///
-    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+    /// Omitted leaves the stored value unchanged. `null` clears it. A value replaces it.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub sender_session_id: MaybeUndefined<SessionId>,
     /// The receiving session.
     ///
-    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+    /// Omitted leaves the stored value unchanged. `null` clears it. A value replaces it.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -261,7 +261,7 @@ pub struct SessionMessage {
     /// On an incoming view, the `messageId` of the same message's outgoing view in the
     /// sender's transcript.
     ///
-    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+    /// Omitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive
     /// after the message starts streaming.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -270,19 +270,19 @@ pub struct SessionMessage {
     /// On an outgoing view, the `messageId` of the same message's incoming view in the
     /// recipient's transcript.
     ///
-    /// Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+    /// Omitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive
     /// after the message starts streaming.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub recipient_message_id: MaybeUndefined<MessageId>,
-    /// Omitted leaves content unchanged; `null` or `[]` clears it.
+    /// Omitted leaves content unchanged. `null` or `[]` clears it.
     /// A non-empty array replaces all content.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
-    /// Omitted leaves metadata unchanged; `null` removes it.
+    /// Omitted leaves metadata unchanged. `null` removes it.
     ///
     /// Implementations MUST NOT make assumptions about values in `_meta`.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
@@ -940,18 +940,18 @@ impl CompactionSummaryChunk {
 /// before any live child traffic or live message naming the child as sender
 /// or recipient. Parents may message and reuse an announced child across
 /// multiple operations.
-/// Child events are delivered automatically on the same connection; no child
+/// Child events are delivered automatically on the same connection. No child
 /// load, resume, or subscription is needed.
 ///
 /// Only the subagent session ID is required. Omitted patch fields keep their
-/// previous values; `null` clears them. Clearing capabilities disables child
+/// previous values. `null` clears them. Clearing capabilities disables child
 /// mutations. Clearing state leaves current activity unset/unconfirmed: it does
 /// not imply idle, stop work, or create an `unknown` state snapshot. A concrete
 /// state replaces the entire previous state object, not the session.
 /// The title and description provide the parent's display metadata for the
 /// child. They do not replace the content of individual messages or operations.
-/// `cwd` and `additionalDirectories` report where the Agent placed the child;
-/// while unset, each inherits the immediate parent's effective value.
+/// `cwd` and `additionalDirectories` report where the Agent placed the child.
+/// While unset, each inherits the immediate parent's effective value.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -964,7 +964,7 @@ pub struct SubagentUpdate {
     pub session_id: SessionId,
     /// The parent's human-readable display title for this child. It need not be unique.
     ///
-    /// Omitted means unchanged; `null` clears it. If unset, the Client chooses
+    /// Omitted means unchanged. `null` clears it. If unset, the Client chooses
     /// a fallback presentation.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -972,7 +972,7 @@ pub struct SubagentUpdate {
     pub title: MaybeUndefined<String>,
     /// The parent's human-readable description of the child's role or purpose.
     ///
-    /// Omitted means unchanged; `null` clears it. If unset, the Client chooses
+    /// Omitted means unchanged. `null` clears it. If unset, the Client chooses
     /// a fallback presentation. This is current display metadata, not the
     /// history of instructions sent to the child.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
@@ -981,7 +981,7 @@ pub struct SubagentUpdate {
     pub description: MaybeUndefined<String>,
     /// Client-initiated session mutations permitted for this subagent session.
     ///
-    /// Omitted means unchanged; `null` clears the capability set and disables
+    /// Omitted means unchanged. `null` clears the capability set and disables
     /// child mutations. If never supplied, no session mutations are permitted.
     /// Read-only operations retain their normal protocol semantics and capability
     /// requirements. A concrete object replaces the whole capability set.
@@ -991,7 +991,7 @@ pub struct SubagentUpdate {
     pub capabilities: MaybeUndefined<SubagentSessionCapabilities>,
     /// Current state snapshot for the child session.
     ///
-    /// Omitted means unchanged; `null` clears the current activity without
+    /// Omitted means unchanged. `null` clears the current activity without
     /// asserting idle or sending an `unknown` snapshot. A concrete state
     /// replaces the previous state object wholesale. If never supplied, the
     /// current activity is unset/unconfirmed.
@@ -1001,7 +1001,7 @@ pub struct SubagentUpdate {
     pub state: MaybeUndefined<StateUpdate>,
     /// The child's working directory. Must be an absolute path.
     ///
-    /// Optional and nullable. Omitted means unchanged; `null` clears the
+    /// Optional and nullable. Omitted means unchanged. `null` clears the
     /// reported value. While unset, the child inherits its immediate parent's
     /// effective working directory. Clients use this value for the child's
     /// root set and as the default terminal working directory.
@@ -1009,10 +1009,10 @@ pub struct SubagentUpdate {
     pub cwd: MaybeUndefined<PathBuf>,
     /// Additional workspace roots for the child. Each path must be absolute.
     ///
-    /// Optional and nullable. Omitted means unchanged; `null` clears the
+    /// Optional and nullable. Omitted means unchanged. `null` clears the
     /// reported value. While unset, the child inherits its immediate parent's
     /// effective additional directories, independently of `cwd`. A concrete
-    /// array replaces the whole list; `[]` reports no additional directories.
+    /// array replaces the whole list. `[]` reports no additional directories.
     /// Clients use these values for the child's root set.
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub additional_directories: MaybeUndefined<Vec<PathBuf>>,
@@ -1021,7 +1021,7 @@ pub struct SubagentUpdate {
     /// these keys.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
-    /// Omitted means unchanged; `null` removes the metadata.
+    /// Omitted means unchanged. `null` removes the metadata.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(
@@ -1117,7 +1117,7 @@ impl SubagentUpdate {
 ///
 /// Client-initiated session mutations permitted for a specific subagent session.
 ///
-/// A mutation requires an explicit per-child capability; support for the method
+/// A mutation requires an explicit per-child capability. Support for the method
 /// on ordinary sessions does not grant support on a child.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
@@ -1128,7 +1128,7 @@ impl SubagentUpdate {
 #[non_exhaustive]
 pub struct SubagentSessionCapabilities {
     /// Permits the client to cancel this child's current work without ending
-    /// the session. Omitted or `null` means unsupported; an object (including
+    /// the session. Omitted or `null` means unsupported. An object (including
     /// `{}`) means supported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -1146,7 +1146,7 @@ pub struct SubagentSessionCapabilities {
 
 #[cfg(feature = "unstable_subagents")]
 impl SubagentSessionCapabilities {
-    /// Builds an empty capability set; cancellation is disabled.
+    /// Builds an empty capability set. Cancellation is disabled.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1175,7 +1175,7 @@ impl SubagentSessionCapabilities {
 ///
 /// Capability to cancel work in a subagent session without ending that session.
 ///
-/// Supplying `{}` advertises support; an omitted or `null` `cancel` does not.
+/// Supplying `{}` advertises support. An omitted or `null` `cancel` does not.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -1221,8 +1221,8 @@ impl SessionCancelCapabilities {
 ///
 /// Current foreground-work state of a reusable child session.
 ///
-/// Each update is a whole-object snapshot. Idle does not terminate the child;
-/// the parent can message it again, transitioning it back to running.
+/// Each update is a whole-object snapshot. Idle does not terminate the child.
+/// The parent can message it again, transitioning it back to running.
 /// Background activity may still emit other session updates while idle.
 #[cfg(feature = "unstable_subagents")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1259,7 +1259,7 @@ pub enum StateUpdate {
 pub struct RunningStateUpdate {
     /// The _meta property is reserved by ACP for additional metadata.
     /// Implementations MUST NOT make assumptions about values at these keys.
-    /// Optional; omitted and `null` mean no metadata for this state snapshot.
+    /// Optional. Omitted and `null` mean no metadata for this state snapshot.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, rename = "_meta")]
@@ -1299,7 +1299,7 @@ pub struct IdleStateUpdate {
     pub stop_reason: Option<IdleStopReason>,
     /// **UNSTABLE** Token usage for completed foreground work.
     ///
-    /// Optional; omitted or `null` means not reported.
+    /// Optional. Omitted or `null` means not reported.
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -1307,7 +1307,7 @@ pub struct IdleStateUpdate {
     pub usage: Option<Box<Usage>>,
     /// The _meta property is reserved by ACP for additional metadata.
     /// Implementations MUST NOT make assumptions about values at these keys.
-    /// Optional; omitted and `null` mean no metadata for this state snapshot.
+    /// Optional. Omitted and `null` mean no metadata for this state snapshot.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, rename = "_meta")]
@@ -1348,7 +1348,7 @@ impl IdleStateUpdate {
 /// Makes the schema check stop reasons and keeps their default-on-error hint.
 ///
 /// Flattening `Option<IdleStopReason>` adds an empty `{}` branch to the `anyOf`. It
-/// matches any value, so the stop reason branches would check nothing; this
+/// matches any value, so the stop reason branches would check nothing. This
 /// replaces it with a branch for an omitted or `null` `stopReason`. Flattening
 /// also removes the `stopReason` property that carried
 /// `x-deserialize-default-on-error`, which SDKs generated from the schema rely on
@@ -1459,7 +1459,7 @@ pub struct ErrorStopReason {
 
 #[cfg(feature = "unstable_subagents")]
 impl ErrorStopReason {
-    /// Builds [`ErrorStopReason`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ErrorStopReason`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1579,7 +1579,7 @@ fn other_stop_reason_schema(schema: &mut Schema) {
 pub struct RequiresActionStateUpdate {
     /// The _meta property is reserved by ACP for additional metadata.
     /// Implementations MUST NOT make assumptions about values at these keys.
-    /// Optional; omitted and `null` mean no metadata for this state snapshot.
+    /// Optional. Omitted and `null` mean no metadata for this state snapshot.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, rename = "_meta")]
@@ -1614,7 +1614,7 @@ impl RequiresActionStateUpdate {
 /// snapshot normally.
 ///
 /// This is not a task outcome or session closure. It does not cancel work, resolve
-/// pending requests, or revoke capabilities; capabilities are updated separately.
+/// pending requests, or revoke capabilities. Capabilities are updated separately.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -1625,7 +1625,7 @@ impl RequiresActionStateUpdate {
 pub struct UnknownStateUpdate {
     /// The _meta property is reserved by ACP for additional metadata.
     /// Implementations MUST NOT make assumptions about values at these keys.
-    /// Optional; omitted and `null` mean no metadata for this state snapshot.
+    /// Optional. Omitted and `null` mean no metadata for this state snapshot.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, rename = "_meta")]
@@ -1747,7 +1747,7 @@ pub struct CurrentModeUpdate {
 }
 
 impl CurrentModeUpdate {
-    /// Builds [`CurrentModeUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`CurrentModeUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(current_mode_id: impl Into<SessionModeId>) -> Self {
         Self {
@@ -1793,7 +1793,7 @@ pub struct ConfigOptionUpdate {
 }
 
 impl ConfigOptionUpdate {
-    /// Builds [`ConfigOptionUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ConfigOptionUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(config_options: Vec<SessionConfigOption>) -> Self {
         Self {
@@ -1817,7 +1817,7 @@ impl ConfigOptionUpdate {
 /// Update to session metadata. All fields are optional to support partial updates.
 ///
 /// Agents send this notification to update session information like title or custom metadata.
-/// This allows clients to display dynamic session names and track session state changes.
+/// Clients can use it to keep session titles and state current.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1848,7 +1848,7 @@ pub struct SessionInfoUpdate {
 }
 
 impl SessionInfoUpdate {
-    /// Builds [`SessionInfoUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionInfoUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1910,7 +1910,7 @@ pub struct UsageUpdate {
 }
 
 impl UsageUpdate {
-    /// Builds [`UsageUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`UsageUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(used: u64, size: u64) -> Self {
         Self {
@@ -1966,7 +1966,7 @@ pub struct Cost {
 }
 
 impl Cost {
-    /// Builds [`Cost`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Cost`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(amount: f64, currency: impl Into<String>) -> Self {
         Self {
@@ -2019,7 +2019,7 @@ pub struct ContentChunk {
 }
 
 impl ContentChunk {
-    /// Builds [`ContentChunk`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ContentChunk`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(content: ContentBlock) -> Self {
         Self {
@@ -2098,7 +2098,7 @@ pub struct AvailableCommandsUpdate {
 }
 
 impl AvailableCommandsUpdate {
-    /// Builds [`AvailableCommandsUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AvailableCommandsUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(available_commands: Vec<AvailableCommand>) -> Self {
         Self {
@@ -2149,7 +2149,7 @@ pub struct AvailableCommand {
 }
 
 impl AvailableCommand {
-    /// Builds [`AvailableCommand`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AvailableCommand`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
         Self {
@@ -2212,7 +2212,7 @@ pub struct UnstructuredCommandInput {
 }
 
 impl UnstructuredCommandInput {
-    /// Builds [`UnstructuredCommandInput`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`UnstructuredCommandInput`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(hint: impl Into<String>) -> Self {
         Self {
@@ -2267,7 +2267,7 @@ pub struct RequestPermissionRequest {
 }
 
 impl RequestPermissionRequest {
-    /// Builds [`RequestPermissionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`RequestPermissionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -2321,7 +2321,7 @@ pub struct PermissionOption {
 }
 
 impl PermissionOption {
-    /// Builds [`PermissionOption`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PermissionOption`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         option_id: impl Into<PermissionOptionId>,
@@ -2407,7 +2407,7 @@ pub struct RequestPermissionResponse {
 }
 
 impl RequestPermissionResponse {
-    /// Builds [`RequestPermissionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`RequestPermissionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(outcome: RequestPermissionOutcome) -> Self {
         Self {
@@ -2471,7 +2471,7 @@ pub struct SelectedPermissionOutcome {
 }
 
 impl SelectedPermissionOutcome {
-    /// Builds [`SelectedPermissionOutcome`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SelectedPermissionOutcome`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(option_id: impl Into<PermissionOptionId>) -> Self {
         Self {
@@ -2524,7 +2524,7 @@ pub struct WriteTextFileRequest {
 }
 
 impl WriteTextFileRequest {
-    /// Builds [`WriteTextFileRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`WriteTextFileRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -2575,7 +2575,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl WriteTextFileResponse {
-    /// Builds [`WriteTextFileResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`WriteTextFileResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -2629,7 +2629,7 @@ pub struct ReadTextFileRequest {
 }
 
 impl ReadTextFileRequest {
-    /// Builds [`ReadTextFileRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ReadTextFileRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, path: impl Into<PathBuf>) -> Self {
         Self {
@@ -2691,7 +2691,7 @@ pub struct ReadTextFileResponse {
 }
 
 impl ReadTextFileResponse {
-    /// Builds [`ReadTextFileResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ReadTextFileResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(content: impl Into<String>) -> Self {
         Self {
@@ -2779,7 +2779,7 @@ pub struct CreateTerminalRequest {
 }
 
 impl CreateTerminalRequest {
-    /// Builds [`CreateTerminalRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`CreateTerminalRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, command: impl Into<String>) -> Self {
         Self {
@@ -2864,7 +2864,7 @@ pub struct CreateTerminalResponse {
 }
 
 impl CreateTerminalResponse {
-    /// Builds [`CreateTerminalResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`CreateTerminalResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -2911,7 +2911,7 @@ pub struct TerminalOutputRequest {
 }
 
 impl TerminalOutputRequest {
-    /// Builds [`TerminalOutputRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`TerminalOutputRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -2964,7 +2964,7 @@ pub struct TerminalOutputResponse {
 }
 
 impl TerminalOutputResponse {
-    /// Builds [`TerminalOutputResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`TerminalOutputResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(output: impl Into<String>, truncated: bool) -> Self {
         Self {
@@ -3020,7 +3020,7 @@ pub struct ReleaseTerminalRequest {
 }
 
 impl ReleaseTerminalRequest {
-    /// Builds [`ReleaseTerminalRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ReleaseTerminalRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -3066,7 +3066,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl ReleaseTerminalResponse {
-    /// Builds [`ReleaseTerminalResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ReleaseTerminalResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3110,7 +3110,7 @@ pub struct KillTerminalRequest {
 }
 
 impl KillTerminalRequest {
-    /// Builds [`KillTerminalRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`KillTerminalRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -3156,7 +3156,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl KillTerminalResponse {
-    /// Builds [`KillTerminalResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`KillTerminalResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3200,7 +3200,7 @@ pub struct WaitForTerminalExitRequest {
 }
 
 impl WaitForTerminalExitRequest {
-    /// Builds [`WaitForTerminalExitRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`WaitForTerminalExitRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
         Self {
@@ -3249,7 +3249,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl WaitForTerminalExitResponse {
-    /// Builds [`WaitForTerminalExitResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`WaitForTerminalExitResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(exit_status: TerminalExitStatus) -> Self {
         Self {
@@ -3301,7 +3301,7 @@ pub struct TerminalExitStatus {
 }
 
 impl TerminalExitStatus {
-    /// Builds [`TerminalExitStatus`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`TerminalExitStatus`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3424,7 +3424,7 @@ pub struct ClientCapabilities {
 }
 
 impl ClientCapabilities {
-    /// Builds an empty [`ClientCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ClientCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3562,7 +3562,7 @@ impl SubagentCapabilities {
 #[non_exhaustive]
 pub struct ClientSessionCapabilities {
     /// Support for ID-addressed context compaction updates. Omitted or `null`
-    /// means unsupported; `{}` advertises the complete compaction contract.
+    /// means unsupported. `{}` advertises the complete compaction contract.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3596,7 +3596,7 @@ pub struct ClientSessionCapabilities {
 }
 
 impl ClientSessionCapabilities {
-    /// Builds an empty [`ClientSessionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ClientSessionCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3702,7 +3702,7 @@ pub struct SessionConfigOptionsCapabilities {
 }
 
 impl SessionConfigOptionsCapabilities {
-    /// Builds an empty [`SessionConfigOptionsCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionConfigOptionsCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3754,7 +3754,7 @@ pub struct BooleanConfigOptionCapabilities {
 }
 
 impl BooleanConfigOptionCapabilities {
-    /// Builds an empty [`BooleanConfigOptionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`BooleanConfigOptionCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3806,7 +3806,7 @@ pub struct AuthCapabilities {
 }
 
 impl AuthCapabilities {
-    /// Builds an empty [`AuthCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`AuthCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3869,7 +3869,7 @@ pub struct FileSystemCapabilities {
 }
 
 impl FileSystemCapabilities {
-    /// Builds an empty [`FileSystemCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`FileSystemCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

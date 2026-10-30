@@ -5,7 +5,7 @@ description: "Client filesystem access methods"
 
 The filesystem methods allow Agents to read and write text files within the Client's environment. These methods enable Agents to access unsaved editor state and allow Clients to track file modifications made during agent execution.
 
-## Checking Support
+## Checking support
 
 Before attempting to use filesystem methods, Agents **MUST** verify that the Client supports these capabilities by checking the [Client Capabilities](/protocol/v1/initialization#client-capabilities) field in the Client's `initialize` request:
 
@@ -28,7 +28,7 @@ Before attempting to use filesystem methods, Agents **MUST** verify that the Cli
 
 If `readTextFile` or `writeTextFile` is `false` or not present, the Agent **MUST NOT** attempt to call the corresponding filesystem method.
 
-## Reading Files
+## Reading files
 
 The `fs/read_text_file` method allows Agents to read text file contents from the Client's filesystem, including unsaved changes in the editor.
 
@@ -75,7 +75,7 @@ The Client responds with the file contents:
 }
 ```
 
-## Writing Files
+## Writing files
 
 The `fs/write_text_file` method allows Agents to write or update text files in the Client's filesystem.
 

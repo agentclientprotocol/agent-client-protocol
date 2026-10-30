@@ -1,7 +1,7 @@
-//! Execution plans for complex tasks that require multiple steps.
+//! Execution plans for multi-step tasks.
 //!
-//! Plans are strategies that agents share with clients through session updates,
-//! providing real-time visibility into their thinking and progress.
+//! A plan is the agent's list of steps for a task. Agents send plans to clients
+//! through session updates and update them as work progresses.
 //!
 //! See: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
 
@@ -55,7 +55,7 @@ pub struct PlanUpdate {
 }
 
 impl PlanUpdate {
-    /// Builds [`PlanUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan: PlanUpdateContent) -> Self {
         Self { plan, meta: None }
@@ -255,7 +255,7 @@ pub struct PlanItems {
 }
 
 impl PlanItems {
-    /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanItems`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -309,7 +309,7 @@ pub struct PlanFile {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanFile {
-    /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanFile`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
@@ -362,7 +362,7 @@ pub struct PlanMarkdown {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
-    /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanMarkdown`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
@@ -413,7 +413,7 @@ pub struct PlanRemoved {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
-    /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanRemoved`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>) -> Self {
         Self {
@@ -466,7 +466,7 @@ pub struct PlanEntry {
 }
 
 impl PlanEntry {
-    /// Builds [`PlanEntry`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanEntry`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         content: impl Into<String>,

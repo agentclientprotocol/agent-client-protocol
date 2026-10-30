@@ -3,19 +3,19 @@ title: "Agent Plan"
 description: "How Agents communicate their execution plans"
 ---
 
-Plans are execution strategies for complex tasks that require multiple steps.
+A plan is the Agent's list of steps for a multi-step task. Each entry has a description, a priority, and a status.
 
-Agents may share plans with Clients through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
+Agents may send plans to Clients through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications and update them as work progresses.
 
 `plan_update` carries a `plan` object with a `type` discriminator, and every plan format includes a required `planId` so Clients can track multiple plans independently.
 
 The stable plan content type is `items`. The draft unstable schema also includes additional plan operations while the Plan Operations RFD is in progress.
 
-## Creating Plans
+## Creating plans
 
 When the language model creates an execution plan, the Agent **SHOULD** report it to the Client with `plan_update`.
 
-### Item-Based Plans
+### Item-based plans
 
 ```json
 {
@@ -64,7 +64,7 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
   accomplished.
 </ParamField>
 
-## Unstable Plan Operations
+## Unstable plan operations
 
 The draft unstable schema includes markdown plans, file-backed plans, and explicit plan removal. These operations are not part of the stable schema yet.
 
@@ -76,7 +76,7 @@ and unfamiliar removal updates through the unknown session-update fallback.
 Agents cannot assume that these plans will be rendered. See [Experimental
 Features and Negotiation](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
 
-### Markdown Plans
+### Markdown plans
 
 ```json
 {
@@ -96,7 +96,7 @@ Features and Negotiation](/protocol/v2/draft/extensibility#experimental-features
 }
 ```
 
-### File Plans
+### File plans
 
 ```json
 {
@@ -118,7 +118,7 @@ Features and Negotiation](/protocol/v2/draft/extensibility#experimental-features
 
 Plan file URIs **MUST** be absolute.
 
-## Removing Plans
+## Removing plans
 
 Agents can remove a plan by sending `plan_removed` with the plan ID:
 
@@ -140,11 +140,11 @@ Clients without unstable plan operations may not act on `plan_removed`. To clear
 
 ## Extensibility
 
-`plan.type` values can be custom or future variants when Clients can preserve or display them generically. Custom plan content types **MUST** begin with `_`; unknown non-underscore plan content types are reserved for future ACP variants.
+`plan.type` values can be custom or future variants when Clients can preserve or display them generically. Custom plan content types **MUST** begin with `_`. Unknown non-underscore plan content types are reserved for future ACP variants.
 
 Every plan content variant, including custom or future variants, **MUST** carry a `planId`.
 
-## Plan Entries
+## Plan entries
 
 Each plan entry represents a specific task or goal within the overall execution strategy:
 
@@ -159,7 +159,7 @@ Each plan entry represents a specific task or goal within the overall execution 
 - `medium`
 - `low`
 
-Custom or future priority values can be used for display hints. Custom priorities **MUST** begin with `_`; unknown non-underscore priorities are reserved for future ACP variants.
+Custom or future priority values can be used for display hints. Custom priorities **MUST** begin with `_`. Unknown non-underscore priorities are reserved for future ACP variants.
 
 </ParamField>
 
@@ -171,11 +171,11 @@ Custom or future priority values can be used for display hints. Custom prioritie
 - `completed`
 - `cancelled`
 
-Custom or future status values can be used when Clients can preserve or display a generic plan-entry state. Custom statuses **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+Custom or future status values can be used when Clients can preserve or display a generic plan-entry state. Custom statuses **MUST** begin with `_`. Unknown non-underscore statuses are reserved for future ACP variants.
 
 </ParamField>
 
-## Updating Plans
+## Updating plans
 
 As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same `sessionUpdate: "plan_update"` structure and `planId`.
 
@@ -183,6 +183,6 @@ Each `plan_update` replaces the whole plan with that `planId`, whatever its `typ
 
 For item-based plans, the Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current contents of that plan completely. An empty `entries` array empties the plan. Clients **MAY** hide an empty plan.
 
-### Dynamic Planning
+### Dynamic planning
 
-Plans can evolve during execution. The Agent **MAY** add, remove, or modify plan entries as it discovers new requirements or completes tasks, allowing it to adapt based on what it learns.
+Plans can change during execution. The Agent **MAY** add, remove, or modify plan entries as it discovers new requirements or completes tasks.

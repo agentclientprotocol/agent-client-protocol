@@ -226,7 +226,7 @@ pub struct TerminalUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub size: MaybeUndefined<TerminalSize>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
     /// stored value without merging nested objects. Beyond this patch rule, implementations
@@ -295,7 +295,7 @@ impl TerminalUpdate {
 
     /// Patches, clears, or leaves unchanged terminal metadata.
     ///
-    /// A concrete object patches stored metadata by top-level key; see
+    /// A concrete object patches stored metadata by top-level key. See
     /// [`apply_meta_update`].
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {

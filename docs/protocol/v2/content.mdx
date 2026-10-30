@@ -3,7 +3,7 @@ title: "Content"
 description: "Understanding content blocks in the Agent Client Protocol"
 ---
 
-Content blocks represent displayable information that flows through the Agent Client Protocol. They provide a structured way to handle various types of user-facing content—whether it's text from language models, images for analysis, or embedded resources for context.
+A content block is one piece of user-facing content: text, an image, audio, a link to a resource, or an embedded resource.
 
 Content blocks appear in:
 
@@ -11,7 +11,7 @@ Content blocks appear in:
 - Language model output reported through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications as message updates or streamed chunks
 - Progress updates and results from [tool calls](/protocol/v2/tool-calls), including streamed tool-call content chunks
 
-## Content Types
+## Content types
 
 Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) and [URIs and Remote Resources](/protocol/v2/security#uris-and-remote-resources).
 
@@ -25,7 +25,7 @@ When displaying Agent output, Clients **SHOULD** show text content. For image, a
 
 `annotations` are hints with [MCP semantics](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations). In `audience`, `user` means the person using the Client and `assistant` means the Agent's model. `priority` ranges from 0 (least important) to 1 (most important). Clients **MAY** collapse or hide content whose `audience` doesn't include `user`, which is an exception to the display rule above.
 
-### Text Content
+### Text content
 
 Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) for raw HTML.
 
@@ -47,7 +47,7 @@ All Agents **MUST** support text content blocks when included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Image Content <Icon icon="asterisk" size="14" />
+### Image content <Icon icon="asterisk" size="14" />
 
 Images can be included for visual context or analysis.
 
@@ -80,7 +80,7 @@ included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Audio Content <Icon icon="asterisk" size="14" />
+### Audio content <Icon icon="asterisk" size="14" />
 
 Audio data for transcription or analysis.
 
@@ -109,7 +109,7 @@ included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Embedded Resource <Icon icon="asterisk" size="14" />
+### Embedded resource <Icon icon="asterisk" size="14" />
 
 Complete resource contents embedded directly in the message.
 
@@ -171,7 +171,7 @@ included in prompts.
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
 
-### Resource Link
+### Resource link
 
 References to resources that the receiver may be able to read.
 

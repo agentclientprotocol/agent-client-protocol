@@ -9,8 +9,8 @@ The Agent Client Protocol allows [Agents](#agent) and [Clients](#client) to comm
 
 The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification with two types of messages:
 
-- **Methods**: Request-response pairs that expect a result or error
-- **Notifications**: One-way messages that don't expect a response
+- Methods are request-response pairs that expect a result or error.
+- Notifications are one-way messages that don't expect a response.
 
 Unlike base JSON-RPC, request IDs **MUST** be a string or an integer, never
 `null`. An error response has `id: null` only when the request ID could not be
@@ -20,7 +20,7 @@ Both sides send requests, and each side chooses IDs for its own requests indepen
 
 Unlike base JSON-RPC, ACP does not use batches. See [Transports](/protocol/v2/transports#no-batches).
 
-## Message Flow
+## Message flow
 
 A typical flow follows this pattern:
 
@@ -28,7 +28,7 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client: completes an advertised authentication flow if required; for example,
+- Client: completes an advertised authentication flow if required. For example,
   `auth/login` for an Agent-handled method or launch and reconnect for a
   terminal method
 
@@ -55,9 +55,9 @@ A typical flow follows this pattern:
 
 Agents are programs that use generative AI to autonomously modify code. They typically run as subprocesses of the Client.
 
-### Baseline Methods
+### Baseline methods
 
-Some baseline methods belong to optional surfaces. An Agent that returns a non-empty `authMethods` list **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method. The `session/*` methods require `capabilities.session`.
+Some baseline methods are optional as a group. An Agent that returns a non-empty `authMethods` list **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method. The `session/*` methods require `capabilities.session`.
 
 <ResponseField
   name="initialize"
@@ -119,7 +119,7 @@ Some baseline methods belong to optional surfaces. An Agent that returns a non-e
   [Close an active session](/protocol/v2/session-setup#closing-active-sessions).
 </ResponseField>
 
-### Optional Methods
+### Optional methods
 
 <ResponseField
   name="session/set_config_option"
@@ -152,7 +152,7 @@ Some baseline methods belong to optional surfaces. An Agent that returns a non-e
 
 Clients provide the interface between users and agents. They are typically code editors (IDEs, text editors) but can also be other UIs for interacting with agents. Clients manage the environment, handle user interactions, and control access to resources.
 
-### Baseline Methods
+### Baseline methods
 
 <ResponseField
   name="session/request_permission"
@@ -162,7 +162,7 @@ Clients provide the interface between users and agents. They are typically code 
   for operations such as tool calls and commands.
 </ResponseField>
 
-### Optional Methods
+### Optional methods
 
 <ResponseField
   name="elicitation/create"
@@ -198,7 +198,7 @@ Clients provide the interface between users and agents. They are typically code 
   [user-facing notices](/protocol/v2/prompt-lifecycle#session-notices).
 </ResponseField>
 
-## Request Cancellation
+## Request cancellation
 
 Either side can send [`$/cancel_request`](/protocol/v2/cancellation) to cancel a request it sent (no response expected).
 
@@ -207,7 +207,7 @@ Either side can send [`$/cancel_request`](/protocol/v2/cancellation) to cancel a
 - All file paths in the protocol **MUST** be absolute, in the native syntax of the machine the Agent runs on (for example `/home/user/project`, `C:\Users\user\project`, or `\\server\share\project`), and are not URIs.
 - Line numbers are 1-based
 
-## Error Handling
+## Error handling
 
 All methods follow standard JSON-RPC 2.0 [error handling](https://www.jsonrpc.org/specification#error_object):
 
@@ -227,19 +227,19 @@ Selected enum-like fields and tagged unions can define custom or future fallback
 
 ## Extensibility
 
-The protocol provides built-in mechanisms for adding custom functionality while maintaining compatibility:
+Implementations can extend the protocol without breaking compatibility:
 
 - Add custom data using `_meta` fields
 - Create custom methods by prefixing their name with underscore (`_`)
 - Advertise custom capabilities during initialization
 
-Learn about [protocol extensibility](/protocol/v2/extensibility) to understand how to use these mechanisms.
+See [Extensibility](/protocol/v2/extensibility) for details.
 
-## Next Steps
+## Next steps
 
-- Read the [Security Considerations](/protocol/v2/security) before shipping an Agent or Client
-- Learn about [Initialization](/protocol/v2/initialization) to understand version and capability negotiation
-- Understand [Session Setup](/protocol/v2/session-setup) for creating, resuming, and closing sessions
-- Review the [Prompt Lifecycle](/protocol/v2/prompt-lifecycle)
-- Explore [Extensibility](/protocol/v2/extensibility) to add custom features
-- Check your agent implementation with the [Test Compatibility Kit](/libraries/testing)
+- [Security Considerations](/protocol/v2/security) covers the trust model. Read it before shipping an Agent or Client.
+- [Initialization](/protocol/v2/initialization) covers version and capability negotiation.
+- [Session Setup](/protocol/v2/session-setup) covers creating, resuming, and closing sessions.
+- [Prompt Lifecycle](/protocol/v2/prompt-lifecycle) covers how prompts run and how Agents report progress.
+- [Extensibility](/protocol/v2/extensibility) covers custom data, methods, and capabilities.
+- The [Test Compatibility Kit](/libraries/testing) checks an Agent implementation against the protocol.

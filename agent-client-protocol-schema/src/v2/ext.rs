@@ -9,7 +9,7 @@ use crate::MaybeUndefined;
 /// Value attached to a given ACP type on the `_meta` field.
 ///
 /// The _meta property is reserved by ACP to allow clients and agents to attach
-/// additional metadata to their interactions. It is an object with string keys; receivers treat
+/// additional metadata to their interactions. It is an object with string keys. Receivers treat
 /// any other value as omitted. Implementations MUST NOT assign meaning to keys they do not
 /// recognize.
 ///
@@ -75,7 +75,7 @@ pub struct ExtRequest {
 }
 
 impl ExtRequest {
-    /// Builds [`ExtRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ExtRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {
@@ -99,7 +99,7 @@ pub struct ExtResponse(
 );
 
 impl ExtResponse {
-    /// Builds [`ExtResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ExtResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(params: Arc<RawValue>) -> Self {
         Self(params)
@@ -127,7 +127,7 @@ pub struct ExtNotification {
 }
 
 impl ExtNotification {
-    /// Builds [`ExtNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`ExtNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {

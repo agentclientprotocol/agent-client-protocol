@@ -3,7 +3,7 @@ title: "Security Considerations"
 description: "Trust model and security guidance for Agents and Clients"
 ---
 
-This page describes ACP's trust model and security guidance that spans features. Guidance for a single feature is on that feature's page; see [Feature Guidance](#feature-guidance).
+This page describes ACP's trust model and security guidance that spans features. Guidance for a single feature is on that feature's page. See [Feature Guidance](#feature-guidance).
 
 ## Trust Model
 
@@ -14,7 +14,7 @@ This page describes ACP's trust model and security guidance that spans features.
 
 Out of scope: a malicious Agent binary, detecting prompt injection, and operating-system sandboxing.
 
-## Rendering Agent Content
+## Rendering Agent content
 
 This applies to all Agent-authored display text, including messages, thoughts, tool calls, plans, commands, config options, notices, session titles, authentication methods, permission requests, and elicitations.
 
@@ -27,7 +27,7 @@ This applies to all Agent-authored display text, including messages, thoughts, t
 - Clients **SHOULD** keep Agent [slash commands](/protocol/v2/slash-commands) distinguishable from their own commands.
 - Clients **MAY** bound or throttle permission requests, elicitations, and output.
 
-## URIs and Remote Resources
+## URIs and remote resources
 
 This applies to `uri` on images, resource links, and embedded resources, to icon `src`, and to URLs in Markdown.
 
@@ -43,7 +43,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 - Implementations **SHOULD NOT** put credentials in `_meta`, including `traceparent`, `tracestate`, and `baggage`. [Preserving unknown values](/protocol/v2/extensibility#enum-and-tagged-union-variants) does not require storing or replaying credentials.
 - Session, message, tool-call, and terminal IDs are not credentials.
 
-## Prompt Injection
+## Prompt injection
 
 - Agents **SHOULD** treat embedded resources, files, tool results, and MCP results as data, not as user instructions.
 - Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
@@ -60,7 +60,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 
 [Custom transports](/protocol/v2/transports#custom-transports) **SHOULD** document their security considerations, including how peers authenticate.
 
-## Feature Guidance
+## Feature guidance
 
 - [Workspace roots](/protocol/v2/session-setup#workspace-root-security)
 - [Terminal authentication](/protocol/v2/authentication#launch-safety)
@@ -69,6 +69,6 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 - [Display-only terminals](/protocol/v2/tool-calls#display-only-terminals) and [diffs](/protocol/v2/tool-calls#diffs)
 - [Elicitation](/protocol/v2/elicitation#user-interaction-requirements) and [URL security](/protocol/v2/elicitation#url-security)
 
-## Residual Risk
+## Residual risk
 
 A user can approve a harmful operation, prompt injection can steer operations the user allowed, and an Agent can act without asking.

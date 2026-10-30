@@ -1,7 +1,7 @@
 //! Tool calls represent actions that language models request agents to perform.
 //!
-//! When an LLM determines it needs to interact with external systems—like reading files,
-//! running code, or fetching data—it generates tool calls that the agent executes on its behalf.
+//! Examples include reading a file or running a command. The agent executes the tool call on
+//! the model's behalf and reports its progress to the client.
 //!
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
 use std::{collections::BTreeMap, sync::Arc};
@@ -95,7 +95,7 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub raw_output: MaybeUndefined<serde_json::Value>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
     /// stored value without merging nested objects. Beyond this patch rule, implementations
@@ -113,7 +113,7 @@ pub struct ToolCallUpdate {
 }
 
 impl ToolCallUpdate {
-    /// Builds [`ToolCallUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ToolCallUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>) -> Self {
         Self {
@@ -190,7 +190,7 @@ impl ToolCallUpdate {
 
     /// Patches, clears, or leaves unchanged tool-call metadata.
     ///
-    /// A concrete object patches stored metadata by top-level key; see
+    /// A concrete object patches stored metadata by top-level key. See
     /// [`apply_meta_update`].
     #[must_use]
     pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
@@ -264,7 +264,7 @@ pub struct ToolCallContentChunk {
 }
 
 impl ToolCallContentChunk {
-    /// Builds [`ToolCallContentChunk`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ToolCallContentChunk`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(tool_call_id: impl Into<ToolCallId>, content: impl Into<ToolCallContent>) -> Self {
         Self {
@@ -521,7 +521,7 @@ pub struct Content {
 }
 
 impl Content {
-    /// Builds [`Content`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Content`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(content: impl Into<ContentBlock>) -> Self {
         Self {
@@ -757,7 +757,7 @@ pub struct DiffChange {
 }
 
 impl DiffChange {
-    /// Builds [`DiffChange`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`DiffChange`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(operation: DiffChangeOperation) -> Self {
         Self {
@@ -868,7 +868,7 @@ pub struct DiffPathChange {
 }
 
 impl DiffPathChange {
-    /// Builds [`DiffPathChange`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`DiffPathChange`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<AbsolutePath>) -> Self {
         Self { path: path.into() }
@@ -888,7 +888,7 @@ pub struct DiffPathPairChange {
 }
 
 impl DiffPathPairChange {
-    /// Builds [`DiffPathPairChange`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`DiffPathPairChange`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(old_path: impl Into<AbsolutePath>, path: impl Into<AbsolutePath>) -> Self {
         Self {
@@ -990,7 +990,7 @@ pub struct ToolCallLocation {
     /// The absolute file path being accessed or modified.
     pub path: AbsolutePath,
     /// Optional 1-based line number within the file. Omitted and `null` are equivalent and
-    /// mean no specific line; `0` is invalid.
+    /// mean no specific line. `0` is invalid.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1008,7 +1008,7 @@ pub struct ToolCallLocation {
 }
 
 impl ToolCallLocation {
-    /// Builds [`ToolCallLocation`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ToolCallLocation`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(path: impl Into<AbsolutePath>) -> Self {
         Self {

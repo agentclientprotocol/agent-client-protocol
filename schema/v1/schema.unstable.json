@@ -304,7 +304,7 @@
       "x-method": "fs/write_text_file"
     },
     "SessionId": {
-      "description": "A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v1/draft/session-setup#session-id)",
+      "description": "A unique identifier for a conversation session between a client and agent.\n\nEach session has its own context, conversation history, and state, so one\nagent can run several independent sessions.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v1/draft/session-setup#session-id)",
       "type": "string"
     },
     "ReadTextFileRequest": {
@@ -606,7 +606,7 @@
       }
     },
     "ContentBlock": {
-      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/draft/content)",
+      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output streamed through `session/update` notifications\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), so agents can\nforward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/draft/content)",
       "oneOf": [
         {
           "description": "Text content. May be plain text or formatted with Markdown.\n\nAll agents MUST support text content blocks in prompts.\nClients SHOULD render this text as Markdown.",
@@ -2949,7 +2949,7 @@
       "type": "string"
     },
     "AuthMethodTerminal": {
-      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success; any other termination signals failure.\nThe client MUST NOT pass this method to `authenticate`.",
+      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success. Any other termination signals failure.\nThe client MUST NOT pass this method to `authenticate`.",
       "type": "object",
       "properties": {
         "id": {
@@ -2965,7 +2965,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.",
+          "description": "Optional human-readable description of this authentication method.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3011,7 +3011,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.",
+          "description": "Optional human-readable description of this authentication method.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3029,11 +3029,11 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
+          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn't present.",
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
+          "description": "Intended for UI and end-user contexts, so it should be readable by people.\n\nIf not provided, the name should be used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -4961,7 +4961,7 @@
       "required": ["configOptions"]
     },
     "SessionInfoUpdate": {
-      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.",
+      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nClients can use it to keep session titles and state current.",
       "type": "object",
       "properties": {
         "title": {
@@ -5204,11 +5204,11 @@
       "required": ["compactionId", "content"]
     },
     "SubagentSessionCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability; support for the method\non ordinary sessions does not grant support on a child.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability. Support for the method\non ordinary sessions does not grant support on a child.",
       "type": "object",
       "properties": {
         "cancel": {
-          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted or `null` means unsupported; an object (including\n`{}`) means supported.",
+          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted or `null` means unsupported. An object (including\n`{}`) means supported.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCancelCapabilities"
@@ -5228,7 +5228,7 @@
       }
     },
     "SessionCancelCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability to cancel work in a subagent session without ending that session.\n\nSupplying `{}` advertises support; an omitted or `null` `cancel` does not.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability to cancel work in a subagent session without ending that session.\n\nSupplying `{}` advertises support. An omitted or `null` `cancel` does not.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -5240,7 +5240,7 @@
       }
     },
     "StateUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCurrent foreground-work state of a reusable child session.\n\nEach update is a whole-object snapshot. Idle does not terminate the child;\nthe parent can message it again, transitioning it back to running.\nBackground activity may still emit other session updates while idle.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCurrent foreground-work state of a reusable child session.\n\nEach update is a whole-object snapshot. Idle does not terminate the child.\nThe parent can message it again, transitioning it back to running.\nBackground activity may still emit other session updates while idle.",
       "anyOf": [
         {
           "description": "Foreground work is in progress.",
@@ -5370,7 +5370,7 @@
       "type": "object",
       "properties": {
         "_meta": {
-          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5400,7 +5400,7 @@
       "type": "object",
       "properties": {
         "usage": {
-          "description": "**UNSTABLE** Token usage for completed foreground work.\n\nOptional; omitted or `null` means not reported.",
+          "description": "**UNSTABLE** Token usage for completed foreground work.\n\nOptional. Omitted or `null` means not reported.",
           "anyOf": [
             {
               "$ref": "#/$defs/Usage"
@@ -5412,7 +5412,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5589,7 +5589,7 @@
       "type": "object",
       "properties": {
         "_meta": {
-          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5597,11 +5597,11 @@
       }
     },
     "UnknownStateUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe Agent cannot currently determine foreground activity.\n\nReport this when activity becomes unobservable, not merely because the child\nhas been quiet. The Client MUST stop presenting the previous state as confirmed\ncurrent activity, but may retain it as last known. A later state replaces this\nsnapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities; capabilities are updated separately.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe Agent cannot currently determine foreground activity.\n\nReport this when activity becomes unobservable, not merely because the child\nhas been quiet. The Client MUST stop presenting the previous state as confirmed\ncurrent activity, but may retain it as last known. A later state replaces this\nsnapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities. Capabilities are updated separately.",
       "type": "object",
       "properties": {
         "_meta": {
-          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional; omitted and `null` mean no metadata for this state snapshot.",
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5609,7 +5609,7 @@
       }
     },
     "SubagentUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live child traffic or live message naming the child as sender\nor recipient. Parents may message and reuse an announced child across\nmultiple operations.\nChild events are delivered automatically on the same connection; no child\nload, resume, or subscription is needed.\n\nOnly the subagent session ID is required. Omitted patch fields keep their\nprevious values; `null` clears them. Clearing capabilities disables child\nmutations. Clearing state leaves current activity unset/unconfirmed: it does\nnot imply idle, stop work, or create an `unknown` state snapshot. A concrete\nstate replaces the entire previous state object, not the session.\nThe title and description provide the parent's display metadata for the\nchild. They do not replace the content of individual messages or operations.\n`cwd` and `additionalDirectories` report where the Agent placed the child;\nwhile unset, each inherits the immediate parent's effective value.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live child traffic or live message naming the child as sender\nor recipient. Parents may message and reuse an announced child across\nmultiple operations.\nChild events are delivered automatically on the same connection. No child\nload, resume, or subscription is needed.\n\nOnly the subagent session ID is required. Omitted patch fields keep their\nprevious values. `null` clears them. Clearing capabilities disables child\nmutations. Clearing state leaves current activity unset/unconfirmed: it does\nnot imply idle, stop work, or create an `unknown` state snapshot. A concrete\nstate replaces the entire previous state object, not the session.\nThe title and description provide the parent's display metadata for the\nchild. They do not replace the content of individual messages or operations.\n`cwd` and `additionalDirectories` report where the Agent placed the child.\nWhile unset, each inherits the immediate parent's effective value.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -5621,17 +5621,17 @@
           ]
         },
         "title": {
-          "description": "The parent's human-readable display title for this child. It need not be unique.\n\nOmitted means unchanged; `null` clears it. If unset, the Client chooses\na fallback presentation.",
+          "description": "The parent's human-readable display title for this child. It need not be unique.\n\nOmitted means unchanged. `null` clears it. If unset, the Client chooses\na fallback presentation.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "The parent's human-readable description of the child's role or purpose.\n\nOmitted means unchanged; `null` clears it. If unset, the Client chooses\na fallback presentation. This is current display metadata, not the\nhistory of instructions sent to the child.",
+          "description": "The parent's human-readable description of the child's role or purpose.\n\nOmitted means unchanged. `null` clears it. If unset, the Client chooses\na fallback presentation. This is current display metadata, not the\nhistory of instructions sent to the child.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "capabilities": {
-          "description": "Client-initiated session mutations permitted for this subagent session.\n\nOmitted means unchanged; `null` clears the capability set and disables\nchild mutations. If never supplied, no session mutations are permitted.\nRead-only operations retain their normal protocol semantics and capability\nrequirements. A concrete object replaces the whole capability set.",
+          "description": "Client-initiated session mutations permitted for this subagent session.\n\nOmitted means unchanged. `null` clears the capability set and disables\nchild mutations. If never supplied, no session mutations are permitted.\nRead-only operations retain their normal protocol semantics and capability\nrequirements. A concrete object replaces the whole capability set.",
           "anyOf": [
             {
               "$ref": "#/$defs/SubagentSessionCapabilities"
@@ -5643,7 +5643,7 @@
           "x-deserialize-default-on-error": true
         },
         "state": {
-          "description": "Current state snapshot for the child session.\n\nOmitted means unchanged; `null` clears the current activity without\nasserting idle or sending an `unknown` snapshot. A concrete state\nreplaces the previous state object wholesale. If never supplied, the\ncurrent activity is unset/unconfirmed.",
+          "description": "Current state snapshot for the child session.\n\nOmitted means unchanged. `null` clears the current activity without\nasserting idle or sending an `unknown` snapshot. A concrete state\nreplaces the previous state object wholesale. If never supplied, the\ncurrent activity is unset/unconfirmed.",
           "anyOf": [
             {
               "$ref": "#/$defs/StateUpdate"
@@ -5655,18 +5655,18 @@
           "x-deserialize-default-on-error": true
         },
         "cwd": {
-          "description": "The child's working directory. Must be an absolute path.\n\nOptional and nullable. Omitted means unchanged; `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective working directory. Clients use this value for the child's\nroot set and as the default terminal working directory.",
+          "description": "The child's working directory. Must be an absolute path.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective working directory. Clients use this value for the child's\nroot set and as the default terminal working directory.",
           "type": ["string", "null"]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots for the child. Each path must be absolute.\n\nOptional and nullable. Omitted means unchanged; `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list; `[]` reports no additional directories.\nClients use these values for the child's root set.",
+          "description": "Additional workspace roots for the child. Each path must be absolute.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list. `[]` reports no additional directories.\nClients use these values for the child's root set.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
           }
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)\nOmitted means unchanged; `null` removes the metadata.",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)\nOmitted means unchanged. `null` removes the metadata.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5687,7 +5687,7 @@
           ]
         },
         "senderSessionId": {
-          "description": "The sending session.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it.",
+          "description": "The sending session.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionId"
@@ -5699,7 +5699,7 @@
           "x-deserialize-default-on-error": true
         },
         "recipientSessionId": {
-          "description": "The receiving session.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it.",
+          "description": "The receiving session.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionId"
@@ -5711,7 +5711,7 @@
           "x-deserialize-default-on-error": true
         },
         "senderMessageId": {
-          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive\nafter the message starts streaming.",
+          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive\nafter the message starts streaming.",
           "anyOf": [
             {
               "$ref": "#/$defs/MessageId"
@@ -5723,7 +5723,7 @@
           "x-deserialize-default-on-error": true
         },
         "recipientMessageId": {
-          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive\nafter the message starts streaming.",
+          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive\nafter the message starts streaming.",
           "anyOf": [
             {
               "$ref": "#/$defs/MessageId"
@@ -5735,7 +5735,7 @@
           "x-deserialize-default-on-error": true
         },
         "content": {
-          "description": "Omitted leaves content unchanged; `null` or `[]` clears it.\nA non-empty array replaces all content.",
+          "description": "Omitted leaves content unchanged. `null` or `[]` clears it.\nA non-empty array replaces all content.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -5744,7 +5744,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "Omitted leaves metadata unchanged; `null` removes it.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
+          "description": "Omitted leaves metadata unchanged. `null` removes it.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5773,7 +5773,7 @@
           ]
         },
         "_meta": {
-          "description": "Optional and nullable chunk-scoped metadata; omitted or `null` means none.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
+          "description": "Optional and nullable chunk-scoped metadata. Omitted or `null` means none.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -6167,7 +6167,7 @@
       "type": "object",
       "properties": {
         "compaction": {
-          "description": "Support for ID-addressed context compaction updates. Omitted or `null`\nmeans unsupported; `{}` advertises the complete compaction contract.",
+          "description": "Support for ID-addressed context compaction updates. Omitted or `null`\nmeans unsupported. `{}` advertises the complete compaction contract.",
           "anyOf": [
             {
               "$ref": "#/$defs/CompactionCapabilities"
@@ -6726,7 +6726,7 @@
       "type": "object",
       "properties": {
         "mode": {
-          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\nUnknown\nvalues are preserved; Agents MUST return an error\nfor modes they do not support.",
+          "description": "How the Agent combines `content` with its own instructions.\n\nRequired on the wire, so every request states its mode. In Rust,\nUnknown\nvalues are preserved. Agents MUST return an error\nfor modes they do not support.",
           "allOf": [
             {
               "$ref": "#/$defs/SystemPromptMode"
@@ -6802,7 +6802,7 @@
           ]
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the loaded session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the loaded session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -6901,7 +6901,7 @@
           "x-deserialize-default-on-null": true
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nfor the source session.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nfor the source session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -6955,7 +6955,7 @@
           "x-deserialize-default-on-null": true
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -7672,7 +7672,7 @@
       }
     },
     "MessageMcpResponse": {
-      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nUnknown outer fields are ignored; inner result and error fields are preserved.\nCarrier `_meta` is optional; null or invalid values are treated as absent.\nSenders must include exactly one outcome; receivers prefer `result` if both are present.",
+      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nUnknown outer fields are ignored. Inner result and error fields are preserved.\nCarrier `_meta` is optional. Null or invalid values are treated as absent.\nSenders must include exactly one outcome. Receivers prefer `result` if both are present.",
       "anyOf": [
         {
           "title": "Result",
@@ -7718,11 +7718,11 @@
       "x-method": "mcp/message"
     },
     "McpError": {
-      "description": "**UNSTABLE**\n\nAn inner MCP error, distinct from an outer ACP binding or runtime error.\n\n`code` and `message` are required and non-null. `data` is optional;\nexplicit `null` is preserved separately from an omitted key.",
+      "description": "**UNSTABLE**\n\nAn inner MCP error, distinct from an outer ACP binding or runtime error.\n\n`code` and `message` are required and non-null. `data` is optional.\nExplicit `null` is preserved separately from an omitted key.",
       "type": "object",
       "properties": {
         "code": {
-          "description": "Inner MCP error code; never an ACP error code.",
+          "description": "Inner MCP error code. Never an ACP error code.",
           "type": "integer",
           "format": "int32"
         },
@@ -7731,7 +7731,7 @@
           "type": "string"
         },
         "data": {
-          "description": "Optional error data; explicit null is retained."
+          "description": "Optional error data. Explicit null is retained."
         }
       },
       "required": ["code", "message"],
@@ -7813,7 +7813,7 @@
       "x-method": "session/cancel"
     },
     "MessageMcpNotification": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification parameters for `mcp/message`.\n\nSent by the provider to the consumer for an active request (including\nsubscription acknowledgements and updates); the outer envelope has no `id`.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification parameters for `mcp/message`.\n\nSent by the provider to the consumer for an active request (including\nsubscription acknowledgements and updates). The outer envelope has no `id`.",
       "type": "object",
       "properties": {
         "serverId": {

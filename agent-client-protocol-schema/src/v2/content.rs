@@ -1,11 +1,8 @@
-//! Content blocks for representing various types of information in the Agent Client Protocol.
+//! Content blocks: the text, images, audio, and resources that appear in prompts,
+//! session updates, and tool call results.
 //!
-//! This module defines the core content types used throughout the protocol for communication
-//! between agents and clients. Content blocks provide a flexible, extensible way to represent
-//! text, images, audio, and other resources in prompts, responses, and tool call results.
-//!
-//! The content block structure is designed to be compatible with the Model Context Protocol (MCP),
-//! allowing seamless integration between ACP and MCP-based tools.
+//! The content block structure is compatible with the Model Context Protocol (MCP), so agents
+//! can forward MCP tool output without converting it.
 //!
 //! See: [Content](https://agentclientprotocol.com/protocol/v2/content)
 
@@ -68,17 +65,14 @@ impl_media_type_option_conversion!(Cow<'_, str>);
 
 /// Content blocks represent displayable information in the Agent Client Protocol.
 ///
-/// They provide a structured way to handle various types of user-facing content—whether
-/// it's text from language models, images for analysis, or embedded resources for context.
-///
 /// Content blocks appear in:
 /// - User prompts sent via `session/prompt`
 /// - Language model output reported through `session/update` notifications as
 ///   message updates or streamed chunks
 /// - Progress updates and results from tool calls
 ///
-/// This structure is compatible with the Model Context Protocol (MCP), enabling
-/// agents to seamlessly forward content from MCP tool outputs without transformation.
+/// This structure is compatible with the Model Context Protocol (MCP), so agents can
+/// forward content from MCP tool outputs without transformation.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -225,7 +219,7 @@ pub struct TextContent {
 }
 
 impl TextContent {
-    /// Builds [`TextContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`TextContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
@@ -301,7 +295,7 @@ pub struct ImageContent {
 }
 
 impl ImageContent {
-    /// Builds [`ImageContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`ImageContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<MediaType>) -> Self {
         Self {
@@ -372,7 +366,7 @@ pub struct AudioContent {
 }
 
 impl AudioContent {
-    /// Builds [`AudioContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`AudioContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<MediaType>) -> Self {
         Self {
@@ -431,7 +425,7 @@ pub struct EmbeddedResource {
 }
 
 impl EmbeddedResource {
-    /// Builds [`EmbeddedResource`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`EmbeddedResource`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(resource: EmbeddedResourceResource) -> Self {
         Self {
@@ -505,7 +499,7 @@ pub struct TextResourceContents {
 }
 
 impl TextResourceContents {
-    /// Builds [`TextResourceContents`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`TextResourceContents`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -569,7 +563,7 @@ pub struct BlobResourceContents {
 }
 
 impl BlobResourceContents {
-    /// Builds [`BlobResourceContents`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`BlobResourceContents`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(blob: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -667,7 +661,7 @@ pub struct ResourceLink {
 }
 
 impl ResourceLink {
-    /// Builds [`ResourceLink`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`ResourceLink`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(name: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -745,7 +739,7 @@ impl ResourceLink {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Icon {
-    /// A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI;
+    /// A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI.
     /// Clients reject other schemes, fetch without credentials, and do not follow
     /// scheme- or origin-changing redirects.
     #[cfg_attr(feature = "schemars", schemars(url))]
@@ -788,7 +782,7 @@ pub struct Icon {
 }
 
 impl Icon {
-    /// Builds [`Icon`] with the required source URI; optional display hints start unset.
+    /// Builds [`Icon`] with the required source URI. Optional display hints start unset.
     #[must_use]
     pub fn new(src: impl Into<String>) -> Self {
         Self {

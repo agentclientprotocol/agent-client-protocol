@@ -36,6 +36,18 @@ All paths in the protocol should be absolute
 - Make the same change in both the stable page and its `draft/` copy, unless the change is draft-only
 - Run `npm run check` to make sure the json and zod schemas gets generated properly
 
+## Writing spec prose and schema descriptions
+
+These apply to the `docs/protocol` pages and to Rust doc comments, which become the descriptions in the generated schema.
+
+- Say what the protocol does: name the method, field, or behavior. Skip sentences that only describe benefits ("enables rich interactions", "provides a flexible way", "seamless integration").
+- Don't tack on `-ing` clauses ("…, allowing Clients to…", "…, providing visibility into…"). Write "Clients use it to…" or start a new sentence.
+- Name concrete methods and capabilities instead of abstract nouns. Write "Agents that advertise `capabilities.session`" or "`auth/login` and `auth/logout`", not "the session method surface" or "the authentication surface".
+- Use periods instead of semicolons or em dashes to join clauses. Use straight quotes.
+- Prefer plain words: "use", not "leverage" or "utilize"; "to", not "in order to".
+- Use sentence case for headings. Keep Agent, Client, and acronyms capitalized.
+- v1 is stable: rewording must not add, remove, or change a requirement. Keep every **MUST**/**SHOULD**/**MAY** and its scope as it was, and don't state behavior the v1 spec doesn't already define. Draft v2 pages can change freely.
+
 Never write readme files related to the conversation unless explicitly asked to.
 
 ## Conventional Commits

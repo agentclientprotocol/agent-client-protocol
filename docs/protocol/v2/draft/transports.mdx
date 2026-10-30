@@ -44,7 +44,7 @@ To end the connection, the Client closes the Agent's `stdin`. The Agent treats e
 
 When the connection ends, either side treats requests it sent that have no response as failed.
 
-## Message Timing
+## Message timing
 
 After the `initialize` exchange completes successfully, Agents **MAY** send
 requests and notifications at any time: between Client requests, before a
@@ -56,17 +56,17 @@ This permission does not override capability requirements or method-specific
 lifecycle and ordering rules. For example, session-scoped messages still
 require a valid session.
 
-## Message Order
+## Message order
 
 Transports **MUST** deliver messages in the order they were sent. Receivers
 **MUST** apply a session's `session/update` notifications in the order they are
 received.
 
-## No Batches
+## No batches
 
 ACP does not use JSON-RPC 2.0 batches. Senders **MUST NOT** send a JSON array of messages, and receivers reject one with a single `-32600` (Invalid Request) response with `id: null`.
 
-## Custom Transports
+## Custom transports
 
 Agents and clients **MAY** implement additional custom transport mechanisms to suit their specific needs. The protocol is transport-agnostic and can be implemented over any communication channel that supports bidirectional message exchange.
 

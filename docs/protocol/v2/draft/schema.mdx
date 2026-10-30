@@ -141,7 +141,7 @@ This method is called at the beginning of the connection, before any other reque
 - Exchange capability information between client and agent
 - Determine available authentication methods
 
-The Client may repeat it before its first other request; the latest successful
+The Client may repeat it before its first other request. The latest successful
 `initialize` is authoritative.
 
 The agent should respond with its supported protocol version and capabilities.
@@ -205,7 +205,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Authentication methods supported by the agent.
 
 Optional. Omitted or empty means the agent does not advertise the
-authentication method surface. Supplying one or more methods means
+`auth/login` and `auth/logout` methods. Supplying one or more methods means
 the agent MUST support both `auth/login` and `auth/logout`.
 
 </ResponseField>
@@ -261,7 +261,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The inner MCP method name.
 </ResponseField>
 <ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params; null is equivalent to omission.
+  Optional inner MCP params. Null is equivalent to omission.
 </ResponseField>
 <ResponseField name="requestId" type={<a href="#mcprequestid">McpRequestId</a>} required>
   The identifier of the active inner MCP request.
@@ -675,7 +675,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 System-level instructions for the forked session.
 
-Optional. Omitted and `null` are equivalent; the Agent may then keep a
+Optional. Omitted and `null` are equivalent. The Agent may then keep a
 system prompt it stored with the source session or use its default
 instructions. Clients MUST only send this when the Agent advertises
 `session.systemPrompt`, and SHOULD send the same value they used for the
@@ -707,7 +707,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Initial commands the agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
-Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
 Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
@@ -715,7 +715,7 @@ Later `available_commands_update` notifications replace this list.
   Initial session configuration options.
 
 Optional. Omitted or empty means no config options are advertised.
-Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
 Later `config_option_update` notifications replace this list.
 
 </ResponseField>
@@ -755,7 +755,7 @@ Omitted and `null` are equivalent and mean the first page is requested.
 <ResponseField name="cwd" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   Filter sessions by working directory. Must be an absolute path.
 
-Only sessions whose `cwd` is this same directory match; subdirectories and
+Only sessions whose `cwd` is this same directory match. Subdirectories and
 `additionalDirectories` don't. Agents MAY normalize paths when comparing.
 
 Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
@@ -875,7 +875,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Initial commands the agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
-Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
 Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
@@ -883,7 +883,7 @@ Later `available_commands_update` notifications replace this list.
   Initial session configuration options.
 
 Optional. Omitted or empty means no config options are advertised.
-Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
 Later `config_option_update` notifications replace this list.
 
 </ResponseField>
@@ -904,14 +904,14 @@ relative to other messages in the ACP conversation, not receipt or queueing.
 The Agent MUST return the inserted message's ID without waiting for
 processing to finish.
 
-The Agent reports the user message with the same ID through `session/update`;
-this notification may arrive before or after the response, but neither may
+The Agent reports the user message with the same ID through `session/update`.
+This notification may arrive before or after the response, but neither may
 precede insertion. Processing state, output, tool calls, and completion are
 also reported through session updates.
 
 An error response means the user message was not inserted. Once it is
 inserted, the Agent MUST NOT answer with an error, even if the work fails
-before the response is sent; it ends that work with the `error` stop reason.
+before the response is sent. It ends that work with the `error` stop reason.
 
 A rejected submission produces no user-message updates. Foreground state
 follows its normal lifecycle independently of the request outcome:
@@ -1045,7 +1045,7 @@ with `-32602`, and MAY normalize paths when comparing.
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
   List of MCP servers to connect to for this session.
 
-The complete set of Client-provided servers; omitted and `[]` mean none. Agents SHOULD
+The complete set of Client-provided servers. Omitted and `[]` mean none. Agents SHOULD
 NOT restore servers from earlier requests.
 
 </ResponseField>
@@ -1073,7 +1073,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 System-level instructions for the resumed session.
 
-Optional. Omitted and `null` are equivalent; the Agent may then keep a
+Optional. Omitted and `null` are equivalent. The Agent may then keep a
 system prompt it stored with the session or use its default instructions.
 Clients MUST only send this when the Agent advertises
 `session.systemPrompt`, and SHOULD send the same value they used when the
@@ -1107,7 +1107,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Initial commands the agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
-Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
 Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
@@ -1115,7 +1115,7 @@ Later `available_commands_update` notifications replace this list.
   Initial session configuration options.
 
 Optional. Omitted or empty means no config options are advertised.
-Senders MUST use an array, not `null`; receivers treat `null` like omission.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
 Later `config_option_update` notifications replace this list.
 
 </ResponseField>
@@ -1619,7 +1619,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The inner MCP method name.
 </ResponseField>
 <ResponseField name="params" type={"object | null"} >
-  Optional inner MCP params; null is equivalent to omission.
+  Optional inner MCP params. Null is equivalent to omission.
 </ResponseField>
 <ResponseField name="requestId" type={<a href="#mcprequestid">McpRequestId</a>} required>
   The caller-generated identifier for the inner MCP request.
@@ -1637,9 +1637,9 @@ inner MCP outcome: an opaque result (including JSON null), or an MCP error.
 Outer ACP errors are reserved for binding and runtime failures.
 
 Both branches require their carrier key. An error must be a non-null object.
-Unknown outer fields are ignored; inner result and error fields are preserved.
-Carrier `_meta` is optional; null or invalid values are treated as absent.
-Senders must include exactly one outcome; receivers prefer `result` if both are present.
+Unknown outer fields are ignored. Inner result and error fields are preserved.
+Carrier `_meta` is optional. Null or invalid values are treated as absent.
+Senders must include exactly one outcome. Receivers prefer `result` if both are present.
 
 **Type:** Union
 
@@ -1922,7 +1922,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
 authentication-related extensions. This field does not advertise support
-for `auth/login` or `auth/logout`; those methods are advertised by a
+for `auth/login` or `auth/logout`. Those methods are advertised by a
 non-empty `authMethods` list in the `initialize` response.
 
 </ResponseField>
@@ -1941,7 +1941,7 @@ Supplying `\{\}` means the agent supports provider configuration methods.
   Session capabilities supported by the agent.
 
 Optional. Omitted and `null` are equivalent and mean the agent does not support the
-`session/*` method surface. Supplying `\{\}` means the agent supports the
+`session/*` methods. Supplying `\{\}` means the agent supports the
 baseline session methods: `session/new`, `session/list`,
 `session/resume`, `session/close`, `session/prompt`, `session/cancel`,
 and `session/update`.
@@ -1956,7 +1956,7 @@ Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted `content` starts empty. `content` is replaced as a
-whole array; send `[]` or `null` to clear it.
+whole array. Send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
 an `agent_message` update includes `content`, that array replaces any
@@ -1970,7 +1970,7 @@ content.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -1994,7 +1994,7 @@ Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing thought content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted `content` starts empty. `content` is replaced as a
-whole array; send `[]` or `null` to clear it.
+whole array. Send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
 an `agent_thought` update includes `content`, that array replaces any
@@ -2008,7 +2008,7 @@ content.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -2125,7 +2125,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Additional arguments to append to the configured agent invocation for terminal auth.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
+  Optional human-readable description of this authentication method.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -2164,7 +2164,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
+  Optional human-readable description of this authentication method.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -2232,7 +2232,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
+  Optional human-readable description of this authentication method.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -2257,7 +2257,7 @@ Terminal-based authentication method.
 The client runs the configured agent program as a separate interactive
 process for the user to authenticate via a TUI. Agents MUST advertise this
 method only when the client enabled its terminal authentication capability.
-A zero exit status signals success; any other termination signals failure.
+A zero exit status signals success. Any other termination signals failure.
 The client MUST NOT pass this method to `auth/login`.
 
 **Type:** Object
@@ -2276,7 +2276,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Additional arguments to append to the configured agent invocation for terminal auth.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Optional description providing more details about this authentication method.
+  Optional human-readable description of this authentication method.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -2740,7 +2740,7 @@ stored metadata by top-level key instead of replacing it.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -2806,9 +2806,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Content blocks represent displayable information in the Agent Client Protocol.
 
-They provide a structured way to handle various types of user-facing content—whether
-it's text from language models, images for analysis, or embedded resources for context.
-
 Content blocks appear in:
 
 - User prompts sent via `session/prompt`
@@ -2816,8 +2813,8 @@ Content blocks appear in:
   message updates or streamed chunks
 - Progress updates and results from tool calls
 
-This structure is compatible with the Model Context Protocol (MCP), enabling
-agents to seamlessly forward content from MCP tool outputs without transformation.
+This structure is compatible with the Model Context Protocol (MCP), so agents can
+forward content from MCP tool outputs without transformation.
 
 See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/draft/content)
 
@@ -3970,7 +3967,7 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 </ResponseField>
 <ResponseField name="type" type={<a href="#elicitationschematype">ElicitationSchemaType</a>} required>
-  Type discriminator. Always `"object"`; any other value is rejected.
+  Type discriminator. Always `"object"`. Any other value is rejected.
 </ResponseField>
 
 ## <span class="font-mono">ElicitationSchemaType</span>
@@ -4466,7 +4463,7 @@ Omitted and `null` are equivalent and mean no sizes are specified.
 
 </ResponseField>
 <ResponseField name="src" type={"string"} required>
-  A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI;
+  A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI.
 Clients reject other schemes, fetch without credentials, and do not follow
 scheme- or origin-changing redirects.
 
@@ -4623,7 +4620,7 @@ exceptions. Agents MUST catch these errors and report `cancelled`, not
 The active work ended because something failed.
 
 This includes pre-insertion foreground work. A prompt failure before
-insertion also requires an error response to `session/prompt`; after
+insertion also requires an error response to `session/prompt`. After
 insertion, the prompt's response remains successful.
 
 <Expandable title="Properties">
@@ -4733,11 +4730,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Intended for programmatic or logical use, but can be used as a display
-name fallback if title isn’t present.
+name fallback if title isn't present.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Intended for UI and end-user contexts — optimized to be human-readable
-and easily understood.
+  Intended for UI and end-user contexts, so it should be readable by people.
 
 If not provided, the name should be used for display.
 
@@ -4911,18 +4907,18 @@ Supplying `\{\}` means the agent supports stdio MCP server transports.
 
 An inner MCP error, distinct from an outer ACP binding or runtime error.
 
-`code` and `message` are required and non-null. `data` is optional;
-explicit `null` is preserved separately from an omitted key.
+`code` and `message` are required and non-null. `data` is optional.
+Explicit `null` is preserved separately from an omitted key.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="code" type={"int32"} required>
-  Inner MCP error code; never an ACP error code.
+  Inner MCP error code. Never an ACP error code.
 </ResponseField>
 <ResponseField name="data" type={"any"}>
-  Optional error data; explicit null is retained.
+  Optional error data. Explicit null is retained.
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
   Inner MCP error message.
@@ -5062,7 +5058,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
-  Environment variables to set when launching the MCP server. Names SHOULD be unique;
+  Environment variables to set when launching the MCP server. Names SHOULD be unique.
 Agents MAY reject duplicates with `-32602`, and otherwise the last entry wins.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -5201,7 +5197,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Absolute path to the MCP server executable.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
-  Environment variables to set when launching the MCP server. Names SHOULD be unique;
+  Environment variables to set when launching the MCP server. Names SHOULD be unique.
 Agents MAY reject duplicates with `-32602`, and otherwise the last entry wins.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
@@ -6566,7 +6562,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Capability to cancel work in a subagent session without ending that session.
 
-Supplying `\{\}` advertises support; an omitted or `null` `cancel` does not.
+Supplying `\{\}` advertises support. An omitted or `null` `cancel` does not.
 
 **Type:** Object
 
@@ -6975,8 +6971,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 A unique identifier for a conversation session between a client and agent.
 
-Sessions maintain their own context, conversation history, and state,
-allowing multiple independent interactions with the same agent.
+Each session has its own context, conversation history, and state, so one
+agent can run several independent sessions.
 
 See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/draft/session-setup#session-id)
 
@@ -7032,7 +7028,7 @@ Omitted and `null` are equivalent and mean the last activity time is not reporte
 Update to session metadata. All fields are optional to support partial updates.
 
 Agents send this notification to update session information like title or custom metadata.
-This allows clients to display dynamic session names and track session state changes.
+Clients can use it to keep session titles and state current.
 
 Omitted fields leave the existing session info unchanged. `null` clears the
 corresponding value. A concrete `_meta` object patches the stored metadata by
@@ -7044,7 +7040,7 @@ top-level key.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -7083,7 +7079,7 @@ An upsert for an inter-session message.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -7093,7 +7089,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
-  Omitted leaves content unchanged; `null` clears it; a concrete array
+  Omitted leaves content unchanged. `null` clears it. A concrete array
 replaces the whole content collection.
 </ResponseField>
 <ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
@@ -7103,28 +7099,28 @@ replaces the whole content collection.
   On an outgoing view, the `messageId` of the same message's incoming view in the
 recipient's transcript.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive
 after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   The receiving session.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it.
 
 </ResponseField>
 <ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   On an incoming view, the `messageId` of the same message's outgoing view in the
 sender's transcript.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive
 after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   The sending session.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it.
 
 </ResponseField>
 
@@ -7320,7 +7316,7 @@ fields in the new update patch the previous fields for that message.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -7384,7 +7380,7 @@ fields in the new update patch the previous fields for that message.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -7448,7 +7444,7 @@ fields in the new update patch the previous fields for that message.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -7618,7 +7614,7 @@ exceptions. Agents MUST catch these errors and report `cancelled`, not
 The active work ended because something failed.
 
 This includes pre-insertion foreground work. A prompt failure before
-insertion also requires an error response to `session/prompt`; after
+insertion also requires an error response to `session/prompt`. After
 insertion, the prompt's response remains successful.
 
 <Expandable title="Properties">
@@ -7778,7 +7774,7 @@ A tool call has been created or updated.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -7848,7 +7844,7 @@ An agent-owned terminal has been created or updated.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -8020,7 +8016,7 @@ Session metadata has been updated (title, timestamps, custom metadata)
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -8061,7 +8057,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
   Cumulative session cost.
 
-Omitted leaves the last reported cost unchanged; `null` clears it; a value replaces it.
+Omitted leaves the last reported cost unchanged. `null` clears it. A value replaces it.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -8128,7 +8124,7 @@ A context compaction has been created or updated.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -8195,7 +8191,7 @@ that ownership association's metadata.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -8207,10 +8203,10 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 <ResponseField name="additionalDirectories" type={<><span><a href="#absolutepath">AbsolutePath[]</a></span><span> | null</span></>} >
   Additional workspace roots for the child. Each path must be absolute.
 
-Optional and nullable. Omitted means unchanged; `null` clears the
+Optional and nullable. Omitted means unchanged. `null` clears the
 reported value. While unset, the child inherits its immediate parent's
 effective additional directories, independently of `cwd`. A concrete
-array replaces the whole list; `[]` reports no additional directories.
+array replaces the whole list. `[]` reports no additional directories.
 
 </ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
@@ -8223,7 +8219,7 @@ capability requirements.
 <ResponseField name="cwd" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   The child's working directory. Must be an absolute path.
 
-Optional and nullable. Omitted means unchanged; `null` clears the
+Optional and nullable. Omitted means unchanged. `null` clears the
 reported value. While unset, the child inherits its immediate parent's
 effective working directory.
 
@@ -8231,7 +8227,7 @@ effective working directory.
 <ResponseField name="description" type={"string | null"} >
   The parent's human-readable description of the child's role or purpose.
 
-Optional and nullable. Omitted means unchanged; `null` clears it. This is
+Optional and nullable. Omitted means unchanged. `null` clears it. This is
 current display metadata, not the history of instructions sent to the child.
 
 </ResponseField>
@@ -8244,7 +8240,7 @@ current display metadata, not the history of instructions sent to the child.
 <ResponseField name="state" type={<><span><a href="#stateupdate">StateUpdate</a></span><span> | null</span></>} >
   The child's current foreground state, mirrored onto its parent association.
 
-Optional and nullable. Omitted means unchanged; `null` removes the
+Optional and nullable. Omitted means unchanged. `null` removes the
 current report and leaves activity unconfirmed (not idle or cancelled).
 A concrete `StateUpdate` replaces the entire previous snapshot.
 
@@ -8252,7 +8248,7 @@ A concrete `StateUpdate` replaces the entire previous snapshot.
 <ResponseField name="title" type={"string | null"} >
   The parent's human-readable display title for this child. It need not be unique.
 
-Optional and nullable. Omitted means unchanged; `null` clears it. If no
+Optional and nullable. Omitted means unchanged. `null` clears it. If no
 title is set, the Client chooses a fallback presentation.
 
 </ResponseField>
@@ -8272,7 +8268,7 @@ received from another session.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -8282,7 +8278,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 
 </ResponseField>
 <ResponseField name="content" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
-  Omitted leaves content unchanged; `null` clears it; a concrete array
+  Omitted leaves content unchanged. `null` clears it. A concrete array
 replaces the whole content collection.
 </ResponseField>
 <ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
@@ -8292,28 +8288,28 @@ replaces the whole content collection.
   On an outgoing view, the `messageId` of the same message's incoming view in the
 recipient's transcript.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive
 after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="recipientSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   The receiving session.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it.
 
 </ResponseField>
 <ResponseField name="senderMessageId" type={<><span><a href="#messageid">MessageId</a></span><span> | null</span></>} >
   On an incoming view, the `messageId` of the same message's outgoing view in the
 sender's transcript.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive
 after the message starts streaming.
 
 </ResponseField>
 <ResponseField name="senderSessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
   The sending session.
 
-Omitted leaves the stored value unchanged; `null` clears it; a value replaces it.
+Omitted leaves the stored value unchanged. `null` clears it. A value replaces it.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -8559,7 +8555,7 @@ exceptions. Agents MUST catch these errors and report `cancelled`, not
 The active work ended because something failed.
 
 This includes pre-insertion foreground work. A prompt failure before
-insertion also requires an error response to `session/prompt`; after
+insertion also requires an error response to `session/prompt`. After
 insertion, the prompt's response remains successful.
 
 <Expandable title="Properties">
@@ -8821,7 +8817,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Client-initiated session mutations permitted for a specific subagent session.
 
-A mutation requires an explicit per-child capability; support for the method
+A mutation requires an explicit per-child capability. Support for the method
 on ordinary sessions does not grant support on a child.
 
 **Type:** Object
@@ -8838,7 +8834,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="cancel" type={<><span><a href="#sessioncancelcapabilities">SessionCancelCapabilities</a></span><span> | null</span></>} >
   Permits the client to cancel this child's current work without ending
-the session. Omitted and `null` are equivalent and mean unsupported; an object (including
+the session. Omitted and `null` are equivalent and mean unsupported. An object (including
 `\{\}`) means supported.
 </ResponseField>
 
@@ -8856,9 +8852,9 @@ Sent on the immediate parent session. The first update for an unknown
 `sessionId` announces the child and MUST be sent
 before any live request or notification bearing the child's session ID,
 including messages naming it as sender or recipient. Child events are
-delivered automatically; no separate child load, resume, or subscription is needed.
+delivered automatically. No separate child load, resume, or subscription is needed.
 Understanding this update, registering child sessions, and applying their
-operation restrictions are baseline v2 requirements; no Client capability
+operation restrictions are baseline v2 requirements. No Client capability
 is required.
 
 Only `sessionId` is required. Other fields have
@@ -8866,11 +8862,11 @@ patch semantics: omitted fields leave the stored value unchanged, `null`
 clears or unsets the value, and concrete values replace it. A concrete
 `_meta` object instead patches the stored metadata by top-level key. For
 `state`, `null` removes the current state report and leaves activity
-unconfirmed; it does not report idle or cancellation. A child whose capabilities are
+unconfirmed. It does not report idle or cancellation. A child whose capabilities are
 unset permits no Client-initiated session mutations.
 
-`cwd` and `additionalDirectories` report where the Agent placed the child;
-while unset, each inherits the immediate parent's effective value.
+`cwd` and `additionalDirectories` report where the Agent placed the child.
+While unset, each inherits the immediate parent's effective value.
 The title and description provide the parent's display metadata for the
 child. Agents SHOULD mirror known child state changes in the parent's
 `state` using the same `StateUpdate` snapshot as the
@@ -8887,7 +8883,7 @@ change this association.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -8899,10 +8895,10 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 <ResponseField name="additionalDirectories" type={<><span><a href="#absolutepath">AbsolutePath[]</a></span><span> | null</span></>} >
   Additional workspace roots for the child. Each path must be absolute.
 
-Optional and nullable. Omitted means unchanged; `null` clears the
+Optional and nullable. Omitted means unchanged. `null` clears the
 reported value. While unset, the child inherits its immediate parent's
 effective additional directories, independently of `cwd`. A concrete
-array replaces the whole list; `[]` reports no additional directories.
+array replaces the whole list. `[]` reports no additional directories.
 
 </ResponseField>
 <ResponseField name="capabilities" type={<><span><a href="#subagentsessioncapabilities">SubagentSessionCapabilities</a></span><span> | null</span></>} >
@@ -8915,7 +8911,7 @@ capability requirements.
 <ResponseField name="cwd" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   The child's working directory. Must be an absolute path.
 
-Optional and nullable. Omitted means unchanged; `null` clears the
+Optional and nullable. Omitted means unchanged. `null` clears the
 reported value. While unset, the child inherits its immediate parent's
 effective working directory.
 
@@ -8923,7 +8919,7 @@ effective working directory.
 <ResponseField name="description" type={"string | null"} >
   The parent's human-readable description of the child's role or purpose.
 
-Optional and nullable. Omitted means unchanged; `null` clears it. This is
+Optional and nullable. Omitted means unchanged. `null` clears it. This is
 current display metadata, not the history of instructions sent to the child.
 
 </ResponseField>
@@ -8933,7 +8929,7 @@ current display metadata, not the history of instructions sent to the child.
 <ResponseField name="state" type={<><span><a href="#stateupdate">StateUpdate</a></span><span> | null</span></>} >
   The child's current foreground state, mirrored onto its parent association.
 
-Optional and nullable. Omitted means unchanged; `null` removes the
+Optional and nullable. Omitted means unchanged. `null` removes the
 current report and leaves activity unconfirmed (not idle or cancelled).
 A concrete `StateUpdate` replaces the entire previous snapshot.
 
@@ -8941,7 +8937,7 @@ A concrete `StateUpdate` replaces the entire previous snapshot.
 <ResponseField name="title" type={"string | null"} >
   The parent's human-readable display title for this child. It need not be unique.
 
-Optional and nullable. Omitted means unchanged; `null` clears it. If no
+Optional and nullable. Omitted means unchanged. `null` clears it. If no
 title is set, the Client chooses a fallback presentation.
 
 </ResponseField>
@@ -9216,7 +9212,7 @@ omitted fields start unknown.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -9519,7 +9515,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="line" type={"integer | null"} >
   Optional 1-based line number within the file. Omitted and `null` are equivalent and
-mean no specific line; `0` is invalid.
+mean no specific line. `0` is invalid.
 
     - Minimum: `1`
 
@@ -9618,7 +9614,7 @@ See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/draf
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations
@@ -9751,7 +9747,7 @@ current activity, but may retain it as last known. A later state replaces this
 snapshot normally.
 
 This is not a task outcome or session closure. It does not cancel work, resolve
-pending requests, or revoke capabilities; capabilities are updated separately.
+pending requests, or revoke capabilities. Capabilities are updated separately.
 
 **Type:** Object
 
@@ -9873,7 +9869,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
   Cumulative session cost.
 
-Omitted leaves the last reported cost unchanged; `null` clears it; a value replaces it.
+Omitted leaves the last reported cost unchanged. `null` clears it. A value replaces it.
 
 </ResponseField>
 <ResponseField name="size" type={"uint64"} required>
@@ -9897,7 +9893,7 @@ Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
 value, and a concrete array replaces the previous value. For a new
 `messageId`, omitted `content` starts empty. `content` is replaced as a
-whole array; send `[]` or `null` to clear it.
+whole array. Send `[]` or `null` to clear it.
 
 Message updates and chunks are applied in the order they are received. When
 a `user_message` update includes `content`, that array replaces any content
@@ -9911,7 +9907,7 @@ content.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted leaves the stored metadata unchanged; `null`
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
 stored value without merging nested objects. Beyond this patch rule, implementations

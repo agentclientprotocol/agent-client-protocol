@@ -31,7 +31,7 @@ pub struct CancelRequestNotification {
 }
 
 impl CancelRequestNotification {
-    /// Builds [`CancelRequestNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`CancelRequestNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(request_id: impl Into<RequestId>) -> Self {
         Self {

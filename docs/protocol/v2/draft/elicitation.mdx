@@ -61,7 +61,7 @@ If an Agent sends `elicitation/create` anyway, a Client with no `elicitation` ca
 ## Creating an elicitation
 
 The Agent sends an `elicitation/create` request directly over the ACP
-connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly; it does
+connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly. It does
 not apply MCP's omitted-mode form default.
 
 Scope is represented with flattened fields. Exactly one of `sessionId` or
@@ -80,7 +80,7 @@ Agents **MUST** bind each elicitation and related state to the receiving Client
 connection and, when authentication exists, the verified user identity. A
 `sessionId` alone or an unverified Client-provided identity is not sufficient.
 
-### Foreground State
+### Foreground state
 
 A session-scoped elicitation follows the aggregate
 [foreground-state contract](/protocol/v2/draft/prompt-lifecycle#waiting-for-user-action).
@@ -160,7 +160,7 @@ refresh tokens, private keys, recovery codes, or payment credentials. Ordinary
 profile information such as a name, email address, or username is not
 categorically prohibited. Agents **MUST** use URL mode for sensitive
 interactions. If the Client does not support URL mode, the Agent **MUST NOT**
-fall back to form mode; it **MUST** use another safe flow or fail the operation.
+fall back to form mode. It **MUST** use another safe flow or fail the operation.
 
 ### URL mode
 
@@ -196,8 +196,8 @@ The Client responds with one of three actions:
 
 Agents **MUST** handle an unknown action as `cancel`.
 
-The `content` field is optional on `accept`; receivers treat omission and `null`
-equivalently. It is only meaningful for `accept`; receivers ignore it for
+The `content` field is optional on `accept`. Receivers treat omission and `null`
+equivalently. It is only meaningful for `accept`. Receivers ignore it for
 `decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD** conform to the requested schema. Receivers accept any JSON value in `content` and validate it against the schema, so an unexpected value invalidates only that property, not the whole response. For an accepted URL elicitation, clients
 normally omit `content` because the interaction happens out of band.
 
@@ -216,7 +216,7 @@ send that notification only to the same Client that received the original
 request and include the original `elicitationId`. Clients **MUST** ignore
 unknown or already-completed IDs. On receiving it, Clients **MAY** retry the original operation, update the UI, or otherwise continue. They **SHOULD** still let the user retry or cancel if the notification never arrives.
 
-## Session Cancellation
+## Session cancellation
 
 [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation) does not
 automatically cancel every elicitation scoped to the session. `sessionId` and

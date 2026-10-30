@@ -1097,7 +1097,7 @@ fn default_object_type() -> ElicitationSchemaType {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
-    /// Type discriminator. Always `"object"`; any other value is rejected.
+    /// Type discriminator. Always `"object"`. Any other value is rejected.
     #[serde(rename = "type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
@@ -1378,7 +1378,7 @@ pub struct ElicitationFormCapabilities {
 }
 
 impl ElicitationFormCapabilities {
-    /// Builds an empty [`ElicitationFormCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ElicitationFormCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1421,7 +1421,7 @@ pub struct ElicitationUrlCapabilities {
 }
 
 impl ElicitationUrlCapabilities {
-    /// Builds an empty [`ElicitationUrlCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ElicitationUrlCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1518,7 +1518,7 @@ pub struct ElicitationSessionScope {
 }
 
 impl ElicitationSessionScope {
-    /// Builds [`ElicitationSessionScope`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationSessionScope`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1547,7 +1547,7 @@ pub struct ElicitationRequestScope {
 }
 
 impl ElicitationRequestScope {
-    /// Builds [`ElicitationRequestScope`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationRequestScope`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(request_id: impl Into<RequestId>) -> Self {
         Self {
@@ -1611,7 +1611,7 @@ pub struct CreateElicitationRequest {
 }
 
 impl CreateElicitationRequest {
-    /// Builds [`CreateElicitationRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`CreateElicitationRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(mode: impl Into<ElicitationMode>, message: impl Into<String>) -> Self {
         Self {
@@ -1802,7 +1802,7 @@ pub struct ElicitationFormMode {
 }
 
 impl ElicitationFormMode {
-    /// Builds [`ElicitationFormMode`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationFormMode`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(scope: impl Into<ElicitationScope>, requested_schema: ElicitationSchema) -> Self {
         Self {
@@ -1829,7 +1829,7 @@ pub struct ElicitationUrlMode {
 }
 
 impl ElicitationUrlMode {
-    /// Builds [`ElicitationUrlMode`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationUrlMode`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         scope: impl Into<ElicitationScope>,
@@ -1869,7 +1869,7 @@ pub struct CreateElicitationResponse {
 }
 
 impl CreateElicitationResponse {
-    /// Builds [`CreateElicitationResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`CreateElicitationResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(action: impl Into<ElicitationAction>) -> Self {
         Self {
@@ -2018,7 +2018,7 @@ pub struct ElicitationAcceptAction {
 }
 
 impl ElicitationAcceptAction {
-    /// Builds [`ElicitationAcceptAction`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationAcceptAction`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self { content: None }
@@ -2138,7 +2138,7 @@ pub struct CompleteElicitationNotification {
 }
 
 impl CompleteElicitationNotification {
-    /// Builds [`CompleteElicitationNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`CompleteElicitationNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(elicitation_id: impl Into<ElicitationId>) -> Self {
         Self {

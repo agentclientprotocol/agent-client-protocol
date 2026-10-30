@@ -79,11 +79,11 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
 }
 ```
 
-`authMethods` is optional. Returning a non-empty list advertises the Agent's authentication surface and means the Agent **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method.
+`authMethods` is optional. Returning a non-empty list means the Agent **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method.
 
-`capabilities.auth` is separate from this method surface. It advertises authentication-related extensions and does not change the availability rules for `auth/login` or `auth/logout`.
+`capabilities.auth` is separate from `authMethods`. It advertises authentication-related extensions and does not change the availability rules for `auth/login` or `auth/logout`.
 
-## Before Initialization Completes
+## Before initialization completes
 
 Initialization completes when the Agent responds successfully to `initialize`. Until then:
 
@@ -101,7 +101,7 @@ Clients and Agents **MUST** agree on a protocol version and act according to its
 
 See [Capabilities](#capabilities) to learn how non-breaking features are introduced.
 
-### Version Negotiation
+### Version negotiation
 
 The `initialize` request **MUST** include the latest protocol version the Client supports.
 
@@ -132,7 +132,7 @@ The Agent validates the remaining parameters against the selected version. If th
 
 The Client **MUST** check that it supports the version in a successful response. Advertising a latest version does not imply support for every earlier version. If the Client does not support the selected version, it **SHOULD** close the connection and inform the user.
 
-#### Repeating Initialization
+#### Repeating initialization
 
 When the Agent selects a lower version than requested, it may have ignored parts of the Client's request, such as capabilities. The Client **MAY** then send `initialize` again with the selected version and that version's parameters.
 
@@ -148,8 +148,8 @@ All capabilities included in the `initialize` request or response are **OPTIONAL
 
 The introduction of new capabilities is not considered a breaking change. Therefore, Clients and Agents **MUST** treat all capabilities omitted in the `initialize` request or response as **UNSUPPORTED**.
 
-Capabilities may advertise top-level method surfaces or nested features that
-only apply within a supported surface.
+A capability may advertise a group of methods, such as the `session/*` methods,
+or a nested feature that only applies when its parent capability is supported.
 
 Capabilities may specify the availability of protocol methods, notifications, or a subset of their parameters. They may also signal behaviors of the Agent or Client implementation.
 
@@ -163,13 +163,13 @@ Negotiation](/protocol/v2/draft/extensibility#experimental-features-and-negotiat
 for the distinction between capability-gated operations and capability-free
 informational additions.
 
-### Client Capabilities
+### Client capabilities
 
 Clients **MAY** include defined capability fields in `capabilities`.
 Omitted fields mean unsupported. Extension-specific capabilities belong in
 `_meta`.
 
-#### Terminal Authentication
+#### Terminal authentication
 
 <ParamField path="auth.terminal" type="TerminalAuthCapabilities Object">
   The Client can reproduce the configured Agent invocation in an interactive
@@ -195,16 +195,15 @@ Omitted fields mean unsupported. Extension-specific capabilities belong in
   Learn more about Elicitation
 </Card>
 
-### Agent Capabilities
+### Agent capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
 
 <ResponseField name="session" type="SessionCapabilities Object">
-  The Agent supports the `session/*` method surface. Omitted or `null` means the
-  Agent does not support session methods. Supplying `{}` means the Agent
-  supports the baseline session methods: `session/new`, `session/list`,
-  `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and
-  `session/update`.
+  The Agent supports the `session/*` methods. Omitted or `null` means the Agent
+  does not support session methods. Supplying `{}` means the Agent supports the
+  baseline session methods: `session/new`, `session/list`, `session/resume`,
+  `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
 </ResponseField>
 
 <ResponseField name="auth" type="AgentAuthCapabilities Object">
@@ -215,12 +214,12 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 
 <ResponseField name="providers" type="ProvidersCapabilities Object">
   **Unstable.** The Agent supports `providers/list`, `providers/set`, and
-  `providers/disable`. Omitted or `null` means unsupported; supplying `{}` means
+  `providers/disable`. Omitted or `null` means unsupported. Supplying `{}` means
   supported. Clients **MUST NOT** call these methods unless this capability is
   present, even if their SDK exposes the experimental request types.
 </ResponseField>
 
-#### Session Capabilities
+#### Session capabilities
 
 Supplying `session: {}` means the Agent supports `session/new`,
 `session/list`, `session/resume`, `session/close`, `session/prompt`,
@@ -275,7 +274,7 @@ support `session/set_config_option`.
   Supplying `{ "mode": { "override": {} } }` also advertises `override` mode.
 </ResponseField>
 
-#### Session Prompt Capabilities
+#### Session prompt capabilities
 
 As a baseline, Agents that advertise `session` **MUST** support `text` and `resource_link` content blocks in `session/prompt` requests.
 
@@ -302,7 +301,7 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
   embedded context in prompts.
 </ResponseField>
 
-#### Session MCP Capabilities
+#### Session MCP capabilities
 
 <ResponseField name="stdio" type="McpStdioCapabilities Object">
   The Agent supports connecting to MCP servers over stdio. Omitted or `null`
@@ -327,19 +326,19 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
   Learn more about Authentication
 </Card>
 
-## Implementation Information
+## Implementation information
 
 Both Clients and Agents **MUST** provide information about their implementation in the `info` field. It takes the following three fields:
 
 <ParamField path="name" type="string" required>
   Intended for programmatic or logical use, but can be used as a display name
-  fallback if title isn’t present.
+  fallback if title isn't present.
 </ParamField>
 
 <ParamField path="title" type="string">
-  Intended for UI and end-user contexts — optimized to be human-readable and
-  easily understood. Optional; omitted and `null` are equivalent. If not
-  provided, the name **SHOULD** be used for display.
+  Intended for UI and end-user contexts, so it should be readable by people.
+  Optional. Omitted and `null` are equivalent. If not provided, the name
+  **SHOULD** be used for display.
 </ParamField>
 
 <ParamField path="version" type="string" required>

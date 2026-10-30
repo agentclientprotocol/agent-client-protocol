@@ -256,7 +256,7 @@
       "x-method": "session/request_permission"
     },
     "SessionId": {
-      "description": "A unique identifier for a conversation session between a client and agent.\n\nSessions maintain their own context, conversation history, and state,\nallowing multiple independent interactions with the same agent.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/draft/session-setup#session-id)",
+      "description": "A unique identifier for a conversation session between a client and agent.\n\nEach session has its own context, conversation history, and state, so one\nagent can run several independent sessions.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/draft/session-setup#session-id)",
       "type": "string"
     },
     "RequestPermissionSubject": {
@@ -406,7 +406,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -614,7 +614,7 @@
       ]
     },
     "ContentBlock": {
-      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nThey provide a structured way to handle various types of user-facing content—whether\nit's text from language models, images for analysis, or embedded resources for context.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output reported through `session/update` notifications as\n  message updates or streamed chunks\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), enabling\nagents to seamlessly forward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/draft/content)",
+      "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output reported through `session/update` notifications as\n  message updates or streamed chunks\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), so agents can\nforward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/draft/content)",
       "anyOf": [
         {
           "description": "Text content. May be plain text or formatted with Markdown.\n\nAll agents MUST support text content blocks in prompts.\nClients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown\nextensions.",
@@ -939,7 +939,7 @@
       "type": "object",
       "properties": {
         "src": {
-          "description": "A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI;\nClients reject other schemes, fetch without credentials, and do not follow\nscheme- or origin-changing redirects.",
+          "description": "A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI.\nClients reject other schemes, fetch without credentials, and do not follow\nscheme- or origin-changing redirects.",
           "type": "string",
           "format": "uri"
         },
@@ -1591,7 +1591,7 @@
           ]
         },
         "line": {
-          "description": "Optional 1-based line number within the file. Omitted and `null` are equivalent and\nmean no specific line; `0` is invalid.",
+          "description": "Optional 1-based line number within the file. Omitted and `null` are equivalent and\nmean no specific line. `0` is invalid.",
           "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 1,
@@ -1900,7 +1900,7 @@
       "type": "object",
       "properties": {
         "type": {
-          "description": "Type discriminator. Always `\"object\"`; any other value is rejected.",
+          "description": "Type discriminator. Always `\"object\"`. Any other value is rejected.",
           "allOf": [
             {
               "$ref": "#/$defs/ElicitationSchemaType"
@@ -2587,7 +2587,7 @@
           "type": "string"
         },
         "params": {
-          "description": "Optional inner MCP params; null is equivalent to omission.",
+          "description": "Optional inner MCP params. Null is equivalent to omission.",
           "type": ["object", "null"],
           "additionalProperties": true
         },
@@ -2841,7 +2841,7 @@
           ]
         },
         "authMethods": {
-          "description": "Authentication methods supported by the agent.\n\nOptional. Omitted or empty means the agent does not advertise the\nauthentication method surface. Supplying one or more methods means\nthe agent MUST support both `auth/login` and `auth/logout`.",
+          "description": "Authentication methods supported by the agent.\n\nOptional. Omitted or empty means the agent does not advertise the\n`auth/login` and `auth/logout` methods. Supplying one or more methods means\nthe agent MUST support both `auth/login` and `auth/logout`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AuthMethod"
@@ -2872,11 +2872,11 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn’t present.",
+          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn't present.",
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts — optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
+          "description": "Intended for UI and end-user contexts, so it should be readable by people.\n\nIf not provided, the name should be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2898,7 +2898,7 @@
       "type": "object",
       "properties": {
         "session": {
-          "description": "Session capabilities supported by the agent.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not support the\n`session/*` method surface. Supplying `{}` means the agent supports the\nbaseline session methods: `session/new`, `session/list`,\n`session/resume`, `session/close`, `session/prompt`, `session/cancel`,\nand `session/update`.",
+          "description": "Session capabilities supported by the agent.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not support the\n`session/*` methods. Supplying `{}` means the agent supports the\nbaseline session methods: `session/new`, `session/list`,\n`session/resume`, `session/close`, `session/prompt`, `session/cancel`,\nand `session/update`.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCapabilities"
@@ -2910,7 +2910,7 @@
           "x-deserialize-default-on-error": true
         },
         "auth": {
-          "description": "Authentication-related extension capabilities supported by the agent.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise any\nauthentication-related extensions. This field does not advertise support\nfor `auth/login` or `auth/logout`; those methods are advertised by a\nnon-empty `authMethods` list in the `initialize` response.",
+          "description": "Authentication-related extension capabilities supported by the agent.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise any\nauthentication-related extensions. This field does not advertise support\nfor `auth/login` or `auth/logout`. Those methods are advertised by a\nnon-empty `authMethods` list in the `initialize` response.",
           "anyOf": [
             {
               "$ref": "#/$defs/AgentAuthCapabilities"
@@ -3425,7 +3425,7 @@
       "required": ["name", "value"]
     },
     "AuthMethodTerminal": {
-      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success; any other termination signals failure.\nThe client MUST NOT pass this method to `auth/login`.",
+      "description": "Terminal-based authentication method.\n\nThe client runs the configured agent program as a separate interactive\nprocess for the user to authenticate via a TUI. Agents MUST advertise this\nmethod only when the client enabled its terminal authentication capability.\nA zero exit status signals success. Any other termination signals failure.\nThe client MUST NOT pass this method to `auth/login`.",
       "type": "object",
       "properties": {
         "methodId": {
@@ -3441,7 +3441,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
+          "description": "Optional human-readable description of this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3487,7 +3487,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description providing more details about this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
+          "description": "Optional human-readable description of this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3701,7 +3701,7 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -3710,7 +3710,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -4274,7 +4274,7 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4283,7 +4283,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -4307,7 +4307,7 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4316,7 +4316,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`; receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -5312,7 +5312,7 @@
       "required": ["messageId", "content"]
     },
     "UserMessage": {
-      "description": "A user message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted `content` starts empty. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\na `user_message` update includes `content`, that array replaces any content\npreviously accumulated for the message, including content from earlier\nchunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "A user message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted `content` starts empty. `content` is replaced as a\nwhole array. Send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\na `user_message` update includes `content`, that array replaces any content\npreviously accumulated for the message, including content from earlier\nchunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -5333,7 +5333,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5342,7 +5342,7 @@
       "required": ["messageId"]
     },
     "AgentMessage": {
-      "description": "An agent message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted `content` starts empty. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_message` update includes `content`, that array replaces any\ncontent previously accumulated for the message, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "An agent message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing message content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted `content` starts empty. `content` is replaced as a\nwhole array. Send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_message` update includes `content`, that array replaces any\ncontent previously accumulated for the message, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -5363,7 +5363,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5372,7 +5372,7 @@
       "required": ["messageId"]
     },
     "AgentThought": {
-      "description": "An agent thought or reasoning message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing thought content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted `content` starts empty. `content` is replaced as a\nwhole array; send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_thought` update includes `content`, that array replaces any\ncontent previously accumulated for the thought, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
+      "description": "An agent thought or reasoning message upsert.\n\nOnly `messageId` is required. `content` has patch semantics:\nan omitted field leaves existing thought content unchanged, `null` clears the\nvalue, and a concrete array replaces the previous value. For a new\n`messageId`, omitted `content` starts empty. `content` is replaced as a\nwhole array. Send `[]` or `null` to clear it.\n\nMessage updates and chunks are applied in the order they are received. When\nan `agent_thought` update includes `content`, that array replaces any\ncontent previously accumulated for the thought, including content from\nearlier chunks. Later chunks with the same `messageId` append to the current\ncontent.",
       "type": "object",
       "properties": {
         "messageId": {
@@ -5393,7 +5393,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -5568,7 +5568,7 @@
           "required": ["stopReason"]
         },
         {
-          "description": "The active work ended because something failed.\n\nThis includes pre-insertion foreground work. A prompt failure before\ninsertion also requires an error response to `session/prompt`; after\ninsertion, the prompt's response remains successful.",
+          "description": "The active work ended because something failed.\n\nThis includes pre-insertion foreground work. A prompt failure before\ninsertion also requires an error response to `session/prompt`. After\ninsertion, the prompt's response remains successful.",
           "type": "object",
           "properties": {
             "stopReason": {
@@ -5685,7 +5685,7 @@
       }
     },
     "UnknownStateUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe Agent cannot currently determine foreground activity.\n\nReport this when activity becomes unobservable, not merely because the session\nhas been quiet. The Client MUST stop presenting the previous state as confirmed\ncurrent activity, but may retain it as last known. A later state replaces this\nsnapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities; capabilities are updated separately.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe Agent cannot currently determine foreground activity.\n\nReport this when activity becomes unobservable, not merely because the session\nhas been quiet. The Client MUST stop presenting the previous state as confirmed\ncurrent activity, but may retain it as last known. A later state replaces this\nsnapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities. Capabilities are updated separately.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -5985,7 +5985,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -6384,7 +6384,7 @@
       "required": ["configOptions"]
     },
     "SessionInfoUpdate": {
-      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nThis allows clients to display dynamic session names and track session state changes.\n\nOmitted fields leave the existing session info unchanged. `null` clears the\ncorresponding value. A concrete `_meta` object patches the stored metadata by\ntop-level key.",
+      "description": "Update to session metadata. All fields are optional to support partial updates.\n\nAgents send this notification to update session information like title or custom metadata.\nClients can use it to keep session titles and state current.\n\nOmitted fields leave the existing session info unchanged. `null` clears the\ncorresponding value. A concrete `_meta` object patches the stored metadata by\ntop-level key.",
       "type": "object",
       "properties": {
         "title": {
@@ -6399,7 +6399,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -6445,7 +6445,7 @@
           "minimum": 0
         },
         "cost": {
-          "description": "Cumulative session cost.\n\nOmitted leaves the last reported cost unchanged; `null` clears it; a value replaces it.",
+          "description": "Cumulative session cost.\n\nOmitted leaves the last reported cost unchanged. `null` clears it. A value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/Cost"
@@ -6590,7 +6590,7 @@
           "x-deserialize-default-on-error": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -6628,11 +6628,11 @@
       "required": ["compactionId", "content"]
     },
     "SubagentSessionCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability; support for the method\non ordinary sessions does not grant support on a child.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability. Support for the method\non ordinary sessions does not grant support on a child.",
       "type": "object",
       "properties": {
         "cancel": {
-          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted and `null` are equivalent and mean unsupported; an object (including\n`{}`) means supported.",
+          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted and `null` are equivalent and mean unsupported. An object (including\n`{}`) means supported.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionCancelCapabilities"
@@ -6652,7 +6652,7 @@
       }
     },
     "SessionCancelCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability to cancel work in a subagent session without ending that session.\n\nSupplying `{}` advertises support; an omitted or `null` `cancel` does not.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability to cancel work in a subagent session without ending that session.\n\nSupplying `{}` advertises support. An omitted or `null` `cancel` does not.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -6664,7 +6664,7 @@
       }
     },
     "SubagentUpdate": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live request or notification bearing the child's session ID,\nincluding messages naming it as sender or recipient. Child events are\ndelivered automatically; no separate child load, resume, or subscription is needed.\nUnderstanding this update, registering child sessions, and applying their\noperation restrictions are baseline v2 requirements; no Client capability\nis required.\n\nOnly `sessionId` is required. Other fields have\npatch semantics: omitted fields leave the stored value unchanged, `null`\nclears or unsets the value, and concrete values replace it. A concrete\n`_meta` object instead patches the stored metadata by top-level key. For\n`state`, `null` removes the current state report and leaves activity\nunconfirmed; it does not report idle or cancellation. A child whose capabilities are\nunset permits no Client-initiated session mutations.\n\n`cwd` and `additionalDirectories` report where the Agent placed the child;\nwhile unset, each inherits the immediate parent's effective value.\nThe title and description provide the parent's display metadata for the\nchild. Agents SHOULD mirror known child state changes in the parent's\n`state` using the same `StateUpdate` snapshot as the\nordinary `state_update` notification on the child session. This reports\nchild state, not a separate parent-owned lifecycle. Consumers should\ntreat duplicate reports idempotently.\nCompleting or cancelling work does not end the association: the parent may\nmessage the same child again. Individual messages and their outcomes do not\nchange this association.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nNotification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live request or notification bearing the child's session ID,\nincluding messages naming it as sender or recipient. Child events are\ndelivered automatically. No separate child load, resume, or subscription is needed.\nUnderstanding this update, registering child sessions, and applying their\noperation restrictions are baseline v2 requirements. No Client capability\nis required.\n\nOnly `sessionId` is required. Other fields have\npatch semantics: omitted fields leave the stored value unchanged, `null`\nclears or unsets the value, and concrete values replace it. A concrete\n`_meta` object instead patches the stored metadata by top-level key. For\n`state`, `null` removes the current state report and leaves activity\nunconfirmed. It does not report idle or cancellation. A child whose capabilities are\nunset permits no Client-initiated session mutations.\n\n`cwd` and `additionalDirectories` report where the Agent placed the child.\nWhile unset, each inherits the immediate parent's effective value.\nThe title and description provide the parent's display metadata for the\nchild. Agents SHOULD mirror known child state changes in the parent's\n`state` using the same `StateUpdate` snapshot as the\nordinary `state_update` notification on the child session. This reports\nchild state, not a separate parent-owned lifecycle. Consumers should\ntreat duplicate reports idempotently.\nCompleting or cancelling work does not end the association: the parent may\nmessage the same child again. Individual messages and their outcomes do not\nchange this association.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -6676,12 +6676,12 @@
           ]
         },
         "title": {
-          "description": "The parent's human-readable display title for this child. It need not be unique.\n\nOptional and nullable. Omitted means unchanged; `null` clears it. If no\ntitle is set, the Client chooses a fallback presentation.",
+          "description": "The parent's human-readable display title for this child. It need not be unique.\n\nOptional and nullable. Omitted means unchanged. `null` clears it. If no\ntitle is set, the Client chooses a fallback presentation.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "The parent's human-readable description of the child's role or purpose.\n\nOptional and nullable. Omitted means unchanged; `null` clears it. This is\ncurrent display metadata, not the history of instructions sent to the child.",
+          "description": "The parent's human-readable description of the child's role or purpose.\n\nOptional and nullable. Omitted means unchanged. `null` clears it. This is\ncurrent display metadata, not the history of instructions sent to the child.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -6698,7 +6698,7 @@
           "x-deserialize-default-on-error": true
         },
         "state": {
-          "description": "The child's current foreground state, mirrored onto its parent association.\n\nOptional and nullable. Omitted means unchanged; `null` removes the\ncurrent report and leaves activity unconfirmed (not idle or cancelled).\nA concrete `StateUpdate` replaces the entire previous snapshot.",
+          "description": "The child's current foreground state, mirrored onto its parent association.\n\nOptional and nullable. Omitted means unchanged. `null` removes the\ncurrent report and leaves activity unconfirmed (not idle or cancelled).\nA concrete `StateUpdate` replaces the entire previous snapshot.",
           "anyOf": [
             {
               "$ref": "#/$defs/StateUpdate"
@@ -6710,7 +6710,7 @@
           "x-deserialize-default-on-error": true
         },
         "cwd": {
-          "description": "The child's working directory. Must be an absolute path.\n\nOptional and nullable. Omitted means unchanged; `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective working directory.",
+          "description": "The child's working directory. Must be an absolute path.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective working directory.",
           "anyOf": [
             {
               "$ref": "#/$defs/AbsolutePath"
@@ -6721,14 +6721,14 @@
           ]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots for the child. Each path must be absolute.\n\nOptional and nullable. Omitted means unchanged; `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list; `[]` reports no additional directories.",
+          "description": "Additional workspace roots for the child. Each path must be absolute.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list. `[]` reports no additional directories.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/AbsolutePath"
           }
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -6749,7 +6749,7 @@
           ]
         },
         "senderSessionId": {
-          "description": "The sending session.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it.",
+          "description": "The sending session.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionId"
@@ -6761,7 +6761,7 @@
           "x-deserialize-default-on-error": true
         },
         "recipientSessionId": {
-          "description": "The receiving session.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it.",
+          "description": "The receiving session.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionId"
@@ -6773,7 +6773,7 @@
           "x-deserialize-default-on-error": true
         },
         "senderMessageId": {
-          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive\nafter the message starts streaming.",
+          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive\nafter the message starts streaming.",
           "anyOf": [
             {
               "$ref": "#/$defs/MessageId"
@@ -6785,7 +6785,7 @@
           "x-deserialize-default-on-error": true
         },
         "recipientMessageId": {
-          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOmitted leaves the stored value unchanged; `null` clears it; a value replaces it. It can arrive\nafter the message starts streaming.",
+          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive\nafter the message starts streaming.",
           "anyOf": [
             {
               "$ref": "#/$defs/MessageId"
@@ -6797,7 +6797,7 @@
           "x-deserialize-default-on-error": true
         },
         "content": {
-          "description": "Omitted leaves content unchanged; `null` clears it; a concrete array\nreplaces the whole content collection.",
+          "description": "Omitted leaves content unchanged. `null` clears it. A concrete array\nreplaces the whole content collection.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -6806,7 +6806,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged; `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted leaves the stored metadata unchanged. `null`\nclears it. An object patches the stored metadata by top-level key: keys it omits are\nunchanged, a key set to `null` is removed, and any other value replaces that key's\nstored value without merging nested objects. Beyond this patch rule, implementations\nMUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)",
           "type": ["object", "null"],
           "x-deserialize-default-on-error": true,
           "additionalProperties": true
@@ -6893,7 +6893,7 @@
               "anyOf": [
                 {
                   "title": "InitializeRequest",
-                  "description": "Establishes the connection with a client and negotiates protocol capabilities.\n\nThis method is called at the beginning of the connection, before any other request, to:\n- Negotiate the protocol version to use\n- Exchange capability information between client and agent\n- Determine available authentication methods\n\nThe Client may repeat it before its first other request; the latest successful\n`initialize` is authoritative.\n\nThe agent should respond with its supported protocol version and capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
+                  "description": "Establishes the connection with a client and negotiates protocol capabilities.\n\nThis method is called at the beginning of the connection, before any other request, to:\n- Negotiate the protocol version to use\n- Exchange capability information between client and agent\n- Determine available authentication methods\n\nThe Client may repeat it before its first other request. The latest successful\n`initialize` is authoritative.\n\nThe agent should respond with its supported protocol version and capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/InitializeRequest"
@@ -7010,7 +7010,7 @@
                 },
                 {
                   "title": "PromptRequest",
-                  "description": "Processes a user prompt within a session.\n\nAcceptance means adding a logical user message with an ID and a position\nrelative to other messages in the ACP conversation, not receipt or queueing.\nThe Agent MUST return the inserted message's ID without waiting for\nprocessing to finish.\n\nThe Agent reports the user message with the same ID through `session/update`;\nthis notification may arrive before or after the response, but neither may\nprecede insertion. Processing state, output, tool calls, and completion are\nalso reported through session updates.\n\nAn error response means the user message was not inserted. Once it is\ninserted, the Agent MUST NOT answer with an error, even if the work fails\nbefore the response is sent; it ends that work with the `error` stop reason.\n\nA rejected submission produces no user-message updates. Foreground state\nfollows its normal lifecycle independently of the request outcome:\n`running` may precede insertion, and rejection alone does not imply `idle`.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)",
+                  "description": "Processes a user prompt within a session.\n\nAcceptance means adding a logical user message with an ID and a position\nrelative to other messages in the ACP conversation, not receipt or queueing.\nThe Agent MUST return the inserted message's ID without waiting for\nprocessing to finish.\n\nThe Agent reports the user message with the same ID through `session/update`.\nThis notification may arrive before or after the response, but neither may\nprecede insertion. Processing state, output, tool calls, and completion are\nalso reported through session updates.\n\nAn error response means the user message was not inserted. Once it is\ninserted, the Agent MUST NOT answer with an error, even if the work fails\nbefore the response is sent. It ends that work with the `error` stop reason.\n\nA rejected submission produces no user-message updates. Foreground state\nfollows its normal lifecycle independently of the request outcome:\n`running` may precede insertion, and rejection alone does not imply `idle`.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/PromptRequest"
@@ -7578,7 +7578,7 @@
           "x-deserialize-default-on-null": true
         },
         "env": {
-          "description": "Environment variables to set when launching the MCP server. Names SHOULD be unique;\nAgents MAY reject duplicates with `-32602`, and otherwise the last entry wins.",
+          "description": "Environment variables to set when launching the MCP server. Names SHOULD be unique.\nAgents MAY reject duplicates with `-32602`, and otherwise the last entry wins.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
@@ -7647,7 +7647,7 @@
       "type": "object",
       "properties": {
         "cwd": {
-          "description": "Filter sessions by working directory. Must be an absolute path.\n\nOnly sessions whose `cwd` is this same directory match; subdirectories and\n`additionalDirectories` don't. Agents MAY normalize paths when comparing.\n\nOmitted and `null` are equivalent and mean sessions are not filtered by working directory.",
+          "description": "Filter sessions by working directory. Must be an absolute path.\n\nOnly sessions whose `cwd` is this same directory match. Subdirectories and\n`additionalDirectories` don't. Agents MAY normalize paths when comparing.\n\nOmitted and `null` are equivalent and mean sessions are not filtered by working directory.",
           "anyOf": [
             {
               "$ref": "#/$defs/AbsolutePath"
@@ -7738,7 +7738,7 @@
           "x-deserialize-default-on-null": true
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used for the\nsource session.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used for the\nsource session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -7788,7 +7788,7 @@
           "x-deserialize-default-on-null": true
         },
         "mcpServers": {
-          "description": "List of MCP servers to connect to for this session.\n\nThe complete set of Client-provided servers; omitted and `[]` mean none. Agents SHOULD\nNOT restore servers from earlier requests.",
+          "description": "List of MCP servers to connect to for this session.\n\nThe complete set of Client-provided servers. Omitted and `[]` mean none. Agents SHOULD\nNOT restore servers from earlier requests.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/McpServer"
@@ -7807,7 +7807,7 @@
           ]
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent; the Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -8431,7 +8431,7 @@
       }
     },
     "MessageMcpResponse": {
-      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nUnknown outer fields are ignored; inner result and error fields are preserved.\nCarrier `_meta` is optional; null or invalid values are treated as absent.\nSenders must include exactly one outcome; receivers prefer `result` if both are present.",
+      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nUnknown outer fields are ignored. Inner result and error fields are preserved.\nCarrier `_meta` is optional. Null or invalid values are treated as absent.\nSenders must include exactly one outcome. Receivers prefer `result` if both are present.",
       "anyOf": [
         {
           "title": "Result",
@@ -8477,11 +8477,11 @@
       "x-method": "mcp/message"
     },
     "McpError": {
-      "description": "**UNSTABLE**\n\nAn inner MCP error, distinct from an outer ACP binding or runtime error.\n\n`code` and `message` are required and non-null. `data` is optional;\nexplicit `null` is preserved separately from an omitted key.",
+      "description": "**UNSTABLE**\n\nAn inner MCP error, distinct from an outer ACP binding or runtime error.\n\n`code` and `message` are required and non-null. `data` is optional.\nExplicit `null` is preserved separately from an omitted key.",
       "type": "object",
       "properties": {
         "code": {
-          "description": "Inner MCP error code; never an ACP error code.",
+          "description": "Inner MCP error code. Never an ACP error code.",
           "type": "integer",
           "format": "int32"
         },
@@ -8490,7 +8490,7 @@
           "type": "string"
         },
         "data": {
-          "description": "Optional error data; explicit null is retained."
+          "description": "Optional error data. Explicit null is retained."
         }
       },
       "required": ["code", "message"],
@@ -8596,7 +8596,7 @@
           "type": "string"
         },
         "params": {
-          "description": "Optional inner MCP params; null is equivalent to omission.",
+          "description": "Optional inner MCP params. Null is equivalent to omission.",
           "type": ["object", "null"],
           "additionalProperties": true
         },

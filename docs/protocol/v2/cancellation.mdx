@@ -7,9 +7,9 @@ ACP uses JSON-RPC 2.0 for making requests and getting responses.
 
 The JSON-RPC specification doesn't define any standard mechanism for request cancellation and keeps it up to the implementation.
 
-## `$/cancel_request` Notification
+## `$/cancel_request` notification
 
-In order to provide a consistent approach to cancellation, ACP defines a `$/cancel_request` notification that can be sent to cancel requests. Its `requestId` identifies a request that the sender of `$/cancel_request` issued; receivers match it only against requests they received from that sender, since each side chooses its own request IDs.
+To make cancellation consistent, ACP defines a `$/cancel_request` notification that can be sent to cancel requests. Its `requestId` identifies a request that the sender of `$/cancel_request` issued. Receivers match it only against requests they received from that sender, since each side chooses its own request IDs.
 
 Cancellation remains optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification.
 
@@ -45,12 +45,12 @@ with `stopReason: "cancelled"`. No additional completion update is required if
 no foreground work was active. See [Elicitation Cancellation](/protocol/v2/elicitation#session-cancellation)
 for selective cancellation of related requests and external URL interactions.
 
-## Internal Cancellation
+## Internal cancellation
 
 Requests can also be cancelled internally by the executing party without receiving `$/cancel_request`:
 
-- **Client-side examples**: User closes IDE, switches to different project, file becomes unavailable
-- **Agent-side examples**: LLM context limit reached, internal timeout, resource constraints
+- On the Client, the user closes the IDE or switches projects, or a file becomes unavailable.
+- On the Agent, the LLM context limit is reached, an internal timeout fires, or resources run out.
 
 When internal cancellation occurs, the executing party **SHOULD**:
 
@@ -59,9 +59,9 @@ When internal cancellation occurs, the executing party **SHOULD**:
 
 Both kinds of cancellation answer `session/prompt` with `-32800` only before the user message is inserted. Once it is inserted, the Agent responds successfully with its `messageId`, and the work it started is stopped with [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation) or ends with the matching [stop reason](/protocol/v2/prompt-lifecycle#stop-reasons). See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted).
 
-## Example: Cascading Cancellation Flow
+## Example: cascading cancellation flow
 
-Sending `session/cancel` does not automatically send `$/cancel_request` for outstanding Agent-to-Client requests. An Agent can explicitly propagate cancellation to those requests, but the Client **MUST** answer pending permission requests with the `cancelled` outcome when it sends `session/cancel`, as specified in [active session work cancellation](/protocol/v2/prompt-lifecycle#cancellation); it does not wait for `$/cancel_request`.
+Sending `session/cancel` does not automatically send `$/cancel_request` for outstanding Agent-to-Client requests. An Agent can explicitly propagate cancellation to those requests, but the Client **MUST** answer pending permission requests with the `cancelled` outcome when it sends `session/cancel`, as specified in [active session work cancellation](/protocol/v2/prompt-lifecycle#cancellation). It does not wait for `$/cancel_request`.
 
 ```mermaid
 sequenceDiagram

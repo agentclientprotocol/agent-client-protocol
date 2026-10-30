@@ -3,15 +3,14 @@ title: "Tool Calls"
 description: "How Agents report tool call execution"
 ---
 
-Tool calls represent actions that language models request Agents to perform during a [session](/protocol/v2/prompt-lifecycle). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
+Tool calls are actions the language model asks the Agent to perform during a [session](/protocol/v2/prompt-lifecycle), such as reading a file or running a command. The Agent executes them on the model's behalf.
 
-Agents report tool calls through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
+Agents report tool calls through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications, which Clients use to show progress and results to users.
 
 Tool call updates may arrive while the Agent reports `idle`. They do not change the state.
 
-While Agents handle the actual execution, they may use Client-mediated
-interactions like [permission requests](#requesting-permission) to provide a
-richer, more integrated experience.
+Agents may ask the user for approval before running a tool call. See
+[Requesting Permission](#requesting-permission).
 
 ## Reporting
 
@@ -46,7 +45,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="name" type="string">
   The programmatic name of the invoked tool, such as `read_file`. This
-  identifies which tool is being used; `title` describes this invocation for
+  identifies which tool is being used. `title` describes this invocation for
   users, while `kind` provides a coarse presentation category. Agents **SHOULD**
   include the name the first time they report a `toolCallId` when it is
   available and **SHOULD NOT** change it later except to correct metadata. Names
@@ -108,7 +107,7 @@ starts with every field at its default: `status` is `pending`, `kind` is
 `other`, `content` and `locations` are empty, and `title`, `name`, `rawInput`,
 and `rawOutput` are unset. Clients can show a generic title when `title` is
 unset. `content` and `locations` are
-replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
+replaced as whole arrays. Send `[]` or `null` to clear them. For `_meta`, omit
 the field to leave it unchanged or set it to `null` to clear it. An object
 patches the stored metadata by top-level key: a key set to `null` is removed,
 any other value replaces that key whole, and keys the object omits are
@@ -153,7 +152,7 @@ As tools execute, Agents send updates to report progress and results.
 
 All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
 
-## Streaming Content
+## Streaming content
 
 As tools execute, Agents **MAY** stream individual content items with
 `tool_call_content_chunk`:
@@ -203,7 +202,7 @@ sending each piece as a text content item in its own
 `tool_call_content_chunk`. Clients can present adjacent text items as one
 continuous text.
 
-## Requesting Permission
+## Requesting permission
 
 Permission requests do not by themselves change the session's foreground state. While foreground work is blocked on a permission response, the Agent **SHOULD** report `requires_action`. Once reported, it **MUST** report `running` when foreground progress resumes, or `idle` if the work ends without resuming. Requests for independent background activity may arrive while the session remains `idle`. See [Waiting for User Action](/protocol/v2/prompt-lifecycle#waiting-for-user-action) for concurrent requests and late answers.
 
@@ -298,10 +297,10 @@ For a proposed command, the subject can describe the command directly:
 
 For `type: "command"`, `command` and `cwd` are required, and `cwd` **MUST** be
 an absolute path. `toolCallId`, `terminalId`, and `_meta` are optional and
-nullable; omission and `null` are equivalent and mean the value was not
+nullable. Omission and `null` are equivalent and mean the value was not
 provided. The IDs only associate the permission with displayed state and may be
 unavailable before execution starts. Selecting an allow option authorizes the
-Agent to execute the command; it does not ask the Client to execute anything.
+Agent to execute the command. It does not ask the Client to execute anything.
 
 The Client responds with the user's decision:
 
@@ -342,11 +341,11 @@ Clients also send `cancelled` when the user dismisses the prompt or the Client d
   prompt, or the Client declined it, and `selected` with an `optionId` for the
   selected permission option. If `optionId` doesn't match an offered option, the
   Agent **MUST** treat the request as not approved. Custom or future outcomes
-  may appear; agents that do not understand the outcome **MUST NOT** treat it as
+  may appear. Agents that do not understand the outcome **MUST NOT** treat it as
   approval.
 </ResponseField>
 
-### Permission Options
+### Permission options
 
 Each permission option provided to the Client contains:
 
@@ -408,7 +407,7 @@ Tool calls progress through different statuses during their lifecycle:
   The tool call was cancelled before it completed
 </ResponseField>
 
-Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants. Clients treat a tool call with an unrecognized status as still in progress.
+Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`. Unknown non-underscore statuses are reserved for future ACP variants. Clients treat a tool call with an unrecognized status as still in progress.
 
 `completed`, `failed`, and `cancelled` are final. When foreground work ends, whether it finished, was [cancelled](/protocol/v2/prompt-lifecycle#cancellation), or failed, the Agent **SHOULD** give each of that work's unfinished tool calls a final status. If a tool call's [permission request](#requesting-permission) is rejected or answered with `cancelled`, the Agent reports the tool call as `cancelled` or `failed` rather than leaving it `pending`.
 
@@ -418,7 +417,7 @@ Tool calls can produce different types of content:
 
 Tool call content `type` values can also be custom or future variants. Implementations **SHOULD** preserve unknown content payloads when storing, replaying, proxying, or forwarding tool calls, and otherwise render a generic content item or ignore the item if no safe display is available.
 
-### Regular Content
+### Regular content
 
 Standard [content blocks](/protocol/v2/content) like text, images, or resources:
 
@@ -432,7 +431,7 @@ Standard [content blocks](/protocol/v2/content) like text, images, or resources:
 }
 ```
 
-### Display-only Terminals
+### Display-only terminals
 
 A terminal content item references an Agent-owned terminal by ID:
 
@@ -444,7 +443,7 @@ A terminal content item references an Agent-owned terminal by ID:
 ```
 
 The item is only a display anchor. `terminalId` is required. Optional nullable
-`_meta` is scoped to this content item; omission and `null` both mean that no
+`_meta` is scoped to this content item. Omission and `null` both mean that no
 item metadata was provided. `terminalId` is unique within the session, remains
 stable for the terminal's lifetime, and **MUST NOT** be reused for a different
 terminal. It is independent of `toolCallId`, even when an Agent uses the same
@@ -483,21 +482,21 @@ empty.
 - `cwd` is the command's working directory and **MUST** be absolute when
   supplied.
 - `size` is the terminal size the command runs with, in character cells, with
-  required `cols` and `rows`. It is optional; when present, Clients can render output at this size so that column layouts, progress bars, and
+  required `cols` and `rows`. It is optional. When present, Clients can render output at this size so that column layouts, progress bars, and
   cursor-positioned output display as the program wrote them. Without it,
   Clients choose a size.
 - `output` is an authoritative replacement snapshot. Its required `data` is
   RFC 4648 base64-encoded bytes with JSON Schema `contentEncoding: "base64"`. A concrete
   snapshot is the complete byte sequence the Agent wants the Client to retain
-  for the terminal at that point. It replaces all previously stored bytes;
+  for the terminal at that point. It replaces all previously stored bytes.
   Clients **MUST NOT** merge or splice bytes from the previous snapshot into it.
-  Optional nullable `output._meta` is scoped to that snapshot; omission and
+  Optional nullable `output._meta` is scoped to that snapshot. Omission and
   `null` both mean no snapshot metadata was provided.
 - A concrete `exitStatus` marks the terminal as exited. Its optional nullable
   `exitCode` and `signal` report known exit information. Its optional nullable
   `_meta` is scoped to that exit information. For all three fields, omission
   and `null` both mean the value was not provided. Conventional POSIX signal
-  names include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use
+  names include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use
   platform-specific names. Terminal exit and tool call status are independent.
 - The top-level `_meta` is terminal-scoped and follows the same patch semantics,
   except that an object patches the stored metadata by top-level key. See
@@ -519,10 +518,10 @@ For live output, Agents send `terminal_output_chunk`:
 `terminalId` and `data` are required. Each `data` value is an independently RFC
 4648 base64-encoded byte chunk with JSON Schema `contentEncoding: "base64"`. Clients
 decode each chunk separately and append the decoded bytes in received order for
-that `terminalId`; they **MUST NOT** concatenate encoded strings before
+that `terminalId`. They **MUST NOT** concatenate encoded strings before
 decoding. Chunk boundaries may split UTF-8 code points or terminal escape
 sequences, so decoders retain parser state across chunks. Optional nullable
-`_meta` is chunk-scoped; omission and `null` both mean no chunk metadata was
+`_meta` is chunk-scoped. Omission and `null` both mean no chunk metadata was
 provided. A chunk for a `terminalId` the Client hasn't seen creates the terminal
 with unknown fields and empty output, then appends to it.
 
@@ -531,7 +530,7 @@ whose `data` isn't valid base64, keeping the bytes they already have. The other
 fields of that `terminal_update` still apply. Agents **SHOULD** send all output before a
 concrete `exitStatus`, but Clients still append output that arrives after it.
 Clients **MAY** bound how much output they keep, for example by dropping the
-oldest bytes; a later `output` snapshot replaces whatever they kept.
+oldest bytes. A later `output` snapshot replaces whatever they kept.
 
 Terminal output is Agent content. Clients **SHOULD** render it so that it cannot write the clipboard, send input or query responses, or open links without user action, and sanitizers **SHOULD** keep state across chunks.
 
@@ -655,7 +654,7 @@ Clients **SHOULD** show affected paths from `changes`, not from `patch` headers.
 
 ## Following the Agent
 
-Tool calls can report file locations they're working with, enabling Clients to implement "follow-along" features that track which files the Agent is accessing or modifying in real-time.
+Tool calls can report the file locations they're working with. Clients can use this to follow along, showing which files the Agent is reading or modifying as it works.
 
 ```json
 {
@@ -670,7 +669,7 @@ Tool calls can report file locations they're working with, enabling Clients to i
 
 <ParamField path="line" type="integer | null">
   Optional 1-based line number within the file, represented as an unsigned
-  32-bit integer; `0` is invalid. Omission and `null` are equivalent and mean no
+  32-bit integer. `0` is invalid. Omission and `null` are equivalent and mean no
   specific line was provided.
 </ParamField>
 

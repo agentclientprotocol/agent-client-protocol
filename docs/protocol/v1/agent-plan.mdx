@@ -3,11 +3,11 @@ title: "Agent Plan"
 description: "How Agents communicate their execution plans"
 ---
 
-Plans are execution strategies for complex tasks that require multiple steps.
+A plan is the Agent's list of steps for a multi-step task. Each entry has a description, a priority, and a status.
 
-Agents may share plans with Clients through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications, providing real-time visibility into their thinking and progress.
+Agents may send plans to Clients through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications and update them as work progresses.
 
-## Creating Plans
+## Creating plans
 
 When the language model creates an execution plan, the Agent **SHOULD** report it to the Client:
 
@@ -46,7 +46,7 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
   accomplished
 </ParamField>
 
-## Plan Entries
+## Plan entries
 
 Each plan entry represents a specific task or goal within the overall execution strategy:
 
@@ -72,12 +72,12 @@ Each plan entry represents a specific task or goal within the overall execution 
 
 </ParamField>
 
-## Updating Plans
+## Updating plans
 
 As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same structure.
 
 The Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current plan completely.
 
-### Dynamic Planning
+### Dynamic planning
 
-Plans can evolve during execution. The Agent **MAY** add, remove, or modify plan entries as it discovers new requirements or completes tasks, allowing it to adapt based on what it learns.
+Plans can change during execution. The Agent **MAY** add, remove, or modify plan entries as it discovers new requirements or completes tasks.
