@@ -104,7 +104,7 @@ Agents **SHOULD** put initial state in the `session/new` response, such as `conf
 `session/resume` does not imply idle: an existing session may still be running
 or waiting for user action. See [Current-State Synchronization](#current-state-synchronization).
 
-Agents **MAY** include initial [configuration options](/protocol/v2/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/slash-commands) in `availableCommands` in both `session/new` and `session/resume` responses. For example, a new session can return both:
+The `session/new` and `session/resume` responses carry the session's [configuration options](/protocol/v2/session-config-options) in `configOptions` and [available slash commands](/protocol/v2/slash-commands) in `availableCommands`. Because a setup response replaces the lists the Client holds, an Agent whose session has configuration options or commands **MUST** include them in that response. For example, a new session can return both:
 
 ```json
 {
@@ -327,7 +327,7 @@ original `session/resume` request.
 }
 ```
 
-The response **MAY** also include `configOptions` and `availableCommands` as
+The response also includes the current `configOptions` and `availableCommands` as
 described in [Initial Session State](#initial-session-state), whether or not
 history replay was requested.
 
@@ -349,8 +349,7 @@ on the resume response.
 If connection loss made a pending permission request or elicitation unusable,
 the Agent **SHOULD** reestablish it or safely resolve the wait.
 
-Agents **SHOULD** also return current `configOptions` in the resume response
-and send current session info through `session_info_update` after any requested
+Agents **SHOULD** also send current session info through `session_info_update` after any requested
 history replay and before responding, even when `replayFrom` is omitted or
 `null`. This synchronizes current state rather than replaying historical
 configuration or metadata changes.

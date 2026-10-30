@@ -9,7 +9,7 @@ Agents can advertise a set of slash commands that users can invoke. These comman
 
 ### Initial commands
 
-The Agent **MAY** include `availableCommands` in the `session/new`, `session/resume`, and, when supported, `session/fork` responses, alongside `configOptions` when supported. This lets the Client display commands as soon as [session setup](/protocol/v2/draft/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
+An Agent with commands **MUST** include them in `availableCommands` in the `session/new`, `session/resume`, and, when supported, `session/fork` responses, alongside `configOptions` when supported, since a setup response replaces the Client's command list. This lets the Client display commands as soon as [session setup](/protocol/v2/draft/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
 
 For example, a `session/new` response can advertise a command with text input:
 
