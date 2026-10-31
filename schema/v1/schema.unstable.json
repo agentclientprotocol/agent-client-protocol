@@ -95,7 +95,7 @@
           "description": "Method-specific notification parameters.",
           "anyOf": [
             {
-              "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response.",
+              "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response.\n\n# Deserialization\n\nDo not parse incoming messages with the derived untagged `Deserialize`\n(it exists for schema generation): variants are tried in order, so\nall-optional variants silently swallow any payload. Use\n[`ProtocolLevelNotification::from_method_and_params`].",
               "anyOf": [
                 {
                   "title": "CancelRequestNotification",
@@ -177,7 +177,7 @@
           "description": "Method-specific request parameters.",
           "anyOf": [
             {
-              "description": "All possible requests that an agent can send to a client.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly.\n\nThis enum encompasses all method calls from agent to client.",
+              "description": "All possible requests that an agent can send to a client.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly.\n\nThis enum encompasses all method calls from agent to client.\n\n# Deserialization\n\nDo not parse incoming messages with the derived untagged `Deserialize`\n(it exists for schema generation): variants are tried in order, so\nall-optional variants silently swallow any payload. Use\n[`AgentRequest::from_method_and_params`].",
               "anyOf": [
                 {
                   "title": "WriteTextFileRequest",
@@ -4433,7 +4433,7 @@
           "description": "Method-specific notification parameters.",
           "anyOf": [
             {
-              "description": "All possible notifications that an agent can send to a client.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.",
+              "description": "All possible notifications that an agent can send to a client.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.\n\n# Deserialization\n\nDo not parse incoming messages with the derived untagged `Deserialize`\n(it exists for schema generation): variants are tried in order, so\nall-optional variants silently swallow any payload. Use\n[`AgentNotification::from_method_and_params`].",
               "anyOf": [
                 {
                   "title": "SessionNotification",
@@ -6241,7 +6241,7 @@
           "description": "Method-specific request parameters.",
           "anyOf": [
             {
-              "description": "All possible requests that a client can send to an agent.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly.\n\nThis enum encompasses all method calls from client to agent.",
+              "description": "All possible requests that a client can send to an agent.\n\nThis enum is used internally for routing RPC requests. You typically won't need\nto use this directly.\n\nThis enum encompasses all method calls from client to agent.\n\n# Deserialization\n\nDo not parse incoming messages with the derived untagged `Deserialize`\n(it exists for schema generation): variants are tried in order, so\nall-optional variants silently swallow any payload. Use\n[`ClientRequest::from_method_and_params`].",
               "anyOf": [
                 {
                   "title": "InitializeRequest",
@@ -8354,7 +8354,7 @@
           "description": "Method-specific notification parameters.",
           "anyOf": [
             {
-              "description": "All possible notifications that a client can send to an agent.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.",
+              "description": "All possible notifications that a client can send to an agent.\n\nThis enum is used internally for routing RPC notifications. You typically won't need\nto use this directly.\n\nNotifications do not expect a response.\n\n# Deserialization\n\nDo not parse incoming messages with the derived untagged `Deserialize`\n(it exists for schema generation): variants are tried in order, so\nall-optional variants silently swallow any payload. Use\n[`ClientNotification::from_method_and_params`].",
               "anyOf": [
                 {
                   "title": "CancelNotification",
