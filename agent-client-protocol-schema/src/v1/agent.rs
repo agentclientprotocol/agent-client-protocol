@@ -6403,6 +6403,13 @@ pub(crate) const AUTH_STATUS_METHOD_NAME: &str = "auth/status";
 /// to use this directly.
 ///
 /// This enum encompasses all method calls from client to agent.
+///
+/// # Deserialization
+///
+/// Do not parse incoming messages with the derived untagged `Deserialize`
+/// (it exists for schema generation): variants are tried in order, so
+/// all-optional variants silently swallow any payload. Use
+/// [`ClientRequest::from_method_and_params`].
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -6655,6 +6662,13 @@ impl ClientRequest {
 /// to use this directly - the responses are handled automatically by the connection.
 ///
 /// These are responses to the corresponding `ClientRequest` variants.
+///
+/// # Deserialization
+///
+/// Do not parse incoming messages with the derived untagged `Deserialize`
+/// (it exists for schema generation): variants are tried in order, so
+/// all-optional variants silently swallow any payload. Use
+/// [`AgentResponse::from_method_and_result`].
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -6723,6 +6737,13 @@ pub enum AgentResponse {
 /// to use this directly.
 ///
 /// Notifications do not expect a response.
+///
+/// # Deserialization
+///
+/// Do not parse incoming messages with the derived untagged `Deserialize`
+/// (it exists for schema generation): variants are tried in order, so
+/// all-optional variants silently swallow any payload. Use
+/// [`ClientNotification::from_method_and_params`].
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
