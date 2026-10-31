@@ -83,6 +83,13 @@ pub(crate) const CANCEL_REQUEST_METHOD_NAME: &str = "$/cancel_request";
 /// notifications starting with '$/' it is free to ignore the notification.
 ///
 /// Notifications do not expect a response.
+///
+/// # Deserialization
+///
+/// Do not parse incoming messages with the derived untagged `Deserialize`
+/// (it exists for schema generation): variants are tried in order, so
+/// all-optional variants silently swallow any payload. Use
+/// [`ProtocolLevelNotification::from_method_and_params`].
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
