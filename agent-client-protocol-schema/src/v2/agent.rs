@@ -198,7 +198,8 @@ pub struct Implementation {
     /// Intended for programmatic or logical use, but can be used as a display
     /// name fallback if title isn't present.
     pub name: String,
-    /// Intended for UI and end-user contexts, so it should be readable by people.
+    /// Intended for UI and end-user contexts and optimized to be human-readable
+    /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
     ///
@@ -234,7 +235,8 @@ impl Implementation {
         }
     }
 
-    /// Intended for UI and end-user contexts, so it should be readable by people.
+    /// Intended for UI and end-user contexts and optimized to be human-readable
+    /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
     #[must_use]
