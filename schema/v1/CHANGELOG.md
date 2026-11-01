@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.28.0...schema-v1.29.0) - 2026-10-31
+
+### Added
+
+- *(unstable)* add session/archive and session/unarchive methods ([#2736](https://github.com/agentclientprotocol/agent-client-protocol/pull/2736))
+- *(unstable)* add proxy/initialize and proxy/successor ([#2737](https://github.com/agentclientprotocol/agent-client-protocol/pull/2737))
+- *(unstable)* add session/status method ([#2735](https://github.com/agentclientprotocol/agent-client-protocol/pull/2735))
+- *(unstable)* add auth/status method and auth/status_update notification ([#2732](https://github.com/agentclientprotocol/agent-client-protocol/pull/2732))
+- *(unstable)* add session/set_title method ([#2734](https://github.com/agentclientprotocol/agent-client-protocol/pull/2734))
+
+### Other
+
+- *(rfd)* move client system prompt to preview ([#2739](https://github.com/agentclientprotocol/agent-client-protocol/pull/2739))
+- *(schema)* plain-language pass over spec pages and schema descriptions ([#2730](https://github.com/agentclientprotocol/agent-client-protocol/pull/2730))
+
 ## [1.28.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.27.0...schema-v1.28.0) - 2026-10-30
 
 ### Added
