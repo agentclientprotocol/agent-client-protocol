@@ -3531,9 +3531,12 @@ pub enum RequestPermissionOutcome {
     /// Agents MUST NOT proceed with the operation.
     ///
     /// When a client sends a `session/cancel` notification, it MUST respond to all
-    /// pending `session/request_permission` requests in that session with this
-    /// `cancelled` outcome, without answering any request twice. Requests in other
-    /// sessions are unaffected.
+    /// pending `session/request_permission` requests for the cancelled foreground work
+    /// with this `cancelled` outcome, without answering any request twice. These are the
+    /// pending requests in that session whose `subject` does not reference work in the
+    /// latest `background` list, including requests without a `subject` and requests
+    /// whose `subject` the client does not recognize. Requests for listed background
+    /// work stay open. Requests in other sessions are unaffected.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
     Cancelled(CancelledPermissionOutcome),
@@ -3978,7 +3981,9 @@ pub enum AgentRequest {
     /// to the user and return their decision.
     ///
     /// If the client cancels active session work via `session/cancel`, it MUST
-    /// respond to this request with the `cancelled` outcome.
+    /// respond to this request with the `cancelled` outcome unless its `subject`
+    /// references work in the latest `background` list. A `subject` the client does
+    /// not recognize does not reference listed work.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
     RequestPermissionRequest(Box<RequestPermissionRequest>),

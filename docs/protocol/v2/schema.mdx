@@ -233,10 +233,12 @@ if it does not.
 
 Cancels a session's foreground work and its prompts not yet inserted.
 
-Background work is not covered, but the Agent MAY stop it too.
+Work in the latest `background` list is not covered and keeps running. The
+Agent MAY stop background activity it does not list.
 
 Upon receiving this notification, the Agent SHOULD stop all language model
-requests and all tool call invocations as soon as possible.
+requests and all tool call invocations of the cancelled foreground work as soon
+as possible.
 
 After all ongoing operations have been successfully aborted and pending
 updates have been sent, the Agent MUST send an idle `state_update` session
@@ -1357,7 +1359,9 @@ a potentially sensitive operation. The client should present the options
 to the user and return their decision.
 
 If the client cancels active session work via `session/cancel`, it MUST
-respond to this request with the `cancelled` outcome.
+respond to this request with the `cancelled` outcome unless its `subject`
+references work in the latest `background` list. A `subject` the client does
+not recognize does not reference listed work.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
 
@@ -5558,9 +5562,12 @@ cancelled, the user dismissed the prompt, or the client declined it by policy.
 Agents MUST NOT proceed with the operation.
 
 When a client sends a `session/cancel` notification, it MUST respond to all
-pending `session/request_permission` requests in that session with this
-`cancelled` outcome, without answering any request twice. Requests in other
-sessions are unaffected.
+pending `session/request_permission` requests for the cancelled foreground work
+with this `cancelled` outcome, without answering any request twice. These are the
+pending requests in that session whose `subject` does not reference work in the
+latest `background` list, including requests without a `subject` and requests
+whose `subject` the client does not recognize. Requests for listed background
+work stay open. Requests in other sessions are unaffected.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
 

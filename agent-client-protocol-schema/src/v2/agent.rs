@@ -7461,10 +7461,12 @@ pub enum AgentResponse {
 pub enum ClientNotification {
     /// Cancels a session's foreground work and its prompts not yet inserted.
     ///
-    /// Background work is not covered, but the Agent MAY stop it too.
+    /// Work in the latest `background` list is not covered and keeps running. The
+    /// Agent MAY stop background activity it does not list.
     ///
     /// Upon receiving this notification, the Agent SHOULD stop all language model
-    /// requests and all tool call invocations as soon as possible.
+    /// requests and all tool call invocations of the cancelled foreground work as soon
+    /// as possible.
     ///
     /// After all ongoing operations have been successfully aborted and pending
     /// updates have been sent, the Agent MUST send an idle `state_update` session

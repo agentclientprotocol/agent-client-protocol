@@ -1161,7 +1161,7 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 }
 ```
 
-`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. A `session/prompt` received after `session/cancel` is not cancelled by it. The Agent **MUST** answer those prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list.
+`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. The Agent **MUST** answer the covered prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). A `session/prompt` received after `session/cancel` is not cancelled by it. Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list.
 
 The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification. It **SHOULD** skip tool calls in the latest `background` list and tool calls that reference a listed terminal. This mark is a local display hint: the Agent gives those tool calls their [final status](/protocol/v2/draft/tool-calls#status), and its updates replace the mark.
 
@@ -1170,11 +1170,13 @@ the cancelled foreground work with the `cancelled` outcome. Requests already
 answered do not require another response. The Client tells them apart through
 the request's `subject`: it answers with `cancelled` every pending request whose
 `subject` does not reference work in the latest `background` list, including
-requests without a `subject`. Requests for listed work stay open, and the Agent
+requests without a `subject`. A `subject` the Client does not recognize, such as
+a custom subject type, does not reference listed work, so the Client answers
+that request with `cancelled` too. Requests for listed work stay open, and the Agent
 cancels any that no longer apply with `$/cancel_request`. For selective cancellation of related
 elicitation requests, see [Elicitation Cancellation](/protocol/v2/draft/elicitation#session-cancellation).
 
-When the Agent receives this notification, it **SHOULD** stop all language model requests and all tool call invocations as soon as possible.
+When the Agent receives this notification, it **SHOULD** stop all language model requests and all tool call invocations of the cancelled foreground work as soon as possible.
 
 A response can race with `session/cancel` before cancellation completes. After
 cancellation completes, the Agent **SHOULD** ignore late responses or external
