@@ -15,7 +15,7 @@ Define a standard way for agents to report token usage, with three separate figu
 - **In-turn usage** - the same figure while the turn is still running, reported as provisional snapshots on a new `turn_usage_update`. Running subagents report theirs on their own sessions.
 - **Cumulative usage** - an optional running total that the agent measures natively for a session, including its subagents and internal model calls, reported on `usage_update` whenever it changes.
 
-The RFD also pins down what each token field means, so the same numbers mean the same thing across agents and providers.
+The RFD also pins down what each token field means, so the same numbers mean the same thing across agents and providers, and lets each figure be broken down by model.
 
 This RFD remains in Draft while its semantics are validated against real adapters. Session-level context window size and cumulative cost are covered separately in the [Session Context Size and Cost RFD](/rfds/session-usage). Subagent sessions are defined in the [Subagent Sessions RFD](/rfds/subagents).
 
@@ -29,6 +29,7 @@ ACP has an unstable `usage` field on the turn-completion signal, but it does not
 - **Undefined token categories** - It is not defined whether `inputTokens` includes cached tokens, or whether `outputTokens` includes reasoning tokens. Providers differ on both, so totals and breakdowns cannot be compared or combined.
 - **No rule for subagents** - Agents that delegate work to subagents do not know whether a parent turn should include the subagents' usage. Subagent work can also continue after the parent turn ends.
 - **No running total** - Clients cannot show how many tokens a session has used so far, including delegated and internal work, without adding up values that were never designed to be added.
+- **No split by model** - A turn or a session can use more than one model, for example when an agent switches to a cheaper model partway through a turn. Models are priced differently, so a single total cannot be priced once they mix. Agents work around this with per-model rows in `_meta`, whose scope does not always match `usage`.
 - **No progress during a turn** - Clients cannot show how many tokens a running turn or a running subagent has used so far. Agents work around this in incompatible ways: per-round usage in `_meta` on empty message chunks, custom subagent progress notifications, or agent-specific accumulated-usage notifications. Clients that need a live figure estimate it themselves.
 - **Prompt lifecycle coupling** - The usage semantics need to hold across stop reasons, repeated state snapshots, and the different turn-completion signals of v1 and v2.
 
@@ -331,8 +332,9 @@ Fields of `Usage`:
 - `cachedReadTokens` (number, optional, nullable) - The part of `inputTokens` read from the prompt cache.
 - `cachedWriteTokens` (number, optional, nullable) - The part of `inputTokens` written to the prompt cache.
 - `thoughtTokens` (number, optional, nullable) - The part of `outputTokens` spent on thoughts or reasoning.
+- `models` (array of `ModelUsage`, optional, nullable) - The usage split by model; see [Usage by model](#usage-by-model).
 
-The optional fields are breakdowns of a larger field: `inputTokens` and `outputTokens` break down `totalTokens`, the cache fields break down `inputTokens`, and `thoughtTokens` breaks down `outputTokens`. For every optional field, omission and `null` are equivalent: the agent is not reporting that breakdown. The larger field remains complete either way.
+The optional fields are breakdowns of a larger field: `inputTokens` and `outputTokens` break down `totalTokens`, the cache fields break down `inputTokens`, `thoughtTokens` breaks down `outputTokens`, and `models` breaks down the whole `Usage`. For every optional field, omission and `null` are equivalent: the agent is not reporting that breakdown. The larger field remains complete either way.
 
 - Agents **SHOULD** send `inputTokens` and `outputTokens` when they know them.
 - When both are present, `totalTokens` **MUST** equal `inputTokens + outputTokens`.
@@ -340,6 +342,49 @@ The optional fields are breakdowns of a larger field: `inputTokens` and `outputT
 - Uncached input can be derived as `inputTokens - cachedReadTokens - cachedWriteTokens` when all three are present.
 
 Usage is informational. A Client that receives an inconsistent breakdown may ignore that breakdown, but it does not reject the update.
+
+#### Usage by model
+
+The optional `models` field breaks the usage down by the model that processed it:
+
+```json
+{
+  "totalTokens": 53000,
+  "inputTokens": 41000,
+  "outputTokens": 12000,
+  "cachedReadTokens": 30000,
+  "models": [
+    {
+      "modelId": "claude-opus-5-5",
+      "totalTokens": 45000,
+      "inputTokens": 35000,
+      "outputTokens": 10000,
+      "cachedReadTokens": 28000
+    },
+    {
+      "modelId": "claude-haiku-5-5",
+      "totalTokens": 8000,
+      "inputTokens": 6000,
+      "outputTokens": 2000,
+      "cachedReadTokens": 2000
+    }
+  ]
+}
+```
+
+Fields of `ModelUsage`:
+
+- `modelId` (string, required, non-null) - The model that processed these tokens.
+- `totalTokens`, `inputTokens`, `outputTokens`, `cachedReadTokens`, `cachedWriteTokens`, `thoughtTokens` - The same fields as in [`Usage`](#usage-fields), with the same meaning and rules, for this model's part of the usage. `ModelUsage` has no `models` field.
+
+Because `models` is part of `Usage`, it appears wherever `Usage` does: per-turn usage, `turn_usage_update`, and `cumulativeUsage`. It follows the rules of the `Usage` that contains it:
+
+- **Same scope** - `models` covers exactly what its `Usage` covers. In per-turn and in-turn usage, that is the session's own main loop, so a model used only for internal calls, such as compaction or title generation, does not appear there. In `cumulativeUsage`, it covers everything the running total covers, including subagents and internal calls.
+- **Complete** - When `models` is present, the `totalTokens` of its entries **MUST** add up to the `totalTokens` of the `Usage`. For each other field, when the `Usage` and every entry report it, the entries **MUST** add up to the value in the `Usage`. Agents **SHOULD** report the same fields in each entry as in the `Usage`. An agent that cannot attribute every token to a model omits `models`.
+- **One entry per model** - Each `modelId` **MUST** appear at most once. Agents **MUST NOT** send an empty array.
+- **Model IDs** - `modelId` **SHOULD** be the identifier the runtime used for the model calls, such as the provider's model ID, rather than a display name or an alias such as `default`. Clients treat it as opaque. It is not required to match a value of the `model` session config option.
+- **Measured or computed like its `Usage`** - In per-turn and in-turn usage, agents **MAY** compute the split by adding up the model calls they observe. In `cumulativeUsage`, agents **MUST NOT** compute it; they report `models` only when the runtime measures a running total per model itself.
+- **Snapshot** - A new `Usage` replaces the whole breakdown. Clients **MUST NOT** merge its entries with the entries of an earlier snapshot.
 
 ### Client handling
 
@@ -355,21 +400,24 @@ This differs from cost: the [Subagent Sessions RFD](/rfds/subagents#cost-reporti
 
 1. **Other token categories** - How should ACP represent provider-specific categories such as audio, image, or tool-related tokens?
 2. **Per-turn cost** - Should any per-turn cost estimate exist, or should cost remain exclusively cumulative session state in `usage_update`?
+3. **Prices that depend on the model call** - Some prices depend on the individual model call, such as long-context tiers that apply when one call's input exceeds a threshold. A per-model total cannot represent them. Should ACP add a breakdown by model call, or a pricing tier on `ModelUsage`?
+4. **Cache write durations** - Some providers price cache writes by how long they are kept, such as 5-minute and 1-hour writes. Should `cachedWriteTokens` get a breakdown by duration?
+5. **Compaction usage** - Per-turn usage does not include compaction, so its cost is visible only in `cumulativeUsage`. Should the [Session Compaction RFD](/rfds/session-compaction) carry the usage of each compaction on its completed `compaction_update`?
 
 ### Provider mapping notes
 
 The following inspected versions show how native data maps onto these fields. They are not a claim that all versions or runtime modes behave the same, or that existing adapters already implement this revision.
 
-| Agent                           | Per-turn usage                                                                                                                    | Native running total for `cumulativeUsage`                                                                                                                   |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Claude Agent SDK 0.3.293        | `result.usage` covers the main loop of the turn. Add `cache_read_input_tokens` and `cache_creation_input_tokens` to `inputTokens` | `modelUsage`, summed across models, covers the main loop, subagents and internal calls. It is cumulative per `query()` call and resets on resume or `/clear` |
-| Codex (openai/codex `34420d42`) | The change in the thread's `total` over the turn. Resumed and forked threads start from an inherited total, so use the change     | None. Each thread's `total` covers only its own calls; omit `cumulativeUsage`                                                                                |
-| Gemini CLI 0.66.0-nightly       | The main-loop responses of the prompt. Add `thoughtsTokenCount` to `outputTokens`                                                 | An in-memory total covers subagents and internal calls, but it is per process, not per session; omit `cumulativeUsage` when the process hosts other sessions |
-| GitHub Copilot CLI 1.0.98       | The main agent's `assistant.usage` events during the turn                                                                         | `session.usage.getMetrics` covers subagents and compaction and persists across resume                                                                        |
-| OpenCode 2.0.31                 | The root session's step usage for the turn. Add cache tokens to `inputTokens` and reasoning tokens to `outputTokens`              | Totals exist per session only and exclude child sessions; omit `cumulativeUsage`                                                                             |
-| Goose (block/goose `1b12093f`)  | The model calls of the turn                                                                                                       | Accumulated totals over the session and its subagent sessions, excluding some auxiliary calls                                                                |
-| Cline CLI 3.0.72                | The lead agent's usage for the turn. Input token semantics vary by provider and need normalizing                                  | `aggregateUsage` covers subagents and teammates, but not compaction                                                                                          |
-| Qwen Code 0.25.2                | The main session's model rounds of the turn                                                                                       | A per-session total covers subagents and internal calls, with per-subagent detail                                                                            |
+| Agent                           | Per-turn usage                                                                                                                                                                                          | Native running total for `cumulativeUsage`                                                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Agent SDK 0.3.293        | `result.usage` covers the main loop of the turn. Add `cache_read_input_tokens` and `cache_creation_input_tokens` to `inputTokens`                                                                       | `modelUsage`, summed across models, covers the main loop, subagents and internal calls. It is cumulative per `query()` call and resets on resume or `/clear`. Its per-model entries map to `cumulativeUsage.models` |
+| Codex (openai/codex `34420d42`) | The change in the thread's `total` over the turn. Resumed and forked threads start from an inherited total, so use the change. Not split by model; a turn that runs on one model has one `models` entry | None. Each thread's `total` covers only its own calls; omit `cumulativeUsage`                                                                                                                                       |
+| Gemini CLI 0.66.0-nightly       | The main-loop responses of the prompt. Add `thoughtsTokenCount` to `outputTokens`                                                                                                                       | An in-memory total covers subagents and internal calls, but it is per process, not per session; omit `cumulativeUsage` when the process hosts other sessions                                                        |
+| GitHub Copilot CLI 1.0.98       | The main agent's `assistant.usage` events during the turn                                                                                                                                               | `session.usage.getMetrics` covers subagents and compaction and persists across resume                                                                                                                               |
+| OpenCode 2.0.31                 | The root session's step usage for the turn. Add cache tokens to `inputTokens` and reasoning tokens to `outputTokens`                                                                                    | Totals exist per session only and exclude child sessions; omit `cumulativeUsage`                                                                                                                                    |
+| Goose (block/goose `1b12093f`)  | The model calls of the turn                                                                                                                                                                             | Accumulated totals over the session and its subagent sessions, excluding some auxiliary calls                                                                                                                       |
+| Cline CLI 3.0.72                | The lead agent's usage for the turn. Input token semantics vary by provider and need normalizing                                                                                                        | `aggregateUsage` covers subagents and teammates, but not compaction                                                                                                                                                 |
+| Qwen Code 0.25.2                | The main session's model rounds of the turn                                                                                                                                                             | A per-session total covers subagents and internal calls, with per-subagent detail                                                                                                                                   |
 
 Amp, Kimi CLI, and Cursor do not expose a native running total over a session tree to the client in the inspected versions. Agents in that position omit `cumulativeUsage` rather than computing one.
 
@@ -387,6 +435,8 @@ Every inspected runtime reports usage once per completed model call, which is th
 | Qwen Code 0.26.0          | Add up the main session's per-round `usageMetadata`                                                                                                                                                                                   | Add up the subagent's `USAGE_METADATA` events. `tokenCount` covers output tokens only                                                                                 |
 | Kimi CLI                  | Add up the per-step `StatusUpdate.token_usage`                                                                                                                                                                                        | The subagent's own `StatusUpdate`, wrapped in `SubagentEvent`                                                                                                         |
 
+Per-turn and in-turn `models` come from the same per-call usage as the figures above, grouped by the model of each call.
+
 ## Shiny future
 
 > How will things will play out once this feature exists?
@@ -402,6 +452,7 @@ Every inspected runtime reports usage once per completed model call, which is th
 - Clients can show consistent post-turn usage summaries and running totals without adding up values themselves
 - Clients can rely on the same field meanings across agents and providers
 - Clients can distinguish context window state, turn-level token accounting, and running totals
+- Clients can price turns and sessions that use more than one model
 
 **For Agent Implementations:**
 
@@ -413,7 +464,7 @@ Every inspected runtime reports usage once per completed model call, which is th
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. Update `Usage` in v1 and v2: make `inputTokens` and `outputTokens` optional and nullable, and document the field meanings and the breakdown rules.
+1. Update `Usage` in v1 and v2: make `inputTokens` and `outputTokens` optional and nullable, and document the field meanings and the breakdown rules. Add the `ModelUsage` type and the optional, nullable `models` field, deserialized with `DefaultOnError` on the whole field rather than `VecSkipError`.
 2. Add the optional `cumulativeUsage` field to `UsageUpdate` in v1 and v2.
 3. Add a `TurnUsageUpdate` variant to `SessionUpdate` in v1 and v2, with discriminator `sessionUpdate: "turn_usage_update"` and a required `usage` field. Add the optional, nullable `turnUsage` field to v1 `ClientSessionCapabilities`.
 4. Gate the new Rust crate surface behind the `unstable_end_turn_token_usage` feature.
@@ -467,7 +518,7 @@ v2 allows repeated state snapshots to carry updated information, so a `running` 
 
 ### Why snapshots instead of per-model-call deltas?
 
-Every runtime reports usage per model call, so deltas would map directly, and they could carry the model of each call. But Clients would have to add them up, which this RFD otherwise avoids. A Client that attaches during a work period, for example through `session/resume`, has not received the earlier deltas, while a single snapshot is enough to catch up. The sum would also not match the final per-turn usage when a runtime drops retried or aborted calls. A per-call breakdown remains possible as a separate extension.
+Every runtime reports usage per model call, so deltas would map directly, and they could carry the model of each call. But Clients would have to add them up, which this RFD otherwise avoids. A Client that attaches during a work period, for example through `session/resume`, has not received the earlier deltas, while a single snapshot is enough to catch up. The sum would also not match the final per-turn usage when a runtime drops retried or aborted calls. Each snapshot carries the split by model in [`models`](#usage-by-model) instead.
 
 ### Why does in-turn usage report only measured tokens?
 
@@ -501,5 +552,5 @@ Preserves information, but makes client UI inconsistent and harder to standardiz
 
 ## Revision history
 
-- 2026-10-26: Define per-turn usage as the session's own main loop for one turn, excluding subagents and internal calls. Add subagent usage on the subagent's own turn-completion signal. Report usage on the transition into idle, with repeats replacing rather than adding. Add `turn_usage_update` for provisional per-turn usage while a work period is running, including running subagents on their own sessions, gated in v1 behind `clientCapabilities.session.turnUsage`. Add optional `cumulativeUsage` to `usage_update`. Define token fields as breakdowns and make `totalTokens` the only required field. Add in-turn provider mapping notes.
+- 2026-11-02: Define per-turn usage as the session's own main loop for one turn, excluding subagents and internal calls. Add subagent usage on the subagent's own turn-completion signal. Report usage on the transition into idle, with repeats replacing rather than adding. Add `turn_usage_update` for provisional per-turn usage while a work period is running, including running subagents on their own sessions, gated in v1 behind `clientCapabilities.session.turnUsage`. Add optional `cumulativeUsage` to `usage_update`. Define token fields as breakdowns and make `totalTokens` the only required field. Add an optional `models` breakdown of `Usage` by model. Add in-turn provider mapping notes.
 - 2026-06-02: Split from the original combined session usage and context RFD for separate draft discussion.
