@@ -96,7 +96,7 @@ The Agent does not know the session:
 ### Status values
 
 - `open`: The Agent has this session in memory, for any connection. This does **not** mean the requesting connection is attached to it. A Client that did not create or resume the session on its own connection **MUST** still call `session/resume` (or `session/load` in v1) before sending `session/prompt` or expecting `session/update` notifications.
-- `saved`: The Agent knows the session and can resume it, but it is not in memory. The Client can call `session/resume` (or `session/load` in v1) to start it. An Agent that cannot cheaply tell saved from unknown may also report `saved` for a session it does not have in memory. See [Contract](#contract).
+- `saved`: The Agent knows the session and can resume it, but it is not in memory. The Client can call `session/resume` (or `session/load` in v1) to start it.
 
 Clients **MUST** treat a `status` value they don't recognize as `saved`. That keeps a later status value from being read as permission to skip `session/resume`.
 
@@ -123,7 +123,7 @@ In v2, an `open` response **SHOULD** also include `state`: the session's current
 
 ### Errors
 
-If the Agent does not know the session, it **MUST** return error `-32002` (Resource not found) with the requested `sessionId` in `data`. The one exception is in [Contract](#contract): an Agent that cannot cheaply tell a saved session from an unknown one **MAY** return `saved` instead for a session it does not have in memory. Unknown session IDs are an error, not a normal answer, so `session/status` reports them the same way other session methods should.
+If the Agent does not know the session, it **MUST** return error `-32002` (Resource not found) with the requested `sessionId` in `data`. Unknown session IDs are an error, not a normal answer, so `session/status` reports them the same way other session methods should.
 
 ### Contract
 
@@ -230,7 +230,6 @@ Not yet. Once message IDs and replay cursors are stable, the response could incl
 
 ## Revision history
 
-- 2026-11-01: State the `saved` exception in the error rule and the `saved` definition, matching the schema and error docs.
 - 2026-10-30: Rename the status values from `active` / `inactive` to `open` / `saved`, since v2 already uses "active" for a session attached to a connection.
 - 2026-10-26: Reworked to three states (`active` / `inactive` / `-32002` error), dropped the `live` naming so it isn't confused with v2 turn state, pointed recovery at `session/resume`, added v2 capability and connection semantics, added a v2-only `state` foreground snapshot on `active` responses, and made the contract a snapshot rather than a guarantee.
 - 2026-04-15: Initial draft.

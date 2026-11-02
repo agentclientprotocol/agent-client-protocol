@@ -2078,9 +2078,6 @@ impl CloseSessionResponse {
 /// `session/status` MUST NOT have side effects. The Agent does not load, resume, create,
 /// close, or change the session, and does not attach the requesting connection to it.
 /// A session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.
-/// Telling a saved session from an unknown one may need a storage lookup. An Agent that
-/// cannot do that cheaply MAY return `saved` for any session it does not have in memory, and
-/// a later `session/load` or `session/resume` of a session that does not exist then gets `-32002`.
 #[cfg(feature = "unstable_session_status")]
 #[serde_as]
 #[skip_serializing_none]
@@ -2199,10 +2196,6 @@ pub enum SessionStatus {
     /// `session/update` notifications.
     Open,
     /// The Agent knows the session and can resume it, but does not have it in memory.
-    ///
-    /// An Agent that cannot cheaply tell a saved session from an unknown one may also report
-    /// `saved` for a session it does not have in memory, so `session/load` or `session/resume` can still
-    /// fail with `-32002`.
     ///
     /// The Client can call `session/load` or `session/resume` to start it.
     Saved,
@@ -2834,9 +2827,7 @@ impl SessionInfo {
 /// Only available if the Agent supports the `sessionCapabilities.title` capability.
 ///
 /// The session does not need to be active on the connection. Any session the Agent would
-/// return from `session/list` can be retitled, except one the Agent cannot safely update, such
-/// as an ephemeral session or one held by another process. The Agent MAY refuse such a session
-/// with `-32602` and a message explaining why. A session that does not exist gets `-32002`.
+/// return from `session/list` can be retitled. A session that does not exist gets `-32002`.
 ///
 /// The Agent responds only after it has stored the title. After a successful response, the
 /// Agent SHOULD NOT replace the title with one it generates automatically.

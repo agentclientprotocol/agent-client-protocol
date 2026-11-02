@@ -149,7 +149,7 @@ The response contains the title the Agent persisted:
 #### Errors
 
 - If `sessionId` does not identify a session the Agent knows about, the Agent returns `ResourceNotFound` (`-32002`).
-- Any session the Agent would return from `session/list` can be retitled, with one exception: an Agent **MAY** refuse to retitle a session it cannot safely update, such as an archived session, an ephemeral session that is not persisted, or a session currently held by another process that would overwrite the new title. In that case it returns `InvalidParams` (`-32602`) with a message explaining why, the same code as a rejected title.
+- An Agent **MAY** refuse to retitle a session it cannot safely update, such as an archived session, an ephemeral session that is not persisted, or a session currently held by another process that would overwrite the new title. In that case it returns an error with a message explaining why.
 
 #### Notifications and `session/list`
 
@@ -213,4 +213,3 @@ The main use case is renaming from a session list, where most sessions are not l
 - 2026-08-19: Initial proposal.
 - 2026-10-26: Show v1 and v2 capabilities, return the persisted title in the response, allow normalization, allow retitling sessions that are not loaded, make the notification optional, define errors, and add FAQ.
 - 2026-10-30: Rename the capability from `setTitle` to `title` so later title features can extend the same object.
-- 2026-11-01: Refusing a session the Agent cannot safely update returns `-32602`, as an exception to retitling any listed session.
