@@ -1165,16 +1165,7 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 
 The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification. It **SHOULD** skip tool calls in the latest `background` list and tool calls that reference a listed terminal. This mark is a local display hint: the Agent gives those tool calls their [final status](/protocol/v2/draft/tool-calls#status), and its updates replace the mark.
 
-The Client **MUST** respond to pending `session/request_permission` requests for
-the cancelled foreground work with the `cancelled` outcome. Requests already
-answered do not require another response. The Client tells them apart through
-the request's `subject`: it answers with `cancelled` every pending request whose
-`subject` does not reference work in the latest `background` list, including
-requests without a `subject`. A `subject` the Client does not recognize, such as
-a custom subject type, does not reference listed work, so the Client answers
-that request with `cancelled` too. Requests for listed work stay open, and the Agent
-cancels any that no longer apply with `$/cancel_request`. For selective cancellation of related
-elicitation requests, see [Elicitation Cancellation](/protocol/v2/draft/elicitation#session-cancellation).
+When the Agent stops the cancelled foreground work, it **MUST** stop waiting for that work's pending `session/request_permission` requests and treat them as not approved. It **SHOULD** cancel each of them with [`$/cancel_request`](/protocol/v2/draft/cancellation) so the Client can dismiss the prompt. The Client **MAY** answer a request it knows belongs to the cancelled work with the `cancelled` outcome without waiting for `$/cancel_request`. Permission requests for work in the latest `background` list are not affected. For elicitation requests, see [Elicitation Cancellation](/protocol/v2/draft/elicitation#session-cancellation).
 
 When the Agent receives this notification, it **SHOULD** stop all language model requests and all tool call invocations of the cancelled foreground work as soon as possible.
 
