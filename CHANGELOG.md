@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.15.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.15.0...v1.15.1) - 2026-11-02
+
+### Other
+
+- reconcile v1.15 spec text, unstable RFDs and the proxy-chains RFD ([#2743](https://github.com/agentclientprotocol/agent-client-protocol/pull/2743))
+
 ## [1.15.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.14.0...v1.15.0) - 2026-10-31
 
 ### Added

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.29.0...schema-v1.29.1) - 2026-11-02
+
+### Other
+
+- reconcile v1.15 spec text, unstable RFDs and the proxy-chains RFD ([#2743](https://github.com/agentclientprotocol/agent-client-protocol/pull/2743))
+
 ## [1.29.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.28.0...schema-v1.29.0) - 2026-10-31
 
 ### Added
