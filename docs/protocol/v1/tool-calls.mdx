@@ -7,7 +7,7 @@ Tool calls are actions the language model asks the Agent to perform during a [pr
 
 Agents report tool calls through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications, which Clients use to show progress and results to users.
 
-Agents may use Client capabilities such as [permission requests](#requesting-permission) and [file system access](/protocol/v1/file-system) while running a tool call.
+Agents run tool calls themselves. They may use Client capabilities such as [permission requests](#requesting-permission) or [file system access](/protocol/v1/file-system).
 
 ## Creating
 

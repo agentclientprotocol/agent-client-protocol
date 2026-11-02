@@ -207,7 +207,8 @@ pub struct Implementation {
     /// Intended for programmatic or logical use, but can be used as a display
     /// name fallback if title isn't present.
     pub name: String,
-    /// Intended for UI and end-user contexts, so it should be readable by people.
+    /// Intended for UI and end-user contexts and optimized to be human-readable
+    /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -241,7 +242,8 @@ impl Implementation {
         }
     }
 
-    /// Intended for UI and end-user contexts, so it should be readable by people.
+    /// Intended for UI and end-user contexts and optimized to be human-readable
+    /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
     #[must_use]
@@ -453,6 +455,9 @@ crate::serde_util::default_on_null! {
     /// Request parameters for the `auth/status` method.
     ///
     /// Queries the agent's current authentication state without changing it.
+    ///
+    /// Agents MUST NOT reject it with `auth_required` (`-32000`), since Clients call it to learn
+    /// whether authentication is required.
     #[serde_as]
     #[skip_serializing_none]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -6465,7 +6470,7 @@ pub enum ClientRequest {
     /// Queries the agent's current authentication state.
     ///
     /// This method is only available if the agent advertises the `auth.status` capability.
-    /// It MUST NOT change any agent state.
+    /// It MUST NOT change any agent state, and agents MUST NOT reject it with `auth_required`.
     #[cfg(feature = "unstable_auth_status")]
     AuthStatusRequest(AuthStatusRequest),
     /// Creates a new conversation session with the agent.

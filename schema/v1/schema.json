@@ -2812,7 +2812,7 @@
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts, so it should be readable by people.\n\nIf not provided, the name should be used for display.",
+          "description": "Intended for UI and end-user contexts and optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },

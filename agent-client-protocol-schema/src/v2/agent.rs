@@ -198,7 +198,8 @@ pub struct Implementation {
     /// Intended for programmatic or logical use, but can be used as a display
     /// name fallback if title isn't present.
     pub name: String,
-    /// Intended for UI and end-user contexts, so it should be readable by people.
+    /// Intended for UI and end-user contexts and optimized to be human-readable
+    /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
     ///
@@ -234,7 +235,8 @@ impl Implementation {
         }
     }
 
-    /// Intended for UI and end-user contexts, so it should be readable by people.
+    /// Intended for UI and end-user contexts and optimized to be human-readable
+    /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
     #[must_use]
@@ -454,6 +456,9 @@ crate::serde_util::default_on_null! {
     /// Request parameters for the `auth/status` method.
     ///
     /// Queries the agent's current authentication state without changing it.
+    ///
+    /// Agents MUST NOT reject it with `auth_required` (`-32000`), since Clients call it to learn
+    /// whether authentication is required.
     #[serde_as]
     #[skip_serializing_none]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -7202,7 +7207,7 @@ pub enum ClientRequest {
     /// Queries the agent's current authentication state.
     ///
     /// This method is only available if the agent advertises the `auth.status` capability.
-    /// It MUST NOT change any agent state.
+    /// It MUST NOT change any agent state, and agents MUST NOT reject it with `auth_required`.
     #[cfg(feature = "unstable_auth_status")]
     AuthStatusRequest(Box<AuthStatusRequest>),
     /// Creates a new conversation session with the agent.
@@ -7459,10 +7464,16 @@ pub enum AgentResponse {
 pub enum ClientNotification {
     /// Cancels a session's foreground work and its prompts not yet inserted.
     ///
-    /// Background work is not covered, but the Agent MAY stop it too.
+    /// Work in the latest `background` list is not covered and keeps running. The
+    /// Agent MAY stop background activity it does not list.
     ///
     /// Upon receiving this notification, the Agent SHOULD stop all language model
-    /// requests and all tool call invocations as soon as possible.
+    /// requests and all tool call invocations of the cancelled foreground work as soon
+    /// as possible.
+    ///
+    /// The Agent MUST stop waiting for pending `session/request_permission` requests of
+    /// the cancelled work and treat them as not approved. It SHOULD cancel each of them
+    /// with `$/cancel_request`.
     ///
     /// After all ongoing operations have been successfully aborted and pending
     /// updates have been sent, the Agent MUST send an idle `state_update` session

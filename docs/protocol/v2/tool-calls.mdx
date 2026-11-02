@@ -263,7 +263,7 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   prompt fields or decline according to policy with the `cancelled` outcome.
 </ParamField>
 
-A permission request for listed [background work](/protocol/v2/prompt-lifecycle#background-work) **SHOULD** reference the listed item in `subject`, by `toolCallId` or `terminalId`. The Agent **MUST** list that work before sending the request. On `session/cancel`, such requests stay open. See [Cancellation](/protocol/v2/prompt-lifecycle#cancellation).
+A permission request for listed [background work](/protocol/v2/prompt-lifecycle#background-work) **SHOULD** reference the listed item in `subject`, by `toolCallId` or `terminalId`. The Agent **MUST** list that work before sending the request. `session/cancel` does not cover listed work, so these requests stay open. See [Cancellation](/protocol/v2/prompt-lifecycle#cancellation).
 
 Clients apply a `tool_call` subject's `toolCall` to their stored tool call
 exactly like a [`tool_call_update`](#reporting) notification, in the order it was
@@ -321,7 +321,7 @@ The Client responds with the user's decision:
 
 Clients **MAY** automatically allow or reject permission requests according to the user settings.
 
-When the Client sends [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation), it **MUST** answer every pending permission request in the session with the `"cancelled"` outcome:
+A permission request cancelled with [`$/cancel_request`](/protocol/v2/cancellation), for example after [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation), is answered with the `"cancelled"` outcome:
 
 ```json
 {

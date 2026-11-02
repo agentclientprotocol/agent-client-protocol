@@ -3530,10 +3530,10 @@ pub enum RequestPermissionOutcome {
     /// cancelled, the user dismissed the prompt, or the client declined it by policy.
     /// Agents MUST NOT proceed with the operation.
     ///
-    /// When a client sends a `session/cancel` notification, it MUST respond to all
-    /// pending `session/request_permission` requests in that session with this
-    /// `cancelled` outcome, without answering any request twice. Requests in other
-    /// sessions are unaffected.
+    /// The client answers a request the agent cancels with `$/cancel_request` with
+    /// this outcome. After sending `session/cancel`, the client MAY also send it
+    /// without waiting for `$/cancel_request`, for a request it knows belongs to the
+    /// cancelled foreground work.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
     Cancelled(CancelledPermissionOutcome),
@@ -3977,8 +3977,9 @@ pub enum AgentRequest {
     /// a potentially sensitive operation. The client should present the options
     /// to the user and return their decision.
     ///
-    /// If the client cancels active session work via `session/cancel`, it MUST
-    /// respond to this request with the `cancelled` outcome.
+    /// After `session/cancel`, the agent stops waiting for requests of the cancelled
+    /// foreground work and SHOULD cancel them with `$/cancel_request`. The client
+    /// answers a cancelled request with the `cancelled` outcome.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
     RequestPermissionRequest(Box<RequestPermissionRequest>),

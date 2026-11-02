@@ -143,7 +143,7 @@
               "anyOf": [
                 {
                   "title": "RequestPermissionRequest",
-                  "description": "Requests permission from the user for an operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nIf the client cancels active session work via `session/cancel`, it MUST\nrespond to this request with the `cancelled` outcome.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)",
+                  "description": "Requests permission from the user for an operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nAfter `session/cancel`, the agent stops waiting for requests of the cancelled\nforeground work and SHOULD cancel them with `$/cancel_request`. The client\nanswers a cancelled request with the `cancelled` outcome.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RequestPermissionRequest"
@@ -2854,7 +2854,7 @@
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts, so it should be readable by people.\n\nIf not provided, the name should be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
+          "description": "Intended for UI and end-user contexts and optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -7253,7 +7253,7 @@
       "description": "The outcome of a permission request.",
       "anyOf": [
         {
-          "description": "The request was not approved and no option was selected: the session's work was\ncancelled, the user dismissed the prompt, or the client declined it by policy.\nAgents MUST NOT proceed with the operation.\n\nWhen a client sends a `session/cancel` notification, it MUST respond to all\npending `session/request_permission` requests in that session with this\n`cancelled` outcome, without answering any request twice. Requests in other\nsessions are unaffected.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
+          "description": "The request was not approved and no option was selected: the session's work was\ncancelled, the user dismissed the prompt, or the client declined it by policy.\nAgents MUST NOT proceed with the operation.\n\nThe client answers a request the agent cancels with `$/cancel_request` with\nthis outcome. After sending `session/cancel`, the client MAY also send it\nwithout waiting for `$/cancel_request`, for a request it knows belongs to the\ncancelled foreground work.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
           "type": "object",
           "properties": {
             "outcome": {
@@ -7525,7 +7525,7 @@
               "anyOf": [
                 {
                   "title": "CancelSessionNotification",
-                  "description": "Cancels a session's foreground work and its prompts not yet inserted.\n\nBackground work is not covered, but the Agent MAY stop it too.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations as soon as possible.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason if cancellation ended active\nforeground work. No additional completion update is required if no\nforeground work was active.\n\nAfter cancellation completes, the Agent SHOULD ignore late answers rather\nthan use them to resume the cancelled work.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
+                  "description": "Cancels a session's foreground work and its prompts not yet inserted.\n\nWork in the latest `background` list is not covered and keeps running. The\nAgent MAY stop background activity it does not list.\n\nUpon receiving this notification, the Agent SHOULD stop all language model\nrequests and all tool call invocations of the cancelled foreground work as soon\nas possible.\n\nThe Agent MUST stop waiting for pending `session/request_permission` requests of\nthe cancelled work and treat them as not approved. It SHOULD cancel each of them\nwith `$/cancel_request`.\n\nAfter all ongoing operations have been successfully aborted and pending\nupdates have been sent, the Agent MUST send an idle `state_update` session\nupdate with the `cancelled` stop reason if cancellation ended active\nforeground work. No additional completion update is required if no\nforeground work was active.\n\nAfter cancellation completes, the Agent SHOULD ignore late answers rather\nthan use them to resume the cancelled work.\n\nAgents MUST catch errors caused by aborting cancelled work and report the\n`cancelled` stop reason, not `error`.\n\nThe Agent MAY send content or tool call updates after receiving\n`session/cancel`, but MUST send them before the idle `state_update` that\nreports cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelSessionNotification"

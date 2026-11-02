@@ -141,7 +141,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Queries the agent's current authentication state.
 
 This method is only available if the agent advertises the `auth.status` capability.
-It MUST NOT change any agent state.
+It MUST NOT change any agent state, and agents MUST NOT reject it with `auth_required`.
 
 #### <span class="font-mono">AuthStatusRequest</span>
 
@@ -152,6 +152,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 Request parameters for the `auth/status` method.
 
 Queries the agent's current authentication state without changing it.
+
+Agents MUST NOT reject it with `auth_required` (`-32000`), since Clients call it to learn
+whether authentication is required.
 
 **Type:** Object
 
@@ -586,10 +589,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Cancels a session's foreground work and its prompts not yet inserted.
 
-Background work is not covered, but the Agent MAY stop it too.
+Work in the latest `background` list is not covered and keeps running. The
+Agent MAY stop background activity it does not list.
 
 Upon receiving this notification, the Agent SHOULD stop all language model
-requests and all tool call invocations as soon as possible.
+requests and all tool call invocations of the cancelled foreground work as soon
+as possible.
+
+The Agent MUST stop waiting for pending `session/request_permission` requests of
+the cancelled work and treat them as not approved. It SHOULD cancel each of them
+with `$/cancel_request`.
 
 After all ongoing operations have been successfully aborted and pending
 updates have been sent, the Agent MUST send an idle `state_update` session
@@ -2240,8 +2249,9 @@ Called by the agent when it needs user authorization before executing
 a potentially sensitive operation. The client should present the options
 to the user and return their decision.
 
-If the client cancels active session work via `session/cancel`, it MUST
-respond to this request with the `cancelled` outcome.
+After `session/cancel`, the agent stops waiting for requests of the cancelled
+foreground work and SHOULD cancel them with `$/cancel_request`. The client
+answers a cancelled request with the `cancelled` outcome.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)
 
@@ -2385,6 +2395,10 @@ A conductor sends `proxy/initialize` instead of `initialize` to every component 
 successor, which tells the component to run as a proxy. The params and the response are
 the same as for `initialize`. A conductor sends `initialize` to the final agent.
 
+The params carry the protocol version the conductor selected: the client's requested
+version, unless the conductor supports only a lower one. Before answering successfully,
+the proxy MUST forward an `initialize` request to its successor through `proxy/successor`.
+
 See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 
 #### <span class="font-mono">InitializeProxyResponse</span>
@@ -2395,8 +2409,9 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Response to `proxy/initialize`.
 
-The same as the `initialize` response. The proxy answers with the capabilities of the
-chain from itself onward.
+The same as the `initialize` response. The proxy builds it from its successor's
+`initialize` response and answers with the capabilities of the chain from itself onward.
+It MUST NOT change `protocolVersion`.
 
 <a id="proxy-successor"></a>
 ### <span class="font-mono">proxy/successor</span>
@@ -2427,7 +2442,8 @@ See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 
 <ResponseField name="_meta" type={"object | null"} >
   Metadata for the `proxy/successor` envelope itself, separate from the wrapped
-message's `_meta`.
+message's `_meta`. It is hop-local: the conductor does not copy it into the message
+it unwraps.
 
 The \_meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -2443,6 +2459,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Params of the wrapped notification, forwarded unchanged.
 
 Optional. Omitted and `null` are equivalent and mean the wrapped notification has no params.
+When present, it MUST be a JSON object or array, as JSON-RPC requires.
 The wrapped notification's own `_meta` stays inside these params.
 
 </ResponseField>
@@ -2459,8 +2476,12 @@ A proxy sends it to forward a message to its successor, and the conductor sends 
 deliver a message from the successor to the proxy. The envelope wraps one request: `method`
 and `params` are the wrapped request's method and params.
 
-The result or error of the wrapped request is returned unchanged as the result or error
-of the `proxy/successor` request.
+The result or error of the wrapped request is returned unchanged, as the same JSON value,
+as the result or error of the `proxy/successor` request. Errors the conductor returns
+itself, for example because the successor has exited, are not wrapped results.
+
+To cancel it, the sender sends `$/cancel_request` with the ID of this `proxy/successor`
+request on the same connection. Cancellation is never forwarded to another hop.
 
 See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 
@@ -2470,7 +2491,8 @@ See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 
 <ResponseField name="_meta" type={"object | null"} >
   Metadata for the `proxy/successor` envelope itself, separate from the wrapped
-message's `_meta`.
+message's `_meta`. It is hop-local: the conductor does not copy it into the message
+it unwraps.
 
 The \_meta property is reserved by ACP to allow clients and agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -2486,6 +2508,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Params of the wrapped request, forwarded unchanged.
 
 Optional. Omitted and `null` are equivalent and mean the wrapped request has no params.
+When present, it MUST be a JSON object or array, as JSON-RPC requires.
 The wrapped request's own `_meta` stays inside these params.
 
 </ResponseField>
@@ -5735,7 +5758,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 name fallback if title isn't present.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Intended for UI and end-user contexts, so it should be readable by people.
+  Intended for UI and end-user contexts and optimized to be human-readable
+and easily understood.
 
 If not provided, the name should be used for display.
 
@@ -7218,10 +7242,10 @@ The request was not approved and no option was selected: the session's work was
 cancelled, the user dismissed the prompt, or the client declined it by policy.
 Agents MUST NOT proceed with the operation.
 
-When a client sends a `session/cancel` notification, it MUST respond to all
-pending `session/request_permission` requests in that session with this
-`cancelled` outcome, without answering any request twice. Requests in other
-sessions are unaffected.
+The client answers a request the agent cancels with `$/cancel_request` with
+this outcome. After sending `session/cancel`, the client MAY also send it
+without waiting for `$/cancel_request`, for a request it knows belongs to the
+cancelled foreground work.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 

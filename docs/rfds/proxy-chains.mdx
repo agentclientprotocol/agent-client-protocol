@@ -107,7 +107,7 @@ When proxies are installed, editors would not start the agent directly, but inst
 
 The monolithic nature of agent development has meant that most of the "action" happens within agents. We wish to invert this, with agents trending towards simple agentic loops, and the creativity being pushed outwards into the broader ecosystem.
 
-The Symposium project is one example exploring this concept, with a focus on Rust. The idea is to give Rust users an automatic set of extensions based on the dependencies they are using. These extensions would be packaged up as SACP proxies using WebAssembly for portability and sandboxing.
+The Symposium project is one example exploring this concept, with a focus on Rust. The idea is to give Rust users an automatic set of extensions based on the dependencies they are using. These extensions would be packaged up as ACP proxies using WebAssembly for portability and sandboxing.
 
 Symposium aims to become the standard "Rust ACP experience" by providing both core Rust tooling and a framework for Rust libraries to contribute their own proxy components.
 
@@ -165,7 +165,7 @@ flowchart LR
     Conductor -.->|spawns & routes| Managed
 ```
 
-We provide a canonical conductor implementation in Rust (`sacp-conductor`). Most editors would use this conductor directly to host proxies and agents, though they could also reimplement conductor functionality if needed.
+We provide a canonical conductor implementation in Rust (`agent-client-protocol-conductor`). Most editors would use this conductor directly to host proxies and agents, though they could also reimplement conductor functionality if needed.
 
 ACP defines client and agent as superroles, each with two specializations:
 
@@ -232,30 +232,79 @@ flowchart TB
 
 Components discover their role from the initialization method they receive:
 
-- **Proxies** receive `proxy/initialize` - they have a successor and should forward messages
-- **Agents** receive `initialize` - they are terminal (no successor) and process messages directly
+- **Proxies** receive `proxy/initialize`. They have a successor and forward messages to it.
+- **Agents** receive `initialize`. They are terminal (no successor) and process messages directly.
 
-The `proxy/initialize` request has the same parameters as `initialize` and expects a standard `InitializeResponse`. The only difference is the method name, which signals to the component that it should operate as a proxy.
+`proxy/initialize` takes the same params and returns the same result as `initialize` for the chain's protocol version. In the schema these are `InitializeProxyRequest` and `InitializeProxyResponse`, which have the version's `InitializeRequest` and `InitializeResponse` shapes. Only the method name differs, and it tells the component to run as a proxy.
 
 **Conductor behavior:**
 
 - The conductor MUST send `proxy/initialize` to all proxy components
 - The conductor MUST send `initialize` to the final agent component (if any)
-- When a proxy forwards an `initialize` via `proxy/successor`, the conductor determines whether the successor is another proxy or the agent, and sends `proxy/initialize` or `initialize` respectively.
+- The conductor sends the client's `initialize` request to the first proxy as `proxy/initialize`. When a proxy forwards an `initialize` via `proxy/successor`, the conductor determines whether the successor is another proxy or the agent, and sends `proxy/initialize` or `initialize` respectively.
 
 **Proxy behavior:**
 
 - A proxy that receives `proxy/initialize` knows it has a successor
-- The proxy SHOULD forward requests it does not understand
+- Before it answers `proxy/initialize` successfully, the proxy MUST forward an `initialize` request to its successor through `proxy/successor`, so that the rest of the chain is initialized. It MAY answer with an error without forwarding.
+- The proxy builds its `proxy/initialize` result from its successor's `initialize` result. It MAY change the capabilities and other fields so that the result describes the chain from the proxy onward, for example to add a capability it implements or remove one it blocks. It MUST NOT change `protocolVersion`.
+- The proxy SHOULD forward requests and notifications it does not understand. See [Forwarding](#forwarding).
 - The proxy SHOULD preserve metadata fields when forwarding messages
+
+**Repeated initialization:**
+
+A client may repeat `initialize` when the chain's protocol version allows it (see [Repeating initialization](/protocol/v2/initialization#repeating-initialization) in v2). The conductor forwards a repeated `initialize` through the chain like the first one, without starting the chain again: the first proxy receives it as `proxy/initialize`. A proxy handles a repeated `proxy/initialize` the way an Agent handles a repeated `initialize`, and forwards `initialize` to its successor again under the same rules as the first time. A conductor in proxy mode does the same with a repeated `proxy/initialize` from its own conductor.
 
 Note: A conductor can be configured to run in either terminal mode (expecting `initialize`) or proxy mode (expecting `proxy/initialize`), enabling nested proxy chains.
 
 ### Protocol versions
 
-A chain speaks one ACP protocol version. `proxy/initialize` carries the `initialize` params of the version the client requested, and the version selected in the agent's `initialize` response applies to every component in the chain. A conductor that does not support the requested version selects a lower one, as an Agent would during [version negotiation](/protocol/v2/initialization#version-negotiation).
+A chain speaks one ACP protocol version. Each component selects it the way an Agent does during version negotiation ([v1](/protocol/v1/initialization#version-negotiation), [v2](/protocol/v2/initialization#version-negotiation)), so the version can only go down along the chain:
 
-Proxies and the conductor forward messages without parsing and re-serializing them where they don't need to, so unknown fields and `_meta` survive every hop. On an ACP v2 chain, the rules of that version apply to every hop, including the wrapped messages: request IDs are never `null`, and JSON-RPC batches are not used.
+- `proxy/initialize` carries the `initialize` params at the version the conductor selected, which is the client's requested version unless the conductor supports only a lower one. The conductor sets `protocolVersion` to that version, and if it selected the requested version it forwards the client's params unchanged. A chain without proxies receives `initialize` the same way.
+- A proxy negotiates `proxy/initialize` the same way. If it does not support the version it received, it forwards `initialize` to its successor with a lower version it supports.
+- The version in the agent's `initialize` response applies to every component in the chain. Each proxy returns it unchanged in its `proxy/initialize` response, so the response the client receives carries the version the whole chain accepted.
+
+On an ACP v2 chain, the rules of that version apply to every hop, including the wrapped messages: request IDs are never `null`, and JSON-RPC batches are not used.
+
+### Forwarding
+
+- Proxies and the conductor forward messages without parsing and re-serializing them where they don't need to, so unknown fields and `_meta` survive every hop.
+- A proxy SHOULD forward requests and notifications it does not handle, in both directions, without changing them. This includes methods it does not recognize, such as extension methods.
+- A request that no component handles reaches the end of the chain. There the agent (or the client, for a request from the agent) answers it with `-32601` (Method not found), and that error passes back to the sender unchanged like any other result. A proxy answers `-32601` itself only for a request it decides not to forward.
+- A notification that no component handles is dropped at the end of the chain. Notifications get no response.
+- `$/cancel_request` is never forwarded. See [Cancellation](#cancellation).
+
+### Cancellation
+
+Cancellation is hop-local, as described in [Request cancellation](./request-cancellation):
+
+- The `requestId` in `$/cancel_request` is the ID of a request on the connection the notification arrives on. It means nothing on any other connection, so proxies and the conductor MUST NOT forward a `$/cancel_request` to another hop, whether it arrived plain or wrapped in `proxy/successor`.
+- To cancel a `proxy/successor` request, the sender sends `$/cancel_request` on the same connection with the ID of that `proxy/successor` request. It SHOULD send it plain. A receiver MUST treat a `$/cancel_request` wrapped in `proxy/successor` the same as a plain one: its `requestId` still names the `proxy/successor` request on that connection.
+- A component that forwarded a request and then sees that request cancelled sends its own `$/cancel_request` for the request it forwarded, with that hop's ID. Cancellation reaches the end of the chain one hop at a time.
+
+```text
+Client    -> Conductor: session/prompt (id 1)
+Conductor -> Proxy:     session/prompt (id 10)
+Proxy     -> Conductor: proxy/successor {method: "session/prompt"} (id 20)
+Conductor -> Agent:     session/prompt (id 30)
+
+Client    -> Conductor: $/cancel_request {requestId: 1}
+Conductor -> Proxy:     $/cancel_request {requestId: 10}
+Proxy     -> Conductor: $/cancel_request {requestId: 20}
+Conductor -> Agent:     $/cancel_request {requestId: 30}
+```
+
+### Errors the conductor returns
+
+The pass-through rule in the [message reference](#message-reference) covers the result or error of a wrapped request. The conductor also answers some requests itself. These errors come from the conductor, not from a successor:
+
+- Before the chain is initialized, the conductor answers any request other than `initialize` (`proxy/initialize` for a conductor in proxy mode) with `-32600` (Invalid request), and drops notifications. It answers an initialization request without a valid `protocolVersion` with `-32602` (Invalid params). After either error the conductor is still uninitialized, and the client may retry.
+- If the conductor cannot start the chain, it answers the initialization request with an error and answers every later request with the same error.
+- Only the conductor sends `proxy/initialize`. It answers a `proxy/initialize` request from any other component, including one a proxy wraps in `proxy/successor`, with `-32600`. A conductor in proxy mode answers a plain `initialize` request with `-32600`.
+- `proxy/successor` is exchanged only between the conductor and the proxies it initialized, and between a conductor in proxy mode and its own conductor. The conductor answers a `proxy/successor` request from the agent, or from the client of a conductor in terminal mode, with `-32600`, and drops such a notification. It does not forward either.
+- A `proxy/successor` request without a string `method`, or whose `params` is not an object, an array, or `null`, gets `-32602`.
+- If a component has exited, or exits before it answers, the conductor answers each request that it could not deliver or that is still waiting for that component with `-32603` (Internal error). The same applies when the conductor cannot route a message for another reason. A conductor MAY instead close its connection to the client when a component fails.
 
 ### MCP-over-ACP support
 
@@ -277,7 +326,7 @@ A forwarding proxy preserves downstream MCP capabilities. A bridging proxy may a
 {"method": "initialize", "params": <INITIALIZE_REQUEST_PARAMS>}
 ```
 
-Both methods use the same parameters as the standard ACP `InitializeRequest` and expect a standard `InitializeResponse`.
+Both methods take the params of the version's `InitializeRequest` and return its `InitializeResponse`. A proxy's response describes the chain from that proxy onward.
 
 **Proxy messages:**
 
@@ -294,21 +343,21 @@ Both methods use the same parameters as the standard ACP `InitializeRequest` and
 }
 ```
 
-The inner message fields (`method`, `params`) are flattened into the params object. The optional `_meta` belongs to the `proxy/successor` envelope; the wrapped message's own metadata stays in its `params`. Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the outer JSON-RPC envelope, following JSON-RPC conventions.
+The inner message fields (`method`, `params`) are flattened into the params object. The optional `_meta` belongs to the `proxy/successor` envelope and is hop-local: it describes the envelope on this connection. The conductor does not copy it into the message it unwraps, and it MAY set its own envelope `_meta` when it wraps a message. The wrapped message's own metadata stays in its `params` and is forwarded with them. Whether the wrapped message is a request or notification is determined by the presence of an `id` field in the outer JSON-RPC envelope, following JSON-RPC conventions.
 
-`params` is optional, and omitting it is equivalent to `null`: the wrapped message has no params. The result or error of a wrapped request **MUST** be returned unchanged as the result or error of the `proxy/successor` request.
+`params` is optional, and omitting it is equivalent to `null`: the wrapped message has no params, and the receiver unwraps it to a message without `params`. When present, it MUST be an object or an array, as JSON-RPC requires for params. ACP methods use objects. The result or error of a wrapped request **MUST** be returned unchanged, as the same JSON value, as the result or error of the `proxy/successor` request. The same JSON value need not be the same bytes, because implementations that parse JSON may write numbers differently, for example `1E2` as `100.0`, or may not keep integers beyond 64 bits exactly. An error keeps its `code`, `message`, and `data`. JSON-RPC defines no other members of the error object, and implementations may drop them.
 
 ### Schema
 
 Both methods are in the v1 and draft v2 schemas behind the `unstable_proxy_chains` feature. Because only conductors and proxies exchange them, they form their own `proxy` side, separate from the agent and client methods, with their own `ProxyRequest`, `ProxyResponse`, and `ProxyNotification` unions and a `proxyMethods` entry in `meta.json`.
 
-| Type                         | Shape                                                               |
-| ---------------------------- | ------------------------------------------------------------------- |
-| `InitializeProxyRequest`     | The version's `InitializeRequest`, unchanged.                       |
-| `InitializeProxyResponse`    | The version's `InitializeResponse`, unchanged.                      |
-| `ProxySuccessorRequest`      | `method` (required string), `params` (optional, any JSON), `_meta`. |
-| `ProxySuccessorNotification` | Same as `ProxySuccessorRequest`.                                    |
-| `ProxySuccessorResponse`     | The wrapped request's result, unchanged.                            |
+| Type                         | Shape                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------- |
+| `InitializeProxyRequest`     | The version's `InitializeRequest`, unchanged.                                                |
+| `InitializeProxyResponse`    | The version's `InitializeResponse`, unchanged.                                               |
+| `ProxySuccessorRequest`      | `method` (required string), `params` (optional: a JSON object or array, or `null`), `_meta`. |
+| `ProxySuccessorNotification` | Same as `ProxySuccessorRequest`.                                                             |
+| `ProxySuccessorResponse`     | The wrapped request's result, unchanged.                                                     |
 
 ### Examples (non-normative)
 
@@ -498,7 +547,7 @@ The conductor handles process management, capability negotiation, and message ro
 
 ### How does the standard conductor implementation work?
 
-The `sacp-conductor` reference implementation can form trees of proxy chains. It can be configured to run in proxy mode (expecting `proxy/initialize`) or terminal mode (expecting `initialize`). When the last proxy in its managed chain sends a message to its successor, the conductor forwards that message to its own parent conductor (if in proxy mode) or to the final agent (if in terminal mode).
+The `agent-client-protocol-conductor` reference implementation can form trees of proxy chains. It can be configured to run in proxy mode (expecting `proxy/initialize`) or terminal mode (expecting `initialize`). When the last proxy in its managed chain sends a message to its successor, the conductor forwards that message to its own parent conductor (if in proxy mode) or to the final agent (if in terminal mode).
 
 This enables hierarchical structures like:
 
@@ -528,12 +577,7 @@ The benefits of composability typically outweigh the minimal latency costs for h
 
 ### What happens when proxy components crash or misbehave?
 
-This is conductor behavior, not part of the protocol. The reference conductor manages component lifecycles:
-
-- Failed components are restarted automatically where possible
-- Component crashes don't affect the rest of the chain
-- Graceful degradation by bypassing failed components
-- Clear error reporting to help users debug configuration issues
+The conductor answers requests that a failed component can no longer answer with `-32603`, or closes its connection to the client. See [Errors the conductor returns](#errors-the-conductor-returns). Whether a conductor restarts or bypasses a failed component is conductor behavior, not part of the protocol.
 
 ### Can proxy chains be nested or form trees?
 
@@ -581,3 +625,4 @@ Earlier releases of the Rust SDK used the `_proxy/initialize` and `_proxy/succes
 - Split MCP-over-ACP transport into [separate RFD](./mcp-over-acp) to enable independent use by any ACP component.
 - **2026-10-30**: Added schema support behind `unstable_proxy_chains` as a separate `proxy` side, required wrapped request results and errors to pass through unchanged, and marked the crash-handling FAQ as conductor behavior.
 - **2026-10-30**: Named the `proxy/successor` metadata field `_meta`, defined how a chain carries one protocol version (including draft v2), and updated the implementation status to the Rust SDK crates.
+- **2026-11-01**: Matched the rules to the reference conductor. Defined how each proxy negotiates the protocol version and builds its `proxy/initialize` response, how unknown requests and notifications are forwarded, hop-local cancellation and envelope `_meta`, and the errors the conductor returns. Required wrapped `params` to be an object, an array, or `null`, and defined "unchanged" for wrapped results and errors as the same JSON value. Defined repeated `proxy/initialize`. Linked version negotiation for both v1 and v2, replaced the old `sacp-conductor` name, and removed crash-handling claims the reference conductor does not implement.
