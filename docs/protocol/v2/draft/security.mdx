@@ -49,6 +49,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 - Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
 - Agents **SHOULD** request permission before writing files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.
 - Clients **SHOULD NOT** open links, run commands, change settings, or send data based only on Agent-authored text.
+- A [system prompt](/protocol/v2/draft/session-setup#system-prompt) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.
 
 ## Intermediaries
 
@@ -75,7 +76,6 @@ A user can approve a harmful operation, prompt injection can steer operations th
 
 ## Unstable features
 
-- A [system prompt](/protocol/v2/draft/session-setup#system-prompt-unstable) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.
 - Clients **SHOULD NOT** read a plan file `uri` outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
 - [Session-directed messages](/protocol/v2/draft/prompt-lifecycle#session-directed-messages-unstable) are Agent content. Clients **SHOULD** attribute them to the sending session and **SHOULD NOT** present them as user messages.
 - Provider `headers` are credentials. Agents **SHOULD NOT** return them from `providers/list`.

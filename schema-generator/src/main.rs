@@ -380,6 +380,81 @@ mod schema_annotation_tests {
     }
 
     #[test]
+    fn generated_system_prompt_schema_is_available_without_unstable_features() {
+        let schema = root_schema_value();
+        for definition in [
+            "SystemPrompt",
+            "SystemPromptMode",
+            "SessionSystemPromptCapabilities",
+            "SessionSystemPromptModeCapabilities",
+            "SessionSystemPromptOverrideCapabilities",
+        ] {
+            assert!(
+                !def_schema(&schema, definition)["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE"),
+                "{definition} must be stable"
+            );
+        }
+
+        let prompt = def_schema(&schema, "SystemPrompt");
+        assert_eq!(prompt["required"], serde_json::json!(["mode", "content"]));
+        for field in ["mode", "content"] {
+            assert_no_extension(
+                property_schema(&schema, "SystemPrompt", field),
+                DEFAULT_ON_ERROR_EXTENSION,
+            );
+        }
+
+        let modes = def_schema(&schema, "SystemPromptMode")["anyOf"]
+            .as_array()
+            .unwrap();
+        for mode in ["append", "override"] {
+            assert!(modes.iter().any(|variant| variant["const"] == mode));
+        }
+        assert!(modes.iter().any(|variant| variant["title"] == "other"));
+
+        // Receivers act on the prompt, so the request field stays strict.
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        let requests = [
+            "NewSessionRequest",
+            "LoadSessionRequest",
+            "ResumeSessionRequest",
+        ];
+        #[cfg(feature = "unstable_protocol_v2")]
+        let requests = ["NewSessionRequest", "ResumeSessionRequest"];
+        for request in requests {
+            let property = property_schema(&schema, request, "systemPrompt");
+            assert!(schema_contains_ref(property, "#/$defs/SystemPrompt"));
+            assert!(
+                !def_schema(&schema, request)["required"]
+                    .as_array()
+                    .is_some_and(|fields| fields.contains(&Value::from("systemPrompt")))
+            );
+            assert_no_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+            assert!(
+                !property["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE")
+            );
+        }
+
+        let capability = property_schema(&schema, "SessionCapabilities", "systemPrompt");
+        assert!(schema_contains_ref(
+            capability,
+            "#/$defs/SessionSystemPromptCapabilities"
+        ));
+        assert_bool_extension(capability, DEFAULT_ON_ERROR_EXTENSION);
+        let override_ = property_schema(&schema, "SessionSystemPromptModeCapabilities", "override");
+        assert!(schema_contains_ref(
+            override_,
+            "#/$defs/SessionSystemPromptOverrideCapabilities"
+        ));
+    }
+
+    #[test]
     fn generated_compaction_schema_is_available_without_unstable_features() {
         let schema = root_schema_value();
         assert_eq!(def_schema(&schema, "CompactionId")["type"], "string");

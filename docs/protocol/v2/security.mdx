@@ -49,6 +49,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 - Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
 - Agents **SHOULD** request permission before writing files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.
 - Clients **SHOULD NOT** open links, run commands, change settings, or send data based only on Agent-authored text.
+- A [system prompt](/protocol/v2/session-setup#system-prompt) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.
 
 ## Intermediaries
 

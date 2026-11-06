@@ -174,21 +174,21 @@ Agents that don't support client system prompts continue working exactly as they
 ### Implemented
 
 The unstable schema landed in
-[PR #2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361),
-behind the `unstable_session_system_prompt` Cargo feature:
+[PR #2361](https://github.com/agentclientprotocol/agent-client-protocol/pull/2361)
+and was stabilized for both protocol versions:
 
 - Both protocol versions define `SystemPrompt`, `SystemPromptMode`, and the
   `SessionSystemPrompt*Capabilities` types, and accept `systemPrompt` on their
-  session lifecycle requests.
-- The unstable JSON schemas and the draft protocol guides for both versions
-  describe the capability and the field. See the
-  [v1 guide](/protocol/v1/draft/session-setup#system-prompt-unstable) and
-  [v2 guide](/protocol/v2/draft/session-setup#system-prompt-unstable).
+  session lifecycle requests. `session/fork` itself remains unstable, so the
+  field on fork requests stays behind `unstable_session_fork`.
+- The stable JSON schemas and protocol guides for both versions describe the
+  capability and the field. See the
+  [v1 guide](/protocol/v1/session-setup#system-prompt) and
+  [v2 guide](/protocol/v2/session-setup#system-prompt).
 
-The feature remains behind `unstable_session_system_prompt` and is not included
-in the stable schemas. Preview does not stabilize the wire contract.
+### External implementation evidence
 
-Agent implementations have also landed for both protocol versions:
+Agent implementations have landed for both protocol versions:
 
 | Implementation       | Reference                                                                                                                                                                          | Behavior                                                                                                                                                                                                                                                                                                            |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -365,3 +365,4 @@ Append alone looked sufficient until we accounted for existing harness behavior:
 - 2026-10-09: Moved to Draft. Replaced the bare array and `systemPromptMode` with a `systemPrompt` object, grouped the `override` capability under `mode`, accepted it on load/resume/fork with re-send semantics based on a survey of existing agents, covered ACP v1 and v2, defined what override replaces, and relaxed requirements that agents could not observe or implement
 - 2026-10-12: Added the unstable v1 and v2 schema behind `unstable_session_system_prompt`, with draft docs. Made `mode` extensible under the enum variant extension rule
 - 2026-10-30: Moved to Preview. Clients must not send an empty `content` array, and Agents may reject one. Added the Claude Agent and Codex adapter implementations
+- 2026-11-06: Moved to Completed. Stabilized `systemPrompt` and its capability in both protocol versions with the Preview semantics unchanged. Protocol v2 remains draft overall

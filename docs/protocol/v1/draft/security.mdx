@@ -48,6 +48,7 @@ This applies to `uri` on images, resource links, and embedded resources, and to 
 - Agents **SHOULD** request permission before sending data off the machine after reading untrusted content.
 - Agents **SHOULD** request permission before writing files that control execution or approval, such as version-control hooks, editor or Agent settings, and MCP configuration.
 - Clients **SHOULD NOT** open links, run commands, change settings, or send data based only on Agent-authored text.
+- A [system prompt](/protocol/v1/draft/session-setup#system-prompt) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.
 
 ## Intermediaries
 
@@ -71,7 +72,3 @@ This applies to `uri` on images, resource links, and embedded resources, and to 
 ## Residual risk
 
 A user can approve a harmful operation, prompt injection can steer operations the user allowed, and an Agent can act without asking.
-
-## Unstable features
-
-- A [system prompt](/protocol/v1/draft/session-setup#system-prompt-unstable) carries more weight than user turns. Clients **SHOULD** only send content they trust at that level, and Agents **MAY** reject it.
