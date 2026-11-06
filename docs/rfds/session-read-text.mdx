@@ -1,0 +1,176 @@
+---
+title: "Read retained session text without activating the session"
+---
+
+Author(s): [@slapoguzov](https://github.com/slapoguzov)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add an optional `session/read_text` request in ACP v1 and v2. A Client supplies a known session ID and receives a bounded page of the session's retained user, Agent and displayable compaction-summary text.
+
+The request does not activate or resume the session. Clients can use the text as input to their own search or indexing. This proposal does not define a query language, ranking, snippets or a search-results API.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+[`session/list`](/protocol/v2/session-list) discovers sessions and returns metadata such as their titles. It does not return message text. A Client with its own history copy can search that copy, but it may have no copy of a session created elsewhere or may have discarded an older copy.
+
+[`session/resume`](/protocol/v2/session-setup#resuming-sessions) can replay retained history. It also activates the session, connects to the requested MCP servers and sets the connection's workspace roots. An Agent may reject a resume on a second connection or end the session's activity on the first one. Resuming every session to build a text index is therefore not an observational read.
+
+The [session list extensions proposal](https://github.com/agentclientprotocol/agent-client-protocol/pull/2323) concerns listing, row metadata and subscriptions. The [last-change and catch-up proposal](https://github.com/agentclientprotocol/agent-client-protocol/pull/2394) concerns history freshness and resume replay. Neither defines a detached text read. The earlier [session history discussion](https://github.com/orgs/agentclientprotocol/discussions/60) also proposed history retrieval. This RFD limits the result to searchable text rather than a complete transcript.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Capability
+
+Agents advertise `readText: {}` in the session capabilities:
+
+- v1: `agentCapabilities.sessionCapabilities.readText`.
+- v2: `capabilities.session.readText`.
+
+Omission or `null` means unsupported. An Agent that advertises this capability in v1 also **MUST** advertise `sessionCapabilities.list` and support `session/list`. In v2, listing is already required for Agents that advertise session support.
+
+A Client **MUST** check the capability before calling the method. An Agent that does not advertise it keeps its existing behavior. A Client can still search titles or a history copy it already holds.
+
+### Request and response
+
+The first request names a retained session:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "session/read_text",
+  "params": {
+    "sessionId": "sess_abc123",
+    "maxBytes": 65536
+  }
+}
+```
+
+| Request field | Meaning                                                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sessionId`   | Required, non-null session ID. The session need not be active on this connection.                                                                      |
+| `cursor`      | Optional opaque string from `nextCursor`. Omission and `null` start a new read. An empty string is a cursor, not a request to start over.              |
+| `maxBytes`    | Optional integer of at least 4. Omission and `null` mean 65,536. It bounds the UTF-8 bytes in the response's `text`, excluding JSON encoding overhead. |
+| `_meta`       | Optional metadata object. Omission and `null` are equivalent. Unknown keys have no meaning to the receiver.                                            |
+
+Malformed known fields **MUST** fail with `-32602` rather than being ignored or replaced with a default.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "text": "Investigate the connection timeout.\nThe retry setting is too low.\n",
+    "nextCursor": "opaque-page-token"
+  }
+}
+```
+
+| Response field | Meaning                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`         | Required, non-null string containing the next part of the text projection.                                                              |
+| `nextCursor`   | Optional opaque continuation string. Omission and `null` mean that this read is complete. An empty string remains a valid continuation. |
+| `_meta`        | Optional metadata object. Omission and `null` are equivalent.                                                                           |
+
+The Client continues with the same `sessionId` and the returned cursor. It **MAY** change `maxBytes` between pages. An Agent **MAY** choose a smaller byte bound, but **MUST NOT** exceed the requested bound.
+
+A page with a continuation **MUST** make progress and contain at least one Unicode scalar value. Splits **MUST** preserve Unicode scalar values. A single long message can span pages. Concatenating every page's `text` produces the complete projection without missing or repeated text. Clients **MUST NOT** insert their own separator between pages.
+
+A successful read of a genuinely empty projection returns an empty `text` and no continuation. A source failure is not an empty projection.
+
+### Text projection
+
+The projection **MUST** include all retained, user-displayable text from:
+
+- User messages.
+- Agent messages.
+- Displayable compaction summaries that the Agent retains.
+
+Content follows its retained conversation order. The Agent first reconstructs each logical content block from its streamed fragments, without inserting separators between fragments of that block. It preserves the resulting text strings and inserts a newline between distinct logical content blocks or conversation entries. It does not insert a separator merely because it split a page.
+
+This representation does not expose message IDs, roles, timestamps or rendering instructions. An inserted newline is indistinguishable from a newline in the original text. It provides a session-level text source, not per-message match boundaries. A Client **MUST NOT** treat it as a transcript suitable for replay or use it to infer current session state.
+
+The projection excludes Agent thoughts, hidden instructions, tool input and output, binary content and resource bodies that would require an additional read. An Agent **MUST NOT** execute a tool, follow a resource link or invoke a model to produce the projection.
+
+Retention remains the Agent's policy. The method does not reconstruct discarded messages or summaries. Once a read starts, the Agent **MUST NOT** silently omit text that belonged to that read. If it cannot continue the same projection, the cursor-invalidated rule below applies.
+
+### Read consistency and errors
+
+Each first-page request starts one logical read of a retained-text snapshot. A cursor binds to that read, the session and the connection. It is not a durable history cursor and Clients **MUST NOT** persist it across connections.
+
+An Agent can hold a snapshot or detect when its source changes. It **MUST** either continue the same projection or reject a cursor it can no longer honor with `-32602`. It **MUST NOT** splice newer text into an older read. Clients discard the partial projection and start a new read after this error.
+
+Agents **MAY** expire cursors to bound their resources. Expired, malformed, foreign-session and foreign-connection cursors fail with `-32602`. A retry of a still-valid cursor **MUST** return the same text when the byte bound is unchanged. Changing the byte bound changes only where the page ends.
+
+Unknown, deleted or inaccessible sessions fail with `-32002`. Agents **MUST** enforce the same session visibility boundary as listing on every page request and **MUST NOT** reveal text merely because a Client guessed a session ID. A cursor does not preserve access after authorization is revoked. This method does not grant access to an Agent's other users or workspaces.
+
+A storage or backend failure **MUST** fail the request rather than return a successful empty or incomplete projection. Clients **MUST NOT** replace a complete cached projection with partial pages after any failed read.
+
+The existing `$/cancel_request` mechanism applies. Agents **SHOULD** stop further source reads after cancellation. A cancelled read does not cancel the session's work.
+
+### No session lifecycle effects
+
+An Agent **MUST NOT** activate, resume, close, cancel, archive or unarchive a session to serve this request. It **MUST NOT** change its workspace roots, MCP servers, configuration, activity timestamps or current connection ownership.
+
+An Agent **MUST NOT** send the projection as `session/update` replay on a live session channel. Reading an actively running session is observational. If the Agent cannot produce a consistent snapshot, it fails the read rather than interrupt the session or return a mixed snapshot.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A Client lists sessions, reads retained text for a session it has never opened and passes that text to its own matcher. The session can remain active in another Client. Selecting a result is a separate action that may resume the session.
+
+A Client that removes its local history copy can later obtain a new text projection without reopening the conversation. Agent-side retention still determines which text remains available.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+This PR proposes a contract only. It adds no schema fields or implementation.
+
+1. Review the text projection, detached-read guarantee and capability in this RFD.
+2. Add the method, models and capability behind an unstable feature in both protocol versions. Update SDKs and conversions.
+3. Map native Agent storage to the projection without activating sessions. Document which retained content each implementation can expose.
+4. Check the following cases before preview:
+   - A listed session created outside the Client is found by a user-message token even when the Client has no local history copy.
+   - User, Agent and retained compaction-summary text are included. Discarded history is not fabricated.
+   - Reading idle and running sessions causes no lifecycle, MCP, model, configuration or connection-ownership changes.
+   - Large text, Unicode splits, pagination retries, concurrent changes, invalidated cursors and cancellation preserve a complete bounded read or return an explicit failure.
+   - Unsupported Agents retain their old behavior. Visibility checks and source failures cannot become successful empty reads.
+
+These are acceptance cases for a future implementation. No Agent or Client runtime result is claimed by this proposal.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not add a search parameter to session/list?
+
+Server-side search can avoid transferring a large history, but it needs a matching contract, index-freshness rules, ranking and result semantics. A text source lets a Client use the matcher it already has. A later search proposal can coexist with this method.
+
+### Why not expose the complete conversation?
+
+A complete transcript needs message identity, tool-call reconstruction, state updates and version-specific replay semantics. Those already belong to replay. This method exposes only text for consumers that do not need to reconstruct a session.
+
+### Why not use updatedAt as the cursor?
+
+Its current meaning is last activity, not an immutable snapshot identifier. The last-change proposal discusses that distinction separately. This method does not redefine `updatedAt` or require a global revision counter.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- Resume and replay every session. This changes session lifecycle and connection state.
+- Read Agent files directly. That couples Clients to storage formats and does not work for remote Agents.
+- Return the full text in one response. That has no useful bound for long sessions.
+- Add text to every list row. That makes ordinary discovery transfer full conversation content.
+- Define server-side search now. That solves a broader problem than providing a Client with a text source.
+
+## Revision history
+
+- 2026-11-03: Initial proposal.
