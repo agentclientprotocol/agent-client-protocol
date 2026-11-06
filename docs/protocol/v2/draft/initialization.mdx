@@ -296,9 +296,9 @@ support `session/set_config_option`.
 </ResponseField>
 
 <ResponseField name="systemPrompt" type="SessionSystemPromptCapabilities Object">
-  **Unstable.** The Agent supports
-  [`systemPrompt`](/protocol/v2/draft/session-setup#system-prompt-unstable) on
-  session lifecycle requests. Omitted or `null` both mean the Agent does not
+  The Agent supports
+  [`systemPrompt`](/protocol/v2/draft/session-setup#system-prompt) on session
+  lifecycle requests. Omitted or `null` both mean the Agent does not
   advertise support. Supplying `{}` means the Agent supports `append` mode.
   Supplying `{ "mode": { "override": {} } }` also advertises `override` mode.
 </ResponseField>

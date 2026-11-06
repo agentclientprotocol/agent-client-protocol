@@ -47,6 +47,8 @@ A receiver that does not implement a method, or receives a capability-gated meth
 
 Malformed parameters and unsupported values get `-32602`. For example, an invalid `session/list` cursor, or in `session/set_config_option` an unknown `configId`, an invalid value, or a value `type` that is unsupported or doesn't match the option.
 
+A `systemPrompt` the Agent cannot apply gets an error, and `-32602` is recommended. See [System prompt](/protocol/v2/draft/session-setup#system-prompt).
+
 ### Unknown sessions
 
 If a session-scoped request names a session that does not exist or is not active on the connection, the Agent **MUST** respond with `-32002` and set `data.sessionId` to the requested ID. A session is active once it is created, resumed, or forked on the connection, until it is closed or the connection ends. See [Session Lifecycle](/protocol/v2/draft/session-setup#session-lifecycle).
@@ -63,5 +65,4 @@ Agents **MUST** reject any request other than `initialize` that arrives before i
 - `session/status` of a session the Agent does not know gets `-32002`, with `data.sessionId` set to the requested ID. A session that exists but isn't active on the connection is not an error. The Agent reports its status.
 - `session/archive` and `session/unarchive` of a session that does not exist get `-32002`. Unlike `session/delete`, they don't succeed silently. An `archived` filter value the Agent does not support gets `-32602`. See [Archived Sessions](/protocol/v2/draft/session-list#archived-sessions-unstable).
 - `session/set_title` of a session that does not exist gets `-32002`. The session only has to exist. It doesn't have to be active on the connection. A title the Agent rejects gets `-32602`.
-- A `systemPrompt` the Agent cannot apply gets an error, `-32602` recommended. See [System Prompt](/protocol/v2/draft/session-setup#system-prompt-unstable).
 - `providers/*` methods called without the [`providers` capability](/protocol/v2/draft/initialization#agent-capabilities) get `-32601`.

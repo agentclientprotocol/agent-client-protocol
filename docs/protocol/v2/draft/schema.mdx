@@ -812,11 +812,7 @@ session.
   The ID of the session to fork.
 </ResponseField>
 <ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-System-level instructions for the forked session.
+  System-level instructions for the forked session.
 
 Optional. Omitted and `null` are equivalent. The Agent may then keep a
 system prompt it stored with the source session or use its default
@@ -992,11 +988,7 @@ additional roots are activated for the new session.
   List of MCP (Model Context Protocol) servers the agent should connect to.
 </ResponseField>
 <ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-System-level instructions for the new session.
+  System-level instructions for the new session.
 
 Optional. Omitted and `null` are equivalent and mean the Agent uses its
 own default instructions. Clients MUST only send this when the Agent
@@ -1222,11 +1214,7 @@ or resuming without replay.
   The ID of the session to resume.
 </ResponseField>
 <ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-System-level instructions for the resumed session.
+  System-level instructions for the resumed session.
 
 Optional. Omitted and `null` are equivalent. The Agent may then keep a
 system prompt it stored with the session or use its default instructions.
@@ -7777,11 +7765,7 @@ Supplying `\{\}` means the agent supports checking session status.
 
 </ResponseField>
 <ResponseField name="systemPrompt" type={<><span><a href="#sessionsystempromptcapabilities">SessionSystemPromptCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Whether the agent supports `systemPrompt` on session lifecycle requests.
+  Whether the agent supports `systemPrompt` on session lifecycle requests.
 
 Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
 Supplying `\{\}` means the agent supports `systemPrompt` in `append` mode.
@@ -8394,10 +8378,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 ## <span class="font-mono">SessionSystemPromptCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Capabilities for client-provided system prompts.
 
 Supplying `\{\}` means the agent supports `systemPrompt` on session lifecycle
@@ -8423,10 +8403,6 @@ Optional. Omitted and `null` are equivalent and mean the agent supports only `ap
 </ResponseField>
 
 ## <span class="font-mono">SessionSystemPromptModeCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 System prompt delivery modes the agent supports in addition to `append`.
 
@@ -8455,10 +8431,6 @@ instructions with the client-provided system prompt.
 </ResponseField>
 
 ## <span class="font-mono">SessionSystemPromptOverrideCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Capabilities for the `override` system prompt mode.
 
@@ -10284,16 +10256,12 @@ title is set, the Client chooses a fallback presentation.
 
 ## <span class="font-mono">SystemPrompt</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Client-provided system-level instructions for a session.
 
 Clients MUST only send this when the Agent advertises
 `session.systemPrompt`. Agents that cannot apply it, for example because of
 an unadvertised mode or an unsupported content block type, MUST return an
-error instead of creating, resuming, or forking the session.
+error instead of creating or resuming the session.
 
 **Type:** Object
 
@@ -10316,7 +10284,7 @@ capability allows them, and Agents MUST return an error for content
 blocks they do not support, including unknown types.
 
 Clients MUST NOT send an empty array. Agents MAY reject one with
-`-32602` without creating, resuming, or forking the session.
+`-32602` without creating or resuming the session.
 
 </ResponseField>
 <ResponseField name="mode" type={<a href="#systempromptmode">SystemPromptMode</a>} required>
@@ -10328,10 +10296,6 @@ treating it as `append` or `override`.
 </ResponseField>
 
 ## <span class="font-mono">SystemPromptMode</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 How the Agent combines a client-provided system prompt with its own instructions.
 

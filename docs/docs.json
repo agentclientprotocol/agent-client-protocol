@@ -236,7 +236,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/client-system-prompt"]
+            "pages": []
           },
           {
             "group": "Completed",
@@ -262,7 +262,8 @@
               "rfds/auth-methods",
               "rfds/tool-call-name",
               "rfds/session-compaction",
-              "rfds/session-notices"
+              "rfds/session-notices",
+              "rfds/client-system-prompt"
             ]
           }
         ]
@@ -288,6 +289,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/client-system-prompt-stabilized",
               "announcements/tool-call-name-stabilized",
               "announcements/elicitation-stabilized",
               "announcements/acp-v2-draft",

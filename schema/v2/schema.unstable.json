@@ -3148,7 +3148,7 @@
           "x-deserialize-default-on-error": true
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `systemPrompt` on session lifecycle requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports `systemPrompt` in `append` mode.",
+          "description": "Whether the agent supports `systemPrompt` on session lifecycle requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports `systemPrompt` in `append` mode.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionSystemPromptCapabilities"
@@ -3408,7 +3408,7 @@
       }
     },
     "SessionSystemPromptCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for client-provided system prompts.\n\nSupplying `{}` means the agent supports `systemPrompt` on session lifecycle\nrequests in `append` mode.",
+      "description": "Capabilities for client-provided system prompts.\n\nSupplying `{}` means the agent supports `systemPrompt` on session lifecycle\nrequests in `append` mode.",
       "type": "object",
       "properties": {
         "mode": {
@@ -3432,7 +3432,7 @@
       }
     },
     "SessionSystemPromptModeCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem prompt delivery modes the agent supports in addition to `append`.\n\n`append` has no entry because every agent advertising `session.systemPrompt`\nsupports it.",
+      "description": "System prompt delivery modes the agent supports in addition to `append`.\n\n`append` has no entry because every agent advertising `session.systemPrompt`\nsupports it.",
       "type": "object",
       "properties": {
         "override": {
@@ -3456,7 +3456,7 @@
       }
     },
     "SessionSystemPromptOverrideCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `override` system prompt mode.\n\nSupplying `{}` means the agent supports replacing its built-in default\ninstructions with the client-provided system prompt.",
+      "description": "Capabilities for the `override` system prompt mode.\n\nSupplying `{}` means the agent supports replacing its built-in default\ninstructions with the client-provided system prompt.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -8201,7 +8201,7 @@
           "x-deserialize-default-on-null": true
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the new session.\n\nOptional. Omitted and `null` are equivalent and mean the Agent uses its\nown default instructions. Clients MUST only send this when the Agent\nadvertises `session.systemPrompt`.",
+          "description": "System-level instructions for the new session.\n\nOptional. Omitted and `null` are equivalent and mean the Agent uses its\nown default instructions. Clients MUST only send this when the Agent\nadvertises `session.systemPrompt`.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -8440,7 +8440,7 @@
       "required": ["name", "command"]
     },
     "SystemPrompt": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-provided system-level instructions for a session.\n\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`. Agents that cannot apply it, for example because of\nan unadvertised mode or an unsupported content block type, MUST return an\nerror instead of creating, resuming, or forking the session.",
+      "description": "Client-provided system-level instructions for a session.\n\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`. Agents that cannot apply it, for example because of\nan unadvertised mode or an unsupported content block type, MUST return an\nerror instead of creating or resuming the session.",
       "type": "object",
       "properties": {
         "mode": {
@@ -8452,7 +8452,7 @@
           ]
         },
         "content": {
-          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept `text` content blocks.\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types.\n\nClients MUST NOT send an empty array. Agents MAY reject one with\n`-32602` without creating, resuming, or forking the session.",
+          "description": "The system prompt content.\n\nAgents advertising the capability MUST accept `text` content blocks.\nClients MUST NOT send other content block types until a future\ncapability allows them, and Agents MUST return an error for content\nblocks they do not support, including unknown types.\n\nClients MUST NOT send an empty array. Agents MAY reject one with\n`-32602` without creating or resuming the session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -8468,7 +8468,7 @@
       "required": ["mode", "content"]
     },
     "SystemPromptMode": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nHow the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown modes are preserved so they can be stored,\nproxied, or forwarded. An Agent MUST return an error for a mode it does not\nsupport rather than treating it as `append` or `override`.",
+      "description": "How the Agent combines a client-provided system prompt with its own instructions.\n\nUnknown modes are preserved so they can be stored,\nproxied, or forwarded. An Agent MUST return an error for a mode it does not\nsupport rather than treating it as `append` or `override`.",
       "anyOf": [
         {
           "description": "Add the content to the Agent's own instructions rather than replacing them.\n\nEvery Agent that advertises `session.systemPrompt` supports this mode.\nAgents SHOULD give the content system-level precedence, for example in the\nmodel's system prompt or developer instructions rather than in user-turn\ncontent. Where it is placed and how it is formatted is implementation-defined.",
@@ -8619,7 +8619,7 @@
           "x-deserialize-default-on-null": true
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used for the\nsource session.",
+          "description": "System-level instructions for the forked session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the source session or use its default\ninstructions. Clients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used for the\nsource session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -8784,7 +8784,7 @@
           ]
         },
         "systemPrompt": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSystem-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
+          "description": "System-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"

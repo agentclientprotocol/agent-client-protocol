@@ -1281,16 +1281,11 @@ pub struct NewSessionRequest {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the new session.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the Agent uses its
     /// own default instructions. Clients MUST only send this when the Agent
     /// advertises `session.systemPrompt`.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde(default)]
     pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1313,7 +1308,6 @@ impl NewSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
-            #[cfg(feature = "unstable_session_system_prompt")]
             system_prompt: None,
             meta: None,
         }
@@ -1337,12 +1331,7 @@ impl NewSessionRequest {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the new session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
         self.system_prompt = system_prompt.into_option();
@@ -1491,10 +1480,6 @@ pub struct ForkSessionRequest {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the forked session.
     ///
     /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
@@ -1502,7 +1487,6 @@ pub struct ForkSessionRequest {
     /// instructions. Clients MUST only send this when the Agent advertises
     /// `session.systemPrompt`, and SHOULD send the same value they used for the
     /// source session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde(default)]
     pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1527,7 +1511,6 @@ impl ForkSessionRequest {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
-            #[cfg(feature = "unstable_session_system_prompt")]
             system_prompt: None,
             meta: None,
         }
@@ -1551,12 +1534,7 @@ impl ForkSessionRequest {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the forked session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
         self.system_prompt = system_prompt.into_option();
@@ -1716,10 +1694,6 @@ pub struct ResumeSessionRequest {
     /// or resuming without replay.
     #[serde(default)]
     pub replay_from: Option<ReplayFrom>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the resumed session.
     ///
     /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
@@ -1727,7 +1701,6 @@ pub struct ResumeSessionRequest {
     /// Clients MUST only send this when the Agent advertises
     /// `session.systemPrompt`, and SHOULD send the same value they used when the
     /// session was created.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde(default)]
     pub system_prompt: Option<SystemPrompt>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1752,7 +1725,6 @@ impl ResumeSessionRequest {
             additional_directories: vec![],
             mcp_servers: vec![],
             replay_from: None,
-            #[cfg(feature = "unstable_session_system_prompt")]
             system_prompt: None,
             meta: None,
         }
@@ -1789,12 +1761,7 @@ impl ResumeSessionRequest {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the resumed session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
         self.system_prompt = system_prompt.into_option();
@@ -4543,17 +4510,12 @@ impl HttpHeader {
 
 // System prompt
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Client-provided system-level instructions for a session.
 ///
 /// Clients MUST only send this when the Agent advertises
 /// `session.systemPrompt`. Agents that cannot apply it, for example because of
 /// an unadvertised mode or an unsupported content block type, MUST return an
-/// error instead of creating, resuming, or forking the session.
-#[cfg(feature = "unstable_session_system_prompt")]
+/// error instead of creating or resuming the session.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4574,7 +4536,7 @@ pub struct SystemPrompt {
     /// blocks they do not support, including unknown types.
     ///
     /// Clients MUST NOT send an empty array. Agents MAY reject one with
-    /// `-32602` without creating, resuming, or forking the session.
+    /// `-32602` without creating or resuming the session.
     pub content: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -4588,7 +4550,6 @@ pub struct SystemPrompt {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SystemPrompt {
     /// Builds [`SystemPrompt`] with the required fields set. Optional fields start unset or empty.
     ///
@@ -4622,16 +4583,11 @@ impl SystemPrompt {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// How the Agent combines a client-provided system prompt with its own instructions.
 ///
 /// Unknown modes are preserved so they can be stored,
 /// proxied, or forwarded. An Agent MUST return an error for a mode it does not
 /// support rather than treating it as `append` or `override`.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -5785,15 +5741,10 @@ pub struct SessionCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `systemPrompt` on session lifecycle requests.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5921,15 +5872,10 @@ impl SessionCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `systemPrompt` on session lifecycle requests.
     ///
     /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(
         mut self,
@@ -6094,15 +6040,10 @@ impl SessionAdditionalDirectoriesCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for client-provided system prompts.
 ///
 /// Supplying `{}` means the agent supports `systemPrompt` on session lifecycle
 /// requests in `append` mode.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -6129,7 +6070,6 @@ pub struct SessionSystemPromptCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptCapabilities {
     /// Builds an empty [`SessionSystemPromptCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -6158,15 +6098,10 @@ impl SessionSystemPromptCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// System prompt delivery modes the agent supports in addition to `append`.
 ///
 /// `append` has no entry because every agent advertising `session.systemPrompt`
 /// supports it.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -6195,7 +6130,6 @@ pub struct SessionSystemPromptModeCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptModeCapabilities {
     /// Builds an empty [`SessionSystemPromptModeCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -6229,15 +6163,10 @@ impl SessionSystemPromptModeCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for the `override` system prompt mode.
 ///
 /// Supplying `{}` means the agent supports replacing its built-in default
 /// instructions with the client-provided system prompt.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -6256,7 +6185,6 @@ pub struct SessionSystemPromptOverrideCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptOverrideCapabilities {
     /// Builds an empty [`SessionSystemPromptOverrideCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
@@ -8733,7 +8661,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_session_system_prompt_capabilities_serialization() {
         assert_eq!(
@@ -8794,7 +8721,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_lifecycle_request_serialization() {
         let system_prompt = SystemPrompt::new(vec![ContentBlock::from(
@@ -8853,7 +8779,6 @@ mod test_serialization {
 
     /// `SystemPrompt::new` defaults to `append` in Rust, but `mode` is required on
     /// the wire, so it is always serialized.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_new_defaults_to_append() {
         let system_prompt = SystemPrompt::new(vec![ContentBlock::from("...")]);
@@ -8867,7 +8792,6 @@ mod test_serialization {
     /// Unknown modes follow the enum variant extension rule: they parse as
     /// `SystemPromptMode::Other` so they are not dropped, and an agent that does
     /// not support them must reject the request.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_preserves_unknown_modes() {
         for mode in ["_vendor_mode", "prepend"] {
@@ -8889,7 +8813,6 @@ mod test_serialization {
     /// The receiver acts on `systemPrompt`, so malformed values fail the request
     /// (`-32602`) instead of creating a session without the prompt, and `null`
     /// is equivalent to omitting the field.
-    #[cfg(feature = "unstable_session_system_prompt")]
     fn assert_system_prompt_is_strict<T>(base: &serde_json::Value)
     where
         T: serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
@@ -8923,7 +8846,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_session_setup_requests_reject_malformed_system_prompts() {
         assert!(
@@ -8946,7 +8868,6 @@ mod test_serialization {
 
     /// Unknown content block types parse as `ContentBlock::Other` so they are not
     /// dropped. An agent that does not support them must reject the request.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_preserves_unknown_content_blocks() {
         let request: NewSessionRequest = serde_json::from_value(json!({
