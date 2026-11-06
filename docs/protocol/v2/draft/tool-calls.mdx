@@ -452,6 +452,7 @@ The Client cancels the tool call with a `tool_call/cancel` request:
 ```
 
 - The Client **MUST NOT** send it unless the tool call currently advertises `capabilities.cancel`.
+- `sessionId` is the session that reports the tool call. For a [subagent](/rfds/subagents)'s tool call, that is the child session: the tool call's own `cancel` enables the request even when the child doesn't advertise `cancel`.
 - The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the work has stopped. The Agent confirms that with a `tool_call_update` to a final status, normally `cancelled`, and may send `completed` or `failed` if the work finished first.
 - The Agent responds with `-32602` if the tool call is unknown, already final, or not cancellable.
 - Cancelling a tool call does not change the foreground state by itself. This works for foreground tool calls too, so a user can stop one long-running step without cancelling the rest of the work.
@@ -597,6 +598,7 @@ A terminal may keep running after its tool call returns control to the model, as
 The Agent **SHOULD** stop advertising `cancel` once the terminal reports `exitStatus`. The Client stops the process with a `terminal/cancel` request with the `sessionId` and `terminalId`:
 
 - The Client **MUST NOT** send it unless the terminal currently advertises `capabilities.cancel`.
+- `sessionId` is the session that reports the terminal. For a [subagent](/rfds/subagents)'s terminal, that is the child session: the terminal's own `cancel` enables the request even when the child doesn't advertise `cancel`.
 - The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the process has stopped. The Agent confirms that with a `terminal_update` that sets `exitStatus`.
 - The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not cancellable.
 - Cancelling stops the process but does not release the terminal: its output remains available for display and replay. It does not change the foreground state or the status of any tool call that references the terminal.

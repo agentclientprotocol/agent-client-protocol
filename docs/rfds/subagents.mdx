@@ -955,7 +955,10 @@ Mutations include prompting, queueing, steering, cancellation, closing,
 deletion, mode or configuration changes, and forking. Loading or resuming also
 changes runtime attachment and is not a read-only history query. The only
 mutation capability defined by this RFD is `cancel`; direct child load, resume,
-and close are therefore not allowed. The parent Agent's own communication with
+and close are therefore not allowed. A child's tool call or terminal that
+advertises its own `capabilities.cancel` enables `tool_call/cancel` or
+`terminal/cancel` for that item, sent with the child's `sessionId`, whether or
+not the child advertises `cancel`. It enables nothing else on the child. The parent Agent's own communication with
 its children is not a Client-initiated mutation and is not restricted by these
 capabilities.
 
