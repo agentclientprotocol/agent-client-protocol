@@ -55,6 +55,7 @@ The following projects implement ACP directly, connect ACP agents to other envir
 - [Toad](https://www.batrachian.ai/)
 - [Intelligent Terminal](https://github.com/microsoft/intelligent-terminal) — Windows Terminal fork with native agent integration, driving ACP-compatible agent CLIs over stdio
 - [SpurCode](https://github.com/getspur/SpurCode) — Rust-native terminal orchestrator that runs a mixed fleet of ACP agents (Claude Code, Codex, Gemini, Kimi, OpenCode and more) in parallel across Git worktrees, from one TUI
+- [acp-runner](https://github.com/ranvirsingh/acp-runner) — CLI that runs multi-step agent workflows from one `agent.yaml`: each step sends a prompt to Claude Code, Codex or any ACP agent, runs a shell command as a check, and can loop back to an earlier step on failure, with per-step MCP tool scoping
 
 ## Desktop and Web
 
