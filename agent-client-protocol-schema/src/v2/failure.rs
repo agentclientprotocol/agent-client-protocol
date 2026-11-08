@@ -116,8 +116,8 @@ fn failure_schema(schema: &mut schemars::Schema) {
 mod tests {
     use super::*;
     use crate::v2::{
-        Error, ErrorStopReason, IdleStateUpdate, OtherStopReason, SessionNotification,
-        SessionUpdate, StateUpdate,
+        Error, ErrorStopReason, IdleStateUpdate, OtherStopReason, SessionUpdate, StateUpdate,
+        UpdateSessionNotification,
     };
     use serde_json::json;
 
@@ -149,12 +149,12 @@ mod tests {
             StopReason::Refusal,
             StopReason::Error(ErrorStopReason::new()),
         ] {
-            let live = SessionNotification::new(
+            let live = UpdateSessionNotification::new(
                 "sess_1",
                 SessionUpdate::Failure(Failure::new("fail_1", reason).unwrap()),
             );
             let wire = serde_json::to_value(&live).unwrap();
-            let replay: SessionNotification = serde_json::from_value(wire.clone()).unwrap();
+            let replay: UpdateSessionNotification = serde_json::from_value(wire.clone()).unwrap();
             assert_eq!(serde_json::to_value(replay).unwrap(), wire);
         }
     }
