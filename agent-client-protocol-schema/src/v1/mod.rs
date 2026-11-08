@@ -15,6 +15,8 @@ mod proxy;
 mod rpc;
 mod tool_call;
 
+#[cfg(feature = "unstable_error_classification")]
+pub use crate::error_classification::*;
 pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification};
 pub use agent::*;
 pub use client::*;
@@ -56,6 +58,3 @@ impl SessionId {
         Self(id.into())
     }
 }
-
-#[cfg(feature = "unstable_error_classification")]
-pub use crate::error_classification::*;

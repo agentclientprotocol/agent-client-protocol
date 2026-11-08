@@ -27,6 +27,8 @@ pub(crate) mod schema_util;
 mod terminal;
 mod tool_call;
 
+#[cfg(feature = "unstable_error_classification")]
+pub use crate::error_classification::*;
 pub use crate::rpc::{JsonRpcMessage, Notification};
 pub use agent::*;
 pub use client::*;
@@ -205,6 +207,3 @@ mod tests {
         drop(TerminalUpdate::new("terminal-1").cwd(None));
     }
 }
-
-#[cfg(feature = "unstable_error_classification")]
-pub use crate::error_classification::*;

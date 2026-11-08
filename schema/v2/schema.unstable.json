@@ -5157,6 +5157,14 @@
       "description": "Schema for [`Error::data`]: the shapes ACP defines, or any other value.",
       "anyOf": [
         {
+          "title": "Classified",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorClassification"
+            }
+          ]
+        },
+        {
           "title": "UnsupportedProtocolVersion",
           "allOf": [
             {
@@ -5174,6 +5182,97 @@
         },
         {
           "title": "Other"
+        }
+      ]
+    },
+    "ErrorClassification": {
+      "description": "**UNSTABLE.** Optional classification fields in an object-valued error `data`.\n\nOmitted and `null` fields mean unknown. Malformed fields are ignored individually.\nExisting non-object error data remains valid and must not be wrapped or replaced.\nAuthentication continues to use code `-32000`, regardless of classification.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "The cause of the failure. Unknown values must use generic error handling.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorKind"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "retryable": {
+          "description": "Whether the same unchanged request may succeed. Absence means unknown, not false.\nThis hint does not authorize automatic retries or guarantee safe side effects.",
+          "type": ["boolean", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "retryAfterMs": {
+          "description": "Minimum delay from receipt before retrying, supplied by the provider or runtime.\nOnly meaningful when `retryable` is true. Agents must not invent this value.",
+          "type": ["integer", "null"],
+          "format": "uint64",
+          "minimum": 0,
+          "x-deserialize-default-on-error": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "ErrorKind": {
+      "description": "**UNSTABLE.** An open classification of a failure that ends foreground work.\nCustom values start with `_`. Other unknown values are reserved for future ACP kinds.",
+      "anyOf": [
+        {
+          "description": "A temporary request or throughput limit.",
+          "type": "string",
+          "const": "rate_limited"
+        },
+        {
+          "description": "An account, plan, or organization usage allowance is used up.",
+          "type": "string",
+          "const": "usage_limit"
+        },
+        {
+          "description": "Input exceeds the model's context window.",
+          "type": "string",
+          "const": "context_window_exceeded"
+        },
+        {
+          "description": "A configured cost or token budget was reached.",
+          "type": "string",
+          "const": "budget_exceeded"
+        },
+        {
+          "description": "The service is temporarily out of capacity.",
+          "type": "string",
+          "const": "overloaded"
+        },
+        {
+          "description": "The Agent cannot reach its runtime or a required service.",
+          "type": "string",
+          "const": "connection"
+        },
+        {
+          "description": "The request, configuration, or model cannot be accepted.",
+          "type": "string",
+          "const": "invalid_request"
+        },
+        {
+          "description": "A policy blocks the operation. Normal refusals retain the refusal stop reason.",
+          "type": "string",
+          "const": "policy"
+        },
+        {
+          "description": "The model provider failed with no more specific known cause.",
+          "type": "string",
+          "const": "provider_error"
+        },
+        {
+          "description": "The Agent failed with no more specific known cause.",
+          "type": "string",
+          "const": "internal"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future classification. Receivers must accept unknown values.",
+          "type": "string"
         }
       ]
     },
