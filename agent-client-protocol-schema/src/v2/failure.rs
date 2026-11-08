@@ -55,6 +55,7 @@ pub struct Failure {
 }
 
 #[serde_as]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FailureFields {
@@ -62,6 +63,7 @@ struct FailureFields {
     #[serde(flatten)]
     stop_reason: StopReason,
     #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, rename = "_meta")]
     meta: Option<Meta>,
 }
