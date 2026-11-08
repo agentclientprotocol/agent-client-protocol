@@ -66,3 +66,13 @@ Agents **MUST** reject any request other than `initialize` that arrives before i
 - `session/archive` and `session/unarchive` of a session that does not exist get `-32002`. Unlike `session/delete`, they don't succeed silently. An `archived` filter value the Agent does not support gets `-32602`. See [Archived Sessions](/protocol/v2/draft/session-list#archived-sessions-unstable).
 - `session/set_title` of a session that does not exist gets `-32002`. The session only has to exist. It doesn't have to be active on the connection. A title the Agent rejects gets `-32602`.
 - `providers/*` methods called without the [`providers` capability](/protocol/v2/draft/initialization#agent-capabilities) get `-32601`.
+
+## Error classification (unstable)
+
+The `unstable_error_classification` feature prototypes [the error classification proposal](https://github.com/agentclientprotocol/agent-client-protocol/pull/2755). When `data` is an object, `kind`, `retryable`, and `retryAfterMs` describe a failure without changing its code or message. Unknown kinds and malformed fields fall back to generic error handling. Omitted or `null` fields mean unknown. An explicit `retryable: false` is distinct from an absent value.
+
+The kinds are `rate_limited`, `usage_limit`, `context_window_exceeded`, `budget_exceeded`, `overloaded`, `connection`, `invalid_request`, `policy`, `provider_error`, and `internal`. Custom kinds start with `_`. Receivers accept future kinds. Authentication keeps code `-32000`.
+
+`retryAfterMs` is a non-negative integer delay from receipt and only has meaning with `retryable: true`. Agents send a delay only when the provider or runtime supplies it. A retry hint does not authorize automatic retries or guarantee that duplicate side effects are safe.
+
+Non-object data and unrelated object keys remain valid. The Rust `Error::classification()` accessor reads these fields without changing the original data. `ErrorClassification` can also decode and encode object data while retaining unrelated keys.

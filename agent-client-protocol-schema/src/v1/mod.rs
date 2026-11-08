@@ -56,3 +56,6 @@ impl SessionId {
         Self(id.into())
     }
 }
+
+#[cfg(feature = "unstable_error_classification")]
+pub use crate::error_classification::*;

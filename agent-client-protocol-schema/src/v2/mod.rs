@@ -205,3 +205,6 @@ mod tests {
         drop(TerminalUpdate::new("terminal-1").cwd(None));
     }
 }
+
+#[cfg(feature = "unstable_error_classification")]
+pub use crate::error_classification::*;
