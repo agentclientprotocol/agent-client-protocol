@@ -15,6 +15,10 @@ mod content;
 mod elicitation;
 mod error;
 mod ext;
+#[cfg(feature = "unstable_failure_entries")]
+mod failure;
+#[cfg(feature = "unstable_failure_entries")]
+pub use failure::*;
 #[cfg(feature = "unstable_mcp_over_acp")]
 mod mcp;
 mod plan;

@@ -1194,3 +1194,13 @@ Agents **MUST** catch these errors and report the semantically meaningful `cance
 The Agent **MAY** send `session/update` notifications with content or tool call updates after receiving the `session/cancel` notification, but it **MUST** ensure that it does so before sending the idle `state_update` session update that reports cancellation.
 
 The Client **SHOULD** still accept tool call updates received after sending `session/cancel`.
+
+## Failure history entries (unstable)
+
+The `unstable_failure_entries` feature prototypes [the failure entries proposal](https://github.com/agentclientprotocol/agent-client-protocol/pull/2756). A `failure` session update records failed foreground work in history. It requires a session-unique `failureId` and a `stopReason` with the same fields as the idle update. Repeating the ID replaces the entry.
+
+Agents send failures for `error`, `max_tokens`, `max_turn_requests`, and `refusal`. They may use custom reasons for failed work. They do not send a failure for `end_turn` or `cancelled`. Receivers accept unknown reasons. A failure with `stopReason: "error"` uses the same optional JSON-RPC `error` details as the idle update.
+
+Send the failure after the other updates for the work and before the idle `state_update`. Only the idle update ends foreground work. It retains the same stop reason and error. Retention follows message retention: an Agent need not retain failures, but a retained failure replays in its original position and should keep its ID.
+
+The latest entry is current only while the session is idle. Later messages or failures make earlier failures history. This schema does not implement persistence, UI deduplication, retry actions, or adapter migration.
