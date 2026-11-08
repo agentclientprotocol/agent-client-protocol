@@ -6562,17 +6562,6 @@
       "required": ["failureId"],
       "anyOf": [
         {
-          "description": "The active work ended successfully.\nIncludes locally handled commands that required no model call.",
-          "type": "object",
-          "properties": {
-            "stopReason": {
-              "type": "string",
-              "const": "end_turn"
-            }
-          },
-          "required": ["stopReason"]
-        },
-        {
           "description": "The active work ended because the agent reached the maximum number of tokens.",
           "type": "object",
           "properties": {
@@ -6601,17 +6590,6 @@
             "stopReason": {
               "type": "string",
               "const": "refusal"
-            }
-          },
-          "required": ["stopReason"]
-        },
-        {
-          "description": "The user or client chose to stop the work: via `session/cancel`, by\nclosing the session, or through an interaction the agent offers, such\nas a permission option that tells the agent to stop. Work the agent\nstops for its own reasons uses another reason, such as `error` for an\ninternal timeout.\n\nAgents MUST report this stop reason on an idle `state_update` when\ncancellation ends active foreground work, even if aborting causes\nexceptions. Agents MUST catch these errors and report `cancelled`, not\n`error`.",
-          "type": "object",
-          "properties": {
-            "stopReason": {
-              "type": "string",
-              "const": "cancelled"
             }
           },
           "required": ["stopReason"]

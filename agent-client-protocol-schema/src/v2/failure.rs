@@ -105,6 +105,21 @@ impl Failure {
 
 #[cfg(feature = "schemars")]
 fn failure_schema(schema: &mut schemars::Schema) {
+    // Keep generated reference docs and SDK unions aligned with the wire constraint.
+    // The shared StopReason still includes successful completion and cancellation.
+    if let Some(variants) = schema
+        .get_mut("anyOf")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        variants.retain(|variant| {
+            !matches!(
+                variant
+                    .pointer("/properties/stopReason/const")
+                    .and_then(serde_json::Value::as_str),
+                Some("end_turn" | "cancelled")
+            )
+        });
+    }
     super::schema_util::reject_known_string_discriminators(
         schema,
         "stopReason",
@@ -116,10 +131,30 @@ fn failure_schema(schema: &mut schemars::Schema) {
 mod tests {
     use super::*;
     use crate::v2::{
-        Error, ErrorStopReason, IdleStateUpdate, OtherStopReason, SessionUpdate, StateUpdate,
+        Error, ErrorStopReason, IdleStateUpdate, SessionUpdate, StateUpdate,
         UpdateSessionNotification,
     };
     use serde_json::json;
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn schema_alternatives_exclude_successful_and_cancelled_work() {
+        let schema = serde_json::to_value(schemars::schema_for!(Failure)).unwrap();
+        let reasons: Vec<_> = schema["anyOf"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|variant| {
+                variant
+                    .pointer("/properties/stopReason/const")
+                    .and_then(serde_json::Value::as_str)
+            })
+            .collect();
+        assert_eq!(
+            reasons,
+            ["max_tokens", "max_turn_requests", "refusal", "error"]
+        );
+    }
 
     #[test]
     fn failure_and_idle_have_the_same_error_but_distinct_roles() {
@@ -173,7 +208,6 @@ mod tests {
             ));
             assert_eq!(serde_json::to_value(update).unwrap(), wire);
         }
-        let _custom = OtherStopReason::new("_custom", Default::default());
     }
 
     #[test]

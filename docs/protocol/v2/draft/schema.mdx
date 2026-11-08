@@ -5438,19 +5438,6 @@ This type does not execute retries or implement history storage.
 
 **Variants:**
 
-<ResponseField name="end_turn" type="object">
-The active work ended successfully.
-Includes locally handled commands that required no model call.
-
-<Expandable title="Properties">
-
-<ResponseField name="stopReason" type={"string"} required>
-  The discriminator value. Must be `"end_turn"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 <ResponseField name="max_tokens" type="object">
 The active work ended because the agent reached the maximum number of tokens.
 
@@ -5483,27 +5470,6 @@ The active work ended because the agent refused to continue.
 
 <ResponseField name="stopReason" type={"string"} required>
   The discriminator value. Must be `"refusal"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="cancelled" type="object">
-The user or client chose to stop the work: via `session/cancel`, by
-closing the session, or through an interaction the agent offers, such
-as a permission option that tells the agent to stop. Work the agent
-stops for its own reasons uses another reason, such as `error` for an
-internal timeout.
-
-Agents MUST report this stop reason on an idle `state_update` when
-cancellation ends active foreground work, even if aborting causes
-exceptions. Agents MUST catch these errors and report `cancelled`, not
-`error`.
-
-<Expandable title="Properties">
-
-<ResponseField name="stopReason" type={"string"} required>
-  The discriminator value. Must be `"cancelled"`.
 </ResponseField>
 
 </Expandable>
@@ -9169,19 +9135,6 @@ This entry does not change foreground state. Only the following idle update ends
 
 **Alternatives (`anyOf`):**
 
-<ResponseField name="end_turn" type="object">
-The active work ended successfully.
-Includes locally handled commands that required no model call.
-
-<Expandable title="Properties">
-
-<ResponseField name="stopReason" type={"string"} required>
-  The discriminator value. Must be `"end_turn"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 <ResponseField name="max_tokens" type="object">
 The active work ended because the agent reached the maximum number of tokens.
 
@@ -9214,27 +9167,6 @@ The active work ended because the agent refused to continue.
 
 <ResponseField name="stopReason" type={"string"} required>
   The discriminator value. Must be `"refusal"`.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
-<ResponseField name="cancelled" type="object">
-The user or client chose to stop the work: via `session/cancel`, by
-closing the session, or through an interaction the agent offers, such
-as a permission option that tells the agent to stop. Work the agent
-stops for its own reasons uses another reason, such as `error` for an
-internal timeout.
-
-Agents MUST report this stop reason on an idle `state_update` when
-cancellation ends active foreground work, even if aborting causes
-exceptions. Agents MUST catch these errors and report `cancelled`, not
-`error`.
-
-<Expandable title="Properties">
-
-<ResponseField name="stopReason" type={"string"} required>
-  The discriminator value. Must be `"cancelled"`.
 </ResponseField>
 
 </Expandable>
