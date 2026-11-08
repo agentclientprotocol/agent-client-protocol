@@ -42,11 +42,11 @@ pub struct Error {
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
-    #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(
         all(feature = "schemars", feature = "unstable_error_classification"),
         schemars(with = "Option<ErrorData>")
     )]
+    #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub data: Option<serde_json::Value>,
