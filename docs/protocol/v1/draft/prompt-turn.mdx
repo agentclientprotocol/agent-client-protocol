@@ -103,6 +103,13 @@ one or forward the content themselves. Neither view acknowledges completed
 recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
 for participant registration, history gaps, and ownership rules.
 
+The task a parent gives a subagent, including the first one that starts its
+work, is a session-directed message. Agents **SHOULD** report it as an
+incoming `session_message` in the child's transcript, with `senderSessionId`
+set to the parent, and **SHOULD NOT** report it as a `user_message_chunk`.
+Clients can then render it as a message from the parent session rather than
+from the user. See [Delegated tasks](/rfds/subagents#delegated-tasks).
+
 ## The prompt turn lifecycle
 
 <br />

@@ -266,6 +266,7 @@ addressed to its own session ID:
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Working directory and additional dirs     | `cwd` and `additionalDirectories` on the parent's `subagent_update`; see [Working directories](#working-directories) |
 | Display label and role                    | `title` and `description` on the parent's `subagent_update`                                                          |
+| Initial task and later instructions       | `session_message` in the child's transcript; see [Delegated tasks](#delegated-tasks)                                 |
 | The child's own conversation title        | Child-addressed `session_info_update`                                                                                |
 | Model, reasoning level, and other options | Child-addressed `config_option_update`; see [Child configuration](#child-configuration)                              |
 | Current work state                        | See [Current work state](#current-work-state)                                                                        |
@@ -583,6 +584,28 @@ Normal tool calls remain available for actual tools, including tools that
 perform delegation or waiting. They report those operations' inputs, outputs,
 and outcomes. Agents do not need to invent a tool call to report a directed
 message, and this RFD adds no session-reference variant to `ToolCallContent`.
+
+#### Delegated tasks
+
+The task a parent gives a child, including the first one that starts the
+child's work, is a session-directed message from the parent to the child.
+Agents **SHOULD** report it as the incoming view in the child's transcript, a
+`session_message` with outer `sessionId` set to the child and
+`senderSessionId` set to the parent, before the child's response to it. If the
+parent's conversation also records the delegation, Agents **SHOULD** report the
+outgoing view in the parent's transcript and link the two views. Later
+instructions to the same child use the same form.
+
+Agents **SHOULD NOT** report this task as a `user_message_chunk` or a v2
+`user_message` in the child's transcript. A user message would attribute the
+task to the human user. A `session_message` lets Clients render it as
+communication between sessions, for example as "From Parent" at the top of the
+child's conversation. The `description` on `subagent_update` describes the
+child's role and is not a substitute for the task message.
+
+A parent that delegates through a tool may also report the task in that tool
+call's input. The tool call reports the operation. The child's
+`session_message` reports what the child received.
 
 #### Streaming
 
@@ -1422,6 +1445,15 @@ chunk patch message state even though its `_meta` does not. An Agent that
 learns the identity while streaming sends one metadata-only upsert, which
 needs no content.
 
+### How does a Client get a subagent's initial task?
+
+From the incoming `session_message` in the child's transcript, as described in
+[Delegated tasks](#delegated-tasks). The first task is not a special case: it
+is the first session-directed message the child receives. Reporting it as a
+user message would attribute it to the human user, and storing it on
+`subagent_update` would conflate the child's current display metadata with
+its message history.
+
 ### Why report directories on the association rather than `session_info_update`?
 
 For ordinary sessions the Client chooses `cwd` and `additionalDirectories`
@@ -1495,6 +1527,10 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-09: Recommended reporting the task a parent gives a child, including
+  the first one, as an incoming `session_message` in the child's transcript
+  rather than a user message, so Clients can render it as communication
+  between sessions.
 - 2026-10-30: In v2, optimistic cancellation skips tool calls in the session's `background` list, following the v2 Background Work RFD.
 - 2026-10-29: Removed the JSON-RPC batch rules, since ACP v2 no longer uses batches.
 - 2026-10-29: Added optional `cwd` and `additionalDirectories` to
