@@ -7359,6 +7359,36 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   The current mode the Agent is in.
 </ResponseField>
 
+## <span class="font-mono">SessionReference</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A display-only reference to another session that this tool call operates on,
+such as a subagent it created, delegated to, or is waiting on.
+
+The referenced session must already be known to the Client through ordinary
+session setup or a `subagent_update` announcement. The reference does not
+establish ownership, grant any Client-initiated controls, or report that the
+referenced session received or finished any work.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The referenced session.
+</ResponseField>
+
 ## <span class="font-mono">SessionResumeCapabilities</span>
 
 Capabilities for the `session/resume` method.
@@ -9112,6 +9142,33 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"terminal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="session" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A display-only reference to another session, such as a subagent.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
+  The referenced session.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"session"`.
 </ResponseField>
 
 </Expandable>

@@ -334,6 +334,31 @@ When a terminal is embedded in a tool call, the Client displays live output as i
   Learn more about Terminals
 </Card>
 
+### Sessions (unstable)
+
+**Draft only.** A session content item links the tool call to another session
+it operates on, such as a [subagent](/rfds/subagents) it spawned or waits on:
+
+```json
+{
+  "type": "session",
+  "sessionId": "sess_child_1"
+}
+```
+
+<ParamField path="sessionId" type="string" required>
+  The referenced session. It must already be known through ordinary session
+  setup or a `subagent_update` announcement.
+</ParamField>
+
+Optional nullable `_meta` is scoped to this content item. Omission and `null`
+both mean that no item metadata was provided. A tool call can reference several
+sessions. The reference is display-only. It does not establish ownership,
+enable Client-initiated controls on the referenced session, or report that
+session's work state. Agents send it only when the Client advertises the `subagents` capability. The task a parent
+sends a child is reported as a [session-directed message](/protocol/v1/draft/prompt-turn#session-directed-messages-unstable),
+not through a tool call.
+
 ## Following the Agent
 
 Tool calls can report the file locations they're working with. Clients can use this to follow along, showing which files the Agent is reading or modifying as it works.

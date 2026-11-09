@@ -22,7 +22,10 @@ which carry optional sender and recipient metadata, and
 than tool-call content.
 
 The association is not a task or a one-shot lifetime. The parent can message
-the same child again after earlier work finishes. Client-initiated session
+the same child again after earlier work finishes. One-shot children remain a
+supported case: an Agent whose runtime creates a fresh worker for each
+delegation announces a new child each time and never assigns it more work.
+The protocol does not limit subagents to that pattern. Client-initiated session
 mutations remain disabled unless explicitly advertised for that child; this
 proposal initially defines only cancellation of current work.
 
@@ -175,6 +178,13 @@ task, turn, or tool call. Completing a task does not create a new conversation.
 Provider IDs can be used directly when their scope and lifetime meet the
 identity requirements above; otherwise adapters can derive suitable ACP IDs
 or maintain a mapping.
+
+Reuse is allowed, not required. Many runtimes run a subagent once, often
+synchronously inside a single tool call, and discard it. Such an Agent
+announces a new child session for each run and never sends it another
+assignment. This conforms to this RFD. The child keeps its last reported state
+and history, and the Agent need not report anything further for it. See
+[Do subagents have to be reusable?](#do-subagents-have-to-be-reusable)
 
 Announcement ordering also applies to short-lived work. Clients attribute
 subsequent traffic to the announced child and apply its restricted-session
@@ -583,7 +593,57 @@ message.
 Normal tool calls remain available for actual tools, including tools that
 perform delegation or waiting. They report those operations' inputs, outputs,
 and outcomes. Agents do not need to invent a tool call to report a directed
-message, and this RFD adds no session-reference variant to `ToolCallContent`.
+message.
+
+#### Referencing sessions from tool calls
+
+Add a `session` variant to `ToolCallContent` in both versions. It is a
+display-only reference to another session that the tool call operates on, in
+the same way that `terminal` content references a terminal by ID:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_parent",
+    "update": {
+      "sessionUpdate": "tool_call_update",
+      "toolCallId": "call_wait_1",
+      "content": [
+        { "type": "session", "sessionId": "sess_child_1" },
+        { "type": "session", "sessionId": "sess_child_2" }
+      ]
+    }
+  }
+}
+```
+
+`sessionId` is required. `_meta` is optional and nullable, and omitted or
+`null` means no metadata. Clients use the reference to link the tool call to the
+referenced session, for example to open the child's conversation from the tool
+call.
+
+Delegation itself is a message. Agents **SHOULD** report the task a parent
+sends a child as a `session_message`, as described in
+[Delegated tasks](#delegated-tasks), and need not keep a tool call only to link
+the parent to the child. Session references are for tool calls that remain
+visible because they report a real operation, such as a spawn that needed
+permission, a tool that waits on one or more children, or a batch spawn. A tool
+call can reference several sessions, and a reusable child can be referenced by
+many tool calls over its lifetime.
+
+A referenced session follows the announcement rule above: it **MUST** be known
+through ordinary session setup or a `subagent_update` announcement before a
+tool call references it. A replayed reference to a session that is not
+available follows the historical replay rules. A reference does not establish
+ownership, grant Client-initiated controls, or report that the referenced
+session received or finished any work. Its tool call's status does not define
+the referenced session's lifetime or work state.
+
+In v1, `session` content is covered by the `subagents` Client capability like
+the rest of this RFD. In v2, receivers that do not recognize it preserve it as
+unknown tool call content.
 
 #### Delegated tasks
 
@@ -668,6 +728,7 @@ the same event:
 | `params.update.sessionId` in `subagent_update`          | Which child is owned by the parent named by the outer ID?        |
 | `params.update.senderSessionId` in a session message    | Which session sent, or is sending, this message?                 |
 | `params.update.recipientSessionId` in a session message | Which session is this message addressed to?                      |
+| `sessionId` in `session` tool call content              | Which session does this tool call operate on?                    |
 
 For example, with parent `sess_parent` and child `sess_child_1`:
 
@@ -995,8 +1056,8 @@ ordinary standalone `session/list` entries. This avoids offering load, resume,
 or prompt controls that are not available for them.
 
 If forking a parent copies child history, the Agent **MUST** consistently remap
-the copied session IDs in both message participant fields, including references
-to the forked root. Each copied child still has one parent and a distinct
+the copied session IDs in both message participant fields and in `session`
+tool call content, including references to the forked root. Each copied child still has one parent and a distinct
 identity. Participants outside the copied tree do not become part of the copy;
 unavailable participants follow the historical replay rules above. Copying
 history does not itself create live child runtimes. Parent deletion keeps its
@@ -1184,7 +1245,8 @@ implementation to use the named SDKs, providers, or integration techniques.
 2. Add `SessionMessage` and `SessionMessageChunk` update variants in both
    versions, using normal content, with optional sender and recipient session
    metadata and message references on `SessionMessage` for incoming and
-   outgoing views.
+   outgoing views. Add a `session` variant to `ToolCallContent` in both
+   versions.
 3. Mirror the v2 `StateUpdate` payload in v1 and embed it in the v1 association
    update. In v2, mirror ordinary child-session state notifications in the
    parent association as well.
@@ -1421,8 +1483,9 @@ reports execution of a tool. An outgoing or incoming message should be
 renderable as ordinary content with a recipient or sender link, without
 requiring a tool-call card or a raw-input viewer. The directed-message updates
 provide that representation and support streaming. Actual tool operations can
-still be reported normally, but their status does not define a child's lifetime
-or acknowledge that it processed a message.
+still be reported normally and can link to the sessions they operate on with
+`session` content, but their status does not define a child's lifetime or
+acknowledge that it processed a message.
 
 ### Why can both views of a message reference each other?
 
@@ -1483,6 +1546,22 @@ direct user intervention may be unsupported or interfere with orchestration.
 A future per-child capability could opt into it without assuming every Agent
 can implement it.
 
+Some runtimes already let the user message a child directly. Claude Code, for
+example, accepts input on a subagent's transcript, and OpenCode's runtime can
+prompt a child session. The expected follow-up is a per-child `prompt`
+capability in `subagent_update.capabilities`, enabling `session/prompt` with
+the child's session ID.
+
+### Do subagents have to be reusable?
+
+No. A one-shot child, created for one delegation and never given more work,
+is a valid and common use of this RFD. The Agent announces it, reports the
+incoming task and the child's traffic, and reports `idle` when it finishes.
+Later updates are optional. The RFD defines reusable sessions so that it does
+not limit the protocol to one-shot children. Agents whose runtimes reuse
+workers can keep a child's identity across assignments, and Agents whose
+runtimes do not can create a new child for each run.
+
 ### What do the association's title and description describe?
 
 They describe the child in its parent's view, so Clients can show multiple
@@ -1526,6 +1605,12 @@ while the announcing update and positive capability allowlist capture the
 important difference from a user-facing session.
 
 ## Revision history
+
+- 2026-11-09: Stated that one-shot children, announced for a single
+  delegation and never reused, conform to this RFD. Named a per-child `prompt`
+  capability as the expected way to let Clients prompt a child in the future.
+  Added a `session` variant to `ToolCallContent` so a tool call that spawns,
+  waits on, or otherwise operates on a session can link to it.
 
 - 2026-11-09: Recommended reporting the task a parent gives a child, including
   the first one, as an incoming `session_message` in the child's transcript

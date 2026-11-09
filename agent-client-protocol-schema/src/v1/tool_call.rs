@@ -12,6 +12,8 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
 
+#[cfg(feature = "unstable_subagents")]
+use super::SessionId;
 use super::{ContentBlock, Error, Meta, TerminalId};
 
 /// Represents a tool call that the language model has requested.
@@ -554,6 +556,13 @@ pub enum ToolCallContent {
     ///
     /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)
     Terminal(Terminal),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A display-only reference to another session, such as a subagent.
+    #[cfg(feature = "unstable_subagents")]
+    Session(SessionReference),
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
@@ -565,6 +574,66 @@ impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
 impl From<Diff> for ToolCallContent {
     fn from(diff: Diff) -> Self {
         ToolCallContent::Diff(diff)
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A display-only reference to another session that this tool call operates on,
+/// such as a subagent it created, delegated to, or is waiting on.
+///
+/// The referenced session must already be known to the Client through ordinary
+/// session setup or a `subagent_update` announcement. The reference does not
+/// establish ownership, grant any Client-initiated controls, or report that the
+/// referenced session received or finished any work.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionReference {
+    /// The referenced session.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SessionReference {
+    /// Builds [`SessionReference`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl From<SessionReference> for ToolCallContent {
+    fn from(session: SessionReference) -> Self {
+        ToolCallContent::Session(session)
     }
 }
 
@@ -788,6 +857,22 @@ impl ToolCallLocation {
 
 #[cfg(test)]
 mod tests {
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn session_reference_tool_call_content_round_trips() {
+        use serde_json::json;
+        let content = ToolCallContent::from(SessionReference::new("sess_child_1"));
+        let value = serde_json::to_value(&content).unwrap();
+        assert_eq!(
+            value,
+            json!({ "type": "session", "sessionId": "sess_child_1" })
+        );
+        assert_eq!(
+            serde_json::from_value::<ToolCallContent>(value).unwrap(),
+            content
+        );
+    }
     use super::*;
 
     #[test]

@@ -12,6 +12,8 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
+#[cfg(feature = "unstable_subagents")]
+use super::SessionId;
 use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal, apply_meta_update};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
@@ -523,6 +525,13 @@ pub enum ToolCallContent {
     Diff(Diff),
     /// A display-only reference to an agent-owned terminal.
     Terminal(Terminal),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A display-only reference to another session, such as a subagent.
+    #[cfg(feature = "unstable_subagents")]
+    Session(SessionReference),
     /// Custom or future tool call content.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -592,15 +601,23 @@ impl<'de> Deserialize<'de> for OtherToolCallContent {
 }
 
 fn is_known_tool_call_content_type(type_: &str) -> bool {
-    matches!(type_, "content" | "diff" | "terminal")
+    KNOWN_TOOL_CALL_CONTENT_TYPES.contains(&type_)
 }
+
+const KNOWN_TOOL_CALL_CONTENT_TYPES: &[&str] = &[
+    "content",
+    "diff",
+    "terminal",
+    #[cfg(feature = "unstable_subagents")]
+    "session",
+];
 
 #[cfg(feature = "schemars")]
 fn other_tool_call_content_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
-        &["content", "diff", "terminal"],
+        KNOWN_TOOL_CALL_CONTENT_TYPES,
     );
 }
 
@@ -619,6 +636,66 @@ impl From<Diff> for ToolCallContent {
 impl From<Terminal> for ToolCallContent {
     fn from(terminal: Terminal) -> Self {
         ToolCallContent::Terminal(terminal)
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A display-only reference to another session that this tool call operates on,
+/// such as a subagent it created, delegated to, or is waiting on.
+///
+/// The referenced session must already be known to the Client through ordinary
+/// session setup or a `subagent_update` announcement. The reference does not
+/// establish ownership, grant any Client-initiated controls, or report that the
+/// referenced session received or finished any work.
+#[cfg(feature = "unstable_subagents")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionReference {
+    /// The referenced session.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl SessionReference {
+    /// Builds [`SessionReference`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(feature = "unstable_subagents")]
+impl From<SessionReference> for ToolCallContent {
+    fn from(session: SessionReference) -> Self {
+        ToolCallContent::Session(session)
     }
 }
 
@@ -1166,6 +1243,24 @@ impl ToolCallLocation {
 
 #[cfg(test)]
 mod tests {
+
+    #[cfg(feature = "unstable_subagents")]
+    #[test]
+    fn session_reference_tool_call_content_round_trips() {
+        use serde_json::json;
+        let content = ToolCallContent::from(SessionReference::new("sess_child_1"));
+        let value = serde_json::to_value(&content).unwrap();
+        assert_eq!(
+            value,
+            json!({ "type": "session", "sessionId": "sess_child_1" })
+        );
+        assert_eq!(
+            serde_json::from_value::<ToolCallContent>(value).unwrap(),
+            content
+        );
+        // A malformed known variant must not fall through to `Other`.
+        assert!(serde_json::from_value::<ToolCallContent>(json!({ "type": "session" })).is_err());
+    }
 
     #[test]
     fn location_line_is_one_based() {
