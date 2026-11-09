@@ -6863,7 +6863,7 @@ impl McpAcpCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelSessionNotification {
-    /// The ID of the session to cancel operations for.
+    /// The ID of the session whose foreground work to cancel.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
