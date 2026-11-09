@@ -136,6 +136,8 @@ Agents can remove a plan by sending `plan_removed` with the plan ID:
 }
 ```
 
+Agents **SHOULD** send `plan_removed` when a plan is cancelled, for example when the user rejects it or the Agent abandons it. A finished plan doesn't need to be removed. Clients **MUST** ignore `plan_removed` for a `planId` they don't know.
+
 Clients without unstable plan operations may not act on `plan_removed`. To clear the plan for them too, Agents can first send an `items` update with `entries: []`.
 
 ## Extensibility

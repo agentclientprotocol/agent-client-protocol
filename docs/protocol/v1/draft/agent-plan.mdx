@@ -54,6 +54,10 @@ Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client adver
 
 `plan_update` carries a `plan` object with a `type` discriminator. Every plan format includes a required `planId` so Clients can track multiple plans independently.
 
+When the Client advertised `plan`, the Agent **SHOULD** send its plans with `plan_update` instead of the `plan` update.
+
+Each `plan_update` replaces the whole plan with that `planId`, whatever its `type`, including when the type differs from the previous update.
+
 ### Item-based plans
 
 ```json
@@ -120,6 +124,8 @@ Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client adver
 }
 ```
 
+Plan file URIs **MUST** be absolute.
+
 ### Removing plans
 
 Agents can remove a plan by sending `plan_removed` with the plan ID:
@@ -137,6 +143,8 @@ Agents can remove a plan by sending `plan_removed` with the plan ID:
   }
 }
 ```
+
+Agents **SHOULD** send `plan_removed` when a plan is cancelled, for example when the user rejects it or the Agent abandons it. A finished plan doesn't need to be removed. Clients **MUST** ignore `plan_removed` for a `planId` they don't know.
 
 ## Plan entries
 
@@ -169,6 +177,8 @@ Each plan entry represents a specific task or goal within the overall execution 
 As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same structure.
 
 The Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current plan completely.
+
+For `plan_update`, the Agent sends updates with the same `planId`. For item-based plans, the Agent **MUST** send a complete list of all plan entries in each update and their current status, and the Client **MUST** replace the current contents of that plan completely. An empty `entries` array empties the plan. Clients **MAY** hide an empty plan.
 
 ### Dynamic planning
 

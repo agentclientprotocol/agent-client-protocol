@@ -38,7 +38,7 @@ Additionally, introduce a `plan_removed` session update type that carries only a
 
 The existing `plan` session update type is **not modified** and continues to work as before. Agents that want multi-plan support, new plan formats, or removal capabilities use `plan_update` and `plan_removed` only when the client advertises `plan`; otherwise they fall back to the existing `plan` session update type.
 
-### Client Capabilities
+### Client capabilities
 
 Add to `ClientCapabilities`:
 
@@ -48,17 +48,32 @@ plan?: PlanCapabilities
 
 This field is optional. When present as `{}`, it signals the client supports the `plan_update` and `plan_removed` session update types. When omitted, the client does not advertise support, and the agent must fall back to the existing `plan` session update type.
 
-### Multiple Plans
+When the Client advertised `plan`, Agents **SHOULD** send their plans with `plan_update` instead of `plan`.
+
+### Multiple plans
 
 The `planId` field on every plan variant identifies a specific plan.
 
-- Each `plan_update` targets the plan with the given `planId`
-- Client tracks plans by ID; updates replace the content of that specific plan
-- Different plans may use different types (e.g., one `items` plan and one `markdown` plan)
+- Each `plan_update` replaces the whole plan with that `planId`, whatever its `type`, including when the type differs from the previous update.
+- Clients track plans by ID. Different plans may use different types (for example, one `items` plan and one `markdown` plan).
+- For `items` plans, the Agent sends the complete list of entries in each update. An empty `entries` array empties the plan. Clients **MAY** hide an empty plan.
 
-### Plan Removal
+### File plans
 
-Agent sends a `plan_removed` session update with the plan's `planId` to dismiss it. This is a separate session update type from `plan_update`, keeping content updates and lifecycle events distinct.
+Plan file URIs **MUST** be absolute.
+
+### Plan removal
+
+The Agent sends a `plan_removed` session update with the plan's `planId` to remove it. This is a separate session update type from `plan_update`, so content updates and lifecycle events stay distinct.
+
+- Agents **SHOULD** send `plan_removed` when a plan is cancelled, for example when the user rejects it or the Agent abandons it. A finished plan doesn't need to be removed.
+- Clients **MUST** ignore `plan_removed` for a `planId` they don't know.
+
+### Protocol versions
+
+In ACP v1, `plan_update` and `plan_removed` require the Client's `plan` capability, as described above. The v1 `PlanUpdateContent` has no fallback for unknown `type` values, so a v1 Client that receives an unknown plan type fails to parse the notification. A new v1 plan type would need its own capability.
+
+In ACP v2, the [v2 Plan Variants RFD](/rfds/v2/plan-variants) makes `plan_update` with `type: "items"` the only plan update and removes the `plan` capability. `markdown`, `file`, and `plan_removed` remain unstable in v2 and need no capability. v2 Clients that don't know a plan type treat it as replacing the plan with that `planId` through the unknown plan-content fallback.
 
 ## Shiny future
 
@@ -70,7 +85,25 @@ Agents will be able to present plans in the format most natural to them — stru
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-### Json Format Examples
+### Protocol implementation
+
+The schema is implemented behind the `unstable_plan_operations` Cargo feature:
+
+- ACP v1 defines `PlanUpdate`, `PlanUpdateContent`, `PlanItems`, `PlanFile`, `PlanMarkdown`, `PlanRemoved`, `PlanId`, and `PlanCapabilities`, and adds `plan` to `ClientCapabilities`.
+- ACP v2 defines `markdown`, `file`, and `plan_removed` on top of the stable `items` plan update.
+- The draft protocol guides describe both versions. See the [v1 guide](/protocol/v1/draft/agent-plan#plan-operations) and [v2 guide](/protocol/v2/draft/agent-plan#unstable-plan-operations).
+
+The feature remains behind `unstable_plan_operations` and is not included in the stable schemas.
+
+### Agent and Client implementations
+
+| Implementation       | Reference                                                                                                                                                                             | Behavior                                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Zed                  | [PR #66345](https://github.com/zed-industries/zed/pull/66345)                                                                                                                         | Client. Advertises `plan` on v1 behind its `acp-beta` feature flag. Handles `items`, `markdown`, `file`, and `plan_removed` on v1 and v2. Keeps every plan by `planId` and shows the most recently changed one. Shows a `file` plan as a link to the file.                                                                           |
+| Claude Agent adapter | [PR #1554](https://github.com/agentclientprotocol/claude-agent-acp/pull/1554), included in [v0.102.0](https://github.com/agentclientprotocol/claude-agent-acp/releases/tag/v0.102.0)  | Agent. Sends the TodoWrite checklist as an `items` plan and an approved plan-mode plan as a `markdown` plan. Sends `plan_removed` for an emptied checklist and on `/clear`. Falls back to `plan` when a v1 Client doesn't advertise `plan`. Doesn't send `file` plans, because a `file://` URI only resolves on the Agent's machine. |
+| Codex adapter        | [PR #351](https://github.com/agentclientprotocol/codex-acp/pull/351) and [PR #752](https://github.com/agentclientprotocol/codex-acp/pull/752) (`items` plans on v1, not yet released) | Agent. Sends `update_plan` checklists as an `items` plan and plan-mode plans as `markdown` plans, one `planId` per plan. Falls back to `plan` for checklists and to Agent messages for plan-mode plans when a v1 Client doesn't advertise `plan`. Doesn't send `file` plans or `plan_removed`.                                       |
+
+### Json format examples
 
 Existing `plan` (unchanged):
 
@@ -147,6 +180,10 @@ Keeping removal as a separate session update type means `plan_update`'s `type` d
 
 A generic "agent shares markdown document" API would be simpler and more reusable. However, keeping it plan-typed enables clients to build plan-aware UX: selecting plan steps for partial execution, tracking plan progress, showing plan history. A generic markdown block wouldn't carry this semantic meaning. If future use cases need generic markdown sharing, that can be a separate feature.
 
+### When should an Agent remove a plan?
+
+When the plan is cancelled, for example when the user rejects it or the Agent abandons it. A finished plan still shows what the Agent did, so the Agent doesn't need to remove it. Clients can hide or collapse finished plans themselves.
+
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 1. **Extending the existing `plan` variant**: Would break backward compatibility or require complex dual-format deserialization.
@@ -154,4 +191,5 @@ A generic "agent shares markdown document" API would be simpler and more reusabl
 
 ## Revision history
 
-2026-04-02: Initial draft
+- 2026-04-02: Initial draft
+- 2026-11-09: Defined replacement across types, empty `items` plans, absolute file URIs, when Agents remove plans, and removal of unknown plan IDs. Described the v1 and v2 differences and added the Zed, Claude Agent, and Codex implementations
