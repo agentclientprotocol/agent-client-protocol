@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.15](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.14...schema-v2.0.0-alpha.15) - 2026-11-09
+
+### Other
+
+- *(unstable-v2)* clarify session/cancel only cancels foreground work ([#2776](https://github.com/agentclientprotocol/agent-client-protocol/pull/2776))
+
 ## [2.0.0-alpha.14](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.13...schema-v2.0.0-alpha.14) - 2026-11-09
 
 ### Added

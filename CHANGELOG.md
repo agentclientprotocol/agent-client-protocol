@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.16.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.16.0...v1.16.1) - 2026-11-09
+
+### Other
+
+- *(unstable-v2)* clarify session/cancel only cancels foreground work ([#2776](https://github.com/agentclientprotocol/agent-client-protocol/pull/2776))
+
 ## [1.16.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.15.1...v1.16.0) - 2026-11-09
 
 ### Added
