@@ -620,6 +620,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA display-only reference to another session, such as a subagent.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "session"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionReference"
+            }
+          ]
+        },
+        {
           "title": "other",
           "description": "Custom or future tool call content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding tool call\noutput, and otherwise ignore it or display it generically.",
           "type": "object",
@@ -658,6 +674,16 @@
                   "type": {
                     "type": "string",
                     "const": "terminal"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "session"
                   }
                 },
                 "required": ["type"]
@@ -1632,6 +1658,27 @@
         }
       },
       "required": ["terminalId"]
+    },
+    "SessionReference": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA display-only reference to another session that this tool call operates on,\nsuch as a subagent it created, delegated to, or is waiting on.\n\nThe referenced session must already be known to the Client through ordinary\nsession setup or a `subagent_update` announcement. The reference does not\nestablish ownership, grant any Client-initiated controls, or report that the\nreferenced session received or finished any work.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The referenced session.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"]
     },
     "ToolCallLocation": {
       "description": "A file location being accessed or modified by a tool.\n\nEnables clients to implement \"follow-along\" features that track\nwhich files the agent is working with in real-time.\n\nSee protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#following-the-agent)",
