@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.16.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.15.1...v1.16.0) - 2026-11-09
+
+### Added
+
+- *(schema)* stabilize client system prompt ([#2765](https://github.com/agentclientprotocol/agent-client-protocol/pull/2765))
+
 ## [1.15.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.15.0...v1.15.1) - 2026-11-02
 
 ### Other
