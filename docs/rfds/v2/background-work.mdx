@@ -59,7 +59,7 @@ Background work is session-owned work that is running independently of the sessi
 
 Terminals, tool calls, and subagents may continue after the session reports `idle`. Their updates do not change the foreground state, as already specified.
 
-No new entity type is added. Anything an agent runs in the background is a process, work started by a tool call, or a subagent. The rare exception can be modeled as a tool call that the agent starts itself.
+No new entity type is added. Anything an agent runs in the background is a process, work started by a tool call, or a subagent. Work without a process stays on the tool call that started it. When the Agent knows that a tool call's work continues after the call returns control to the model, it **SHOULD** keep that tool call `pending`, `in_progress`, or `paused` and list it, instead of giving it a final status. Some work has no such tool call. No tool call started it, such as a task that a hook started, or the Agent learned of the work only after its tool call reached a final status. The Agent **MAY** start a tool call of its own for such work, with a title that describes the work, and list it. It sends that tool call like any other, before the first list that names it, even while the session is `idle`. A final status is never reopened. The Agent starts a new tool call instead.
 
 **Background work is work the user can reason about.** It is something the user or the model started and that the user may want to stop or leave to finish. Internal housekeeping that the agent starts on its own, such as memory consolidation or an auto-started watcher, is not background work in this sense. The Agent **SHOULD NOT** list it, because a Client could only show it as unexplained activity or warn about it before close. If housekeeping needs to be visible, the Agent represents it as a tool call and lists it like any other work.
 
@@ -362,11 +362,25 @@ Claude Code, for example, starts a follow-up turn when a background task finishe
 
 Instead, two ordering rules cover the race between the list emptying and a follow-up turn starting. When the Agent does know that new foreground work is starting, it reports `running` in the snapshot that removes the item, not after an empty `idle` snapshot. When it doesn't, Clients that release resources on a quiet session wait a short grace period first.
 
+### What about work that has no tool call, or whose tool call already finished?
+
+Where it can, the Agent keeps the launching tool call open instead. When it knows at the tool result that the work goes on, it keeps that call `in_progress` and lists it, as `claude-agent-acp` does for `Monitor`, `Workflow`, and backgrounded MCP calls. The work then stays where it started in the transcript.
+
+When there is no such call, the Agent starts a tool call of its own. Claude Code has both cases: a hook can start a task without any tool call, and an MCP call can return, with its final status, before the task it started is reported. The launching tool call can't be listed then, because a final status can't change.
+
+Reopening a final tool call was considered and rejected. Clients rely on `completed`, `failed`, and `cancelled` being final when they clean up unfinished tool calls and stop showing progress. The call did finish: its result went back to the model, and the task it started has a lifetime of its own. This is also why a backgrounded process is listed as its terminal. Reopening would also not cover work that no tool call started. Subagents are different. A child session's `idle` was never final, and it corresponds to a `paused` tool call, not a `completed` one. If Clients want to show which tool call started an agent-started tool call, a reference to it can be added later. Until then, Agents can put it in `_meta`.
+
+A new item type with its own title and `cancel` would duplicate what a tool call already has, and Clients would need a second way to show and stop work. An agent-started tool call reuses both, and `tool_call/cancel` works on it like on any other tool call. The cost is that the tool call appears in the session's history where the Agent started it, not in the turn that the work came from. Clients already show tool call updates that arrive while the session is `idle`, from background tool calls.
+
+An item with an unknown `type`, such as a vendor-specific task item, still counts as background work, but the Client can neither name nor cancel it. An agent-started tool call is the better choice.
+
 ### Is there a v1 form?
 
 Not in this RFD. The `background` list belongs on the session-level `state_update`, which only v2 defines. Tool call `capabilities` and `tool_call/cancel` are additive and could be proposed for v1 separately. Terminal cancellation has no v1 equivalent, because v1 terminals are owned by the Client. Until then, v1 Clients rely on adapter-specific extensions.
 
 ## Revision history
+
+- 2026-11-09: An Agent that knows a tool call's work continues in the background keeps that tool call open and lists it. Background work without a tool call to report it on, or whose tool call already has a final status, is reported on a tool call the Agent starts itself. Final statuses stay final. This replaces vendor-specific list items such as the earlier `_claude/task` in `claude-agent-acp`. The tool call and prompt lifecycle pages say that an Agent may report tool calls the model did not request, and that work continuing after a final status gets a new tool call.
 
 - 2026-11-02: The rule that reports follow-up work with the removal applies only when the Agent knows of the follow-up at that point. An Agent that learns of it later, as `claude-agent-acp` does when Claude Code starts a follow-up turn after a background task ends, may send `idle` with the updated list and then `running`, and Clients rely on the grace period.
 - 2026-11-02: On `session/cancel`, the Agent cancels the permission requests of the cancelled foreground work with `$/cancel_request` instead of the Client choosing them by `subject`. `session/close` cancels every pending permission request the same way.

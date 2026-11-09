@@ -122,6 +122,8 @@ also a valid arbitrary JSON value: omission leaves the stored value unchanged,
 patch representation cannot distinguish storing a literal JSON `null` from
 clearing the field.
 
+The Agent **MAY** also report a tool call that the model did not request, for [background work](/protocol/v2/prompt-lifecycle#background-work) that has no other tool call.
+
 ## Updating
 
 As tools execute, Agents send updates to report progress and results.
@@ -418,7 +420,7 @@ Custom or future status values can be used when Clients can display a generic pr
 
 Clients **SHOULD** show `in_progress` as active, `pending` as waiting or scheduled, and `paused` as paused. Statuses never go back to `pending`: a scheduled wakeup goes from `pending` to `completed` when it fires, and the work it triggers is new foreground work. `in_progress` and `paused` may alternate any number of times. How work is paused and resumed is up to the Agent.
 
-`completed`, `failed`, and `cancelled` are final. When foreground work ends, whether it finished, was [cancelled](/protocol/v2/prompt-lifecycle#cancellation), or failed, the Agent **SHOULD** give each of that work's unfinished tool calls a final status. Tool calls in the session's [`background`](/protocol/v2/prompt-lifecycle#background-work) list are not part of that work. If a tool call's [permission request](#requesting-permission) is rejected or answered with `cancelled`, the Agent reports the tool call as `cancelled` or `failed` rather than leaving it `pending`.
+`completed`, `failed`, and `cancelled` are final. If work goes on after its tool call is final, the Agent reports it on a new tool call. When foreground work ends, whether it finished, was [cancelled](/protocol/v2/prompt-lifecycle#cancellation), or failed, the Agent **SHOULD** give each of that work's unfinished tool calls a final status. Tool calls in the session's [`background`](/protocol/v2/prompt-lifecycle#background-work) list are not part of that work. If a tool call's [permission request](#requesting-permission) is rejected or answered with `cancelled`, the Agent reports the tool call as `cancelled` or `failed` rather than leaving it `pending`.
 
 ### Cancelling tool calls
 

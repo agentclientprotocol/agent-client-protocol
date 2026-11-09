@@ -181,6 +181,8 @@ Background work is session-owned work running independently of foreground work. 
 - **Tool calls.** Work without a process of its own, such as a watcher, a workflow, or a scheduled wakeup, keeps reporting [status](/protocol/v2/draft/tool-calls#status) on its tool call. `pending` and `paused` tool calls are still live.
 - **Subagent sessions.** A background child keeps reporting through its [subagent](/rfds/subagents) association and `state`.
 
+Work without a process stays on the tool call that started it. When the Agent knows that a tool call's work continues after the call returns control to the model, it **SHOULD** keep that tool call `pending`, `in_progress`, or `paused` and list it, instead of giving it a final status. Some background work has no such tool call. No tool call started it, such as a task that a hook started, or the Agent learned of the work only after its tool call reached a final status. The Agent **MAY** start a tool call of its own for such work, with a title that describes the work, and list it. It sends that tool call like any other, before the first list that names it, even while the session is `idle`. The Agent does not reopen a tool call that has a final status. It starts a new one instead.
+
 Background work is work the user can reason about: something the user or the model started, which the user may want to stop or leave to finish. The Agent **SHOULD NOT** list housekeeping it starts on its own, such as memory consolidation. If housekeeping needs to be visible, the Agent represents it as a tool call.
 
 `running`, `requires_action`, `idle`, and `unknown` state updates carry an optional `background` list of the work currently running independently of foreground work:
