@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-alpha.14](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.13...schema-v2.0.0-alpha.14) - 2026-11-09
+
+### Added
+
+- *(schema)* stabilize client system prompt ([#2765](https://github.com/agentclientprotocol/agent-client-protocol/pull/2765))
+
 ## [2.0.0-alpha.13](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.12...schema-v2.0.0-alpha.13) - 2026-11-02
 
 ### Other
