@@ -9592,7 +9592,7 @@
       "type": "object",
       "properties": {
         "sessionId": {
-          "description": "The ID of the session to cancel operations for.",
+          "description": "The ID of the session whose foreground work to cancel.",
           "allOf": [
             {
               "$ref": "#/$defs/SessionId"
