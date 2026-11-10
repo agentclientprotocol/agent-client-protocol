@@ -2,7 +2,7 @@ All paths in the protocol should be absolute
 
 ## Adding new methods
 
-- Create empty params and output structs in src/client.rs or src/agent.rs under the corresponding section. I'll add the fields myself.
+- Create the params and output structs in `agent-client-protocol-schema/src/{v1,v2}/{agent,client}.rs` under the corresponding section, with the fields the RFD or request defines. Follow the schema rules below for each field.
 - If the protocol method name is `noun/verb`, use `verb_noun` for the user facing methods and structs.
 
   Example 1 (`noun/noun`):
@@ -19,7 +19,7 @@ All paths in the protocol should be absolute
 
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
-- Add the method to src/bin/generate.rs SideDocs functions
+- Add the method to the SideDocs functions in `schema-generator/src/main.rs`
 - Run `npm run generate` and fix any issues that appear
 - Run `npm run check`
 - Update the example agents and clients in tests and examples in both libraries
