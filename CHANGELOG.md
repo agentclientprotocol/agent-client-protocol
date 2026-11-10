@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [1.17.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.16.0...v1.17.0) - 2026-11-10
+
+### Added
+
+- *(unstable)* add description to AuthAccount ([#2793](https://github.com/agentclientprotocol/agent-client-protocol/pull/2793))
+- *(unstable)* add session/options and initial config option values ([#2792](https://github.com/agentclientprotocol/agent-client-protocol/pull/2792))
+- *(unstable)* add session tool call content and clarify one-shot subagents ([#2787](https://github.com/agentclientprotocol/agent-client-protocol/pull/2787))
+
+### Other
+
+- *(unstable-v2)* clarify session/cancel only cancels foreground work ([#2776](https://github.com/agentclientprotocol/agent-client-protocol/pull/2776))
+
 ## [1.16.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.15.1...v1.16.0) - 2026-11-09
 
 ### Added
