@@ -1,0 +1,186 @@
+---
+title: "Error Classification"
+---
+
+Author(s): [@slapoguzov](https://github.com/slapoguzov)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add three optional fields to the `data` object of a JSON-RPC error: `kind`, `retryable`, and `retryAfterMs`. They tell the Client what kind of failure happened and whether trying again can help. The fields work the same way in a failed `session/prompt` response and in the `error` of an idle `state_update` with `stopReason: "error"`.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The [prompt lifecycle RFD](/rfds/v2/prompt) reports a failure that ends the turn with a JSON-RPC error object, both before and after the user message is inserted. It leaves finer categories for later, "as codes or in `data`".
+
+Today the Client gets a numeric code and a message. Most failures use `-32603` (Internal error). The Client cannot tell a short rate limit from an exhausted usage plan or a context window overflow, so it cannot decide whether to show a Retry button or what to suggest. The only option is to parse the message, which differs between Agents and languages.
+
+Agents already know the cause. The Claude Agent SDK reports errors such as `rate_limit`, `billing_error`, and `overloaded`. The Codex app-server reports `usageLimitExceeded`, `contextWindowExceeded`, `serverOverloaded`, and others. ACP has no place for this information, so adapters that need it put it in `_meta`, and every Client has to learn every adapter's format.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+When `error.data` is an object, these properties have a defined meaning:
+
+```typescript
+type ErrorData = {
+  kind?: ErrorKind;
+  retryable?: boolean;
+  retryAfterMs?: number; // non-negative integer
+  [key: string]: unknown; // other agent-specific data is unchanged
+};
+
+type ErrorKind =
+  | "rate_limited"
+  | "usage_limit"
+  | "context_window_exceeded"
+  | "budget_exceeded"
+  | "overloaded"
+  | "connection"
+  | "invalid_request"
+  | "policy"
+  | "provider_error"
+  | "internal"
+  | string; // custom values start with "_"
+```
+
+| Kind                      | Meaning                                                                |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `rate_limited`            | A temporary request or throughput limit.                               |
+| `usage_limit`             | An account, plan, or organization usage allowance is used up.          |
+| `context_window_exceeded` | The input is larger than the model's context window.                   |
+| `budget_exceeded`         | A configured cost or token budget was reached.                         |
+| `overloaded`              | The service is temporarily out of capacity.                            |
+| `connection`              | The Agent cannot reach its runtime or a required service.              |
+| `invalid_request`         | The request, configuration, or selected model cannot be accepted.      |
+| `policy`                  | A policy blocks the operation. A normal model refusal stays `refusal`. |
+| `provider_error`          | The model provider failed, and no more specific kind is known.         |
+| `internal`                | The Agent itself failed, and no more specific kind is known.           |
+
+`kind` is an open enum. Values without a leading `_` are reserved for ACP. Custom values start with `_`, for example `_claude/output_limit`.
+
+`retryable: true` means the same request, sent again without changes, may succeed. `false` means it is not expected to succeed. If the field is absent, the answer is unknown. A user action such as signing in or reducing the context can still help when `retryable` is `false`.
+
+`retryAfterMs` is the minimum delay, counted from when the error is received, before trying again. It only makes sense with `retryable: true`.
+
+Before insertion, the error is the `session/prompt` error response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "prompt-1",
+  "error": {
+    "code": -32603,
+    "message": "Rate limit reached. Try again in 15 seconds.",
+    "data": {
+      "kind": "rate_limited",
+      "retryable": true,
+      "retryAfterMs": 15000
+    }
+  }
+}
+```
+
+After insertion, the same shape is the `error` of the idle update:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "idle",
+      "stopReason": "error",
+      "error": {
+        "code": -32603,
+        "message": "The conversation is too long for this model.",
+        "data": { "kind": "context_window_exceeded", "retryable": false }
+      }
+    }
+  }
+}
+```
+
+### Agent rules
+
+- Agents **MAY** send any of the fields when they know the value. They **SHOULD** use the most specific standard kind and **SHOULD** omit a field rather than guess it from message text.
+- Agents **MUST NOT** invent `retryAfterMs`. They send it only when the provider or runtime gives a delay.
+- Authentication failures keep code `-32000` (`authRequired`). A `kind` does not replace it.
+- Agents keep the existing `code`, `message`, and other `data` keys. If `data` is not an object, the Agent omits the new fields rather than wrapping or dropping the existing value.
+- The fields do not change which failures end a turn. Transient warnings still use notices.
+
+### Client rules
+
+- Clients **MUST** accept errors without these fields, with non-object `data`, and with unknown kinds, and fall back to their generic error handling.
+- Clients **SHOULD** ignore a malformed field and still show the error.
+- An absent `retryable` is not `false`. An explicit `retryable` takes precedence over any guess the Client makes from `kind`.
+- `retryable: true` is a hint, not a promise. It does not make a retry safe from duplicate side effects, and it does not allow automatic retries on its own.
+- Clients handle `-32000` with their authentication flow, whatever `kind` says.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A Client shows a rate limit with a countdown and a Retry button, tells the user that their plan is used up, and suggests starting a new session when the context is full, all without parsing the message. Clients get the same behavior from every Agent, and adapters no longer need private `_meta` keys for it.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Add the `ErrorData` properties and the open `ErrorKind` enum to the schema and SDKs. Unknown kinds must decode without errors.
+2. Update the Claude and Codex adapters to set the fields on both failure paths: the `session/prompt` error response and `stopReason: "error"`.
+3. Let Clients adopt the fields at their own pace.
+
+### Mapping from existing agents
+
+The kinds come from the errors that Claude and Codex report today:
+
+| Kind                      | Claude Agent SDK                                 | Codex app-server                       |
+| ------------------------- | ------------------------------------------------ | -------------------------------------- |
+| `rate_limited`            | `rate_limit`                                     | `rateLimitExceeded`                    |
+| `usage_limit`             | `billing_error`, `account_on_hold`               | `usageLimitExceeded`                   |
+| `context_window_exceeded` | input context overflow                           | `contextWindowExceeded`                |
+| `budget_exceeded`         | `error_max_budget_usd`                           | `sessionBudgetExceeded`                |
+| `overloaded`              | `overloaded`                                     | `serverOverloaded`                     |
+| `connection`              | lost connection to the Claude Code process       | HTTP and stream connection failures    |
+| `invalid_request`         | `invalid_request`, `model_not_found`             | `badRequest`, `modelNotFound`          |
+| `policy`                  | (refusals stay `refusal`)                        | `cyberPolicy`                          |
+| `provider_error`          | `server_error`, `unknown`                        | `internalServerError`, `other`         |
+| `internal`                | internal adapter errors                          | `sandboxError`, `threadRollbackFailed` |
+| `-32000` (not a kind)     | `authentication_failed`, `oauth_org_not_allowed` | `unauthorized`                         |
+
+Errors without a good standard match use custom kinds, for example `_claude/output_limit` for `max_output_tokens`.
+
+### Compatibility
+
+All fields are optional. Older Clients ignore unknown keys in `data` and keep using `code` and `message`. No capability is needed, because the fields only add information to an existing extensible object. No new error codes are added, and existing codes keep their meaning.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Does this define a persistent error or a Retry action?
+
+No. This RFD only classifies an error. Showing the error in session history, updating or resolving it, and Retry buttons that stay valid across reloads are out of scope.
+
+### Why not add more standard kinds now?
+
+The list covers failures that both Claude and Codex report and that need different handling in a Client. Other cases, such as output length limits or access denied, can use custom kinds first. They can become standard once several Agents need them.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**New JSON-RPC error codes** - Codes already identify the protocol error and drive authentication. Retryability and the delay would still need separate fields. Fields in `data` are additive and keep existing codes intact.
+
+**An error notice** - Notices are optional user-facing information and do not end work. The prompt lifecycle RFD rejected notices for failures after insertion.
+
+**A separate error type or notification** - The prompt lifecycle already uses one JSON-RPC error object before and after insertion. A new type would duplicate code, message, and data handling, and a separate notification would need rules to connect it to the idle update.
+
+## Revision history
+
+- 2026-11-03: Initial draft.

@@ -204,7 +204,8 @@
               "rfds/get-auth-state",
               "rfds/session-status",
               "rfds/session-set-title",
-              "rfds/session-archive"
+              "rfds/session-archive",
+              "rfds/error-classification"
             ]
           },
           {
