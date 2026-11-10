@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.31.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.30.0...schema-v1.31.0) - 2026-11-10
+
+### Added
+
+- *(unstable)* add description to AuthAccount ([#2793](https://github.com/agentclientprotocol/agent-client-protocol/pull/2793))
+- *(unstable)* add session/options and initial config option values ([#2792](https://github.com/agentclientprotocol/agent-client-protocol/pull/2792))
+- *(unstable)* add session tool call content and clarify one-shot subagents ([#2787](https://github.com/agentclientprotocol/agent-client-protocol/pull/2787))
+
 ## [1.30.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.29.1...schema-v1.30.0) - 2026-11-09
 
 ### Added
