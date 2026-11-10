@@ -802,6 +802,27 @@ this is the complete resulting additional-root list for the forked
 session.
 
 </ResponseField>
+<ResponseField name="configOptions" type={<a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial values for the forked session's config options.
+
+Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+this when the Agent advertises `session.options`.
+
+The Agent applies the entries in list order on top of the configuration the fork
+starts with, as if the Client had called `session/set_config_option` for each entry
+after the session was set up. Malformed entries and duplicate `configId` values fail
+the request with `-32602`. The Agent MUST ignore an entry whose `configId` is unknown,
+whose `type` does not match the option, or whose value is not allowed when it is
+applied. The `configOptions` in the response contain the values the session actually
+has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+and SHOULD NOT send other `session/update` notifications caused by applying them
+before it responds.
+
+</ResponseField>
 <ResponseField name="cwd" type={<a href="#absolutepath">AbsolutePath</a>} required>
   The working directory for this session. Must be an absolute path.
 </ResponseField>
@@ -996,7 +1017,9 @@ The Agent applies the entries in list order, as if the Client had called
 entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
 ignore an entry whose `configId` is unknown, whose `type` does not match the option,
 or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
-has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
+has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+and SHOULD NOT send other `session/update` notifications caused by applying them
+before it responds.
 
 </ResponseField>
 <ResponseField name="cwd" type={<a href="#absolutepath">AbsolutePath</a>} required>
@@ -1083,7 +1106,8 @@ Only available if the Agent supports the `session.options` capability.
 
 `session/options` MUST NOT create or resume a session, send `session/update`
 notifications, add an entry to `session/list`, or change an existing session. Agents
-SHOULD NOT connect to MCP servers to answer it.
+SHOULD NOT connect to MCP servers to answer it. Agents MAY start their runtime to resolve
+the options. The rules above still hold for it.
 
 **Type:** Object
 
@@ -1315,7 +1339,9 @@ The Agent applies the entries in list order, as if the Client had called
 entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
 ignore an entry whose `configId` is unknown, whose `type` does not match the option,
 or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
-has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
+has. The Agent SHOULD NOT send `config_option_update` notifications for these entries
+on the requesting connection. If the session is active on other connections, the
+Agent SHOULD send `config_option_update` on those connections.
 
 The Agent applies the entries before it replays history for `replayFrom` and before
 it responds.

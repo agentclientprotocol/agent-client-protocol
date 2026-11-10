@@ -508,7 +508,7 @@ Content delivered at system level carries more weight with the model than user t
 
 ## Initial config option values (unstable)
 
-Agents that advertise `session.options` accept a `configOptions` list on `session/new` and `session/resume`. The Agent applies the entries in order, as if the Client had called `session/set_config_option` for each one after setup, and returns the resulting values in the response. Clients can get the options and allowed values before setup with `session/options`. See [Options before a session exists](/protocol/v2/draft/session-config-options#options-before-a-session-exists-unstable).
+Agents that advertise `session.options` accept a `configOptions` list on `session/new`, `session/resume`, and, when supported, `session/fork`. The Agent applies the entries in order, as if the Client had called `session/set_config_option` for each one after setup, and returns the resulting values in the response. Clients can get the options and allowed values before setup with `session/options`. See [Options before a session exists](/protocol/v2/draft/session-config-options#options-before-a-session-exists-unstable).
 
 ## Session ID
 

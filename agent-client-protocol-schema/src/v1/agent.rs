@@ -1274,7 +1274,9 @@ pub struct NewSessionRequest {
     /// entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
     /// ignore an entry whose `configId` is unknown, whose `type` does not match the option,
     /// or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
-    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
@@ -1342,7 +1344,9 @@ impl NewSessionRequest {
     /// entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
     /// ignore an entry whose `configId` is unknown, whose `type` does not match the option,
     /// or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
-    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
     #[cfg(feature = "unstable_session_options")]
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<InitialSessionConfigOption>) -> Self {
@@ -1710,6 +1714,29 @@ pub struct ForkSessionRequest {
     /// for the source session.
     #[serde(default)]
     pub system_prompt: Option<SystemPrompt>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the forked session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `sessionCapabilities.options`.
+    ///
+    /// The Agent applies the entries in list order on top of the configuration the fork
+    /// starts with, as if the Client had called `session/set_config_option` for each entry
+    /// after the session was set up. Malformed entries and duplicate `configId` values fail
+    /// the request with `-32602`. The Agent MUST ignore an entry whose `configId` is unknown,
+    /// whose `type` does not match the option, or whose value is not allowed when it is
+    /// applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
+    #[cfg(feature = "unstable_session_options")]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -1733,6 +1760,8 @@ impl ForkSessionRequest {
             additional_directories: vec![],
             mcp_servers: vec![],
             system_prompt: None,
+            #[cfg(feature = "unstable_session_options")]
+            config_options: vec![],
             meta: None,
         }
     }
@@ -1755,6 +1784,31 @@ impl ForkSessionRequest {
     #[must_use]
     pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
         self.system_prompt = system_prompt.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the forked session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `sessionCapabilities.options`.
+    ///
+    /// The Agent applies the entries in list order on top of the configuration the fork
+    /// starts with, as if the Client had called `session/set_config_option` for each entry
+    /// after the session was set up. Malformed entries and duplicate `configId` values fail
+    /// the request with `-32602`. The Agent MUST ignore an entry whose `configId` is unknown,
+    /// whose `type` does not match the option, or whose value is not allowed when it is
+    /// applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
+    #[cfg(feature = "unstable_session_options")]
+    #[must_use]
+    pub fn config_options(mut self, config_options: Vec<InitialSessionConfigOption>) -> Self {
+        self.config_options = config_options;
         self
     }
 
@@ -2324,7 +2378,8 @@ pub enum SessionStatus {
 ///
 /// `session/options` MUST NOT create or resume a session, send `session/update`
 /// notifications, add an entry to `session/list`, or change an existing session. Agents
-/// SHOULD NOT connect to MCP servers to answer it.
+/// SHOULD NOT connect to MCP servers to answer it. Agents MAY start their runtime to resolve
+/// the options. The rules above still hold for it.
 #[cfg(feature = "unstable_session_options")]
 #[serde_as]
 #[skip_serializing_none]
@@ -7811,6 +7866,43 @@ mod test_serialization {
             serde_json::to_value(SessionOptionsResponse::new()).unwrap(),
             json!({})
         );
+        #[cfg(feature = "unstable_session_fork")]
+        {
+            let fork =
+                ForkSessionRequest::new("sess_abc123", "/home/user/project").config_options(vec![
+                    InitialSessionConfigOption::new(
+                        "model",
+                        SessionConfigOptionValue::value_id("model-2"),
+                    ),
+                ]);
+            let value = serde_json::to_value(&fork).unwrap();
+            assert_eq!(
+                value["configOptions"],
+                json!([{"configId": "model", "value": "model-2"}])
+            );
+            assert_eq!(
+                serde_json::from_value::<ForkSessionRequest>(value).unwrap(),
+                fork
+            );
+            // `null` is an empty list, and a malformed entry fails the request.
+            assert_eq!(
+                serde_json::from_value::<ForkSessionRequest>(json!({
+                    "sessionId": "sess_abc123",
+                    "cwd": "/home/user/project",
+                    "configOptions": null
+                }))
+                .unwrap(),
+                ForkSessionRequest::new("sess_abc123", "/home/user/project")
+            );
+            assert!(
+                serde_json::from_value::<ForkSessionRequest>(json!({
+                    "sessionId": "sess_abc123",
+                    "cwd": "/home/user/project",
+                    "configOptions": [{"type": "boolean", "value": true}]
+                }))
+                .is_err()
+            );
+        }
         assert_eq!(
             serde_json::to_value(
                 SessionCapabilities::new().options(SessionOptionsCapabilities::new())
