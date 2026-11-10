@@ -7100,7 +7100,7 @@
           ]
         },
         "configOptions": {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `sessionCapabilities.options`.\n\nThe Agent applies the entries in list order, as if the Client had called\n`session/set_config_option` for each entry after the session was set up. Malformed\nentries and duplicate `configId` values fail the request with `-32602`. The Agent MUST\nignore an entry whose `configId` is unknown, whose `type` does not match the option,\nor whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries.",
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `sessionCapabilities.options`.\n\nThe Agent applies the entries in list order, as if the Client had called\n`session/set_config_option` for each entry after the session was set up. Malformed\nentries and duplicate `configId` values fail the request with `-32602`. The Agent MUST\nignore an entry whose `configId` is unknown, whose `type` does not match the option,\nor whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries,\nand SHOULD NOT send other `session/update` notifications caused by applying them\nbefore it responds.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/InitialSessionConfigOption"
@@ -7609,6 +7609,14 @@
             }
           ]
         },
+        "configOptions": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the forked session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `sessionCapabilities.options`.\n\nThe Agent applies the entries in list order on top of the configuration the fork\nstarts with, as if the Client had called `session/set_config_option` for each entry\nafter the session was set up. Malformed entries and duplicate `configId` values fail\nthe request with `-32602`. The Agent MUST ignore an entry whose `configId` is unknown,\nwhose `type` does not match the option, or whose value is not allowed when it is\napplied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries,\nand SHOULD NOT send other `session/update` notifications caused by applying them\nbefore it responds.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InitialSessionConfigOption"
+          },
+          "x-deserialize-default-on-null": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
           "type": ["object", "null"],
@@ -7690,7 +7698,7 @@
       "x-method": "session/status"
     },
     "SessionOptionsRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `session/options`, which returns the config options a session\nwould start with, without creating or resuming a session.\n\nOnly available if the Agent supports the `sessionCapabilities.options` capability.\n\n`session/options` MUST NOT create or resume a session, send `session/update`\nnotifications, add an entry to `session/list`, or change an existing session. Agents\nSHOULD NOT connect to MCP servers to answer it.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `session/options`, which returns the config options a session\nwould start with, without creating or resuming a session.\n\nOnly available if the Agent supports the `sessionCapabilities.options` capability.\n\n`session/options` MUST NOT create or resume a session, send `session/update`\nnotifications, add an entry to `session/list`, or change an existing session. Agents\nSHOULD NOT connect to MCP servers to answer it. Agents MAY start their runtime to resolve\nthe options. The rules above still hold for it.",
       "type": "object",
       "properties": {
         "cwd": {

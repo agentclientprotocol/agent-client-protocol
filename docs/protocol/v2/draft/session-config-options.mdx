@@ -533,11 +533,11 @@ The response contains the options the session would start with:
 
 `configOptions` uses the same type and rules as on `NewSessionResponse`. `availableCommands` uses the same type as on `NewSessionResponse` and is advisory. Commands can depend on state the Agent only has once the session exists, such as MCP prompts. Agents **MAY** return a partial list or omit it. Clients **MUST** use the commands from the setup response and later `available_commands_update` notifications for the session itself.
 
-`session/options` **MUST NOT** create or resume a session, send `session/update` notifications, add an entry to `session/list`, or change an existing session. The response is a snapshot. The options a session actually starts with are the ones in the setup response.
+`session/options` **MUST NOT** create or resume a session, send `session/update` notifications, add an entry to `session/list`, or change an existing session. Agents **MAY** start their runtime to resolve the options. These rules still hold for it: it stores no session, writes nothing to the history of `sessionId`, and adds no entry to `session/list`. Clients **SHOULD NOT** call `session/options` on a timer, because an Agent may start its runtime for each call. The response is a snapshot. The options a session actually starts with are the ones in the setup response.
 
 ### Initial values
 
-Clients send the values the user picked in `configOptions` on `session/new` and `session/resume`. Each entry has the same shape as `session/set_config_option` without `sessionId`. Entries **MUST** include `type`, as on `session/set_config_option`.
+Clients send the values the user picked in `configOptions` on `session/new`, `session/resume`, and, when the Agent supports it, `session/fork`. Each entry has the same shape as `session/set_config_option` without `sessionId`. Entries **MUST** include `type`, as on `session/set_config_option`.
 
 ```json
 {
@@ -554,7 +554,7 @@ Clients send the values the user picked in `configOptions` on `session/new` and 
 }
 ```
 
-The Agent applies the entries in list order, as if the Client had called `session/set_config_option` for each entry after the session was set up. Each entry is checked against the option set as it stands at that point, so an earlier entry (such as the model) can change which values a later entry (such as the reasoning level) allows. Clients **SHOULD** send entries in the order the Agent listed the options in the `session/options` response. For restored sessions, the entries apply on top of the session's restored configuration.
+The Agent applies the entries in list order, as if the Client had called `session/set_config_option` for each entry after the session was set up. Each entry is checked against the option set as it stands at that point, so an earlier entry (such as the model) can change which values a later entry (such as the reasoning level) allows. Clients **SHOULD** send entries in the order the Agent listed the options in the `session/options` response. For restored sessions, the entries apply on top of the session's restored configuration. On `session/fork`, the entries apply on top of the configuration the fork would start with without them. To show the options before a fork, Clients call `session/options` with the `sessionId` of the source session.
 
 For `session/resume`, the Agent applies the entries before it replays history for `replayFrom` and before it responds.
 
@@ -563,6 +563,8 @@ Initial values are handled differently from `session/set_config_option`, because
 - An entry that does not match the schema, such as a missing `configId` or a `value` that does not match its `type`, **MUST** fail the request with `-32602`.
 - An entry with a value `type` the Agent does not support **MUST** fail the request with `-32602`.
 - Two entries with the same `configId` **MUST** fail the request with `-32602`.
-- An entry whose `configId` is unknown, whose `type` does not match the option's type, or whose value is not allowed when it is applied **MUST** be ignored. The option keeps its default value, or the value the Agent resolved from earlier entries.
+- An entry whose `configId` is unknown, whose `type` does not match the option's type, or whose value is not allowed when it is applied **MUST** be ignored. This includes a value the Agent's runtime refuses. The option keeps its default value, or the value the Agent resolved from earlier entries.
 - The `configOptions` in the setup response **MUST** contain the values the session actually has. Clients compare them with what they sent to find entries the Agent ignored.
-- The Agent **SHOULD NOT** send `config_option_update` notifications for these entries.
+- The Agent **SHOULD NOT** send `config_option_update` notifications for these entries on the requesting connection. The setup response contains the resulting values.
+- Until the `session/new` or `session/fork` response, the Client does not know the session. The Agent **SHOULD NOT** send other `session/update` notifications caused by applying the entries before that response, such as a notice that a value fell back (see [Creating a session](/protocol/v2/draft/session-setup#initial-session-state)). It sends them after the response.
+- A `session/resume` can reach a session that is active on other connections. The entries change its configuration, so the Agent **SHOULD** send `config_option_update` on those connections, as for any other change. See [From the Agent](#from-the-agent).
