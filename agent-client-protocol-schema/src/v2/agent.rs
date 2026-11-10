@@ -516,8 +516,8 @@ impl AuthStatusRequest {
 pub struct AuthStatusResponse {
     /// Whether the agent can start sessions without the user signing in first.
     ///
-    /// This is the only field clients should act on. Clients MUST treat values they
-    /// do not recognize as `unknown`.
+    /// Clients use this field to decide whether sign-in is needed. Clients MUST treat
+    /// values they do not recognize as `unknown`.
     pub state: AuthState,
     /// The accounts the agent has configured, for display.
     ///
@@ -591,8 +591,8 @@ impl AuthStatusResponse {
 pub struct AuthStatusUpdateNotification {
     /// Whether the agent can start sessions without the user signing in first.
     ///
-    /// This is the only field clients should act on. Clients MUST treat values they
-    /// do not recognize as `unknown`.
+    /// Clients use this field to decide whether sign-in is needed. Clients MUST treat
+    /// values they do not recognize as `unknown`.
     pub state: AuthState,
     /// The accounts the agent has configured, for display.
     ///
@@ -696,6 +696,14 @@ pub struct AuthAccount {
     /// Human-readable name for the account, suitable for display on its own,
     /// for example `Claude Max`, `OpenAI API key`, or `Vertex AI`.
     pub label: String,
+    /// Short text shown with the label, such as the credential source, for example
+    /// `API key helper`. MUST NOT contain credentials.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no description is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub description: Option<String>,
     /// Whether the agent currently uses this account by default.
     ///
     /// Several accounts MAY be active, for example one per provider.
@@ -745,12 +753,20 @@ impl AuthAccount {
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
+            description: None,
             active: None,
             name: None,
             email: None,
             organization: None,
             meta: None,
         }
+    }
+
+    /// Short text shown with the label, such as the credential source.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
     }
 
     /// Whether the agent currently uses this account by default.
@@ -9795,7 +9811,9 @@ mod test_serialization {
     #[test]
     fn auth_status_response_round_trips() {
         let response = AuthStatusResponse::new(AuthState::Authenticated).accounts(vec![
-            AuthAccount::new("Anthropic API key").active(true),
+            AuthAccount::new("Anthropic API key")
+                .description("API key helper".to_string())
+                .active(true),
             AuthAccount::new("Claude Max").email("user@example.com".to_string()),
         ]);
         let json = serde_json::to_value(&response).unwrap();
@@ -9806,6 +9824,7 @@ mod test_serialization {
                 "accounts": [
                     {
                         "label": "Anthropic API key",
+                        "description": "API key helper",
                         "active": true
                     },
                     {
@@ -9838,6 +9857,7 @@ mod test_serialization {
                 {"active": true},
                 {
                     "label": "Vertex AI",
+                    "description": 42,
                     "active": "yes",
                     "email": ["not", "a", "string"]
                 }

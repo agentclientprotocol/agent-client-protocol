@@ -3990,7 +3990,7 @@
       "type": "object",
       "properties": {
         "state": {
-          "description": "Whether the agent can start sessions without the user signing in first.\n\nThis is the only field clients should act on. Clients MUST treat values they\ndo not recognize as `unknown`.",
+          "description": "Whether the agent can start sessions without the user signing in first.\n\nClients use this field to decide whether sign-in is needed. Clients MUST treat\nvalues they do not recognize as `unknown`.",
           "allOf": [
             {
               "$ref": "#/$defs/AuthState"
@@ -4054,6 +4054,11 @@
         "label": {
           "description": "Human-readable name for the account, suitable for display on its own,\nfor example `Claude Max`, `OpenAI API key`, or `Vertex AI`.",
           "type": "string"
+        },
+        "description": {
+          "description": "Short text shown with the label, such as the credential source, for example\n`API key helper`. MUST NOT contain credentials.\n\nOptional. Omitted and `null` are equivalent and mean no description is reported.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "active": {
           "description": "Whether the agent currently uses this account by default.\n\nSeveral accounts MAY be active, for example one per provider.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not indicate whether this account is in effect.",
@@ -7654,7 +7659,7 @@
       "type": "object",
       "properties": {
         "state": {
-          "description": "Whether the agent can start sessions without the user signing in first.\n\nThis is the only field clients should act on. Clients MUST treat values they\ndo not recognize as `unknown`.",
+          "description": "Whether the agent can start sessions without the user signing in first.\n\nClients use this field to decide whether sign-in is needed. Clients MUST treat\nvalues they do not recognize as `unknown`.",
           "allOf": [
             {
               "$ref": "#/$defs/AuthState"

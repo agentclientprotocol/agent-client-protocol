@@ -200,8 +200,8 @@ of them and mark the ones in effect with `active`.
 <ResponseField name="state" type={<a href="#authstate">AuthState</a>} required>
   Whether the agent can start sessions without the user signing in first.
 
-This is the only field clients should act on. Clients MUST treat values they
-do not recognize as `unknown`.
+Clients use this field to decide whether sign-in is needed. Clients MUST treat
+values they do not recognize as `unknown`.
 
 </ResponseField>
 
@@ -1783,8 +1783,8 @@ of them and mark the ones in effect with `active`.
 <ResponseField name="state" type={<a href="#authstate">AuthState</a>} required>
   Whether the agent can start sessions without the user signing in first.
 
-This is the only field clients should act on. Clients MUST treat values they
-do not recognize as `unknown`.
+Clients use this field to decide whether sign-in is needed. Clients MUST treat
+values they do not recognize as `unknown`.
 
 </ResponseField>
 
@@ -2839,6 +2839,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Several accounts MAY be active, for example one per provider.
 
 Optional. Omitted and `null` are equivalent and mean the agent does not indicate whether this account is in effect.
+
+</ResponseField>
+<ResponseField name="description" type={"string | null"} >
+  Short text shown with the label, such as the credential source, for example
+`API key helper`. MUST NOT contain credentials.
+
+Optional. Omitted and `null` are equivalent and mean no description is reported.
 
 </ResponseField>
 <ResponseField name="email" type={"string | null"} >
