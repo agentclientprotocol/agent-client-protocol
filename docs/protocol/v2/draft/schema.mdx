@@ -981,6 +981,24 @@ remains the base for relative paths. When omitted or empty, no
 additional roots are activated for the new session.
 
 </ResponseField>
+<ResponseField name="configOptions" type={<a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial values for the session's config options.
+
+Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+this when the Agent advertises `session.options`.
+
+The Agent applies the entries in list order, as if the Client had called
+`session/set_config_option` for each entry after the session was set up. Malformed
+entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
+ignore an entry whose `configId` is unknown, whose `type` does not match the option,
+or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
+has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
+
+</ResponseField>
 <ResponseField name="cwd" type={<a href="#absolutepath">AbsolutePath</a>} required>
   The working directory for this session. Must be an absolute path.
 </ResponseField>
@@ -1038,6 +1056,106 @@ Later `config_option_update` notifications replace this list.
   Unique identifier for the created session.
 
 Used in all subsequent requests for this conversation.
+
+</ResponseField>
+
+<a id="session-options"></a>
+### <span class="font-mono">session/options</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Returns the config options a session would start with, without creating or resuming a session.
+
+This method is only available if the agent advertises the `session.options` capability.
+
+#### <span class="font-mono">SessionOptionsRequest</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Request parameters for `session/options`, which returns the config options a session
+would start with, without creating or resuming a session.
+
+Only available if the Agent supports the `session.options` capability.
+
+`session/options` MUST NOT create or resume a session, send `session/update`
+notifications, add an entry to `session/list`, or change an existing session. Agents
+SHOULD NOT connect to MCP servers to answer it.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="additionalDirectories" type={<a href="#absolutepath">AbsolutePath[]</a>} >
+  Additional workspace roots to resolve options for. Each path must be absolute.
+
+Optional. Omitted and `null` are equivalent to an empty list.
+
+</ResponseField>
+<ResponseField name="cwd" type={<a href="#absolutepath">AbsolutePath</a>} required>
+  The working directory to resolve options for. Must be an absolute path.
+</ResponseField>
+<ResponseField name="sessionId" type={<><span><a href="#sessionid">SessionId</a></span><span> | null</span></>} >
+  The session to resolve options for.
+
+Optional. Omitted and `null` are equivalent and mean a new session. When present,
+the Agent returns what `session/resume` with the same `cwd` and
+`additionalDirectories` would return, with the same `cwd` rules. A session the
+Agent does not know gets `-32002`.
+
+</ResponseField>
+
+#### <span class="font-mono">SessionOptionsResponse</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Response from `session/options`.
+
+The result is a snapshot. The options a session actually starts with are the ones in
+the session setup response.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} >
+  Commands the Agent knows the session would have.
+
+Optional. Omitted or empty means no commands are advertised.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+
+Advisory. Agents MAY return a partial list. Clients MUST use the commands from the
+`session/new` or `session/resume` response and later `available_commands_update`
+notifications for the session itself.
+
+</ResponseField>
+<ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
+  The config options the session would start with, with the same rules as on
+`NewSessionResponse`.
+
+Optional. Omitted or empty means no config options are advertised.
+Senders MUST use an array, not `null`. Receivers treat `null` like omission.
 
 </ResponseField>
 
@@ -1180,6 +1298,27 @@ When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the resumed
 session. It may differ from any previously used or reported list as long as
 the request `cwd` matches the session's `cwd`.
+
+</ResponseField>
+<ResponseField name="configOptions" type={<a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Initial values for the session's config options.
+
+Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+this when the Agent advertises `session.options`.
+
+The Agent applies the entries in list order, as if the Client had called
+`session/set_config_option` for each entry after the session was set up. Malformed
+entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
+ignore an entry whose `configId` is unknown, whose `type` does not match the option,
+or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
+has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
+
+The Agent applies the entries before it replays history for `replayFrom` and before
+it responds.
 
 </ResponseField>
 <ResponseField name="cwd" type={<a href="#absolutepath">AbsolutePath</a>} required>
@@ -5759,6 +5898,97 @@ Omitted and `null` are equivalent and mean the `name` is used for display.
 for debugging or metrics purposes. (e.g. "1.0.0").
 </ResponseField>
 
+## <span class="font-mono">InitialSessionConfigOption</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+An initial value for a config option, sent on session setup requests.
+
+Same shape as `session/set_config_option` without `sessionId`. Unlike
+`session/set_config_option`, an unknown `configId`, a `type` that does not match the
+option, or a value that is not allowed is ignored instead of rejected.
+
+**Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
+  The ID of the configuration option to set.
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="id" type="object">
+A `SessionConfigValueId` string value (`type: "id"`).
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"id"`.
+</ResponseField>
+<ResponseField
+  name="value"
+  type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>}
+  required
+>
+  The value ID.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="boolean" type="object">
+A boolean value (`type: "boolean"`).
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"boolean"`.
+</ResponseField>
+<ResponseField name="value" type={"boolean"} required>
+  The boolean value.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future session configuration option value payload.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+Agents MUST reject a `session/set_config_option` request with a value type
+they do not support with `-32602`.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future session configuration option value type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+<ResponseField name="value" type={"any"} required>
+  Raw value payload for the custom or future value type.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 ## <span class="font-mono">IntegerPropertySchema</span>
 
 Schema for integer properties in an elicitation form.
@@ -7745,6 +7975,18 @@ Optional. Omitted and `null` are equivalent and mean the agent does not advertis
 server transport support for sessions.
 
 </ResponseField>
+<ResponseField name="options" type={<><span><a href="#sessionoptionscapabilities">SessionOptionsCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Whether the agent supports `session/options`.
+
+Optional. Omitted or `null` both mean the agent does not advertise support.
+Supplying `\{\}` means the agent supports `session/options` and accepts initial
+config option values on session setup requests.
+
+</ResponseField>
 <ResponseField name="prompt" type={<><span><a href="#promptcapabilities">PromptCapabilities</a></span><span> | null</span></>} >
   Prompt capabilities supported by the agent in `session/prompt` requests.
 
@@ -8314,6 +8556,30 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="sessionId" type={<a href="#sessionid">SessionId</a>} required>
   The session ID from the request.
+</ResponseField>
+
+## <span class="font-mono">SessionOptionsCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for the `session/options` method.
+
+Supplying `\{\}` means the agent supports `session/options` and accepts initial config
+option values on session setup requests.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
 </ResponseField>
 
 ## <span class="font-mono">SessionReference</span>

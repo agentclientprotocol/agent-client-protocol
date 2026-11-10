@@ -2450,6 +2450,15 @@
                   ]
                 },
                 {
+                  "title": "SessionOptionsResponse",
+                  "description": "Successful result returned for a `session/options` request.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SessionOptionsResponse"
+                    }
+                  ]
+                },
+                {
                   "title": "SetSessionTitleResponse",
                   "description": "Successful result returned for a `session/set_title` request.",
                   "allOf": [
@@ -2846,6 +2855,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "options": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/options`.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports `session/options` and accepts initial\nconfig option values on session setup requests.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionOptionsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "title": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhether the agent supports `session/set_title`.\n\nAgents report titles through `session/list` and `session_info_update` without this\ncapability. It only advertises that Clients can set titles.\n\nOptional. Omitted or `null` both mean the agent does not advertise support.\nSupplying `{}` means the agent supports setting session titles.",
           "anyOf": [
@@ -3012,6 +3033,18 @@
     },
     "SessionStatusCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/status` method.\n\nSupplying `{}` means the agent supports checking session status.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionOptionsCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for the `session/options` method.\n\nSupplying `{}` means the agent supports `session/options` and accepts initial config\noption values on session setup requests.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -4141,6 +4174,41 @@
           "type": "string"
         }
       ]
+    },
+    "SessionOptionsResponse": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from `session/options`.\n\nThe result is a snapshot. The options a session actually starts with are the ones in\nthe session setup response.\n\nAgents only return `type: \"boolean\"` options when the Client advertises\n`sessionCapabilities.configOptions.boolean`.",
+      "type": "object",
+      "properties": {
+        "modes": {
+          "description": "The mode state the session would start with, if the Agent supports modes.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/draft/session-modes)",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionModeState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "configOptions": {
+          "description": "The config options the session would start with, with the same rules as on\n`NewSessionResponse`.\n\nOptional. Omitted, `null`, or empty means no config options are advertised.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/SessionConfigOption"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "x-side": "agent",
+      "x-method": "session/options"
     },
     "SetSessionTitleResponse": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse from setting the title of a session.",
@@ -6416,6 +6484,15 @@
                   ]
                 },
                 {
+                  "title": "SessionOptionsRequest",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReturns the config options a session would start with, without creating or resuming a session.\n\nThis method is only available if the agent advertises the `sessionCapabilities.options` capability.",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/SessionOptionsRequest"
+                    }
+                  ]
+                },
+                {
                   "title": "SetSessionTitleRequest",
                   "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSets the title of a session.\n\nThis method is only available if the agent advertises the `sessionCapabilities.title` capability.\n\nThe session does not need to be active on the connection. The agent stores the\ntitle and returns the stored title, which may be normalized.",
                   "allOf": [
@@ -7017,6 +7094,14 @@
             }
           ]
         },
+        "configOptions": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `sessionCapabilities.options`.\n\nThe Agent applies the entries in list order, as if the Client had called\n`session/set_config_option` for each entry after the session was set up. Malformed\nentries and duplicate `configId` values fail the request with `-32602`. The Agent MUST\nignore an entry whose `configId` is unknown, whose `type` does not match the option,\nor whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InitialSessionConfigOption"
+          },
+          "x-deserialize-default-on-null": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
           "type": ["object", "null"],
@@ -7279,6 +7364,60 @@
         }
       ]
     },
+    "InitialSessionConfigOption": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn initial value for a config option, sent on session setup requests.\n\nSame shape as `session/set_config_option` without `sessionId`. Unlike\n`session/set_config_option`, an unknown `configId`, a `type` that does not match the\noption, or a value that is not allowed is ignored instead of rejected.\n\nClients only send `type: \"boolean\"` entries when they advertise\n`sessionCapabilities.configOptions.boolean`.",
+      "type": "object",
+      "properties": {
+        "configId": {
+          "description": "The ID of the configuration option to set.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionConfigId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["configId"],
+      "anyOf": [
+        {
+          "description": "A boolean value (`type: \"boolean\"`).",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "boolean"
+            },
+            "value": {
+              "description": "The boolean value.",
+              "type": "boolean"
+            }
+          },
+          "required": ["type", "value"]
+        },
+        {
+          "title": "value_id",
+          "description": "A `SessionConfigValueId` string value.\n\nThis is the default when `type` is absent on the wire. Unknown `type`\nvalues with string payloads also gracefully deserialize into this\nvariant.",
+          "type": "object",
+          "properties": {
+            "value": {
+              "description": "The value ID.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/SessionConfigValueId"
+                }
+              ]
+            }
+          },
+          "required": ["value"]
+        }
+      ]
+    },
     "LoadSessionRequest": {
       "description": "Request parameters for loading an existing session.\n\nOnly available if the Agent supports the `loadSession` capability.\n\nSee protocol docs: [Loading Sessions](https://agentclientprotocol.com/protocol/v1/draft/session-setup#loading-sessions)",
       "type": "object",
@@ -7321,6 +7460,14 @@
               "type": "null"
             }
           ]
+        },
+        "configOptions": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `sessionCapabilities.options`.\n\nThe Agent applies the entries in list order, as if the Client had called\n`session/set_config_option` for each entry after the session was set up. Malformed\nentries and duplicate `configId` values fail the request with `-32602`. The Agent MUST\nignore an entry whose `configId` is unknown, whose `type` does not match the option,\nor whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InitialSessionConfigOption"
+          },
+          "x-deserialize-default-on-null": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
@@ -7537,6 +7684,44 @@
       "x-side": "agent",
       "x-method": "session/status"
     },
+    "SessionOptionsRequest": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for `session/options`, which returns the config options a session\nwould start with, without creating or resuming a session.\n\nOnly available if the Agent supports the `sessionCapabilities.options` capability.\n\n`session/options` MUST NOT create or resume a session, send `session/update`\nnotifications, add an entry to `session/list`, or change an existing session. Agents\nSHOULD NOT connect to MCP servers to answer it.",
+      "type": "object",
+      "properties": {
+        "cwd": {
+          "description": "The working directory to resolve options for. Must be an absolute path.",
+          "type": "string"
+        },
+        "additionalDirectories": {
+          "description": "Additional workspace roots to resolve options for. Each path must be absolute.\n\nOptional. Omitted and `null` are equivalent to an empty list.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-deserialize-default-on-null": true
+        },
+        "sessionId": {
+          "description": "The session to resolve options for.\n\nOptional. Omitted and `null` are equivalent and mean a new session. When present,\nthe Agent returns what `session/load` or `session/resume` with the same `cwd` and\n`additionalDirectories` would return, with the same `cwd` rules. A session the\nAgent does not know gets `-32002`.\nClients MUST only send this when the Agent supports `session/load` (`loadSession`)\nor `session/resume` (`sessionCapabilities.resume`).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["cwd"],
+      "x-side": "agent",
+      "x-method": "session/options"
+    },
     "SetSessionTitleRequest": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for setting the title of a session.\n\nOnly available if the Agent supports the `sessionCapabilities.title` capability.\n\nThe session does not need to be active on the connection. Any session the Agent would\nreturn from `session/list` can be retitled. A session that does not exist gets `-32002`.\n\nThe Agent responds only after it has stored the title. After a successful response, the\nAgent SHOULD NOT replace the title with one it generates automatically.",
       "type": "object",
@@ -7606,6 +7791,14 @@
               "type": "null"
             }
           ]
+        },
+        "configOptions": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `sessionCapabilities.options`.\n\nThe Agent applies the entries in list order, as if the Client had called\n`session/set_config_option` for each entry after the session was set up. Malformed\nentries and duplicate `configId` values fail the request with `-32602`. The Agent MUST\nignore an entry whose `configId` is unknown, whose `type` does not match the option,\nor whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InitialSessionConfigOption"
+          },
+          "x-deserialize-default-on-null": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",

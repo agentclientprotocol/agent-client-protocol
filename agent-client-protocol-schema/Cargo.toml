@@ -35,6 +35,7 @@ unstable = [
     "unstable_session_archive",
     "unstable_session_fork",
     "unstable_session_status",
+    "unstable_session_options",
     "unstable_session_set_title",
     "unstable_subagents",
     "unstable_end_turn_token_usage",
@@ -51,6 +52,7 @@ unstable_proxy_chains = []
 unstable_session_archive = []
 unstable_session_fork = []
 unstable_session_status = []
+unstable_session_options = []
 unstable_session_set_title = []
 unstable_subagents = []
 unstable_end_turn_token_usage = []

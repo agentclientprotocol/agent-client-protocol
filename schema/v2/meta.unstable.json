@@ -17,6 +17,7 @@
     "session_archive": "session/archive",
     "session_unarchive": "session/unarchive",
     "session_status": "session/status",
+    "session_options": "session/options",
     "session_set_title": "session/set_title",
     "session_resume": "session/resume",
     "session_close": "session/close",
