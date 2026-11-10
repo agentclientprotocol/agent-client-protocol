@@ -42,6 +42,8 @@ For example, a `session/new` response can advertise a command with text input:
 
 `null` is not a valid outbound value for this field.
 
+Agents that advertise `session.options` can also return advisory `availableCommands` from `session/options`, before a session exists. That list is a preview. The setup response replaces it. See [Options before a session exists](/protocol/v2/draft/session-config-options#options-before-a-session-exists-unstable).
+
 ### Notifications
 
 After session setup, the Agent **MAY** announce commands that were not included in the response, or update the list, via the `available_commands_update` session notification:

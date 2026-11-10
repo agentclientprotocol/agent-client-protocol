@@ -457,6 +457,102 @@ This notification also contains the complete configuration state. Common reasons
 - Falling back to a different model due to rate limits or errors
 - Adjusting available options based on context discovered during execution
 
+## Options before a session exists (unstable)
+
+Agents that advertise `sessionCapabilities.options` support `session/options`, which returns the config options a session would start with without creating or resuming it. They also accept initial values in `configOptions` on `session/new`, `session/load`, and `session/resume`. Clients **MUST NOT** call `session/options` or send `configOptions` on session setup requests unless the Agent advertises the capability. See the [RFD](/rfds/session-options).
+
+### Querying options
+
+Clients call `session/options` with the same workspace parameters as `session/new`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/options",
+  "params": {
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib"]
+  }
+}
+```
+
+<ParamField path="cwd" type="string" required>
+  The working directory to resolve options for. Must be an absolute path.
+</ParamField>
+
+<ParamField path="additionalDirectories" type="string[]">
+  Additional workspace roots to resolve options for. Omitted and `null` are
+  equivalent to an empty list.
+</ParamField>
+
+<ParamField path="sessionId" type="SessionId">
+  An existing session to resolve options for. Omitted and `null` are equivalent
+  and mean a new session.
+</ParamField>
+
+When `sessionId` is present, the Agent returns what `session/load` or `session/resume` with the same `cwd` and `additionalDirectories` would return. The same `cwd` rules as those methods apply. A session the Agent does not know gets `-32002`. Clients **MUST NOT** send `sessionId` unless the Agent supports `session/load` (`loadSession`) or `session/resume` (`sessionCapabilities.resume`).
+
+The request has no `mcpServers` parameter. Agents **SHOULD NOT** connect to MCP servers to answer it.
+
+The response contains the options the session would start with:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "configOptions": [
+      {
+        "id": "model",
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "currentValue": "model-1",
+        "options": [
+          { "value": "model-1", "name": "Model 1" },
+          { "value": "model-2", "name": "Model 2" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`configOptions` uses the same type and rules as on `NewSessionResponse`. `modes` uses the same type as on `NewSessionResponse`. Agents only return `type: "boolean"` options when the Client advertises `sessionCapabilities.configOptions.boolean`.
+
+`session/options` **MUST NOT** create or resume a session, send `session/update` notifications, add an entry to `session/list`, or change an existing session. The response is a snapshot. The options a session actually starts with are the ones in the setup response.
+
+### Initial values
+
+Clients send the values the user picked in `configOptions` on `session/new`, `session/load`, and `session/resume`. Each entry has the same shape as `session/set_config_option` without `sessionId`. `type` is optional and defaults to `id`, as on `session/set_config_option`. Clients only send `type: "boolean"` entries when they advertise `sessionCapabilities.configOptions.boolean`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "mcpServers": [],
+    "configOptions": [
+      { "configId": "model", "value": "model-2" },
+      { "configId": "reasoning", "value": "high" }
+    ]
+  }
+}
+```
+
+The Agent applies the entries in list order, as if the Client had called `session/set_config_option` for each entry after the session was set up. Each entry is checked against the option set as it stands at that point, so an earlier entry (such as the model) can change which values a later entry (such as the reasoning level) allows. Clients **SHOULD** send entries in the order the Agent listed the options in the `session/options` response. For restored sessions, the entries apply on top of the session's restored configuration.
+
+Initial values are handled differently from `session/set_config_option`, because options can change between `session/options` and session setup:
+
+- An entry that does not match the schema, such as a missing `configId` or a `value` that does not match its `type`, **MUST** fail the request with `-32602`.
+- Two entries with the same `configId` **MUST** fail the request with `-32602`.
+- An entry whose `configId` is unknown, whose `type` does not match the option's type, or whose value is not allowed when it is applied **MUST** be ignored. The option keeps its default value, or the value the Agent resolved from earlier entries.
+- The `configOptions` in the setup response **MUST** contain the values the session actually has. Clients compare them with what they sent to find entries the Agent ignored.
+- The Agent **SHOULD NOT** send `config_option_update` notifications for these entries.
+
 ## Relationship to session modes
 
 Session Config Options supersede the older [Session Modes](/protocol/v1/draft/session-modes) API. However, during the transition period, Agents that provide mode-like configuration **SHOULD** send both:

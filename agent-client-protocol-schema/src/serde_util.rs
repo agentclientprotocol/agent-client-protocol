@@ -150,6 +150,9 @@ mod default_on_null_tests {
                 $check::<v1::UnarchiveSessionResponse>();
             }
 
+            #[cfg(feature = "unstable_session_options")]
+            $check::<v1::SessionOptionsResponse>();
+
             #[cfg(feature = "unstable_llm_providers")]
             {
                 $check::<v1::ListProvidersRequest>();
@@ -179,6 +182,9 @@ mod default_on_null_tests {
                     $check::<v2::ArchiveSessionResponse>();
                     $check::<v2::UnarchiveSessionResponse>();
                 }
+
+                #[cfg(feature = "unstable_session_options")]
+                $check::<v2::SessionOptionsResponse>();
 
                 #[cfg(feature = "unstable_llm_providers")]
                 {
