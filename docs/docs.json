@@ -54,6 +54,7 @@
             "pages": [
               "get-started/introduction",
               "get-started/architecture",
+              "get-started/related-protocols",
               "get-started/agents",
               "get-started/clients",
               "get-started/registry"
