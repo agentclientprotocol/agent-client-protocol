@@ -116,8 +116,6 @@ The response contains the config options the session would start with:
 
 The response is a snapshot. The options a session actually starts with are the ones in the session setup response.
 
-If the Agent requires authentication before `session/new`, it requires the same authentication before `session/options` and returns the same error.
-
 ### Initial values on session setup
 
 Session setup requests gain an optional `configOptions` field. Omitted and `null` are equivalent to an empty list. Each entry uses the same value shape as `session/set_config_option`:
@@ -150,7 +148,7 @@ Error handling:
 
 - An entry that does not match the schema (for example, a missing `configId` or a `value` that does not match its `type`) **MUST** fail the request with `-32602` (Invalid params).
 - Two entries with the same `configId` **MUST** fail the request with `-32602`.
-- A well-formed entry whose `configId` is unknown, or whose value is not allowed at the point it is applied, **MUST** be ignored. The option keeps its default value, or the value the Agent resolved from earlier entries.
+- A well-formed entry whose `configId` is unknown, whose `type` does not match the option's type (for example, a `boolean` entry for a `select` option), or whose value is not allowed at the point it is applied, **MUST** be ignored. Options can change type between `session/options` and session setup, so this is stale state, not a Client bug. The option keeps its default value, or the value the Agent resolved from earlier entries.
 - The `configOptions` in the response **MUST** contain the values the session actually has after all entries are applied. Clients compare them with what they sent to find entries the Agent ignored.
 
 ### Version differences
