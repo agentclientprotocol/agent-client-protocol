@@ -474,6 +474,14 @@ Client that receives conflicting references treats the views as unlinked. A
 reference does not indicate that the recipient finished processing the
 message, and it does not establish ownership.
 
+An Agent links two views only when it can establish that they are the same
+message. A provider-supplied identifier shared by both sides is the strongest
+evidence. Without one, the Agent chooses how to match them, for example by
+recipient and content. Equal content alone can match the wrong entry when a
+sender repeats a message, and delivery may transform the content. When the
+Agent cannot establish the match, it leaves the views unlinked. Unlinked views
+are valid, and Clients display each one in its own transcript.
+
 Known participant information must remain consistent with the enclosing
 transcript and earlier updates for that message. When both IDs are known,
 they identify different sessions and the outer `params.sessionId` matches one
@@ -574,7 +582,10 @@ form acknowledges recipient processing or establishes new ownership. Actual
 delivery is handled by the Agent.
 
 The Agent reports each side only when it can observe that side: an outgoing
-entry is not sufficient evidence to manufacture an incoming entry. Clients
+entry is not sufficient evidence to manufacture an incoming entry. The Agent
+may report an outgoing view when it observes the send start or once the send
+completes. It **SHOULD NOT** report an outgoing view for a send that it knows
+failed before the message left the sender. Clients
 **MUST NOT** infer receipt or synthesize an Agent-reported incoming transcript
 entry solely from an outgoing entry. This does not prevent a clearly labeled
 projection of outgoing messages in a cross-session view. The two views have
@@ -641,6 +652,14 @@ ownership, grant Client-initiated controls, or report that the referenced
 session received or finished any work. Its tool call's status does not define
 the referenced session's lifetime or work state.
 
+`content` on a tool call update replaces the whole array. An Agent that sends
+new content for a tool call includes its session references again, or the
+update removes them. An update that omits `content` leaves them in place.
+
+A tool may address a session by a name or another provider handle instead of
+its session ID. The Agent adds a reference only when it can resolve that
+handle to a known session. It **MUST NOT** guess the session.
+
 In v1, `session` content is covered by the `subagents` Client capability like
 the rest of this RFD. In v2, receivers that do not recognize it preserve it as
 unknown tool call content.
@@ -655,6 +674,13 @@ Agents **SHOULD** report it as the incoming view in the child's transcript, a
 parent's conversation also records the delegation, Agents **SHOULD** report the
 outgoing view in the parent's transcript and link the two views. Later
 instructions to the same child use the same form.
+
+Some providers record input in the child's conversation without recording who
+sent it, and a sibling or another session can also message the child. When the
+Agent has no evidence of the sender, it reports the incoming view without
+`senderSessionId` and **MUST NOT** assume the parent. It can supply the sender
+in a later upsert. Clients display such an entry as a message from another
+session, not as a user message.
 
 Agents **SHOULD NOT** report this task as a `user_message_chunk` or a v2
 `user_message` in the child's transcript. A user message would attribute the
@@ -856,15 +882,27 @@ When observability of child foreground work is actually lost, the Agent
 **MUST** report `unknown` using the existing state payload: v1 sends
 `subagent_update` with `"state": { "state": "unknown" }` on the parent stream;
 v2 sends `state_update` with `"state": "unknown"` on the child stream. Silence
-alone is not evidence of lost observability. V2 mirrors this snapshot on the
+alone is not evidence of lost observability. Observability is also lost when
+the Agent itself stops tracking a child that may still be working, for
+example when its runtime starts a new conversation and discards the
+association while the child's work continues. V2 mirrors this snapshot on the
 parent association as well. The Client **MUST NOT** continue
 presenting an earlier `running` or `requires_action` as confirmed live activity
 after `unknown`, though it may retain that last-known value for context. A
 subsequent `running`, `requires_action`, or `idle` replaces `unknown` for the
 same child ID. `unknown` neither closes or cancels the child nor resolves
 pending requests; it does not automatically revoke mutation capabilities.
-If a control is no longer available, the Agent updates `capabilities`
-separately.
+If a control is no longer available, the Agent updates `capabilities`, in the
+same `subagent_update` or a later one.
+
+`unknown` also leaves the child's unfinished tool calls, terminals, and v2
+`background` list as last reported. The Agent **MUST NOT** invent a final
+status for them, and it need not send further updates for work it can no
+longer observe. The Client **MUST NOT** present them as confirmed live
+activity or treat them as failed or cancelled. It may show them as
+unconfirmed, as it does after [connection loss](#connection-loss). If the
+Agent later learns that the work ended, it reports the final statuses and the
+child's `idle` state as usual.
 
 The association's `state` field is a replacement snapshot, not a nested patch:
 omission leaves the previous snapshot unchanged, `null` clears it, and a
@@ -1606,6 +1644,14 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-12: Clarified, from adapter implementation
+  feedback, that an incoming view omits `senderSessionId` when the sender is
+  not known, when an Agent links two views or leaves them unlinked, and when
+  it reports an outgoing view. An Agent that stops tracking a child that may
+  still be working reports `unknown`, which leaves the child's unfinished
+  tool calls, terminals, and `background` list as last reported. Session
+  references are resent with replaced tool call content and are added only
+  for sessions the Agent can resolve.
 - 2026-11-09: Stated that one-shot children, announced for a single
   delegation and never reused, conform to this RFD. Named a per-child `prompt`
   capability as the expected way to let Clients prompt a child in the future.
