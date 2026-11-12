@@ -13,12 +13,12 @@ The current maintainers for ACP are:
 
 ## Core Maintainers
 
-| Name             | GitHub                           |
-| ---------------- | -------------------------------- |
-| Agus Zubiaga     | https://github.com/agu-z         |
-| Anna Zhdan       | https://github.com/anna239       |
-| Niko Matsakis    | https://github.com/nikomatsakis  |
-| Aleksandr Slapoguzov | https://github.com/slapoguzov |
+| Name                 | GitHub                          |
+| -------------------- | ------------------------------- |
+| Agus Zubiaga         | https://github.com/agu-z        |
+| Anna Zhdan           | https://github.com/anna239      |
+| Niko Matsakis        | https://github.com/nikomatsakis |
+| Aleksandr Slapoguzov | https://github.com/slapoguzov   |
 
 ## SDK Maintainers
 
