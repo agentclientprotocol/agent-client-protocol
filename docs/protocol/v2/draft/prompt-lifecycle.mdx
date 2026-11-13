@@ -141,6 +141,11 @@ set to the parent, and **SHOULD NOT** report it as a `user_message`. Clients
 can then render it as a message from the parent session rather than from the
 user. See [Delegated tasks](/rfds/subagents#delegated-tasks).
 
+When the Agent has no evidence of who sent a message the child received, it
+omits `senderSessionId` and **MUST NOT** assume the parent. It links two views
+only when it can establish that they are the same message, and leaves them
+unlinked otherwise.
+
 ## Foreground and background work
 
 **Foreground work** is the Agent's active response or workflow in the session, including model processing, tool execution, and waiting for user action needed to continue that work. The Agent **MUST** treat that work as foreground whether it was started by a user prompt or by the Agent, for example to pursue an ongoing goal, continue earlier work, or act on a completed background task.

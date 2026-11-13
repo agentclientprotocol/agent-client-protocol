@@ -1616,7 +1616,10 @@ impl RequiresActionStateUpdate {
 /// snapshot normally.
 ///
 /// This is not a task outcome or session closure. It does not cancel work, resolve
-/// pending requests, or revoke capabilities. Capabilities are updated separately.
+/// pending requests, or revoke capabilities. If a control is no longer available,
+/// the Agent updates the capabilities explicitly. Unfinished tool calls and
+/// terminals stay as last reported. The Agent does not invent a final status
+/// for them, and Clients do not present them as confirmed live activity.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]

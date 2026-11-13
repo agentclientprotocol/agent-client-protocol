@@ -359,6 +359,11 @@ session's work state. Agents send it only when the Client advertises the `subage
 sends a child is reported as a [session-directed message](/protocol/v1/draft/prompt-turn#session-directed-messages-unstable),
 not through a tool call.
 
+`content` on `tool_call_update` replaces the whole array, so an Agent that
+sends new content includes the session references again. When a tool addresses
+a session by a name or another handle, the Agent adds a reference only if it
+can resolve the handle to a known session.
+
 ## Following the Agent
 
 Tool calls can report the file locations they're working with. Clients can use this to follow along, showing which files the Agent is reading or modifying as it works.
