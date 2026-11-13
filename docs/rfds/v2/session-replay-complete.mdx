@@ -137,7 +137,7 @@ When the Agent crashes during a resume, the Client knows that the replay was cut
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
-1. **Schema.** Add a `ReplayComplete` variant with only `_meta` to the v2 `SessionUpdate` union, behind an unstable feature flag at first.
+1. **Schema.** Add a `ReplayComplete` variant with only `_meta` to the v2 `SessionUpdate` union.
 2. **Docs.** Update v2 [Session Setup](/protocol/v2/session-setup). Add a `replay_complete` step to the sequence diagram between "All content reported" and the current `state_update`. Document the ordering rule and the outcome table. Add the child markers to the [reconnection rules](../subagents.mdx#reconnection-and-replay) of the Subagent Sessions RFD. Add the variant to the session update table and the resume lifecycle examples in [Prompt Lifecycle](/protocol/v2/prompt-lifecycle#session-updates), to the [migration guide](/protocol/v2/migration), and to the change list in the [v2 overview](./overview.mdx).
 3. **SDKs.** Expose the variant in the SDKs. An Agent SDK helper can buffer live updates while a replay runs. A Client SDK must deliver the updates of a resuming session before the response. The Client knows the session ID before the request, so the SDK can register the session handler first. [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146) does this for the Kotlin SDK.
 4. **Adapters.** claude-agent-acp already sends one end event after the replay, as a vendor extension in `_meta` that the Client opts in to. See [#1361](https://github.com/agentclientprotocol/claude-agent-acp/pull/1361). Move it to `replay_complete` on v2 connections, and add the marker to the other v2 adapters.
@@ -223,5 +223,6 @@ Not in this RFD. v1 `session/load` has the same gap, but the v1 `SessionUpdate` 
 
 ## Revision history
 
+- 2026-11-13: Steps 1 and 2 landed. `replay_complete` is in the v2 schema as `SessionUpdate::ReplayComplete`, without a separate feature flag, like the other v2 RFDs. The rules are in the v2 [Session Setup](/protocol/v2/session-setup#replay-complete) page. The child session rules are in its draft copy, because `subagent_update` is still unstable.
 - 2026-11-13: Narrowed to v2 and moved into the v2 RFD collection. Added the `state_update` snapshot and v1 questions. Removed the guidance on when Clients render history. Gave each replayed child session its own marker.
 - 2026-10-16: Initial draft.

@@ -1243,7 +1243,10 @@ these differences:
   work, not a separate subagent lifecycle.
 - **Resume with replay.** Available child history is replayed best-effort
   through `session/resume` with `replayFrom: { "type": "start" }`, not
-  `session/load`.
+  `session/load`. Each child that the Agent announces during that request
+  gets its own `replay_complete` update on its own `sessionId`, after its last
+  replayed update. Live updates and requests for the child follow it. See the
+  [v2 Replay Complete Signal RFD](./v2/session-replay-complete.mdx#subagent-sessions).
 - **Directories are informational.** v2 removes the Client filesystem and
   terminal methods, so a child's `cwd` and `additionalDirectories` have no
   Client-side root-set check or terminal default to drive. They use the same
@@ -1644,6 +1647,9 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-13: In v2, each child announced during a resume with replay gets
+  its own `replay_complete` update, following the v2 Replay Complete Signal
+  RFD.
 - 2026-11-12: Clarified, from adapter implementation
   feedback, that an incoming view omits `senderSessionId` when the sender is
   not known, when an Agent links two views or leaves them unlinked, and when

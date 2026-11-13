@@ -156,6 +156,11 @@ pub enum SessionUpdate {
     CompactionUpdate(CompactionUpdate),
     /// A content block appended to a context compaction's retained summary.
     CompactionSummaryChunk(CompactionSummaryChunk),
+    /// The history replay requested by `session/resume` is complete for this session.
+    ///
+    /// Every update for the session between the `session/resume` request and
+    /// this update is replayed history. Every update after it is not.
+    ReplayComplete(ReplayComplete),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -929,6 +934,52 @@ impl CompactionSummaryChunk {
     }
 }
 
+/// Marks the end of the history replay requested by `session/resume`.
+///
+/// The Agent sends this once on a session for each `session/resume` request
+/// with a `replayFrom` cursor, after the last replayed update for that session
+/// and before the response. It sends it for an empty history too. Every update
+/// for the session between the request and this update is replayed history.
+/// Every update after it is not.
+///
+/// The Agent does not send it when `replayFrom` is omitted or `null`, or when
+/// it cannot finish the replay. A resume that ends without it delivered a
+/// truncated replay.
+///
+/// See protocol docs: [Replay Complete](https://agentclientprotocol.com/protocol/v2/session-setup#replay-complete)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ReplayComplete {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl ReplayComplete {
+    /// Builds [`ReplayComplete`] with no metadata.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets or clears optional metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// **UNSTABLE**
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1298,7 +1349,7 @@ fn is_known_session_update(session_update: &str) -> bool {
     }
     if matches!(
         session_update,
-        "compaction_update" | "compaction_summary_chunk"
+        "compaction_update" | "compaction_summary_chunk" | "replay_complete"
     ) {
         return true;
     }
@@ -1361,6 +1412,7 @@ fn other_session_update_schema(schema: &mut Schema) {
             "notice",
             "compaction_update",
             "compaction_summary_chunk",
+            "replay_complete",
             #[cfg(feature = "unstable_subagents")]
             "subagent_update",
             #[cfg(feature = "unstable_subagents")]
@@ -4852,6 +4904,94 @@ mod tests {
                 .unwrap()
                 .iter()
                 .any(|variant| variant["properties"]["sessionUpdate"]["const"] == "notice")
+        );
+    }
+
+    #[test]
+    fn replay_complete_round_trips_with_and_without_meta() {
+        use serde_json::json;
+
+        let bare = json!({ "sessionUpdate": "replay_complete" });
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::ReplayComplete(ReplayComplete::new())).unwrap(),
+            bare
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(bare).unwrap(),
+            SessionUpdate::ReplayComplete(ReplayComplete::new())
+        );
+
+        let mut meta = Meta::new();
+        meta.insert("source".into(), json!("transcript"));
+        let with_meta = json!({
+            "sessionUpdate": "replay_complete",
+            "_meta": { "source": "transcript" }
+        });
+        let update = SessionUpdate::ReplayComplete(ReplayComplete::new().meta(meta));
+        assert_eq!(serde_json::to_value(&update).unwrap(), with_meta);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(with_meta).unwrap(),
+            update
+        );
+    }
+
+    #[test]
+    fn replay_complete_is_never_preserved_as_an_unknown_update() {
+        use serde_json::json;
+
+        // `_meta` is the only field, and a `null` or malformed value means no
+        // metadata. The marker must still parse as the known variant so a
+        // Client does not miss the end of the replay.
+        for wire in [
+            json!({ "sessionUpdate": "replay_complete", "_meta": null }),
+            json!({ "sessionUpdate": "replay_complete", "_meta": false }),
+            json!({ "sessionUpdate": "replay_complete", "futureField": 1 }),
+        ] {
+            assert_eq!(
+                serde_json::from_str::<SessionUpdate>(&wire.to_string()).unwrap(),
+                SessionUpdate::ReplayComplete(ReplayComplete::new())
+            );
+            assert_eq!(
+                serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+                SessionUpdate::ReplayComplete(ReplayComplete::new())
+            );
+        }
+
+        assert!(
+            serde_json::from_value::<OtherSessionUpdate>(
+                json!({ "sessionUpdate": "replay_complete" })
+            )
+            .is_err()
+        );
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn replay_complete_schema_has_only_optional_meta_and_excludes_unknown_fallback() {
+        use serde_json::json;
+
+        let schema = serde_json::to_value(schemars::schema_for!(ReplayComplete)).unwrap();
+        assert!(schema.get("required").is_none());
+        assert_eq!(
+            schema["properties"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .collect::<Vec<_>>(),
+            ["_meta"]
+        );
+        assert_eq!(
+            schema["properties"]["_meta"]["type"],
+            json!(["object", "null"])
+        );
+        let fallback = serde_json::to_value(schemars::schema_for!(OtherSessionUpdate)).unwrap();
+        assert!(
+            fallback["not"]["anyOf"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|variant| variant["properties"]["sessionUpdate"]["const"]
+                    == "replay_complete")
         );
     }
 

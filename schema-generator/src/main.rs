@@ -589,6 +589,55 @@ mod schema_annotation_tests {
         assert!(variants.iter().all(|variant| variant["type"] == "string"));
     }
 
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_replay_complete_is_a_standard_session_update() {
+        let schema = root_schema_value();
+        let marker = def_schema(&schema, "ReplayComplete");
+        assert!(marker.get("required").is_none());
+        assert!(!marker["description"].as_str().unwrap().contains("UNSTABLE"));
+        let meta = property_schema(&schema, "ReplayComplete", "_meta");
+        assert_eq!(meta["type"], serde_json::json!(["object", "null"]));
+        assert_bool_extension(meta, DEFAULT_ON_ERROR_EXTENSION);
+
+        let updates = def_schema(&schema, "SessionUpdate");
+        let variants = updates
+            .get("oneOf")
+            .or_else(|| updates.get("anyOf"))
+            .and_then(Value::as_array)
+            .unwrap();
+        let variant = variants
+            .iter()
+            .find(|variant| {
+                variant.pointer("/properties/sessionUpdate/const")
+                    == Some(&Value::from("replay_complete"))
+            })
+            .expect("replay_complete must be a standard session update");
+        assert!(schema_contains_ref(variant, "#/$defs/ReplayComplete"));
+        assert_eq!(variant["required"], serde_json::json!(["sessionUpdate"]));
+        assert!(
+            !variant["description"]
+                .as_str()
+                .unwrap()
+                .contains("UNSTABLE")
+        );
+
+        let fallback = variants
+            .iter()
+            .find(|variant| variant["title"] == "other")
+            .unwrap();
+        assert!(
+            fallback["not"]["anyOf"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|variant| {
+                    variant.pointer("/properties/sessionUpdate/const")
+                        == Some(&Value::from("replay_complete"))
+                })
+        );
+    }
+
     #[cfg(not(feature = "unstable_protocol_v2"))]
     #[test]
     fn generated_v1_compaction_capability_is_optional_nullable_and_stable() {

@@ -38,6 +38,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                                     |
 | `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                                        |
 | `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                                             |
+| `replay_complete`           | Marks the [end of a history replay](/protocol/v2/draft/session-setup#replay-complete) requested by `session/resume`.                                   |
 
 This is the complete set of standard variants defined in the current draft [`SessionUpdate` schema](/protocol/v2/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 
@@ -1143,23 +1144,23 @@ needs to finish the external interaction. Late answers may arrive after work
 ends, including during a later foreground workflow. An idle snapshot on resume
 may carry a previous stop reason without creating another completion.
 
-| Scenario                                                       | Expected trace or invariant                                                                                                         |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| New session                                                    | Default `idle` unless a state update reports otherwise. The response does not overwrite an already-reported state                   |
-| Resume with running foreground work                            | Replay, if requested → current `running` snapshot → resume response. The snapshot reports activity after resuming                   |
-| Resume during blocked work                                     | Current `requires_action` snapshot → resume response                                                                                |
-| Foreground work starts blocked                                 | `requires_action` → `running` when progress resumes → `idle` when work ends. No preliminary `running` required                      |
-| Two completed turns                                            | `running` → `idle(end_turn)` → `running` → `idle(end_turn)`                                                                         |
-| Local command from idle                                        | Prompt insertion → `running` → local handling → `idle(end_turn)`, even without a model call                                         |
-| Background permission or elicitation while idle                | Request and response. State remains `idle` unless foreground work actually starts                                                   |
-| Two requests block all foreground work                         | `running` → `requires_action`. Answering one leaves `requires_action` if still blocked. Report `running` only when progress resumes |
-| A pending request while other foreground work progresses       | Remain `running` and display the request independently                                                                              |
-| A local command finishes while other foreground work continues | Remain active with no idle boundary for the individual command                                                                      |
-| Cancellation while blocked                                     | `requires_action` → cancellation cleanup → `idle(cancelled)`. After completion, late answers should not resume that work            |
-| Repeated snapshot                                              | `running, running` or `idle, idle` has one logical state, not two work intervals or completions                                     |
-| Same state with updated information                            | Apply the updated information without another state transition or completion                                                        |
-| Resume idle with an old `cancelled` stop reason                | Synchronize idle without cancelling a newer URL interaction or creating another cancellation event                                  |
-| Cancellation while idle                                        | No additional completion update is required                                                                                         |
+| Scenario                                                       | Expected trace or invariant                                                                                                             |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| New session                                                    | Default `idle` unless a state update reports otherwise. The response does not overwrite an already-reported state                       |
+| Resume with running foreground work                            | Replay and `replay_complete`, if requested → current `running` snapshot → resume response. The snapshot reports activity after resuming |
+| Resume during blocked work                                     | Current `requires_action` snapshot → resume response                                                                                    |
+| Foreground work starts blocked                                 | `requires_action` → `running` when progress resumes → `idle` when work ends. No preliminary `running` required                          |
+| Two completed turns                                            | `running` → `idle(end_turn)` → `running` → `idle(end_turn)`                                                                             |
+| Local command from idle                                        | Prompt insertion → `running` → local handling → `idle(end_turn)`, even without a model call                                             |
+| Background permission or elicitation while idle                | Request and response. State remains `idle` unless foreground work actually starts                                                       |
+| Two requests block all foreground work                         | `running` → `requires_action`. Answering one leaves `requires_action` if still blocked. Report `running` only when progress resumes     |
+| A pending request while other foreground work progresses       | Remain `running` and display the request independently                                                                                  |
+| A local command finishes while other foreground work continues | Remain active with no idle boundary for the individual command                                                                          |
+| Cancellation while blocked                                     | `requires_action` → cancellation cleanup → `idle(cancelled)`. After completion, late answers should not resume that work                |
+| Repeated snapshot                                              | `running, running` or `idle, idle` has one logical state, not two work intervals or completions                                         |
+| Same state with updated information                            | Apply the updated information without another state transition or completion                                                            |
+| Resume idle with an old `cancelled` stop reason                | Synchronize idle without cancelling a newer URL interaction or creating another cancellation event                                      |
+| Cancellation while idle                                        | No additional completion update is required                                                                                             |
 
 ## Cancellation
 
