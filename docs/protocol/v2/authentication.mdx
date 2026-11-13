@@ -270,6 +270,8 @@ On success, the Agent returns an empty result:
 After a successful `auth/logout`, authentication-gated requests will require the
 user to complete one of the advertised authentication flows again.
 
+Logging out is idempotent. If there is no authenticated state to end, for example because the Client already logged out, the Agent **SHOULD** respond with the same empty result.
+
 ## Active sessions
 
 The protocol does not guarantee what happens to already-running sessions after
