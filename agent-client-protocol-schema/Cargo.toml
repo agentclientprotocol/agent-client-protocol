@@ -11,7 +11,7 @@ readme = "../README.md"
 keywords = ["agent", "client", "protocol", "ai", "editor"]
 categories = ["development-tools", "api-bindings"]
 include = ["/src/**/*.rs", "/Cargo.toml"]
-rust-version = "1.88.0"
+rust-version.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
