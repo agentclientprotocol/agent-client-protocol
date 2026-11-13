@@ -455,7 +455,7 @@ The Client cancels the tool call with a `tool_call/cancel` request:
 
 - The Client **MUST NOT** send it unless the tool call currently advertises `capabilities.cancel`.
 - The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the work has stopped. The Agent confirms that with a `tool_call_update` to a final status, normally `cancelled`, and may send `completed` or `failed` if the work finished first.
-- The Agent responds with `-32602` if the tool call is unknown, already final, or not cancellable.
+- The Agent responds with `-32602` if the tool call is unknown, already final, or not cancellable. This includes a request that the Client sends again after the first one was accepted and the tool call has since reached a final status. The `tool_call_update` with that status reports the outcome.
 - Cancelling a tool call does not change the foreground state by itself. This works for foreground tool calls too, so a user can stop one long-running step without cancelling the rest of the work.
 
 ## Content
@@ -600,7 +600,7 @@ The Agent **SHOULD** stop advertising `cancel` once the terminal reports `exitSt
 
 - The Client **MUST NOT** send it unless the terminal currently advertises `capabilities.cancel`.
 - The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the process has stopped. The Agent confirms that with a `terminal_update` that sets `exitStatus`.
-- The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not cancellable.
+- The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not cancellable. This includes a request that the Client sends again after the first one was accepted and the process has since exited. The `terminal_update` that sets `exitStatus` reports the outcome.
 - Cancelling stops the process but does not release the terminal: its output remains available for display and replay. It does not change the foreground state or the status of any tool call that references the terminal.
 
 Input, resize, and other interactive control remain out of scope.
