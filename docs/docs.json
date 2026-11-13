@@ -228,7 +228,8 @@
               "rfds/session-status",
               "rfds/session-set-title",
               "rfds/session-archive",
-              "rfds/session-options"
+              "rfds/session-options",
+              "rfds/speed-config-category"
             ]
           },
           {
