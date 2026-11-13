@@ -110,6 +110,11 @@ set to the parent, and **SHOULD NOT** report it as a `user_message_chunk`.
 Clients can then render it as a message from the parent session rather than
 from the user. See [Delegated tasks](/rfds/subagents#delegated-tasks).
 
+When the Agent has no evidence of who sent a message the child received, it
+omits `senderSessionId` and **MUST NOT** assume the parent. It links two views
+only when it can establish that they are the same message, and leaves them
+unlinked otherwise.
+
 ## The prompt turn lifecycle
 
 <br />

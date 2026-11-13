@@ -2,6 +2,7 @@
 name = "schema-generator"
 version = "0.0.0"
 edition = "2024"
+rust-version.workspace = true
 publish = false
 license = "Apache-2.0"
 description = "Internal generator for Agent Client Protocol JSON Schema artifacts"
