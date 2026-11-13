@@ -4299,6 +4299,11 @@
           "const": "model_config"
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nResponse speed selector, such as a fast mode toggle.",
+          "type": "string",
+          "const": "speed"
+        },
+        {
           "description": "Thought/reasoning level selector.",
           "type": "string",
           "const": "thought_level"

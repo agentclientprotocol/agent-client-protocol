@@ -219,16 +219,29 @@ Each config option **MAY** include a `category` field. Categories are semantic m
 
 Category names beginning with `_` are free for custom use (e.g., `_my_custom_category`). Category names that do not begin with `_` are reserved for the ACP spec.
 
-| Category        | Description                                                              |
-| --------------- | ------------------------------------------------------------------------ |
-| `mode`          | Session mode selector                                                    |
-| `model`         | Model selector                                                           |
-| `model_config`  | Model-related parameter, such as context size or speed/quality trade-off |
-| `thought_level` | Thought/reasoning level selector                                         |
+| Category        | Description                                                    |
+| --------------- | -------------------------------------------------------------- |
+| `mode`          | Session mode selector                                          |
+| `model`         | Model selector                                                 |
+| `model_config`  | Model-related parameter, such as context size                  |
+| `speed`         | Response speed selector, such as a fast mode toggle (unstable) |
+| `thought_level` | Thought/reasoning level selector                               |
 
 Clients **SHOULD** render `model_config` options near the `model` selector, such as in the same popover or panel. No capability negotiation is required for category values.
 
 When multiple options share the same category, Clients **SHOULD** use the array ordering to resolve ties, preferring earlier options in the list for prominent placement or keyboard shortcuts.
+
+### Speed options (unstable)
+
+Agents use the `speed` category for an option that changes how fast the model responds, such as a fast mode toggle or a speed selector. In a `boolean` `speed` option, `true` is the faster setting. See the [RFD](/rfds/speed-config-category).
+
+Agents **SHOULD** list the values of a `select` `speed` option from slowest to fastest.
+
+Agents **SHOULD NOT** use `speed` for an option that mainly selects a model, reasoning level, or session mode, even when its values differ in speed. Use `model`, `thought_level`, or `mode` for those.
+
+A `speed` option can depend on other options. For example, an Agent can offer it only for some models. The Agent reports such changes in the complete `configOptions` list, as for any other option.
+
+Clients **SHOULD** render `speed` options near the `model` selector, as with `model_config`. Clients **MAY** also show the current speed outside the option list, such as an icon while a `boolean` `speed` option is `true`.
 
 ## Option ordering
 
