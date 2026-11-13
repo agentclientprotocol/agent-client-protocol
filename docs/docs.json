@@ -230,7 +230,8 @@
               "rfds/session-set-title",
               "rfds/session-archive",
               "rfds/session-options",
-              "rfds/speed-config-category"
+              "rfds/speed-config-category",
+              "rfds/agent-skills"
             ]
           },
           {
