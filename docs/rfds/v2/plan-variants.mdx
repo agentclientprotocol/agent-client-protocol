@@ -25,7 +25,7 @@ For now, v2 should stabilize only the item-based plan content variant:
 }
 ```
 
-The markdown, file, and removal pieces from [Plan Operations Support](/rfds/plan-operations) remain behind the unstable plan-operations feature while that RFD continues. V2 does not need a separate `plan` runtime handshake for those unstable operations.
+The markdown and removal pieces from [Plan Operations Support](/rfds/plan-operations) remain behind the unstable plan-operations feature while that RFD continues. V2 does not need a separate `plan` runtime handshake for those unstable operations.
 
 ## Status quo
 
@@ -42,7 +42,7 @@ The v1 plan update is a flattened session update:
 
 This shape has no stable place for a plan ID or a content discriminator. Adding either field to the same `plan` variant would create a mixed old/new shape and make future plan formats harder to add cleanly.
 
-The Plan Operations RFD already introduced a more extensible tagged shape through `plan_update`, plus markdown, file, and removal operations. Those pieces are still useful, but v2 does not need to wait on them to adopt the extensible baseline.
+The Plan Operations RFD already introduced a more extensible tagged shape through `plan_update`, plus markdown and removal operations. Those pieces are still useful, but v2 does not need to wait on them to adopt the extensible baseline.
 
 ## What we propose to do about it
 
@@ -56,7 +56,7 @@ ACP v2 should:
 - Keep unknown plan content variants parseable and preservable using the [v2 enum variant extension](/rfds/v2/enum-variant-extension) rules.
 - Require every plan content variant, including unknown future/custom variants, to carry a `planId`.
 - Remove `ClientCapabilities.plan` from v2.
-- Keep `markdown`, `file`, and `plan_removed` behind `unstable_plan_operations` until the Plan Operations RFD settles.
+- Keep `markdown` and `plan_removed` behind `unstable_plan_operations` until the Plan Operations RFD settles.
 
 The stable v2 `plan_update` shape does not require a capability. The unstable plan operations remain gated by the draft unstable protocol surface, not by a v2 `plan` field.
 
@@ -68,7 +68,7 @@ This RFD doesn't define v1↔v2 conversions. Implementations that bridge version
 
 > How will things play out once this feature exists?
 
-The v2 schema has a single extensible place for plan content from the start. ACP can later promote markdown, file-backed, removal, or other plan operations without introducing another incompatible plan update shape.
+The v2 schema has a single extensible place for plan content from the start. ACP can later promote markdown, removal, or other plan operations without introducing another incompatible plan update shape.
 
 Clients that only understand item-based plans can still preserve or display unknown plan content generically, while extensions get the `_`-prefixed namespace defined by the enum variant extension RFD.
 
@@ -78,7 +78,7 @@ Clients that only understand item-based plans can still preserve or display unkn
 
 1. Make `PlanUpdate`, `PlanUpdateContent`, `PlanItems`, and `PlanId` part of the default v2 Rust schema source.
 2. Remove `PlanCapabilities` from the v2 Rust schema source.
-3. Leave `PlanFile`, `PlanMarkdown`, and `PlanRemoved` behind `unstable_plan_operations`.
+3. Leave `PlanMarkdown` and `PlanRemoved` behind `unstable_plan_operations`.
 4. Remove `SessionUpdate::Plan` from the v2 schema and make `SessionUpdate::PlanUpdate` the default plan variant.
 5. Require `planId` on unknown `PlanUpdateContent` fallback payloads.
 6. Regenerate v2 schema docs so the default v2 surface shows only the item-based tagged plan shape.
@@ -93,6 +93,7 @@ The item-based tagged shape is enough to make v2 extensible and remove the old f
 
 ## Revision history
 
+- 2026-11-13: Dropped `file` from the unstable plan operations. Plan Operations Support now puts an optional `path` on `markdown` plans and has no `file` plan type.
 - 2026-10-29: Removed the FAQ about a `main` plan ID for v1 conversion, since this RFD leaves conversion to adapters.
 - 2026-10-27: Dropped the step that kept `sessionUpdate: "plan"` rejected. Like other removed v1 variants, it is treated as an unknown v2 update.
 - 2026-06-02: Initial draft

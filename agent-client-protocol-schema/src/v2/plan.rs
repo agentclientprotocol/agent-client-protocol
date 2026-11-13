@@ -13,6 +13,8 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
+#[cfg(feature = "unstable_plan_operations")]
+use super::AbsolutePath;
 use super::Meta;
 use crate::IntoOption;
 
@@ -81,13 +83,6 @@ impl PlanUpdate {
 pub enum PlanUpdateContent {
     /// Structured plan entries.
     Items(PlanItems),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// A URI pointing to a file containing the plan.
-    #[cfg(feature = "unstable_plan_operations")]
-    File(PlanFile),
     /// **UNSTABLE**
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -198,8 +193,6 @@ fn other_plan_update_content_schema(schema: &mut Schema) {
 const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &[
     "items",
     #[cfg(feature = "unstable_plan_operations")]
-    "file",
-    #[cfg(feature = "unstable_plan_operations")]
     "markdown",
 ];
 
@@ -210,14 +203,10 @@ impl PlanUpdateContent {
         Self::Items(PlanItems::new(plan_id, entries))
     }
 
-    /// Builds a plan update that points clients at an external plan file URI.
-    #[cfg(feature = "unstable_plan_operations")]
-    #[must_use]
-    pub fn file(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
-        Self::File(PlanFile::new(plan_id, uri))
-    }
-
     /// Builds a plan update whose plan content is inline Markdown.
+    ///
+    /// To also name the file that holds the plan, wrap a [`PlanMarkdown`] built with
+    /// [`PlanMarkdown::path`] in [`PlanUpdateContent::Markdown`].
     #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
     pub fn markdown(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
@@ -281,60 +270,6 @@ impl PlanItems {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// A plan represented by a file URI.
-#[cfg(feature = "unstable_plan_operations")]
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct PlanFile {
-    /// The plan ID to update.
-    pub plan_id: PlanId,
-    /// The URI of the file containing the plan.
-    #[cfg_attr(feature = "schemars", schemars(url))]
-    pub uri: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT assign meaning to keys they do not recognize.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_plan_operations")]
-impl PlanFile {
-    /// Builds [`PlanFile`] with the required fields set. Optional fields start unset or empty.
-    #[must_use]
-    pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
-        Self {
-            plan_id: plan_id.into(),
-            uri: uri.into(),
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
-    /// do not recognize.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A plan represented as raw markdown content.
 #[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
@@ -348,6 +283,14 @@ pub struct PlanMarkdown {
     pub plan_id: PlanId,
     /// Markdown content for the plan.
     pub content: String,
+    /// The absolute path of the file that holds this plan.
+    ///
+    /// Omitted and `null` are equivalent and mean the plan has no file. `content` is the
+    /// plan to display whether or not `path` is set. Clients can use `path` to open the file.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub path: Option<AbsolutePath>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -368,8 +311,18 @@ impl PlanMarkdown {
         Self {
             plan_id: plan_id.into(),
             content: content.into(),
+            path: None,
             meta: None,
         }
+    }
+
+    /// The absolute path of the file that holds this plan.
+    ///
+    /// `content` is the plan to display whether or not `path` is set.
+    #[must_use]
+    pub fn path(mut self, path: impl IntoOption<AbsolutePath>) -> Self {
+        self.path = path.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -610,18 +563,55 @@ mod tests {
     fn plan_update_content_does_not_hide_malformed_known_experimental_variant() {
         assert!(
             serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
-                "type": "file",
-                "planId": "plan-1"
-            }))
-            .is_err()
-        );
-        assert!(
-            serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
                 "type": "markdown",
                 "planId": "plan-1"
             }))
             .is_err()
         );
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn markdown_plan_path_round_trips() {
+        let wire = serde_json::json!({
+            "type": "markdown",
+            "planId": "plan-1",
+            "content": "# Next steps",
+            "path": "/home/user/project/PLAN.md"
+        });
+        let content: PlanUpdateContent = serde_json::from_value(wire.clone()).unwrap();
+        assert_eq!(
+            content,
+            PlanUpdateContent::Markdown(
+                PlanMarkdown::new("plan-1", "# Next steps").path("/home/user/project/PLAN.md")
+            )
+        );
+        assert_eq!(serde_json::to_value(content).unwrap(), wire);
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn markdown_plan_path_is_optional_and_lenient() {
+        let without_path = PlanUpdateContent::markdown("plan-1", "# Next steps");
+        assert_eq!(
+            serde_json::to_value(&without_path).unwrap(),
+            serde_json::json!({
+                "type": "markdown",
+                "planId": "plan-1",
+                "content": "# Next steps"
+            })
+        );
+        // `null` and a malformed path both mean the plan has no file. The content still parses.
+        for path in [serde_json::Value::Null, serde_json::json!(42)] {
+            let content: PlanUpdateContent = serde_json::from_value(serde_json::json!({
+                "type": "markdown",
+                "planId": "plan-1",
+                "content": "# Next steps",
+                "path": path
+            }))
+            .unwrap();
+            assert_eq!(content, without_path);
+        }
     }
 
     #[test]

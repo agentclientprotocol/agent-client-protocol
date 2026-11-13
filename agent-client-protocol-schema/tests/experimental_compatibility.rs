@@ -19,7 +19,12 @@ fn decode_update(wire: &Value) -> SessionUpdate {
 fn experimental_plan_content_roundtrips_with_or_without_local_support() {
     for plan in [
         json!({"type": "markdown", "planId": "plan-1", "content": "# Next steps"}),
-        json!({"type": "file", "planId": "plan-1", "uri": "file:///workspace/plan.md"}),
+        json!({
+            "type": "markdown",
+            "planId": "plan-1",
+            "content": "# Next steps",
+            "path": "/workspace/plan.md"
+        }),
     ] {
         let wire = json!({"sessionUpdate": "plan_update", "plan": plan});
         let update = decode_update(&wire);
@@ -27,10 +32,7 @@ fn experimental_plan_content_roundtrips_with_or_without_local_support() {
             panic!("expected plan update");
         };
         #[cfg(feature = "unstable_plan_operations")]
-        assert!(matches!(
-            plan_update.plan,
-            PlanUpdateContent::Markdown(_) | PlanUpdateContent::File(_)
-        ));
+        assert!(matches!(plan_update.plan, PlanUpdateContent::Markdown(_)));
         #[cfg(not(feature = "unstable_plan_operations"))]
         assert!(matches!(plan_update.plan, PlanUpdateContent::Other(_)));
         assert_eq!(serde_json::to_value(update).unwrap(), wire);
@@ -110,7 +112,7 @@ fn experimental_types_do_not_imply_provider_capability() {
 fn plan_fallback_schema_excludes_only_locally_recognized_variants() {
     let schema = serde_json::to_value(schemars::schema_for!(OtherPlanUpdateContent)).unwrap();
     let excluded = schema["not"]["anyOf"].as_array().unwrap();
-    for tag in ["items", "file", "markdown"] {
+    for tag in ["items", "markdown"] {
         assert_eq!(
             excluded
                 .iter()

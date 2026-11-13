@@ -76,6 +76,6 @@ A user can approve a harmful operation, prompt injection can steer operations th
 
 ## Unstable features
 
-- Clients **SHOULD NOT** read a plan file `uri` outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
+- Clients **SHOULD NOT** read a markdown plan's `path` outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
 - [Session-directed messages](/protocol/v2/draft/prompt-lifecycle#session-directed-messages-unstable) are Agent content. Clients **SHOULD** attribute them to the sending session and **SHOULD NOT** present them as user messages.
 - Provider `headers` are credentials. Agents **SHOULD NOT** return them from `providers/list`.
