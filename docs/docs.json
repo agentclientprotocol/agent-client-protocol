@@ -226,7 +226,6 @@
               "rfds/plan-operations",
               "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
-              "rfds/subagents",
               "rfds/session-status",
               "rfds/session-set-title",
               "rfds/session-archive",
@@ -236,7 +235,7 @@
           },
           {
             "group": "Preview",
-            "pages": []
+            "pages": ["rfds/subagents"]
           },
           {
             "group": "Completed",
