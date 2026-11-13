@@ -32,6 +32,7 @@ sequenceDiagram
             Agent->>Client: session/update
             Agent->>Client: session/update
             Note over Agent,Client: All content reported
+            Agent->>Client: "session/update (replay_complete)"
         end
         Agent->>Client: "session/update (current state_update)"
         Agent-->>Client: session/resume response
@@ -204,7 +205,7 @@ cursor. For `{ "type": "start" }`, that means replaying all retained conversatio
 
 When `replayFrom.type` is `"start"`, the Agent **MUST** replay all retained
 conversation history to the Client in the form of `session/update` notifications before
-responding.
+responding. It marks the end of the replay with [`replay_complete`](#replay-complete).
 
 The schema accepts custom and future `replayFrom.type` values so intermediaries
 can preserve them. An Agent that does not support the supplied cursor type
@@ -317,8 +318,8 @@ removes stale keys by setting them to `null`, or sends `_meta: null` before the
 current object.
 
 When all requested replay entries have been reported to the Client, the Agent
-**MUST** synchronize current state as described below, then respond to the
-original `session/resume` request.
+**MUST** send [`replay_complete`](#replay-complete), synchronize current state
+as described below, then respond to the original `session/resume` request.
 
 ```json
 {
@@ -331,6 +332,54 @@ original `session/resume` request.
 The response also includes the current `configOptions` and `availableCommands` as
 described in [Initial Session State](#initial-session-state), whether or not
 history replay was requested.
+
+### Replay complete
+
+For each `session/resume` request with a `replayFrom` cursor, the Agent marks the end of the replay with a `replay_complete` update:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "update": {
+      "sessionUpdate": "replay_complete"
+    }
+  }
+}
+```
+
+The update has no required fields.
+
+- The Agent **MUST** send `replay_complete` exactly once on the session named in the request, after the last replayed update and before the response.
+- The Agent **MUST** send it for an empty history too. Then it is the first `session/update` for the session after the request.
+- The Agent **MUST NOT** send it when `replayFrom` is omitted or `null`, or for `session/new`.
+- The Agent **MUST NOT** send it when it cannot finish the replay.
+
+Every `session/update` that the Agent sends for the session between the request and `replay_complete` **MUST** be replayed history, as [Replay Contents](#replay-contents) defines it. The Agent holds every other update for the session and sends it after `replay_complete`. Examples are the chunks of a message that is still streaming, `notice`, `available_commands_update`, `config_option_update`, and the updates of [current-state synchronization](#current-state-synchronization).
+
+Foreground work that is still running during a resume is split at a cut point. The updates up to the cut are history and come before `replay_complete`. The rest comes after it. Chunks are keyed by `messageId`, so the later chunks append to the replayed message.
+
+Agent requests such as `session/request_permission` and `elicitation/create` are not history, so they **SHOULD** also wait until after `replay_complete`. This includes a pending request that the Agent reestablishes after a connection loss. A Client applies the `toolCall` of a permission request's [`tool_call` subject](/protocol/v2/tool-calls#requesting-permission) like a `tool_call_update`, so replayed updates that arrive after the request could overwrite that newer state.
+
+`replay_complete` does not make the session [active](#session-lifecycle). A session that was not active before the request becomes active with the successful response, so `session/prompt` fails with `-32002` until then.
+
+`replay_complete` means that the Agent sent every update it selected for the replay. It does not mean that the Agent retained all history. Agents **SHOULD** report known gaps after `replay_complete`, for example with a [notice](/protocol/v2/prompt-lifecycle#session-notices).
+
+Together with the response, `replay_complete` tells the Client whether the replay was complete:
+
+| What the Client received                                         | Meaning                                                                                          |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `replay_complete`, then a success response                       | Complete history. The resume succeeded.                                                          |
+| `replay_complete`, then an error response or the connection ends | Complete history. The resume failed.                                                             |
+| No `replay_complete`, then an error response                     | Truncated replay. The Client **MUST NOT** use the updates as the full history.                   |
+| No `replay_complete`, then the connection ends                   | Truncated replay, as above.                                                                      |
+| No `replay_complete`, then a success response                    | Protocol violation. The success response still certifies the history. The Client **MAY** log it. |
+
+A `session/resume` that is cancelled with [`$/cancel_request`](/protocol/v2/cancellation) still gets a response. A `-32800` response is an error response in this table.
+
+An Agent that rejects the `replayFrom` cursor with `-32602` replays nothing and does not send `replay_complete`.
 
 ### Current-state synchronization
 

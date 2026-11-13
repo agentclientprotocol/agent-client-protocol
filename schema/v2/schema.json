@@ -4703,6 +4703,22 @@
           ]
         },
         {
+          "description": "The history replay requested by `session/resume` is complete for this session.\n\nEvery update for the session between the `session/resume` request and\nthis update is replayed history. Every update after it is not.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "replay_complete"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ReplayComplete"
+            }
+          ]
+        },
+        {
           "title": "other",
           "description": "Custom or future session update.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this update type should preserve the\nraw payload when storing, replaying, proxying, or forwarding session\nhistory, and otherwise ignore it or display it generically.",
           "type": "object",
@@ -4901,6 +4917,16 @@
                   "sessionUpdate": {
                     "type": "string",
                     "const": "compaction_summary_chunk"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
+                    "const": "replay_complete"
                   }
                 },
                 "required": ["sessionUpdate"]
@@ -6217,6 +6243,18 @@
         }
       },
       "required": ["compactionId", "content"]
+    },
+    "ReplayComplete": {
+      "description": "Marks the end of the history replay requested by `session/resume`.\n\nThe Agent sends this once on a session for each `session/resume` request\nwith a `replayFrom` cursor, after the last replayed update for that session\nand before the response. It sends it for an empty history too. Every update\nfor the session between the request and this update is replayed history.\nEvery update after it is not.\n\nThe Agent does not send it when `replayFrom` is omitted or `null`, or when\nit cannot finish the replay. A resume that ends without it delivered a\ntruncated replay.\n\nSee protocol docs: [Replay Complete](https://agentclientprotocol.com/protocol/v2/session-setup#replay-complete)",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "CompleteElicitationNotification": {
       "description": "Notification sent by the agent when a URL-based elicitation is complete.\n\nThis notification is not a foreground state update.",
