@@ -1894,7 +1894,8 @@ starting with '$/' it is free to ignore the notification."
             let required = definition
                 .get("required")
                 .and_then(|v| v.as_array())
-                .map_or_default(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>());
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
+                .unwrap_or_default();
 
             // Sort properties for consistent output
             let mut sorted_props: Vec<(&String, &Value)> = props.iter().collect();
