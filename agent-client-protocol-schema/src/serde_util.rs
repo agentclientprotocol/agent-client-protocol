@@ -2,16 +2,16 @@
 //!
 //! ## Payload adapters
 //!
-//! - [`default_on_null`] — opt a defaultable payload into accepting null.
+//! - [`default_on_null`]: opt a defaultable payload into accepting null.
 //!
 //! ## Types
 //!
-//! - [`MaybeUndefined<T>`] — three-state: undefined (key absent), null, or value.
+//! - [`MaybeUndefined<T>`]: three-state: undefined (key absent), null, or value.
 //!
 //! ## Builder traits
 //!
-//! - [`IntoOption<T>`] — ergonomic conversion into `Option<T>` for builder methods.
-//! - [`IntoMaybeUndefined<T>`] — ergonomic conversion into `MaybeUndefined<T>` for builder methods.
+//! - [`IntoOption<T>`]: ergonomic conversion into `Option<T>` for builder methods.
+//! - [`IntoMaybeUndefined<T>`]: ergonomic conversion into `MaybeUndefined<T>` for builder methods.
 //!
 //! `MaybeUndefined` based on: <https://docs.rs/async-graphql/latest/src/async_graphql/types/maybe_undefined.rs.html>
 use std::{
@@ -32,16 +32,30 @@ use serde_with::{DeserializeAs, de::DeserializeAsWrap};
 /// Declare the normal derives except `Deserialize` inside this macro. A private
 /// wire type derives deserialization from the same fields and attributes, so
 /// there is no second field definition to maintain and no public helper methods.
-/// `DefaultOnNull` wraps only deserialization of the entire payload; serialization
+/// `DefaultOnNull` wraps only deserialization of the entire payload. Serialization
 /// and JSON Schema are still derived directly on the public type.
 ///
-/// Opt in explicitly; implementing `Default` alone does not change wire behavior.
+/// Opt in explicitly. Implementing `Default` alone does not change wire behavior.
 macro_rules! default_on_null {
+    // Copies one field from the wire struct, keeping only the field's `#[cfg]`
+    // attributes so feature-gated fields compile with the feature off.
+    (@assign $payload:ident $wire:ident $field:ident []) => {
+        $payload.$field = $wire.$field;
+    };
+    (@assign $payload:ident $wire:ident $field:ident [[cfg $($condition:tt)*] $($rest:tt)*]) => {
+        #[cfg $($condition)*]
+        {
+            $crate::serde_util::default_on_null!(@assign $payload $wire $field [$($rest)*]);
+        }
+    };
+    (@assign $payload:ident $wire:ident $field:ident [[$($other:tt)*] $($rest:tt)*]) => {
+        $crate::serde_util::default_on_null!(@assign $payload $wire $field [$($rest)*]);
+    };
     (
         $(#[$attribute:meta])*
         $visibility:vis struct $payload:ident {
             $(
-                $(#[$field_attribute:meta])*
+                $(#[$($field_attribute:tt)*])*
                 $field_visibility:vis $field:ident: $field_type:ty
             ),* $(,)?
         }
@@ -49,7 +63,7 @@ macro_rules! default_on_null {
         $(#[$attribute])*
         $visibility struct $payload {
             $(
-                $(#[$field_attribute])*
+                $(#[$($field_attribute)*])*
                 $field_visibility $field: $field_type,
             )*
         }
@@ -60,7 +74,7 @@ macro_rules! default_on_null {
                 #[derive(serde::Deserialize)]
                 struct Wire {
                     $(
-                        $(#[$field_attribute])*
+                        $(#[$($field_attribute)*])*
                         $field_visibility $field: $field_type,
                     )*
                 }
@@ -68,13 +82,18 @@ macro_rules! default_on_null {
                 struct NonNull;
 
                 impl<'de> serde_with::DeserializeAs<'de, $payload> for NonNull {
+                    #[allow(clippy::field_reassign_with_default)]
                     fn deserialize_as<D: serde::Deserializer<'de>>(
                         deserializer: D,
                     ) -> Result<$payload, D::Error> {
                         let wire = <Wire as serde::Deserialize>::deserialize(deserializer)?;
-                        Ok($payload {
-                            $($field: wire.$field,)*
-                        })
+                        let mut payload = <$payload as Default>::default();
+                        $(
+                            $crate::serde_util::default_on_null!(
+                                @assign payload wire $field [$([$($field_attribute)*])*]
+                            );
+                        )*
+                        Ok(payload)
                     }
                 }
 
@@ -122,16 +141,23 @@ mod default_on_null_tests {
             $check::<v1::KillTerminalResponse>();
             $check::<v1::WaitForTerminalExitResponse>();
 
+            #[cfg(feature = "unstable_auth_status")]
+            $check::<v1::AuthStatusRequest>();
+
+            #[cfg(feature = "unstable_session_archive")]
+            {
+                $check::<v1::ArchiveSessionResponse>();
+                $check::<v1::UnarchiveSessionResponse>();
+            }
+
+            #[cfg(feature = "unstable_session_options")]
+            $check::<v1::SessionOptionsResponse>();
+
             #[cfg(feature = "unstable_llm_providers")]
             {
                 $check::<v1::ListProvidersRequest>();
                 $check::<v1::SetProviderResponse>();
                 $check::<v1::DisableProviderResponse>();
-            }
-            #[cfg(feature = "unstable_nes")]
-            {
-                $check::<v1::StartNesRequest>();
-                $check::<v1::CloseNesResponse>();
             }
 
             #[cfg(feature = "unstable_protocol_v2")]
@@ -145,17 +171,26 @@ mod default_on_null_tests {
                 $check::<v2::CloseSessionResponse>();
                 $check::<v2::ListSessionsRequest>();
                 $check::<v2::DeleteSessionResponse>();
+                $check::<v2::CancelToolCallResponse>();
+                $check::<v2::CancelTerminalResponse>();
+
+                #[cfg(feature = "unstable_auth_status")]
+                $check::<v2::AuthStatusRequest>();
+
+                #[cfg(feature = "unstable_session_archive")]
+                {
+                    $check::<v2::ArchiveSessionResponse>();
+                    $check::<v2::UnarchiveSessionResponse>();
+                }
+
+                #[cfg(feature = "unstable_session_options")]
+                $check::<v2::SessionOptionsResponse>();
 
                 #[cfg(feature = "unstable_llm_providers")]
                 {
                     $check::<v2::ListProvidersRequest>();
                     $check::<v2::SetProviderResponse>();
                     $check::<v2::DisableProviderResponse>();
-                }
-                #[cfg(feature = "unstable_nes")]
-                {
-                    $check::<v2::StartNesRequest>();
-                    $check::<v2::CloseNesResponse>();
                 }
             }
         };

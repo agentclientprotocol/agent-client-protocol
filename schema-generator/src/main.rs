@@ -7,11 +7,19 @@ use agent_client_protocol_schema::v1::{
     ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
     PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification, Request, Response,
 };
+#[cfg(all(feature = "unstable", not(feature = "unstable_protocol_v2")))]
+use agent_client_protocol_schema::v1::{
+    PROXY_METHOD_NAMES, ProxyNotification, ProxyRequest, ProxyResponse,
+};
 #[cfg(feature = "unstable_protocol_v2")]
 use agent_client_protocol_schema::v2::{
     AGENT_METHOD_NAMES, AgentNotification, AgentRequest, AgentResponse, CLIENT_METHOD_NAMES,
-    ClientNotification, ClientRequest, ClientResponse, JsonRpcBatch, JsonRpcMessage, Notification,
+    ClientNotification, ClientRequest, ClientResponse, JsonRpcMessage, Notification,
     PROTOCOL_LEVEL_METHOD_NAMES, ProtocolLevelNotification, Request, Response,
+};
+#[cfg(all(feature = "unstable", feature = "unstable_protocol_v2"))]
+use agent_client_protocol_schema::v2::{
+    PROXY_METHOD_NAMES, ProxyNotification, ProxyRequest, ProxyResponse,
 };
 use schemars::{
     JsonSchema,
@@ -26,28 +34,30 @@ use std::{
 
 use markdown_generator::MarkdownGenerator;
 
-#[cfg(feature = "unstable_protocol_v2")]
 const PROTOCOL_DOC_BASE: &str = "https://agentclientprotocol.com/protocol";
 
-#[cfg(feature = "unstable_protocol_v2")]
-const VERSIONED_PROTOCOL_DOC_PATHS: &[&str] = &[
-    "agent-plan",
-    "authentication",
-    "cancellation",
-    "content",
-    "elicitation",
-    "error",
-    "extensibility",
-    "initialization",
-    "prompt-lifecycle",
-    "session-config-options",
-    "session-delete",
-    "session-list",
-    "session-setup",
-    "slash-commands",
-    "tool-calls",
-    "transports",
-];
+/// Protocol version directory the schema's doc links point into.
+const PROTOCOL_VERSION_DIR: &str = if cfg!(feature = "unstable_protocol_v2") {
+    "v2"
+} else {
+    "v1"
+};
+
+/// Rewrites stable doc links to the draft pages when generating the unstable schema.
+///
+/// Source doc comments link to the stable versioned pages
+/// (`https://agentclientprotocol.com/protocol/v2/...`). The unstable schema documents draft
+/// features, so its links point at the matching `draft/` pages instead.
+fn publication_doc_links(text: &str) -> String {
+    if cfg!(feature = "unstable") {
+        text.replace(
+            &format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/"),
+            &format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/draft/"),
+        )
+    } else {
+        text.to_string()
+    }
+}
 
 /// All messages that an agent can send to a client.
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -71,28 +81,16 @@ enum ClientOutgoingMessage {
     Notification(Notification<ClientNotification>),
 }
 
-/// Messages that an agent can include in a JSON-RPC batch call to a client.
-#[cfg(feature = "unstable_protocol_v2")]
+/// All messages that a conductor and its proxies send each other.
+#[cfg(feature = "unstable")]
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
 #[allow(clippy::large_enum_variant)]
-enum AgentBatchCallMessage {
-    Request(Request<AgentRequest>),
-    Notification(Notification<AgentNotification>),
-    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
-}
-
-/// Messages that a client can include in a JSON-RPC batch call to an agent.
-#[cfg(feature = "unstable_protocol_v2")]
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
-#[schemars(inline)]
-#[allow(clippy::large_enum_variant)]
-enum ClientBatchCallMessage {
-    Request(Request<ClientRequest>),
-    Notification(Notification<ClientNotification>),
-    ProtocolLevelNotification(Notification<ProtocolLevelNotification>),
+enum ProxyMessage {
+    Request(Request<ProxyRequest>),
+    Response(Response<ProxyResponse>),
+    Notification(Notification<ProxyNotification>),
 }
 
 #[expect(dead_code)]
@@ -103,15 +101,9 @@ enum ClientBatchCallMessage {
 enum AcpTypes {
     Agent(JsonRpcMessage<AgentOutgoingMessage>),
     Client(JsonRpcMessage<ClientOutgoingMessage>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    AgentBatchCall(JsonRpcBatch<AgentBatchCallMessage>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    AgentBatchResponse(JsonRpcBatch<Response<AgentResponse>>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    ClientBatchCall(JsonRpcBatch<ClientBatchCallMessage>),
-    #[cfg(feature = "unstable_protocol_v2")]
-    ClientBatchResponse(JsonRpcBatch<Response<ClientResponse>>),
     ProtocolLevel(JsonRpcMessage<Notification<ProtocolLevelNotification>>),
+    #[cfg(feature = "unstable")]
+    Proxy(JsonRpcMessage<ProxyMessage>),
 }
 
 fn main() {
@@ -197,12 +189,17 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
     let schema_protocol_version = ProtocolVersion::V1;
 
     // Create a combined metadata object
-    let metadata = serde_json::json!({
+    #[cfg_attr(not(feature = "unstable"), expect(unused_mut))]
+    let mut metadata = serde_json::json!({
         "version": schema_protocol_version,
         "agentMethods": AGENT_METHOD_NAMES,
         "clientMethods": CLIENT_METHOD_NAMES,
         "protocolMethods": PROTOCOL_LEVEL_METHOD_NAMES,
     });
+    #[cfg(feature = "unstable")]
+    {
+        metadata["proxyMethods"] = serde_json::to_value(PROXY_METHOD_NAMES).unwrap();
+    }
 
     let meta_file: &str = match (
         cfg!(feature = "unstable_protocol_v2"),
@@ -232,19 +229,7 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
     let mut markdown_gen = MarkdownGenerator::new(schema_file);
     let mut markdown_doc = markdown_gen.generate(schema_value);
 
-    let protocol_doc_base = match (
-        cfg!(feature = "unstable_protocol_v2"),
-        cfg!(feature = "unstable"),
-    ) {
-        (true, true) => "https://agentclientprotocol.com/protocol/v2/draft/",
-        (true, false) => "https://agentclientprotocol.com/protocol/v2/",
-        (false, true) => "https://agentclientprotocol.com/protocol/v1/draft/",
-        (false, false) => "https://agentclientprotocol.com/protocol/v1/",
-    };
-    markdown_doc = markdown_doc.replace(
-        "https://agentclientprotocol.com/protocol/",
-        protocol_doc_base,
-    );
+    markdown_doc = publication_doc_links(&markdown_doc);
 
     let doc_file: &str = match (
         cfg!(feature = "unstable_protocol_v2"),
@@ -270,61 +255,30 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
 }
 
 fn schema_value_for_publication(schema_value: &serde_json::Value) -> serde_json::Value {
-    #[cfg(feature = "unstable_protocol_v2")]
-    {
-        let mut schema_value = schema_value.clone();
-        let protocol_doc_base = if cfg!(feature = "unstable") {
-            format!("{PROTOCOL_DOC_BASE}/v2/draft")
-        } else {
-            format!("{PROTOCOL_DOC_BASE}/v2")
-        };
-
-        for path in VERSIONED_PROTOCOL_DOC_PATHS {
-            replace_string_values(
-                &mut schema_value,
-                &format!("{PROTOCOL_DOC_BASE}/{path}"),
-                &format!("{protocol_doc_base}/{path}"),
-            );
-        }
-        schema_value
-    }
-
-    #[cfg(not(feature = "unstable_protocol_v2"))]
-    {
-        schema_value.clone()
-    }
+    let mut schema_value = schema_value.clone();
+    replace_string_values(&mut schema_value);
+    schema_value
 }
 
-#[cfg(feature = "unstable_protocol_v2")]
-fn replace_string_values(value: &mut serde_json::Value, from: &str, to: &str) {
+fn replace_string_values(value: &mut serde_json::Value) {
     match value {
-        serde_json::Value::String(string) => {
-            *string = string.replace(from, to);
-        }
-        serde_json::Value::Array(array) => {
-            for value in array {
-                replace_string_values(value, from, to);
-            }
-        }
-        serde_json::Value::Object(object) => {
-            for value in object.values_mut() {
-                replace_string_values(value, from, to);
-            }
-        }
+        serde_json::Value::String(string) => *string = publication_doc_links(string),
+        serde_json::Value::Array(array) => array.iter_mut().for_each(replace_string_values),
+        serde_json::Value::Object(object) => object.values_mut().for_each(replace_string_values),
         serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
     }
 }
 
 #[cfg(test)]
 mod schema_annotation_tests {
-    #[cfg(feature = "unstable_protocol_v2")]
-    use super::{PROTOCOL_DOC_BASE, VERSIONED_PROTOCOL_DOC_PATHS, schema_value_for_publication};
+    use super::{PROTOCOL_DOC_BASE, PROTOCOL_VERSION_DIR, schema_value_for_publication};
     use super::{root_schema_value, schema_crate_dir};
     use serde_json::Value;
     use std::fs;
 
     const DEFAULT_ON_ERROR_EXTENSION: &str = "x-deserialize-default-on-error";
     const SKIP_INVALID_ITEMS_EXTENSION: &str = "x-deserialize-skip-invalid-items";
+    const DEFAULT_ON_NULL_EXTENSION: &str = "x-deserialize-default-on-null";
 
     #[test]
     fn generated_notice_schema_is_available_without_unstable_features() {
@@ -423,6 +377,81 @@ mod schema_annotation_tests {
                     })
             );
         }
+    }
+
+    #[test]
+    fn generated_system_prompt_schema_is_available_without_unstable_features() {
+        let schema = root_schema_value();
+        for definition in [
+            "SystemPrompt",
+            "SystemPromptMode",
+            "SessionSystemPromptCapabilities",
+            "SessionSystemPromptModeCapabilities",
+            "SessionSystemPromptOverrideCapabilities",
+        ] {
+            assert!(
+                !def_schema(&schema, definition)["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE"),
+                "{definition} must be stable"
+            );
+        }
+
+        let prompt = def_schema(&schema, "SystemPrompt");
+        assert_eq!(prompt["required"], serde_json::json!(["mode", "content"]));
+        for field in ["mode", "content"] {
+            assert_no_extension(
+                property_schema(&schema, "SystemPrompt", field),
+                DEFAULT_ON_ERROR_EXTENSION,
+            );
+        }
+
+        let modes = def_schema(&schema, "SystemPromptMode")["anyOf"]
+            .as_array()
+            .unwrap();
+        for mode in ["append", "override"] {
+            assert!(modes.iter().any(|variant| variant["const"] == mode));
+        }
+        assert!(modes.iter().any(|variant| variant["title"] == "other"));
+
+        // Receivers act on the prompt, so the request field stays strict.
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        let requests = [
+            "NewSessionRequest",
+            "LoadSessionRequest",
+            "ResumeSessionRequest",
+        ];
+        #[cfg(feature = "unstable_protocol_v2")]
+        let requests = ["NewSessionRequest", "ResumeSessionRequest"];
+        for request in requests {
+            let property = property_schema(&schema, request, "systemPrompt");
+            assert!(schema_contains_ref(property, "#/$defs/SystemPrompt"));
+            assert!(
+                !def_schema(&schema, request)["required"]
+                    .as_array()
+                    .is_some_and(|fields| fields.contains(&Value::from("systemPrompt")))
+            );
+            assert_no_extension(property, DEFAULT_ON_ERROR_EXTENSION);
+            assert!(
+                !property["description"]
+                    .as_str()
+                    .unwrap()
+                    .contains("UNSTABLE")
+            );
+        }
+
+        let capability = property_schema(&schema, "SessionCapabilities", "systemPrompt");
+        assert!(schema_contains_ref(
+            capability,
+            "#/$defs/SessionSystemPromptCapabilities"
+        ));
+        assert_bool_extension(capability, DEFAULT_ON_ERROR_EXTENSION);
+        let override_ = property_schema(&schema, "SessionSystemPromptModeCapabilities", "override");
+        assert!(schema_contains_ref(
+            override_,
+            "#/$defs/SessionSystemPromptOverrideCapabilities"
+        ));
     }
 
     #[test]
@@ -798,31 +827,93 @@ mod schema_annotation_tests {
 
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
-    fn generated_v2_schema_includes_json_rpc_batch_messages() {
+    fn generated_v2_error_response_id_is_required_and_nullable() {
         let schema = root_schema_value();
+        for definition in ["AgentResponse", "ClientResponse"] {
+            let error = def_schema(&schema, definition)
+                .get("anyOf")
+                .and_then(Value::as_array)
+                .and_then(|variants| {
+                    variants
+                        .iter()
+                        .find(|variant| variant.pointer("/properties/error").is_some())
+                })
+                .unwrap_or_else(|| panic!("missing error variant in {definition}"));
+            assert!(
+                error
+                    .pointer("/properties/id/anyOf")
+                    .and_then(Value::as_array)
+                    .is_some_and(|variants| variants.iter().any(|v| v["type"] == "null")),
+                "{definition} error id must accept null"
+            );
+            assert!(
+                error
+                    .get("required")
+                    .and_then(Value::as_array)
+                    .is_some_and(|required| required.iter().any(|field| field == "id")),
+                "{definition} error id must be required"
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable")]
+    #[test]
+    fn generated_unstable_schema_has_separate_proxy_side() {
+        let schema = root_schema_value();
+        let proxy = root_variant_schema(&schema, "Proxy");
+        for (union, members) in [
+            (
+                "ProxyRequest",
+                &["InitializeProxyRequest", "ProxySuccessorRequest"][..],
+            ),
+            (
+                "ProxyResponse",
+                &["InitializeProxyResponse", "ProxySuccessorResponse"][..],
+            ),
+            ("ProxyNotification", &["ProxySuccessorNotification"][..]),
+        ] {
+            assert!(
+                schema_contains_ref(proxy, &format!("#/$defs/{union}")),
+                "missing {union} in Proxy"
+            );
+            for member in members {
+                assert!(
+                    schema_contains_ref(def_schema(&schema, union), &format!("#/$defs/{member}")),
+                    "missing {member} in {union}"
+                );
+                assert_eq!(
+                    def_schema(&schema, member)["x-side"].as_str(),
+                    Some("proxy"),
+                    "{member} must be on the proxy side"
+                );
+            }
+        }
+        for union in ["ClientRequest", "AgentRequest"] {
+            assert!(
+                !schema_contains_ref(def_schema(&schema, union), "#/$defs/ProxySuccessorRequest"),
+                "{union} must not include proxy messages"
+            );
+        }
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_v2_schema_excludes_json_rpc_batch_messages() {
+        let schema = root_schema_value();
+        let titles: Vec<&str> = schema
+            .get("anyOf")
+            .and_then(Value::as_array)
+            .unwrap()
+            .iter()
+            .filter_map(|variant| variant.get("title").and_then(Value::as_str))
+            .collect();
         for title in [
             "AgentBatchCall",
             "AgentBatchResponse",
             "ClientBatchCall",
             "ClientBatchResponse",
         ] {
-            let batch_schema = root_variant_schema(&schema, title);
-            assert_eq!(
-                batch_schema.get("type").and_then(Value::as_str),
-                Some("array")
-            );
-            assert_eq!(
-                batch_schema.get("minItems").and_then(Value::as_u64),
-                Some(1)
-            );
-        }
-
-        for title in ["AgentBatchCall", "ClientBatchCall"] {
-            let batch_schema = root_variant_schema(&schema, title);
-            assert!(
-                schema_contains_ref(batch_schema, "#/$defs/ProtocolLevelNotification"),
-                "missing ProtocolLevelNotification in {title}"
-            );
+            assert!(!titles.contains(&title), "unexpected {title}");
         }
 
         {
@@ -840,22 +931,9 @@ mod schema_annotation_tests {
                 Some("string")
             );
 
-            let protocol_notification = def_schema(&schema, "ProtocolLevelNotification");
-            assert_eq!(
-                protocol_notification
-                    .pointer("/properties/method/type")
-                    .and_then(Value::as_str),
-                Some("string")
-            );
             assert!(
-                protocol_notification
-                    .pointer("/required")
-                    .and_then(Value::as_array)
-                    .is_some_and(|required| required.iter().any(|field| field == "method"))
-            );
-            assert!(
-                schema_contains_ref(protocol_notification, "#/$defs/CancelRequestNotification"),
-                "missing CancelRequestNotification in ProtocolLevelNotification"
+                schema_contains_ref(protocol_level, "#/$defs/CancelRequestNotification"),
+                "missing CancelRequestNotification in ProtocolLevel"
             );
         }
     }
@@ -945,34 +1023,33 @@ mod schema_annotation_tests {
         }
     }
 
-    #[cfg(feature = "unstable_protocol_v2")]
     #[test]
-    fn published_v2_schema_links_to_versioned_v2_protocol_docs() {
+    fn published_schema_links_to_its_own_versioned_protocol_docs() {
         let schema = schema_value_for_publication(&root_schema_value());
         let schema_json = serde_json::to_string(&schema).unwrap();
 
-        let protocol_doc_base = if cfg!(feature = "unstable") {
-            format!("{PROTOCOL_DOC_BASE}/v2/draft")
+        let expected = if cfg!(feature = "unstable") {
+            format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/draft/")
         } else {
-            format!("{PROTOCOL_DOC_BASE}/v2")
+            format!("{PROTOCOL_DOC_BASE}/{PROTOCOL_VERSION_DIR}/")
         };
+        let links: Vec<&str> = schema_json
+            .match_indices(PROTOCOL_DOC_BASE)
+            .map(|(i, _)| &schema_json[i..])
+            .collect();
 
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/prompt-lifecycle")));
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/tool-calls")));
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/initialization")));
-        assert!(schema_json.contains(&format!("{protocol_doc_base}/elicitation")));
-
-        for path in VERSIONED_PROTOCOL_DOC_PATHS {
+        assert!(!links.is_empty(), "schema should link to the protocol docs");
+        for link in links {
             assert!(
-                !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/{path}")),
-                "found unversioned v2 schema docs link for {path}"
+                link.starts_with(&expected),
+                "doc link should start with {expected}: {}",
+                &link[..link.len().min(80)]
+            );
+            assert!(
+                !link.starts_with(&format!("{expected}draft/")),
+                "doc link should not be double-drafted"
             );
         }
-
-        assert!(
-            !schema_json.contains(&format!("{PROTOCOL_DOC_BASE}/v2/v2/")),
-            "v2 docs links should not be double-versioned"
-        );
     }
 
     #[test]
@@ -1008,6 +1085,35 @@ mod schema_annotation_tests {
                             line_index + 1
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn source_default_on_null_fields_are_schema_annotated() {
+        let root = schema_crate_dir();
+        for module_dir in ["src/v1", "src/v2"] {
+            for entry in fs::read_dir(root.join(module_dir)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+
+                let source = fs::read_to_string(&path).unwrap();
+                let lines: Vec<_> = source.lines().collect();
+                for (line_index, line) in lines.iter().enumerate() {
+                    if !line.contains(r#"#[serde_as(deserialize_as = "DefaultOnNull"#) {
+                        continue;
+                    }
+
+                    let annotation = lines.get(line_index + 1).copied().unwrap_or_default();
+                    assert!(
+                        annotation.contains(r#""x-deserialize-default-on-null" = true"#),
+                        "{}:{} missing {DEFAULT_ON_NULL_EXTENSION}",
+                        path.display(),
+                        line_index + 1
+                    );
                 }
             }
         }
@@ -1074,7 +1180,7 @@ mod schema_annotation_tests {
             .unwrap_or_else(|| panic!("missing schema definition {def_name}"))
     }
 
-    #[cfg(feature = "unstable_protocol_v2")]
+    #[cfg(any(feature = "unstable", feature = "unstable_protocol_v2"))]
     fn root_variant_schema<'a>(schema: &'a Value, title: &str) -> &'a Value {
         schema
             .get("anyOf")
@@ -1198,6 +1304,7 @@ mod markdown_generator {
             let mut agent_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut client_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut protocol_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
+            let mut proxy_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut referenced_types: Vec<(String, Value)> = Vec::new();
 
             for (name, def) in &self.definitions {
@@ -1216,6 +1323,7 @@ mod markdown_generator {
                         "agent" => &mut agent_types,
                         "client" => &mut client_types,
                         "protocol" => &mut protocol_types,
+                        "proxy" => &mut proxy_types,
                         "both" => {
                             let entry = (name.clone(), def.clone());
                             agent_types
@@ -1295,6 +1403,25 @@ and control access to resources."
                     side_docs.client_method_doc(&method),
                     types,
                 );
+            }
+
+            if !proxy_types.is_empty() {
+                writeln!(&mut self.output, "## Proxy").unwrap();
+                writeln!(&mut self.output).unwrap();
+                writeln!(
+                    &mut self.output,
+                    "Defines the messages that a conductor and the proxies it manages send each other.
+
+Ordinary clients and agents never send or receive these messages. A conductor sends
+`proxy/initialize` to each proxy and forwards messages between proxies with
+`proxy/successor`."
+                )
+                .unwrap();
+                writeln!(&mut self.output).unwrap();
+
+                for (method, types) in proxy_types {
+                    self.generate_method(None, &method, side_docs.proxy_method_doc(&method), types);
+                }
             }
             {
                 writeln!(&mut self.output, "## Protocol Level").unwrap();
@@ -2277,6 +2404,7 @@ starting with '$/' it is free to ignore the notification."
         agent: HashMap<String, String>,
         client: HashMap<String, String>,
         protocol: HashMap<String, String>,
+        proxy: HashMap<String, String>,
     }
 
     impl SideDocs {
@@ -2293,6 +2421,11 @@ starting with '$/' it is free to ignore the notification."
                 "session/list" => self.agent.get("ListSessionsRequest").unwrap(),
                 "session/delete" => self.agent.get("DeleteSessionRequest").unwrap(),
                 "session/fork" => self.agent.get("ForkSessionRequest").unwrap(),
+                "session/archive" => self.agent.get("ArchiveSessionRequest").unwrap(),
+                "session/unarchive" => self.agent.get("UnarchiveSessionRequest").unwrap(),
+                "session/status" => self.agent.get("SessionStatusRequest").unwrap(),
+                "session/options" => self.agent.get("SessionOptionsRequest").unwrap(),
+                "session/set_title" => self.agent.get("SetSessionTitleRequest").unwrap(),
                 "session/resume" => self.agent.get("ResumeSessionRequest").unwrap(),
                 "session/set_mode" => self.agent.get("SetSessionModeRequest").unwrap(),
                 "session/set_config_option" => {
@@ -2305,18 +2438,11 @@ starting with '$/' it is free to ignore the notification."
                     .or_else(|| self.agent.get("CancelNotification"))
                     .unwrap(),
                 "session/close" => self.agent.get("CloseSessionRequest").unwrap(),
+                "tool_call/cancel" => self.agent.get("CancelToolCallRequest").unwrap(),
+                "terminal/cancel" => self.agent.get("CancelTerminalRequest").unwrap(),
                 "logout" => self.agent.get("LogoutRequest").unwrap(),
                 "auth/logout" => self.agent.get("LogoutAuthRequest").unwrap(),
-                "nes/start" => self.agent.get("StartNesRequest").unwrap(),
-                "nes/suggest" => self.agent.get("SuggestNesRequest").unwrap(),
-                "nes/close" => self.agent.get("CloseNesRequest").unwrap(),
-                "nes/accept" => self.agent.get("AcceptNesNotification").unwrap(),
-                "nes/reject" => self.agent.get("RejectNesNotification").unwrap(),
-                "document/didOpen" => self.agent.get("DidOpenDocumentNotification").unwrap(),
-                "document/didChange" => self.agent.get("DidChangeDocumentNotification").unwrap(),
-                "document/didClose" => self.agent.get("DidCloseDocumentNotification").unwrap(),
-                "document/didSave" => self.agent.get("DidSaveDocumentNotification").unwrap(),
-                "document/didFocus" => self.agent.get("DidFocusDocumentNotification").unwrap(),
+                "auth/status" => self.agent.get("AuthStatusRequest").unwrap(),
                 "mcp/message" => self.agent.get("MessageMcpNotification").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
@@ -2343,7 +2469,16 @@ starting with '$/' it is free to ignore the notification."
                 "elicitation/complete" => {
                     self.client.get("CompleteElicitationNotification").unwrap()
                 }
+                "auth/status_update" => self.client.get("AuthStatusUpdateNotification").unwrap(),
                 "mcp/message" => self.client.get("MessageMcpRequest").unwrap(),
+                _ => panic!("Introduced a method? Add it here :)"),
+            }
+        }
+
+        fn proxy_method_doc(&self, method_name: &str) -> &String {
+            match method_name {
+                "proxy/initialize" => self.proxy.get("InitializeProxyRequest").unwrap(),
+                "proxy/successor" => self.proxy.get("ProxySuccessorRequest").unwrap(),
                 _ => panic!("Introduced a method? Add it here :)"),
             }
         }
@@ -2449,6 +2584,24 @@ starting with '$/' it is free to ignore the notification."
                             && let Some(name) = variant["name"].as_str()
                         {
                             side_docs.client.insert(
+                                name.to_string(),
+                                variant["docs"].as_str().unwrap_or_default().to_string(),
+                            );
+                        }
+                    }
+                }
+
+                if matches!(
+                    item["name"].as_str(),
+                    Some("ProxyRequest" | "ProxyNotification")
+                ) && is_current_protocol_item(item)
+                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
+                {
+                    for variant_id in variants {
+                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                            && let Some(name) = variant["name"].as_str()
+                        {
+                            side_docs.proxy.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
@@ -2967,8 +3120,14 @@ starting with '$/' it is free to ignore the notification."
             let (url, other) = url
                 .split_once("<ResponseField name=\"other\" type=\"object\">")
                 .unwrap();
+            // v2 requires exactly one scope; v1 still accepts either.
+            let keyword = if cfg!(feature = "unstable_protocol_v2") {
+                "oneOf"
+            } else {
+                "anyOf"
+            };
             for mode in [form, url, other] {
-                assert_scope_alternatives(mode, "anyOf");
+                assert_scope_alternatives(mode, keyword);
                 assert_eq!(mode.matches("name=\"toolCallId\"").count(), 1);
             }
         }

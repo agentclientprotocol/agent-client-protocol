@@ -6,6 +6,20 @@ rss: true
 
 This page is for larger ACP announcements and project updates. For lifecycle changes to Requests for Dialog, see [RFD Updates](/rfds/updates).
 
+<Update label="November 6, 2026" tags={["Protocol"]}>
+## Client-Provided System Prompts are Stabilized
+
+The Client-Provided System Prompt RFD has moved to Completed, and `systemPrompt`
+on session setup is now stabilized in ACP v1 and v2.
+
+Agents that advertise `systemPrompt` accept system-level instructions in
+`append` mode. Agents that also advertise `mode.override` let Clients replace
+their built-in default instructions.
+
+[Read the full announcement](/announcements/client-system-prompt-stabilized).
+
+</Update>
+
 <Update label="September 17, 2026" tags={["Protocol"]}>
 ## Tool Call Names are Stabilized
 

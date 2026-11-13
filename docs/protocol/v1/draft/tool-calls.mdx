@@ -3,11 +3,11 @@ title: "Tool Calls"
 description: "How Agents report tool call execution"
 ---
 
-Tool calls represent actions that language models request Agents to perform during a [prompt turn](/protocol/v1/draft/prompt-turn). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
+Tool calls are actions the language model asks the Agent to perform during a [prompt turn](/protocol/v1/draft/prompt-turn), such as reading a file or running a command. The Agent executes them on the model's behalf.
 
-Agents report tool calls through [`session/update`](/protocol/v1/draft/prompt-turn#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
+Agents report tool calls through [`session/update`](/protocol/v1/draft/prompt-turn#3-agent-reports-output) notifications, which Clients use to show progress and results to users.
 
-While Agents handle the actual execution, they may leverage Client capabilities like [permission requests](#requesting-permission) or [file system access](/protocol/v1/draft/file-system) to provide a richer, more integrated experience.
+Agents run tool calls themselves. They may use Client capabilities such as [permission requests](#requesting-permission) or [file system access](/protocol/v1/draft/file-system).
 
 ## Creating
 
@@ -41,7 +41,7 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="name" type="string">
   The programmatic name of the invoked tool, such as `read_file`. This
-  identifies which tool is being used; `title` describes this invocation for
+  identifies which tool is being used. `title` describes this invocation for
   users, while `kind` provides a coarse presentation category. If omitted or
   `null` on the initial tool call, no name is provided. Names are opaque,
   informational metadata and do not advertise a capability or grant
@@ -133,7 +133,7 @@ For `name`, a string sets or replaces the tool name. Omission and `null` both
 leave the existing name unchanged, so ACP v1 cannot clear a previously reported
 name.
 
-## Requesting Permission
+## Requesting permission
 
 The Agent **MAY** request permission from the user before executing a tool call by calling the `session/request_permission` method:
 
@@ -213,7 +213,7 @@ If the current prompt turn gets [cancelled](/protocol/v1/draft/prompt-turn#cance
   `optionId` - The ID of the selected permission option
 </ResponseField>
 
-### Permission Options
+### Permission options
 
 Each permission option provided to the Client contains:
 
@@ -234,6 +234,22 @@ Each permission option provided to the Client contains:
 - `reject_always` - Reject this operation and remember the choice
 
 </ParamField>
+
+The Agent owns remembered decisions. When the user selects an `allow_always` or
+`reject_always` option, the Agent stores the decision, decides its scope (for
+example a tool, a command, or a directory) and how long it lasts, and applies
+it by not asking again. `kind` is only a UI hint. The option `name` describes
+the scope.
+
+### Security
+
+- Clients **SHOULD** describe the operation from the tool call's `kind`, `locations`, and content, present `title` as Agent-authored text, and show commands and paths in full.
+- Agents **SHOULD NOT** give an option a `name` that contradicts its `kind`, and **SHOULD** act on a selected option according to its known `kind`.
+- Automatic approval **SHOULD NOT** rely only on `title` or option `name`.
+- Agents **SHOULD NOT** treat an outcome they don't recognize as approval.
+- Agents **SHOULD** perform only the operation the approved request described, and **SHOULD** request again if the command or resolved target changes.
+- Agents **SHOULD** state the scope of a remembered decision (`allow_always`, `reject_always`) in the option `name` and **SHOULD NOT** apply it beyond that scope.
+- Agents **SHOULD NOT** switch to a mode or configuration that reduces user oversight without user action.
 
 ## Status
 
@@ -258,7 +274,7 @@ Tool calls progress through different statuses during their lifecycle:
 
 Tool calls can produce different types of content:
 
-### Regular Content
+### Regular content
 
 Standard [content blocks](/protocol/v1/draft/content) like text, images, or resources:
 
@@ -318,9 +334,39 @@ When a terminal is embedded in a tool call, the Client displays live output as i
   Learn more about Terminals
 </Card>
 
+### Sessions (unstable)
+
+**Draft only.** A session content item links the tool call to another session
+it operates on, such as a [subagent](/rfds/subagents) it spawned or waits on:
+
+```json
+{
+  "type": "session",
+  "sessionId": "sess_child_1"
+}
+```
+
+<ParamField path="sessionId" type="string" required>
+  The referenced session. It must already be known through ordinary session
+  setup or a `subagent_update` announcement.
+</ParamField>
+
+Optional nullable `_meta` is scoped to this content item. Omission and `null`
+both mean that no item metadata was provided. A tool call can reference several
+sessions. The reference is display-only. It does not establish ownership,
+enable Client-initiated controls on the referenced session, or report that
+session's work state. Agents send it only when the Client advertises the `subagents` capability. The task a parent
+sends a child is reported as a [session-directed message](/protocol/v1/draft/prompt-turn#session-directed-messages-unstable),
+not through a tool call.
+
+`content` on `tool_call_update` replaces the whole array, so an Agent that
+sends new content includes the session references again. When a tool addresses
+a session by a name or another handle, the Agent adds a reference only if it
+can resolve the handle to a known session.
+
 ## Following the Agent
 
-Tool calls can report file locations they're working with, enabling Clients to implement "follow-along" features that track which files the Agent is accessing or modifying in real-time.
+Tool calls can report the file locations they're working with. Clients can use this to follow along, showing which files the Agent is reading or modifying as it works.
 
 ```json
 {
@@ -334,7 +380,9 @@ Tool calls can report file locations they're working with, enabling Clients to i
 </ParamField>
 
 <ParamField path="line" type="integer | null">
-  Optional line number within the file, represented as an unsigned 32-bit
-  integer. Omission and `null` are equivalent and mean no specific line was
-  provided.
+  Optional 1-based line number within the file, represented as an unsigned
+  32-bit integer. Omission and `null` are equivalent and mean no specific line
+  was provided.
 </ParamField>
+
+Locations are display metadata and do not grant file access. Clients **SHOULD NOT** automatically open locations outside the session's [root set](/protocol/v1/draft/session-setup#workspace-root-security).

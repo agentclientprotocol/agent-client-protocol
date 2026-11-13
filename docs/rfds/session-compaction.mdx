@@ -133,7 +133,9 @@ The update has three optional, nullable patch fields:
   rules.
 
 For each patch field, omission leaves the stored value unchanged, `null`
-clears it, and a concrete value replaces it. On a first-seen ID, omission and
+clears it, and a concrete value replaces it. In v2, a concrete `_meta` object
+instead patches the stored metadata by top-level key, as defined by
+[v2 Metadata Patches](/rfds/v2/meta-patches). On a first-seen ID, omission and
 `null` both start with no value. For `summary`, both `null` and `[]` clear the
 current content.
 
@@ -345,3 +347,6 @@ correlate events heuristically rather than updating one ID-addressed entity.
   artifacts, removed the unstable Cargo feature, expanded schema regression
   coverage, and clarified receive-order timeline placement and summary patch
   semantics independent of compaction status.
+- 2026-10-13: In v2, a concrete `_meta` object patches stored metadata by key,
+  per [v2 Metadata Patches](/rfds/v2/meta-patches). v1 still replaces the whole
+  object.
