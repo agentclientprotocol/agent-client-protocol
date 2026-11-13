@@ -41,6 +41,7 @@ The following RFDs target the v2 release:
 - [Terminal Output](./terminal-output.mdx)
 - [Metadata Patches](./meta-patches.mdx)
 - [Background Work](./background-work.mdx)
+- [Replay Complete Signal](./session-replay-complete.mdx)
 
 These RFDs define v2's breaking changes, and they are the scope of the v2 Preview.
 
@@ -130,6 +131,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-13: Added the v2 Replay Complete Signal RFD for a `replay_complete` update that marks the end of history replay on `session/resume`.
 - 2026-10-30: Added the v2 Background Work changes to the change list now that they are in the v2 schema.
 - 2026-10-30: Added the config option `type`/`groupId` changes and the `usage_update.cost` patch semantics to the change list.
 - 2026-10-29: Scoped the v2 Preview to the RFDs with breaking changes. Remote Transports and other additive work no longer block v2, and transport-specific reliability requirements belong to each transport.
