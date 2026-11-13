@@ -42,6 +42,7 @@ The following RFDs target the v2 release:
 - [Metadata Patches](./meta-patches.mdx)
 - [Background Work](./background-work.mdx)
 - [Replay Complete Signal](./session-replay-complete.mdx)
+- [Idempotency Keys](./idempotency-keys.mdx)
 
 These RFDs define v2's breaking changes, and they are the scope of the v2 Preview.
 
@@ -132,6 +133,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-13: Added the v2 Idempotency Keys RFD for retry classes on every method and an optional `idempotencyKey` on `session/prompt`.
 - 2026-11-13: Added the `replay_complete` session update to the change list now that it is in the v2 schema.
 - 2026-11-13: Added the v2 Replay Complete Signal RFD for a `replay_complete` update that marks the end of history replay on `session/resume`.
 - 2026-10-30: Added the v2 Background Work changes to the change list now that they are in the v2 schema.
