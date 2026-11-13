@@ -107,7 +107,7 @@ Each command carries a required `type` discriminator. Currently the only type is
   Optional input specification for the command
 </ResponseField>
 
-Command entries can add custom or future `type` values. Custom command types **MUST** begin with `_`. Unknown non-underscore command types are reserved for future ACP variants. Every command type carries `name` and `description`. Clients that don't understand a command type should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise either ignore it or display it as a plain command using its `name` and `description`. Entries without a `type`, or with a known `type` that doesn't match its schema, are invalid and are skipped like any other invalid command item.
+Command entries can add custom or future `type` values. Custom command types **MUST** begin with `_`. Unknown non-underscore command types are reserved for future ACP variants. Every command type carries `name` and `description`, and each type defines how its entries are invoked. Clients that don't understand a command type should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise ignore it. They **MUST NOT** display it as a slash command. Entries without a `type`, or with a known `type` that doesn't match its schema, are invalid and are skipped like any other invalid command item.
 
 ### AvailableCommandInput
 
@@ -144,7 +144,7 @@ Commands are included as regular user messages in prompt requests:
 }
 ```
 
-A prompt invokes a command when its first text block starts with `/` followed by the command `name`. The Agent decides how to interpret the prompt. Clients recognizing a command for highlighting or completion **SHOULD** require the name to be followed by whitespace or the end of the text block, so `/web foo` matches `web`, `/webfoo` does not, and `/web-search foo` matches `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
+A prompt invokes a `command` entry when its first text block starts with `/` followed by the command `name`. The Agent decides how to interpret the prompt. Clients recognizing a command for highlighting or completion **SHOULD** require the name to be followed by whitespace or the end of the text block, so `/web foo` matches `web`, `/webfoo` does not, and `/web-search foo` matches `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
 
 The same [prompt insertion contract](/protocol/v2/prompt-lifecycle#2-prompt-accepted) applies to commands: the successful response returns the inserted user message's `messageId`, and the Agent reports that message through a `user_message` update or `user_message_chunk` updates with the same ID.
 

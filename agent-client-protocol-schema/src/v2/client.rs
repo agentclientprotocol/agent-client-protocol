@@ -2774,8 +2774,8 @@ pub enum AvailableCommand {
     ///
     /// Clients that do not understand this command type should preserve the raw
     /// payload when storing, replaying, proxying, or forwarding command
-    /// metadata, and otherwise ignore the command or display it as a plain
-    /// command using its `name` and `description`.
+    /// metadata, and otherwise ignore the command. They MUST NOT display it as a
+    /// slash command.
     #[serde(untagged)]
     Other(OtherAvailableCommand),
 }
@@ -2830,8 +2830,7 @@ pub struct OtherAvailableCommand {
     /// future ACP variants.
     #[serde(rename = "type")]
     pub type_: String,
-    /// Command name without the leading `/`. MUST NOT contain whitespace and MUST be unique
-    /// within the command list.
+    /// Command name. MUST NOT contain whitespace and MUST be unique within the command list.
     pub name: String,
     /// Human-readable description of what the command does.
     pub description: String,
