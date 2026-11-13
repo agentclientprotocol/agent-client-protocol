@@ -13,32 +13,32 @@ Before sending prompts, Clients **MUST** first complete the [initialization](/pr
 
 Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
 
-| `sessionUpdate` value       | Description                                                                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                                    |
-| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                                           |
-| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                                              |
-| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                                         |
-| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                             |
-| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                                               |
-| `subagent_update`           | **Draft only.** Announces an owned child session or updates its display metadata, working directories, capabilities, and mirrored work-state snapshot. |
-| `session_message`           | **Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable).                                      |
-| `session_message_chunk`     | **Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable).                                                  |
-| `state_update`              | A snapshot of the Agent's [foreground activity](#session-states).                                                                                      |
-| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/draft/tool-calls#streaming-content).                                                             |
-| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/draft/tool-calls#reporting).                                                                             |
-| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                                    |
-| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                               |
-| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/draft/agent-plan) identified by ID.                                                            |
-| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v2/draft/agent-plan#removing-plans) identified by ID.                                                    |
-| `available_commands_update` | The set of [available slash commands](/protocol/v2/draft/slash-commands) is ready or has changed.                                                      |
-| `config_option_update`      | The session's [configuration options](/protocol/v2/draft/session-config-options#from-the-agent) have changed.                                          |
-| `session_info_update`       | [Session metadata](/protocol/v2/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.                     |
-| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                                      |
-| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                                     |
-| `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                                        |
-| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                                             |
-| `replay_complete`           | Marks the [end of a history replay](/protocol/v2/draft/session-setup#replay-complete) requested by `session/resume`.                                   |
+| `sessionUpdate` value       | Description                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                    |
+| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                           |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                              |
+| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                         |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                             |
+| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                               |
+| `subagent_update`           | Announces an owned child session or updates its display metadata, working directories, capabilities, and mirrored work-state snapshot. |
+| `session_message`           | Creates or updates a [message addressed to another session](#session-directed-messages).                                               |
+| `session_message_chunk`     | Appends content to a [session-directed message](#session-directed-messages).                                                           |
+| `state_update`              | A snapshot of the Agent's [foreground activity](#session-states).                                                                      |
+| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/draft/tool-calls#streaming-content).                                             |
+| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/draft/tool-calls#reporting).                                                             |
+| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                    |
+| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                               |
+| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/draft/agent-plan) identified by ID.                                            |
+| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v2/draft/agent-plan#removing-plans) identified by ID.                                    |
+| `available_commands_update` | The set of [available slash commands](/protocol/v2/draft/slash-commands) is ready or has changed.                                      |
+| `config_option_update`      | The session's [configuration options](/protocol/v2/draft/session-config-options#from-the-agent) have changed.                          |
+| `session_info_update`       | [Session metadata](/protocol/v2/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.     |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                      |
+| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                     |
+| `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                        |
+| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                             |
+| `replay_complete`           | Marks the [end of a history replay](/protocol/v2/draft/session-setup#replay-complete) requested by `session/resume`.                   |
 
 This is the complete set of standard variants defined in the current draft [`SessionUpdate` schema](/protocol/v2/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 
@@ -52,16 +52,16 @@ Session updates are not limited to prompt-driven foreground work. For example, A
 
 Messages, tool calls, terminals, plans, and compactions are entities that the Agent creates and then updates by ID across multiple session updates. An entity is identified by its type together with its ID, not by its ID alone:
 
-| Entity type                           | Session updates                                 | ID field       |
-| ------------------------------------- | ----------------------------------------------- | -------------- |
-| User message                          | `user_message`, `user_message_chunk`            | `messageId`    |
-| Agent message                         | `agent_message`, `agent_message_chunk`          | `messageId`    |
-| Agent thought                         | `agent_thought`, `agent_thought_chunk`          | `messageId`    |
-| Session-directed message (draft only) | `session_message`, `session_message_chunk`      | `messageId`    |
-| Tool call                             | `tool_call_update`, `tool_call_content_chunk`   | `toolCallId`   |
-| Terminal                              | `terminal_update`, `terminal_output_chunk`      | `terminalId`   |
-| Plan                                  | `plan_update`, `plan_removed`                   | `planId`       |
-| Compaction                            | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
+| Entity type              | Session updates                                 | ID field       |
+| ------------------------ | ----------------------------------------------- | -------------- |
+| User message             | `user_message`, `user_message_chunk`            | `messageId`    |
+| Agent message            | `agent_message`, `agent_message_chunk`          | `messageId`    |
+| Agent thought            | `agent_thought`, `agent_thought_chunk`          | `messageId`    |
+| Session-directed message | `session_message`, `session_message_chunk`      | `messageId`    |
+| Tool call                | `tool_call_update`, `tool_call_content_chunk`   | `toolCallId`   |
+| Terminal                 | `terminal_update`, `terminal_output_chunk`      | `terminalId`   |
+| Plan                     | `plan_update`, `plan_removed`                   | `planId`       |
+| Compaction               | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
 
 An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, Agent thoughts, and session-directed messages are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`. They remain two distinct entities.
 
@@ -69,7 +69,7 @@ The Agent **MUST NOT** reuse an ID for a different entity of the same type withi
 
 An update or chunk for an ID the Client hasn't seen creates the entity with its defaults and then applies, so a chunk can arrive before any full update. Clients **MUST NOT** drop it. An entity's first update or chunk fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks patch the entity in place without moving it, including after the session reports `idle`. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, may ignore its position.
 
-### Session-directed messages (unstable)
+### Session-directed messages
 
 The Agent may report outgoing and incoming messages between sessions,
 separately from user-facing responses and tool calls. The outer
@@ -1034,8 +1034,8 @@ do not represent additional work or usage.
 </ResponseField>
 
 <ResponseField name="unknown">
-  **Draft only.** The Agent cannot currently determine foreground activity. For
-  example, a remote child feed may be lost while ACP remains connected.
+  The Agent cannot currently determine foreground activity. For example, a
+  remote child feed may be lost while ACP remains connected.
 </ResponseField>
 
 Agents report `unknown` on actual loss of observability, not merely after
@@ -1045,7 +1045,7 @@ context. A subsequent `running`, `requires_action`, or `idle` replaces
 `unknown` for the same session. `unknown` is neither a work outcome nor a
 closure or cancellation, and does not resolve pending requests or automatically
 revoke child mutation capabilities. The Agent updates those capabilities
-separately if a control becomes unavailable.
+explicitly if a control becomes unavailable.
 
 Background activity **MAY** continue and emit other `session/update` notifications while the Agent reports `idle`. These notifications do not change the state. Each state may carry a [`background`](#background-work) list of that work.
 
@@ -1070,7 +1070,7 @@ for ordering and pending interactions.
 
 The table describes live state reporting between the three standard states.
 Initial or resume snapshots report the current state without implying a
-transition. The draft `unknown` state can replace any state on loss of
+transition. The `unknown` state can replace any state on loss of
 observability. A later current-state snapshot restores a known state without
 implying that work started or ended while it was unobservable.
 

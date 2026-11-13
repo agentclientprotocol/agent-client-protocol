@@ -725,9 +725,9 @@ update or symlink target change:
 
 Clients **SHOULD** show affected paths from `changes`, not from `patch` headers.
 
-### Sessions (unstable)
+### Sessions
 
-**Draft only.** A session content item links the tool call to another session
+A session content item links the tool call to another session
 it operates on, such as a [subagent](/rfds/subagents) it spawned or waits on:
 
 ```json
@@ -747,7 +747,7 @@ both mean that no item metadata was provided. A tool call can reference several
 sessions. The reference is display-only. It does not establish ownership,
 enable Client-initiated controls on the referenced session, or report that
 session's work state. The task a parent
-sends a child is reported as a [session-directed message](/protocol/v2/draft/prompt-lifecycle#session-directed-messages-unstable),
+sends a child is reported as a [session-directed message](/protocol/v2/draft/prompt-lifecycle#session-directed-messages),
 not through a tool call.
 
 `content` on `tool_call_update` replaces the whole array, so an Agent that

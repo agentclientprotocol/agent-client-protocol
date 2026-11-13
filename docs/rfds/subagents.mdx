@@ -397,7 +397,7 @@ Send an initial snapshot after announcing the child and a fresh snapshot when
 its configuration changes, including changes between assignments to the same
 child. Each notification contains the complete reported configuration, using
 the existing [v1](/protocol/v1/draft/session-config-options#from-the-agent) or
-[v2](/protocol/v2/draft/session-config-options#from-the-agent) config option
+[v2](/protocol/v2/session-config-options#from-the-agent) config option
 shapes. No configuration fields are added to the parent association.
 
 Child configuration is not assumed to match the parent's. If the Agent cannot
@@ -918,8 +918,7 @@ beginning with `_` are implementation-specific; other unknown values are
 reserved for future ACP states. An unknown value does not imply completion or
 closure. Unrecognized stop reasons on an idle snapshot are preserved the same
 way in both versions. V2 keeps its open state and stop-reason handling, with
-`unknown` added to ordinary `StateUpdate` under the experimental
-`unstable_subagents` feature.
+`unknown` added to ordinary `StateUpdate`.
 
 Idle is not a successful task outcome or a declaration that the session has
 been released. As in ordinary v2 sessions, background activity may still emit
@@ -1291,8 +1290,9 @@ implementation to use the named SDKs, providers, or integration techniques.
 3. Mirror the v2 `StateUpdate` payload in v1 and embed it in the v1 association
    update. In v2, mirror ordinary child-session state notifications in the
    parent association as well.
-4. Keep the additions behind `unstable_subagents` and regenerate schemas and
-   reference documentation.
+4. Keep the v1 additions behind `unstable_subagents` and regenerate schemas
+   and reference documentation. The v2 additions are part of the v2 schema
+   and need only `unstable_protocol_v2`.
 5. Ship SDK releases that carry the draft `subagents` capability and update
    types — or at minimum preserve them when deserializing and re-serializing —
    before adapter rollout. SDKs that strip the draft fields force temporary
@@ -1647,6 +1647,9 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-13: The v2 schema no longer gates subagents behind
+  `unstable_subagents`. The v2 protocol guides describe them. v1 keeps the
+  feature flag.
 - 2026-11-13: Moved to Preview.
 - 2026-11-13: In v2, each child announced during a resume with replay gets
   its own `replay_complete` update, following the v2 Replay Complete Signal

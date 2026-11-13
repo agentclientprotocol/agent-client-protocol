@@ -19,6 +19,7 @@ Out of scope: a malicious Agent binary, detecting prompt injection, and operatin
 This applies to all Agent-authored display text, including messages, thoughts, tool calls, plans, commands, config options, notices, session titles, authentication methods, permission requests, and elicitations.
 
 - Clients **SHOULD NOT** run scripts from Agent content, and **SHOULD** disable or sanitize raw HTML when rendering Markdown.
+- [Session-directed messages](/protocol/v2/draft/prompt-lifecycle#session-directed-messages) are Agent content. Clients **SHOULD** attribute them to the sending session and **SHOULD NOT** present them as user messages.
 - Clients **SHOULD NOT** automatically run active content, such as diagram renderers, that can fetch resources or execute code.
 - Clients **SHOULD NOT** open links from Agent content without user action, and **SHOULD** show the full target and get user confirmation before handing a link with a scheme other than `http` or `https` to the operating system or another handler.
 - Clients **SHOULD** show the full link target when it differs from the link text.
@@ -77,5 +78,4 @@ A user can approve a harmful operation, prompt injection can steer operations th
 ## Unstable features
 
 - Clients **SHOULD NOT** read a markdown plan's `path` outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
-- [Session-directed messages](/protocol/v2/draft/prompt-lifecycle#session-directed-messages-unstable) are Agent content. Clients **SHOULD** attribute them to the sending session and **SHOULD NOT** present them as user messages.
 - Provider `headers` are credentials. Agents **SHOULD NOT** return them from `providers/list`.

@@ -3441,10 +3441,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 ## <span class="font-mono">BackgroundSubagent</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A listed subagent session associated with this session through `subagent_update`.
 
 **Type:** Object
@@ -3566,10 +3562,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="subagent" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A detached subagent session that has anything running: its state is not `idle`, or
 its own `background` list is non-empty or not reported.
 
@@ -7892,10 +7884,6 @@ future ACP variants.
 
 ## <span class="font-mono">SessionCancelCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Capability to cancel work in a subagent session without ending that session.
 
 Supplying `\{\}` advertises support. An omitted or `null` `cancel` does not.
@@ -8468,10 +8456,6 @@ An opaque cursor used to paginate `session/list` results.
 
 ## <span class="font-mono">SessionMessage</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 An upsert for an inter-session message.
 
 **Type:** Object
@@ -8526,10 +8510,6 @@ Omitted leaves the stored value unchanged. `null` clears it. A value replaces it
 </ResponseField>
 
 ## <span class="font-mono">SessionMessageChunk</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 A streamed content block of an inter-session message.
 
@@ -8604,10 +8584,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 ## <span class="font-mono">SessionReference</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 A display-only reference to another session that this tool call operates on,
 such as a subagent it created, delegated to, or is waiting on.
@@ -9247,10 +9223,6 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 </ResponseField>
 
 <ResponseField name="unknown" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 The Agent cannot currently determine foreground activity.
 This replaces previously confirmed activity without ending the work or session.
 
@@ -9788,10 +9760,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="subagent_update" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Announces a child session created and owned by this session, or updates
 that ownership association's metadata.
 
@@ -9865,10 +9833,6 @@ title is set, the Client chooses a fallback presentation.
 </ResponseField>
 
 <ResponseField name="session_message" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A message upsert observed in this session's transcript, sent to or
 received from another session.
 
@@ -9928,10 +9892,6 @@ Omitted leaves the stored value unchanged. `null` clears it. A value replaces it
 </ResponseField>
 
 <ResponseField name="session_message_chunk" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 One content block appended to a sent or received session message.
 
 <Expandable title="Properties">
@@ -10269,10 +10229,6 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 </ResponseField>
 
 <ResponseField name="unknown" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 The Agent cannot currently determine foreground activity.
 This replaces previously confirmed activity without ending the work or session.
 
@@ -10463,10 +10419,6 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 ## <span class="font-mono">SubagentSessionCapabilities</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Client-initiated session mutations permitted for a specific subagent session.
 
 A mutation requires an explicit per-child capability. Support for the method
@@ -10491,10 +10443,6 @@ the session. Omitted and `null` are equivalent and mean unsupported. An object (
 </ResponseField>
 
 ## <span class="font-mono">SubagentUpdate</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Notification that the enclosing parent session created and owns a child session.
 
@@ -11183,10 +11131,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="session" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 A display-only reference to another session, such as a subagent.
 
 <Expandable title="Properties">
@@ -11523,10 +11467,6 @@ future ACP variants. Clients display an unrecognized kind as `other`.
 </ResponseField>
 
 ## <span class="font-mono">UnknownStateUpdate</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 The Agent cannot currently determine foreground activity.
 

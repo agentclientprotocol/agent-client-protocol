@@ -102,7 +102,7 @@ Implementations **MUST NOT** add any custom fields at the root of a type that's 
 
 ### Metadata patches
 
-Upsert updates carry a top-level `_meta` that the Client stores with the entity they create or update: `tool_call_update` (including the `toolCall` of a permission request's `tool_call` subject), `terminal_update`, `user_message`, `agent_message`, `agent_thought`, `session_info_update`, and `compaction_update`. Clients apply this `_meta` as a patch, one top-level key at a time, using the same rule as the update's other fields:
+Upsert updates carry a top-level `_meta` that the Client stores with the entity they create or update: `tool_call_update` (including the `toolCall` of a permission request's `tool_call` subject), `terminal_update`, `user_message`, `agent_message`, `agent_thought`, `session_info_update`, `compaction_update`, `subagent_update`, and `session_message`. Clients apply this `_meta` as a patch, one top-level key at a time, using the same rule as the update's other fields:
 
 - Omit `_meta` to leave the stored metadata unchanged.
 - Set `_meta` to `null` to clear all stored metadata.

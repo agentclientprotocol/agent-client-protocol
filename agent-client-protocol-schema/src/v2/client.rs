@@ -161,28 +161,13 @@ pub enum SessionUpdate {
     /// Every update for the session between the `session/resume` request and
     /// this update is replayed history. Every update after it is not.
     ReplayComplete(ReplayComplete),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Announces a child session created and owned by this session, or updates
     /// that ownership association's metadata.
-    #[cfg(feature = "unstable_subagents")]
     SubagentUpdate(SubagentUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A message upsert observed in this session's transcript, sent to or
     /// received from another session.
-    #[cfg(feature = "unstable_subagents")]
     SessionMessage(SessionMessage),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// One content block appended to a sent or received session message.
-    #[cfg(feature = "unstable_subagents")]
     SessionMessageChunk(SessionMessageChunk),
     /// Custom or future session update.
     ///
@@ -197,15 +182,10 @@ pub enum SessionUpdate {
     Other(OtherSessionUpdate),
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A streamed content block of an inter-session message.
 ///
 /// A chunk carries only content. The message's participants and references come from
 /// `session_message` upserts, which can arrive before, between, or after its chunks.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -229,7 +209,6 @@ pub struct SessionMessageChunk {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionMessageChunk {
     /// Builds a single streamed content block without chunk metadata.
     #[must_use]
@@ -249,12 +228,7 @@ impl SessionMessageChunk {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// An upsert for an inter-session message.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -320,7 +294,6 @@ pub struct SessionMessage {
     pub meta: MaybeUndefined<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionMessage {
     /// Builds a message upsert with its transcript-local ID.
     #[must_use]
@@ -394,7 +367,7 @@ impl SessionMessage {
     }
 }
 
-#[cfg(all(test, feature = "unstable_subagents"))]
+#[cfg(test)]
 mod session_message_tests {
     use super::*;
     use serde_json::{Value, json};
@@ -657,29 +630,6 @@ mod session_message_tests {
             wire,
             "null clears a reference and a malformed one is not supplied"
         );
-    }
-}
-
-#[cfg(all(test, not(feature = "unstable_subagents")))]
-mod disabled_session_message_tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn preserves_both_unknown_message_discriminators() {
-        for (kind, content) in [
-            ("session_message", json!([])),
-            (
-                "session_message_chunk",
-                json!({"type": "text", "text": "hello"}),
-            ),
-        ] {
-            let wire = json!({"sessionUpdate": kind, "messageId": "m1",
-                "senderSessionId": "parent", "recipientSessionId": "child", "content": content});
-            let decoded: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
-            assert!(matches!(decoded, SessionUpdate::Other(_)));
-            assert_eq!(serde_json::to_value(decoded).unwrap(), wire);
-        }
     }
 }
 
@@ -980,10 +930,6 @@ impl ReplayComplete {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Notification that the enclosing parent session created and owns a child session.
 ///
 /// Later updates modify the existing association's metadata, not its ownership.
@@ -1016,7 +962,6 @@ impl ReplayComplete {
 /// Completing or cancelling work does not end the association: the parent may
 /// message the same child again. Individual messages and their outcomes do not
 /// change this association.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1092,7 +1037,6 @@ pub struct SubagentUpdate {
     pub meta: MaybeUndefined<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SubagentUpdate {
     /// Builds a subagent upsert with only its required session ID set.
     #[must_use]
@@ -1172,15 +1116,10 @@ impl SubagentUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Client-initiated session mutations permitted for a specific subagent session.
 ///
 /// A mutation requires an explicit per-child capability. Support for the method
 /// on ordinary sessions does not grant support on a child.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1207,7 +1146,6 @@ pub struct SubagentSessionCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SubagentSessionCapabilities {
     /// Builds an empty capability set. Cancellation is disabled.
     #[must_use]
@@ -1232,14 +1170,9 @@ impl SubagentSessionCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capability to cancel work in a subagent session without ending that session.
 ///
 /// Supplying `{}` advertises support. An omitted or `null` `cancel` does not.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1258,7 +1191,6 @@ pub struct SessionCancelCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionCancelCapabilities {
     /// Builds an empty capability object advertising cancellation support.
     #[must_use]
@@ -1357,7 +1289,6 @@ fn is_known_session_update(session_update: &str) -> bool {
     if session_update == "plan_removed" {
         return true;
     }
-    #[cfg(feature = "unstable_subagents")]
     if matches!(
         session_update,
         "subagent_update" | "session_message" | "session_message_chunk"
@@ -1413,11 +1344,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             "compaction_update",
             "compaction_summary_chunk",
             "replay_complete",
-            #[cfg(feature = "unstable_subagents")]
             "subagent_update",
-            #[cfg(feature = "unstable_subagents")]
             "session_message",
-            #[cfg(feature = "unstable_subagents")]
             "session_message_chunk",
         ],
     );
@@ -1657,13 +1585,8 @@ pub enum StateUpdate {
     Idle(IdleStateUpdate),
     /// Foreground work is blocked on user action.
     RequiresAction(RequiresActionStateUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// The Agent cannot currently determine foreground activity.
     /// This replaces previously confirmed activity without ending the work or session.
-    #[cfg(feature = "unstable_subagents")]
     Unknown(UnknownStateUpdate),
     /// Custom or future session state.
     ///
@@ -1694,7 +1617,6 @@ impl StateUpdate {
             Self::Running(state) => state.background.as_deref(),
             Self::Idle(state) => state.background.as_deref(),
             Self::RequiresAction(state) => state.background.as_deref(),
-            #[cfg(feature = "unstable_subagents")]
             Self::Unknown(state) => state.background.as_deref(),
             Self::Other(_) => None,
         }
@@ -1968,10 +1890,6 @@ impl RequiresActionStateUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// The Agent cannot currently determine foreground activity.
 ///
 /// Report this when activity becomes unobservable, not merely because the session
@@ -1984,7 +1902,6 @@ impl RequiresActionStateUpdate {
 /// the Agent updates the capabilities explicitly. Unfinished tool calls and
 /// terminals stay as last reported. The Agent does not invent a final status
 /// for them, and Clients do not present them as confirmed live activity.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2015,7 +1932,6 @@ pub struct UnknownStateUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl UnknownStateUpdate {
     /// Builds an unknown-activity state.
     #[must_use]
@@ -2096,13 +2012,7 @@ impl<'de> Deserialize<'de> for OtherStateUpdate {
     }
 }
 
-const KNOWN_STATE_UPDATE_STATES: &[&str] = &[
-    "running",
-    "idle",
-    "requires_action",
-    #[cfg(feature = "unstable_subagents")]
-    "unknown",
-];
+const KNOWN_STATE_UPDATE_STATES: &[&str] = &["running", "idle", "requires_action", "unknown"];
 
 fn is_known_state_update(state: &str) -> bool {
     KNOWN_STATE_UPDATE_STATES.contains(&state)
@@ -2137,13 +2047,8 @@ pub enum BackgroundWork {
     /// a watcher, a workflow, or a scheduled wakeup. `pending` and `paused` tool calls
     /// stay listed.
     ToolCall(BackgroundToolCall),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A detached subagent session that has anything running: its state is not `idle`, or
     /// its own `background` list is non-empty or not reported.
-    #[cfg(feature = "unstable_subagents")]
     Subagent(BackgroundSubagent),
     /// Custom or future background work.
     ///
@@ -2245,12 +2150,7 @@ impl BackgroundToolCall {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A listed subagent session associated with this session through `subagent_update`.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2272,7 +2172,6 @@ pub struct BackgroundSubagent {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl BackgroundSubagent {
     /// Builds [`BackgroundSubagent`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -2353,12 +2252,7 @@ impl<'de> Deserialize<'de> for OtherBackgroundWork {
     }
 }
 
-const KNOWN_BACKGROUND_WORK_TYPES: &[&str] = &[
-    "terminal",
-    "tool_call",
-    #[cfg(feature = "unstable_subagents")]
-    "subagent",
-];
+const KNOWN_BACKGROUND_WORK_TYPES: &[&str] = &["terminal", "tool_call", "subagent"];
 
 #[cfg(feature = "schemars")]
 fn other_background_work_schema(schema: &mut Schema) {
@@ -4306,7 +4200,6 @@ mod tests {
 
     use super::*;
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_update_serializes_as_upsert() {
         use serde_json::json;
@@ -4371,7 +4264,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_cancel_capability_is_optional_object() {
         use serde_json::json;
@@ -4413,7 +4305,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_display_metadata_uses_patch_semantics() {
         use serde_json::json;
@@ -4463,7 +4354,6 @@ mod tests {
         assert_eq!(malformed, minimal);
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_directories_use_strict_patch_semantics() {
         use serde_json::json;
@@ -4507,7 +4397,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_notification_keeps_parent_and_child_ids_nested() {
         use serde_json::json;
@@ -4536,7 +4425,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_mirrors_normal_child_state_notifications() {
         use serde_json::json;
@@ -4582,7 +4470,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_state_uses_whole_snapshot_patch_semantics() {
         use serde_json::json;
@@ -4641,7 +4528,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn unknown_activity_is_a_known_state_update() {
         use serde_json::json;
@@ -4679,23 +4565,7 @@ mod tests {
         assert!(serde_json::from_value::<OtherStateUpdate>(json!({"state": "unknown"})).is_err());
     }
 
-    #[cfg(not(feature = "unstable_subagents"))]
-    #[test]
-    fn unknown_activity_is_preserved_without_subagents_feature() {
-        let wire = serde_json::json!({
-            "sessionUpdate": "state_update",
-            "state": "unknown",
-            "_meta": { "source": "worker" }
-        });
-        let parsed: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
-        let SessionUpdate::StateUpdate(StateUpdate::Other(state)) = &parsed else {
-            panic!("expected unrecognized state payload");
-        };
-        assert_eq!(state.state, "unknown");
-        assert_eq!(serde_json::to_value(parsed).unwrap(), wire);
-    }
-
-    #[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+    #[cfg(feature = "schemars")]
     #[test]
     fn subagent_schema_carries_optional_nullable_state_snapshot() {
         use serde_json::json;
@@ -4742,19 +4612,6 @@ mod tests {
                 .as_array()
                 .is_some_and(|required| required.contains(&json!("cancel")))
         );
-    }
-
-    #[cfg(not(feature = "unstable_subagents"))]
-    #[test]
-    fn unsupported_subagent_update_is_preserved() {
-        let wire = serde_json::json!({
-            "sessionUpdate": "subagent_update",
-            "sessionId": "sess_child",
-            "capabilities": { "cancel": {} }
-        });
-        let parsed: SessionUpdate = serde_json::from_value(wire.clone()).unwrap();
-        assert!(matches!(&parsed, SessionUpdate::Other(_)));
-        assert_eq!(serde_json::to_value(parsed).unwrap(), wire);
     }
 
     #[test]
