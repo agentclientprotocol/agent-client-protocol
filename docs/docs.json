@@ -54,6 +54,7 @@
             "pages": [
               "get-started/introduction",
               "get-started/architecture",
+              "get-started/related-protocols",
               "get-started/agents",
               "get-started/clients",
               "get-started/registry"
@@ -86,6 +87,8 @@
                   "protocol/v1/slash-commands",
                   "protocol/v1/extensibility",
                   "protocol/v1/transports",
+                  "protocol/v1/security",
+                  "protocol/v1/error",
                   "protocol/v1/schema",
                   {
                     "group": "Draft: In Progress and May Change",
@@ -110,6 +113,8 @@
                       "protocol/v1/draft/slash-commands",
                       "protocol/v1/draft/extensibility",
                       "protocol/v1/draft/transports",
+                      "protocol/v1/draft/security",
+                      "protocol/v1/draft/error",
                       "protocol/v1/draft/schema"
                     ]
                   }
@@ -137,6 +142,8 @@
                   "protocol/v2/slash-commands",
                   "protocol/v2/extensibility",
                   "protocol/v2/transports",
+                  "protocol/v2/security",
+                  "protocol/v2/error",
                   "protocol/v2/schema",
                   {
                     "group": "Draft: In Progress and May Change",
@@ -158,6 +165,8 @@
                       "protocol/v2/draft/slash-commands",
                       "protocol/v2/draft/extensibility",
                       "protocol/v2/draft/transports",
+                      "protocol/v2/draft/security",
+                      "protocol/v2/draft/error",
                       "protocol/v2/draft/schema"
                     ]
                   }
@@ -190,18 +199,7 @@
               "rfds/session-fork",
               "rfds/proxy-chains",
               "rfds/mcp-over-acp",
-              "rfds/diff-delete",
               "rfds/custom-llm-endpoint",
-              "rfds/plan-operations",
-              "rfds/end-turn-token-usage",
-              "rfds/get-auth-state",
-              "rfds/subagents",
-              "rfds/session-replay-complete"
-            ]
-          },
-          {
-            "group": "Active",
-            "pages": [
               "rfds/streamable-http-websocket-transport",
               {
                 "group": "v2",
@@ -218,18 +216,26 @@
                   "rfds/v2/required-session-methods",
                   "rfds/v2/session-resume-replay",
                   "rfds/v2/diff-file-states",
-                  "rfds/v2/terminal-output"
+                  "rfds/v2/terminal-output",
+                  "rfds/v2/meta-patches",
+                  "rfds/v2/background-work"
                 ]
-              }
+              },
+              "rfds/plan-operations",
+              "rfds/end-turn-token-usage",
+              "rfds/get-auth-state",
+              "rfds/subagents",
+              "rfds/session-replay-complete",
+              "rfds/session-status",
+              "rfds/session-set-title",
+              "rfds/session-archive",
+              "rfds/session-options",
+              "rfds/speed-config-category"
             ]
           },
           {
             "group": "Preview",
-            "pages": ["rfds/session-compaction", "rfds/session-notices"]
-          },
-          {
-            "group": "To be removed",
-            "pages": ["rfds/next-edit-suggestions"]
+            "pages": []
           },
           {
             "group": "Completed",
@@ -253,7 +259,10 @@
               "rfds/boolean-config-option",
               "rfds/elicitation",
               "rfds/auth-methods",
-              "rfds/tool-call-name"
+              "rfds/tool-call-name",
+              "rfds/session-compaction",
+              "rfds/session-notices",
+              "rfds/client-system-prompt"
             ]
           }
         ]
@@ -279,6 +288,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/client-system-prompt-stabilized",
               "announcements/tool-call-name-stabilized",
               "announcements/elicitation-stabilized",
               "announcements/acp-v2-draft",

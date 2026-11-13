@@ -1,7 +1,7 @@
 [package]
 name = "agent-client-protocol-schema"
 authors = ["Zed <hi@zed.dev>"]
-version = "1.10.2"
+version = "1.17.0"
 edition = "2024"
 license = "Apache-2.0"
 description = "A protocol for standardizing communication between code editors and AI coding agents"
@@ -11,7 +11,7 @@ readme = "../README.md"
 keywords = ["agent", "client", "protocol", "ai", "editor"]
 categories = ["development-tools", "api-bindings"]
 include = ["/src/**/*.rs", "/Cargo.toml"]
-rust-version = "1.88.0"
+rust-version.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -27,27 +27,35 @@ default = ["schemars"]
 # omit the dependency and those impls with `default-features = false`.
 schemars = ["dep:schemars", "serde_with/schemars_1"]
 unstable = [
+    "unstable_auth_status",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
-    "unstable_nes",
     "unstable_plan_operations",
+    "unstable_proxy_chains",
+    "unstable_session_archive",
     "unstable_session_fork",
+    "unstable_session_status",
+    "unstable_session_options",
+    "unstable_session_set_title",
+    "unstable_speed_config_category",
     "unstable_subagents",
-    "unstable_session_compaction",
-    "unstable_session_notices",
     "unstable_end_turn_token_usage",
 ]
 # Protocol v2 is intentionally NOT part of the `unstable` umbrella.
 # It introduces a parallel `v2` module with a different wire version, so it
 # must be opted into explicitly.
 unstable_protocol_v2 = []
+unstable_auth_status = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
-unstable_nes = []
 unstable_plan_operations = []
+unstable_proxy_chains = []
+unstable_session_archive = []
 unstable_session_fork = []
-unstable_session_compaction = []
-unstable_session_notices = []
+unstable_session_status = []
+unstable_session_options = []
+unstable_session_set_title = []
+unstable_speed_config_category = []
 unstable_subagents = []
 unstable_end_turn_token_usage = []
 

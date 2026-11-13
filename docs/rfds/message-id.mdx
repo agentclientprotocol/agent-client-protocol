@@ -119,7 +119,7 @@ The `messageId` field would be:
 - **Optional in v1** on `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates. An omitted `messageId` and an explicit `null` are equivalent and both mean the Agent did not provide a message ID for that chunk.
 - **Required in v2** on `agent_message_chunk`, `user_message_chunk`, and `agent_thought_chunk` updates. The field MUST be present and MUST be a non-null string.
 - **Agent-generated** - the Agent is the only participant that creates protocol message IDs
-- **Unique per message** within a session
+- **Unique per message** within a session. In v2, uniqueness is per message type: a user message, an agent message, and an agent thought may share an ID, and Clients key messages by type and ID.
 - **Stable across chunks** - all chunks belonging to the same message share the same `messageId`
 - **Opaque** - Implementations treat it as an identifier without parsing its structure
 
@@ -288,6 +288,7 @@ Future RFDs may propose extending `messageId` to other update types if use cases
 
 ## Revision history
 
+- **2026-10-29**: Recorded that v2 message IDs are unique per message type, not across all messages in a session.
 - **2026-06-05**: Moved to Completed and stabilized optional v1 `messageId` in the stable protocol artifacts
 - **2026-06-03**: Moved the v1 portion of the RFD to Preview while v2-specific behavior remains part of the v2 draft work
 - **2026-06-03**: Moved the RFD out of the v2 Draft group while keeping v2-specific behavior; added a dedicated `MessageId` type, and made v2 require message IDs on streamed message chunks while v1 keeps optional message IDs for compatibility

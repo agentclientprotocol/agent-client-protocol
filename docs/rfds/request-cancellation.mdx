@@ -73,11 +73,13 @@ The **receiving party** is **NOT** required to:
 
 When a `$/cancel_request` notification is received by a supporting implementation, it:
 
-- **MUST** cancel the corresponding request activity and all nested activities related to that request
+- **MAY** cancel the corresponding request activity and all nested activities related to that request
 - **MAY** finish sending any pending notifications before responding
 - **MUST** send one of these responses for the original request:
   - A valid response with appropriate data (such as partial results or cancellation marker)
   - An error response with code [`-32800` (Request Cancelled)](/protocol/v1/draft/schema#errorcode)
+
+Sending `$/cancel_request` does not guarantee that the receiver stops the request or its nested activities. It also does not automatically withdraw requests that the receiver has sent to the other party; propagating cancellation to those requests requires explicit implementation support.
 
 #### Internal Cancellation
 
@@ -152,6 +154,8 @@ Note: it is possible that `session/cancel` could be replaced by the more generic
 
 #### Example: Cascading Cancellation Flow
 
+This v1 example shows an Agent explicitly propagating cancellation to an outstanding terminal request. That propagation is optional, not an automatic protocol guarantee. Independently, the Client **MUST** answer pending permission requests with the `cancelled` outcome when it sends `session/cancel`, as specified in [prompt turn cancellation](/protocol/v1/prompt-turn#cancellation); it does not wait for `$/cancel_request`.
+
 ```mermaid
 sequenceDiagram
     participant Client
@@ -167,14 +171,14 @@ sequenceDiagram
 
     Note over Client,Agent: 3. Client cancels the prompt turn
     Client->>Agent: session/cancel (sessionId)
+    Client->>Agent: response to id=3 (outcome: cancelled)
 
-    Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: $/cancel_request (id=2) [terminal request]
-  Agent->>Client: $/cancel_request (id=3) [permission request]
+    opt 4. Agent propagates cancellation to the terminal request
+        Agent->>Client: $/cancel_request (requestId=2)
+    end
 
-    Note over Client,Agent: 5. Client confirms individual cancellations
+    Note over Client,Agent: 5. Terminal request is cancelled in this example
     Client->>Agent: response to id=2 (error -32800 "Cancelled")
-    Client->>Agent: response to id=3 (error -32800 "Cancelled")
 
     Note over Client,Agent: 6. Agent completes prompt cancellation
     Agent->>Client: response to id=1 (stopReason: "cancelled")
@@ -191,14 +195,11 @@ This ensures clients always receive meaningful responses and prevents race condi
 
 ### How should implementations handle cascading cancellation?
 
-When a request is cancelled, implementations should:
+Implementations can propagate cancellation to nested activities and outstanding child requests, and clean up resources associated with cancelled work. For requests sent to the other party, they can send `$/cancel_request` using each child request's ID. This is explicit implementation behavior, not an automatic or mandatory cascade, and the receiving party may still complete a request normally.
 
-1. Cancel the primary request activity
-2. Propagate cancellation to any nested/child requests
-3. Clean up resources associated with the entire request tree
-4. Send cancellation responses for all affected requests
+Each outstanding request still requires a response. Where a feature defines its own cancellation semantics, those semantics apply: for example, `session/cancel` requires the Client to answer pending `session/request_permission` requests with the `cancelled` outcome, regardless of whether the Agent sends `$/cancel_request`.
 
-This ensures complete cleanup and prevents resource leaks.
+See the protocol's [v1 prompt turn cancellation](/protocol/v1/prompt-turn#cancellation) and [v2 active session work cancellation](/protocol/v2/prompt-lifecycle#cancellation) rules for the Agent's cleanup and completion obligations.
 
 ## Revision history
 

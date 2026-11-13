@@ -1,9 +1,9 @@
-//! Execution plans for complex tasks that require multiple steps.
+//! Execution plans for multi-step tasks.
 //!
-//! Plans are strategies that agents share with clients through session updates,
-//! providing real-time visibility into their thinking and progress.
+//! A plan is the agent's list of steps for a task. Agents send plans to clients
+//! through session updates and update them as work progresses.
 //!
-//! See: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
+//! See: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
 
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -43,10 +43,10 @@ pub struct PlanUpdate {
     /// The updated plan content.
     pub plan: PlanUpdateContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -55,17 +55,17 @@ pub struct PlanUpdate {
 }
 
 impl PlanUpdate {
-    /// Builds [`PlanUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan: PlanUpdateContent) -> Self {
         Self { plan, meta: None }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -103,7 +103,8 @@ pub enum PlanUpdateContent {
     ///
     /// Receivers that do not understand this content type should preserve the
     /// raw payload when storing, replaying, proxying, or forwarding plans, and
-    /// otherwise ignore it or display it generically.
+    /// otherwise ignore it or display it generically. It still replaces any earlier
+    /// content for the same `planId`.
     #[serde(untagged)]
     Other(OtherPlanUpdateContent),
 }
@@ -194,7 +195,13 @@ fn other_plan_update_content_schema(schema: &mut Schema) {
     );
 }
 
-const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &["items", "file", "markdown"];
+const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &[
+    "items",
+    #[cfg(feature = "unstable_plan_operations")]
+    "file",
+    #[cfg(feature = "unstable_plan_operations")]
+    "markdown",
+];
 
 impl PlanUpdateContent {
     /// Builds a plan update that replaces the itemized entries for a plan.
@@ -232,14 +239,14 @@ pub struct PlanItems {
     ///
     /// When updating an item-based plan, the agent must send a complete list of all entries
     /// with their current status. The client replaces that plan with each update.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -248,7 +255,7 @@ pub struct PlanItems {
 }
 
 impl PlanItems {
-    /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanItems`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -259,10 +266,10 @@ impl PlanItems {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -289,10 +296,10 @@ pub struct PlanFile {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -302,7 +309,7 @@ pub struct PlanFile {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanFile {
-    /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanFile`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
@@ -313,10 +320,10 @@ impl PlanFile {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -342,10 +349,10 @@ pub struct PlanMarkdown {
     /// Markdown content for the plan.
     pub content: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -355,7 +362,7 @@ pub struct PlanMarkdown {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
-    /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanMarkdown`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
@@ -366,10 +373,10 @@ impl PlanMarkdown {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -393,10 +400,10 @@ pub struct PlanRemoved {
     /// The plan ID to remove.
     pub plan_id: PlanId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -406,7 +413,7 @@ pub struct PlanRemoved {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
-    /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanRemoved`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>) -> Self {
         Self {
@@ -416,10 +423,10 @@ impl PlanRemoved {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -431,7 +438,7 @@ impl PlanRemoved {
 ///
 /// Represents a task or goal that the assistant intends to accomplish
 /// as part of fulfilling the user's request.
-/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v2/agent-plan#plan-entries)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -447,10 +454,10 @@ pub struct PlanEntry {
     /// Current execution status of this task.
     pub status: PlanEntryStatus,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -459,7 +466,7 @@ pub struct PlanEntry {
 }
 
 impl PlanEntry {
-    /// Builds [`PlanEntry`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanEntry`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         content: impl Into<String>,
@@ -475,10 +482,10 @@ impl PlanEntry {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -490,7 +497,7 @@ impl PlanEntry {
 ///
 /// Used to indicate the relative importance or urgency of different
 /// tasks in the execution plan.
-/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v2/agent-plan#plan-entries)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -514,7 +521,7 @@ pub enum PlanEntryPriority {
 /// Status of a plan entry in the execution flow.
 ///
 /// Tracks the lifecycle of each task from planning through completion.
-/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v2/agent-plan#plan-entries)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -596,6 +603,11 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[cfg(feature = "unstable_plan_operations")]
+    #[test]
+    fn plan_update_content_does_not_hide_malformed_known_experimental_variant() {
         assert!(
             serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
                 "type": "file",

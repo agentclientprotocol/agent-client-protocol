@@ -1,9 +1,9 @@
-//! Execution plans for complex tasks that require multiple steps.
+//! Execution plans for multi-step tasks.
 //!
-//! Plans are strategies that agents share with clients through session updates,
-//! providing real-time visibility into their thinking and progress.
+//! A plan is the agent's list of steps for a task. Agents send plans to clients
+//! through session updates and update them as work progresses.
 //!
-//! See: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
+//! See: [Agent Plan](https://agentclientprotocol.com/protocol/v1/agent-plan)
 
 #[cfg(feature = "unstable_plan_operations")]
 use std::sync::Arc;
@@ -23,7 +23,7 @@ use super::Meta;
 /// Agents report plans to clients to provide visibility into their execution strategy.
 /// Plans can evolve during execution as the agent discovers new requirements or completes tasks.
 ///
-/// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/agent-plan)
+/// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/agent-plan)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -42,7 +42,7 @@ pub struct Plan {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -51,7 +51,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    /// Builds [`Plan`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Plan`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -64,7 +64,7 @@ impl Plan {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -113,7 +113,7 @@ pub struct PlanUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -123,7 +123,7 @@ pub struct PlanUpdate {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanUpdate {
-    /// Builds [`PlanUpdate`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan: PlanUpdateContent) -> Self {
         Self { plan, meta: None }
@@ -133,7 +133,7 @@ impl PlanUpdate {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -208,7 +208,7 @@ pub struct PlanItems {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -218,7 +218,7 @@ pub struct PlanItems {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanItems {
-    /// Builds [`PlanItems`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanItems`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, entries: Vec<PlanEntry>) -> Self {
         Self {
@@ -232,7 +232,7 @@ impl PlanItems {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -261,7 +261,7 @@ pub struct PlanFile {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -271,7 +271,7 @@ pub struct PlanFile {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanFile {
-    /// Builds [`PlanFile`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanFile`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
         Self {
@@ -285,7 +285,7 @@ impl PlanFile {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -314,7 +314,7 @@ pub struct PlanMarkdown {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -324,7 +324,7 @@ pub struct PlanMarkdown {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
-    /// Builds [`PlanMarkdown`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanMarkdown`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self {
@@ -338,7 +338,7 @@ impl PlanMarkdown {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -365,7 +365,7 @@ pub struct PlanRemoved {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -375,7 +375,7 @@ pub struct PlanRemoved {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
-    /// Builds [`PlanRemoved`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanRemoved`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(plan_id: impl Into<PlanId>) -> Self {
         Self {
@@ -388,7 +388,7 @@ impl PlanRemoved {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -413,7 +413,7 @@ pub struct PlanCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -423,7 +423,7 @@ pub struct PlanCapabilities {
 
 #[cfg(feature = "unstable_plan_operations")]
 impl PlanCapabilities {
-    /// Builds an empty [`PlanCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`PlanCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -433,7 +433,7 @@ impl PlanCapabilities {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -445,7 +445,7 @@ impl PlanCapabilities {
 ///
 /// Represents a task or goal that the assistant intends to accomplish
 /// as part of fulfilling the user's request.
-/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/agent-plan#plan-entries)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -464,7 +464,7 @@ pub struct PlanEntry {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -473,7 +473,7 @@ pub struct PlanEntry {
 }
 
 impl PlanEntry {
-    /// Builds [`PlanEntry`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`PlanEntry`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         content: impl Into<String>,
@@ -492,7 +492,7 @@ impl PlanEntry {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -504,7 +504,7 @@ impl PlanEntry {
 ///
 /// Used to indicate the relative importance or urgency of different
 /// tasks in the execution plan.
-/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/agent-plan#plan-entries)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -521,7 +521,7 @@ pub enum PlanEntryPriority {
 /// Status of a plan entry in the execution flow.
 ///
 /// Tracks the lifecycle of each task from planning through completion.
-/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/agent-plan#plan-entries)
+/// See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/agent-plan#plan-entries)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

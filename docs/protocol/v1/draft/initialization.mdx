@@ -54,14 +54,6 @@ They **SHOULD** also provide a name and version to the Agent.
 }
 ```
 
-<Note>
-  `session.compaction` and `session.notices` are independent Preview
-  capabilities available only in the draft schema. Advertise each only when the
-  Client implements its corresponding
-  [compaction](/protocol/v1/draft/prompt-turn#session-compaction) or
-  [notice](/protocol/v1/draft/prompt-turn#session-notices) semantics.
-</Note>
-
 The Agent **MUST** respond with the chosen [protocol version](#protocol-version) and the [capabilities](#agent-capabilities) it supports. It **SHOULD** also provide a name and version to the Client as well:
 
 ```json
@@ -100,7 +92,7 @@ Clients and Agents **MUST** agree on a protocol version and act according to its
 
 See [Capabilities](#capabilities) to learn how non-breaking features are introduced.
 
-### Version Negotiation
+### Version negotiation
 
 The `initialize` request **MUST** include the latest protocol version the Client supports.
 
@@ -122,11 +114,11 @@ Capabilities may specify the availability of protocol methods, notifications, or
 
 Implementations can also [advertise custom capabilities](/protocol/v1/draft/extensibility#advertising-custom-capabilities) using the `_meta` field to indicate support for protocol extensions.
 
-### Client Capabilities
+### Client capabilities
 
 The Client **SHOULD** specify whether it supports the following capabilities:
 
-#### Terminal Authentication
+#### Terminal authentication
 
 <ParamField path="auth.terminal" type="boolean">
   The Client can reproduce the configured Agent invocation in an interactive
@@ -138,7 +130,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Terminal Authentication
 </Card>
 
-#### File System
+#### File system
 
 <ParamField path="readTextFile" type="boolean">
   The `fs/read_text_file` method is available.
@@ -177,7 +169,24 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Elicitation
 </Card>
 
-#### Boolean Config Options
+#### Plan operations
+
+<ParamField path="plan" type="PlanCapabilities Object">
+  The Client can receive `plan_update` and `plan_removed` session updates.
+  Omitted or `null` means the Client does not advertise support, and the Agent
+  sends plans with the `plan` update instead. Supplying `{}` means the Client
+  can receive both update types.
+</ParamField>
+
+<Card
+  icon="list-check"
+  horizontal
+  href="/protocol/v1/draft/agent-plan#plan-operations"
+>
+  Learn more about Plan operations
+</Card>
+
+#### Boolean config options
 
 <ParamField
   path="session.configOptions.boolean"
@@ -196,7 +205,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Config Options
 </Card>
 
-#### Session Compaction
+#### Session compaction
 
 <ParamField path="session.compaction" type="CompactionCapabilities Object">
   The Client supports ID-addressed `compaction_update` and
@@ -214,15 +223,14 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Compaction
 </Card>
 
-#### Session Notices
+#### Session notices
 
 <ParamField path="session.notices" type="NoticeCapabilities Object">
-  The Client can present live advisory `notice` session updates to the user.
-  This field is optional and nullable. Omitting `session` or `notices`, or
-  setting either to `null`, means unsupported. Supplying `{}` advertises notice
-  support. Agents must not send notices without this capability and may instead
-  use an agent message when the information should still be surfaced to the
-  user.
+  The Client can present live `notice` session updates to the user. This field
+  is optional and nullable. Omitting `session` or `notices`, or setting either
+  to `null`, means unsupported. Supplying `{}` advertises notice support. Agents
+  must not send notices without this capability and may instead use an agent
+  message when the information should still be surfaced to the user.
 </ParamField>
 
 <Card
@@ -233,7 +241,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Notices
 </Card>
 
-### Agent Capabilities
+### Agent capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
 
@@ -253,20 +261,20 @@ The Agent **SHOULD** specify whether it supports the following capabilities:
 
 #### Prompt capabilities
 
-As a baseline, all Agents **MUST** support `ContentBlock::Text` and `ContentBlock::ResourceLink` in `session/prompt` requests.
+As a baseline, all Agents **MUST** support `text` and `resource_link` content blocks in `session/prompt` requests.
 
 Optionally, they **MAY** support richer types of [content](/protocol/v1/draft/content) by specifying the following capabilities:
 
 <ResponseField name="image" type="boolean" post={["default: false"]}>
-  The prompt may include `ContentBlock::Image`
+  The prompt may include `image` content blocks
 </ResponseField>
 
 <ResponseField name="audio" type="boolean" post={["default: false"]}>
-  The prompt may include `ContentBlock::Audio`
+  The prompt may include `audio` content blocks
 </ResponseField>
 
 <ResponseField name="embeddedContext" type="boolean" post={["default: false"]}>
-  The prompt may include `ContentBlock::Resource`
+  The prompt may include `resource` content blocks
 </ResponseField>
 
 #### MCP capabilities
@@ -282,18 +290,25 @@ Note: This transport has been deprecated by the MCP spec.
 
 </ResponseField>
 
-#### Authentication Capabilities
+#### Authentication capabilities
 
 <ResponseField name="logout" type="LogoutCapabilities Object">
   The [`logout`](/protocol/v1/draft/authentication#logging-out) method is
   available.
 </ResponseField>
 
+<ResponseField name="status" type="AuthStatusCapabilities Object">
+  **Unstable.** The [`auth/status`](/rfds/get-auth-state) method and the
+  `auth/status_update` notification are available. Omitted or `null` both mean
+  the Agent does not advertise support. Supplying an empty object means the
+  Agent supports them.
+</ResponseField>
+
 <Card icon="shield-check" horizontal href="/protocol/v1/draft/authentication">
   Learn more about Authentication
 </Card>
 
-#### Session Capabilities
+#### Session capabilities
 
 As a baseline, all Agents **MUST** support `session/new`, `session/prompt`, `session/cancel`, and `session/update`.
 
@@ -305,6 +320,14 @@ Optionally, they **MAY** support other session methods and notifications by spec
   empty object means the Agent supports deleting sessions from `session/list`.
 </ResponseField>
 
+<ResponseField name="archive" type="SessionArchiveCapabilities Object">
+  **Unstable.** The `session/archive` and `session/unarchive` methods, the
+  `archived` filter on `session/list`, and `archived` on listed sessions are
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means the Agent supports them. See [Archived
+  Sessions](/protocol/v1/draft/session-list#archived-sessions-unstable).
+</ResponseField>
+
 <ResponseField
   name="additionalDirectories"
   type="SessionAdditionalDirectoriesCapabilities Object"
@@ -314,26 +337,56 @@ Optionally, they **MAY** support other session methods and notifications by spec
   Supplying `{}` means the Agent supports additional workspace roots.
 </ResponseField>
 
+<ResponseField name="systemPrompt" type="SessionSystemPromptCapabilities Object">
+  The Agent supports
+  [`systemPrompt`](/protocol/v1/draft/session-setup#system-prompt) on session
+  lifecycle requests. Omitted or `null` both mean the Agent does not
+  advertise support. Supplying `{}` means the Agent supports `append` mode.
+  Supplying `{ "mode": { "override": {} } }` also advertises `override` mode.
+</ResponseField>
+
+<ResponseField name="options" type="SessionOptionsCapabilities Object">
+  **Unstable.** The [`session/options`](/rfds/session-options) method and
+  `configOptions` on session setup requests are available. Omitted or `null`
+  both mean the Agent does not advertise support. Supplying an empty object
+  means the Agent supports both.
+</ResponseField>
+
+<ResponseField name="status" type="SessionStatusCapabilities Object">
+  **Unstable.** The [`session/status`](/rfds/session-status) method is
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means the Agent supports checking session status.
+</ResponseField>
+
+<ResponseField name="title" type="SessionTitleCapabilities Object">
+  **Unstable.** The [`session/set_title`](/rfds/session-set-title) method is
+  available. Omitted or `null` both mean the Agent does not advertise support.
+  Supplying an empty object means Clients can set session titles. Agents report
+  titles through `session/list` and `session_info_update` without this
+  capability.
+</ResponseField>
+
 <Note>
   `session/load` is still handled by the top-level `load_session` capability.
   This will be unified in future versions of the protocol.
 </Note>
 
-## Implementation Information
+## Implementation information
 
 Both Clients and Agents **SHOULD** provide information about their implementation in the `clientInfo` and `agentInfo` fields respectively. Both take the following three fields:
 
-<ParamField path="name" type="string">
+<ParamField path="name" type="string" required>
   Intended for programmatic or logical use, but can be used as a display name
-  fallback if title isn’t present.
+  fallback if title isn't present.
 </ParamField>
 
 <ParamField path="title" type="string">
-  Intended for UI and end-user contexts — optimized to be human-readable and
-  easily understood. If not provided, the name should be used for display.
+  Intended for UI and end-user contexts and optimized to be human-readable and
+  easily understood. Optional. Omitted and `null` are equivalent. If not
+  provided, the name should be used for display.
 </ParamField>
 
-<ParamField path="version" type="string">
+<ParamField path="version" type="string" required>
   Version of the implementation. Can be displayed to the user or used for
   debugging or metrics purposes.
 </ParamField>
