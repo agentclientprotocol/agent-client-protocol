@@ -134,7 +134,7 @@ If the Agent does not know the session, it **MUST** return error `-32002` (Resou
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
 - Routing layers ask each Agent instance for `session/status` to find the one with the session `open`, and send `session/resume` there instead of loading it on the wrong instance.
 - Clients reconnecting over a long-lived transport can tell "the Agent still has my session" from "the Agent restarted and the session needs resuming", and show the right thing right away.

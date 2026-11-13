@@ -201,7 +201,7 @@ The response includes optional `availableCommands`, with the same type and rules
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
 A Client opens a "new session" screen and calls `session/options` with the workspace the user picked. It shows the model picker and other config options right away, and in v2 the slash commands it knows about. The user picks a model and a reasoning level, types a prompt, and sends it. The Client calls `session/new` with those values and then `session/prompt`. The first turn runs with the settings the user picked, and no session exists until the user commits to one.
 
