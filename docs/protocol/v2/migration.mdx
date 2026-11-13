@@ -871,7 +871,7 @@ A command still carries `name` and `description`, but each command and its optio
 
 </CodeGroup>
 
-As with other extensible unions, unknown command and input types should be preserved when proxying. Each command type defines how its entries are invoked, and `/name` invokes only `command` entries. A client that doesn't understand a command type ignores the entry instead of showing it as a slash command. A client that can't render an input type can fall back to plain text input or hide the command's input hint.
+As with other extensible unions, unknown command and input types should be preserved when proxying. Each command type defines how its entries are invoked, so a client that doesn't understand a command type ignores it and must not display it as a slash command. A client that can't render an input type can fall back to plain text input or hide the command's input hint.
 
 ## Consistent ID naming
 

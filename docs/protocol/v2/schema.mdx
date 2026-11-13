@@ -2019,11 +2019,10 @@ Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
-Each command type defines how its entries are invoked. Clients that do
-not understand this command type MUST NOT display the entry as a slash
-command or offer to invoke it. They ignore the entry, and should still
-preserve the raw payload when storing, replaying, proxying, or
-forwarding command metadata.
+Clients that do not understand this command type should preserve the raw
+payload when storing, replaying, proxying, or forwarding command
+metadata, and otherwise ignore the command. They MUST NOT display it as a
+slash command.
 
 <Expandable title="Properties">
 

@@ -3773,7 +3773,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future command kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nEach command type defines how its entries are invoked. Clients that do\nnot understand this command type MUST NOT display the entry as a slash\ncommand or offer to invoke it. They ignore the entry, and should still\npreserve the raw payload when storing, replaying, proxying, or\nforwarding command metadata.",
+          "description": "Custom or future command kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this command type should preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the command. They MUST NOT display it as a\nslash command.",
           "type": "object",
           "properties": {
             "type": {
