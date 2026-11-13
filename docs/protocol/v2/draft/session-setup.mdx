@@ -383,7 +383,7 @@ A `session/resume` that is cancelled with [`$/cancel_request`](/protocol/v2/draf
 
 An Agent that rejects the `replayFrom` cursor with `-32602` replays nothing and does not send `replay_complete`.
 
-#### Child sessions (unstable)
+#### Child sessions
 
 A resume with replay can also replay the history of [child sessions](/rfds/subagents#reconnection-and-replay), at any depth. Each session has its own `replay_complete` on its own `sessionId`, and the rules above apply to each session separately:
 
@@ -400,7 +400,7 @@ For every successful resume, the Agent **MUST** send a current
 [`state_update`](/protocol/v2/draft/prompt-lifecycle#session-states) after any requested
 history replay and before the resume response. This is required even when
 `replayFrom` is omitted or `null`. The snapshot reports the current foreground
-state after resuming: `idle`, `running`, or `requires_action`, or the draft
+state after resuming: `idle`, `running`, or `requires_action`, or the
 `unknown` state when activity is unobservable.
 
 The snapshot carries the [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list like any other. Before it, the Agent **MUST** send a current update for each listed item that the requested replay did not already deliver at its current state: a `terminal_update` for each terminal, a `tool_call_update` for each tool call, and a `subagent_update` for each child. When no replay was requested, this means all of them.

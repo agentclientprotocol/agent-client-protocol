@@ -12,7 +12,6 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-#[cfg(feature = "unstable_subagents")]
 use super::SessionId;
 use super::{AbsolutePath, ContentBlock, MediaType, Meta, Terminal, apply_meta_update};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
@@ -525,12 +524,7 @@ pub enum ToolCallContent {
     Diff(Diff),
     /// A display-only reference to an agent-owned terminal.
     Terminal(Terminal),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A display-only reference to another session, such as a subagent.
-    #[cfg(feature = "unstable_subagents")]
     Session(SessionReference),
     /// Custom or future tool call content.
     ///
@@ -604,13 +598,7 @@ fn is_known_tool_call_content_type(type_: &str) -> bool {
     KNOWN_TOOL_CALL_CONTENT_TYPES.contains(&type_)
 }
 
-const KNOWN_TOOL_CALL_CONTENT_TYPES: &[&str] = &[
-    "content",
-    "diff",
-    "terminal",
-    #[cfg(feature = "unstable_subagents")]
-    "session",
-];
+const KNOWN_TOOL_CALL_CONTENT_TYPES: &[&str] = &["content", "diff", "terminal", "session"];
 
 #[cfg(feature = "schemars")]
 fn other_tool_call_content_schema(schema: &mut Schema) {
@@ -639,10 +627,6 @@ impl From<Terminal> for ToolCallContent {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A display-only reference to another session that this tool call operates on,
 /// such as a subagent it created, delegated to, or is waiting on.
 ///
@@ -650,7 +634,6 @@ impl From<Terminal> for ToolCallContent {
 /// session setup or a `subagent_update` announcement. The reference does not
 /// establish ownership, grant any Client-initiated controls, or report that the
 /// referenced session received or finished any work.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -672,7 +655,6 @@ pub struct SessionReference {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionReference {
     /// Builds [`SessionReference`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -692,7 +674,6 @@ impl SessionReference {
     }
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl From<SessionReference> for ToolCallContent {
     fn from(session: SessionReference) -> Self {
         ToolCallContent::Session(session)
@@ -1244,7 +1225,6 @@ impl ToolCallLocation {
 #[cfg(test)]
 mod tests {
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn session_reference_tool_call_content_round_trips() {
         use serde_json::json;

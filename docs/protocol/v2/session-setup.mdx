@@ -381,15 +381,27 @@ A `session/resume` that is cancelled with [`$/cancel_request`](/protocol/v2/canc
 
 An Agent that rejects the `replayFrom` cursor with `-32602` replays nothing and does not send `replay_complete`.
 
+#### Child sessions
+
+A resume with replay can also replay the history of [child sessions](/rfds/subagents#reconnection-and-replay), at any depth. Each session has its own `replay_complete` on its own `sessionId`, and the rules above apply to each session separately:
+
+- The Agent **MUST** send `replay_complete` exactly once on each child session that it announces with `subagent_update` between the request and the response. It sends it after the announcement and after the last replayed update for that child. An announced child with no replayed history gets one too, like the session named in the request. A child that the Agent does not announce gets none.
+- Every update for a session before that session's `replay_complete` is replayed history. Updates and Agent requests that are not history follow it. They do not wait for the replay of any other session.
+- The `replay_complete` updates of different sessions have no required order. A parent's `replay_complete` says nothing about its children.
+- The table above applies to each session, with that session's `replay_complete` and the response to the request.
+
+No `replay_complete` means that the replay of every session is complete. The successful response does, because the Agent sends all history selected for the replay before it.
+
 ### Current-state synchronization
 
 For every successful resume, the Agent **MUST** send a current
 [`state_update`](/protocol/v2/prompt-lifecycle#session-states) after any requested
 history replay and before the resume response. This is required even when
 `replayFrom` is omitted or `null`. The snapshot reports the current foreground
-state after resuming: `idle`, `running`, or `requires_action`.
+state after resuming: `idle`, `running`, or `requires_action`, or the
+`unknown` state when activity is unobservable.
 
-The snapshot carries the [`background`](/protocol/v2/prompt-lifecycle#background-work) list like any other. Before it, the Agent **MUST** send a current update for each listed item that the requested replay did not already deliver at its current state: a `terminal_update` for each terminal, a `tool_call_update` for each tool call. When no replay was requested, this means all of them.
+The snapshot carries the [`background`](/protocol/v2/prompt-lifecycle#background-work) list like any other. Before it, the Agent **MUST** send a current update for each listed item that the requested replay did not already deliver at its current state: a `terminal_update` for each terminal, a `tool_call_update` for each tool call, and a `subagent_update` for each child. When no replay was requested, this means all of them.
 
 Agents **MUST NOT** replay historical `state_update` notifications as current
 activity. The snapshot and subsequent live state changes **MUST** be delivered
