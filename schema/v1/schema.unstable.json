@@ -5166,22 +5166,6 @@
           ]
         },
         {
-          "description": "A URI pointing to a file containing the plan.",
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "file"
-            }
-          },
-          "required": ["type"],
-          "allOf": [
-            {
-              "$ref": "#/$defs/PlanFile"
-            }
-          ]
-        },
-        {
           "description": "Raw markdown content for the plan.",
           "type": "object",
           "properties": {
@@ -5236,31 +5220,6 @@
       },
       "required": ["planId", "entries"]
     },
-    "PlanFile": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented by a file URI.",
-      "type": "object",
-      "properties": {
-        "planId": {
-          "description": "The plan ID to update.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/PlanId"
-            }
-          ]
-        },
-        "uri": {
-          "description": "The URI of the file containing the plan.",
-          "type": "string"
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["planId", "uri"]
-    },
     "PlanMarkdown": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as raw markdown content.",
       "type": "object",
@@ -5276,6 +5235,11 @@
         "content": {
           "description": "Markdown content for the plan.",
           "type": "string"
+        },
+        "path": {
+          "description": "The absolute path of the file that holds this plan.\n\nThis field is optional. Omitting it or sending `null` both mean that the plan\nhas no file. `content` is the plan to display whether or not `path` is set.\nClients can use `path` to open the file.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",

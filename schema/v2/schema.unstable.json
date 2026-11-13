@@ -6923,22 +6923,6 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA URI pointing to a file containing the plan.",
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "file"
-            }
-          },
-          "required": ["type"],
-          "allOf": [
-            {
-              "$ref": "#/$defs/PlanFile"
-            }
-          ]
-        },
-        {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRaw markdown content for the plan.",
           "type": "object",
           "properties": {
@@ -6981,16 +6965,6 @@
                   "type": {
                     "type": "string",
                     "const": "items"
-                  }
-                },
-                "required": ["type"]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "const": "file"
                   }
                 },
                 "required": ["type"]
@@ -7132,32 +7106,6 @@
       },
       "required": ["planId", "entries"]
     },
-    "PlanFile": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented by a file URI.",
-      "type": "object",
-      "properties": {
-        "planId": {
-          "description": "The plan ID to update.",
-          "allOf": [
-            {
-              "$ref": "#/$defs/PlanId"
-            }
-          ]
-        },
-        "uri": {
-          "description": "The URI of the file containing the plan.",
-          "type": "string",
-          "format": "uri"
-        },
-        "_meta": {
-          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
-          "type": ["object", "null"],
-          "x-deserialize-default-on-error": true,
-          "additionalProperties": true
-        }
-      },
-      "required": ["planId", "uri"]
-    },
     "PlanMarkdown": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as raw markdown content.",
       "type": "object",
@@ -7173,6 +7121,18 @@
         "content": {
           "description": "Markdown content for the plan.",
           "type": "string"
+        },
+        "path": {
+          "description": "The absolute path of the file that holds this plan.\n\nOmitted and `null` are equivalent and mean the plan has no file. `content` is the\nplan to display whether or not `path` is set. Clients can use `path` to open the file.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
         },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",

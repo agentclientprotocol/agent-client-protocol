@@ -97,34 +97,26 @@ Each `plan_update` replaces the whole plan with that `planId`, whatever its `typ
       "plan": {
         "type": "markdown",
         "planId": "implementation-plan",
-        "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests"
+        "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests",
+        "path": "/home/user/project/PLAN.md"
       }
     }
   }
 }
 ```
 
-### File plans
+<ParamField path="plan.content" type="string" required>
+  The plan as Markdown.
+</ParamField>
 
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "session/update",
-  "params": {
-    "sessionId": "sess_abc123def456",
-    "update": {
-      "sessionUpdate": "plan_update",
-      "plan": {
-        "type": "file",
-        "planId": "design-doc",
-        "uri": "file:///tmp/plan.md"
-      }
-    }
-  }
-}
-```
+<ParamField path="plan.path" type="string | null">
+  The absolute path of the file that holds this plan. Omission and `null` are
+  equivalent and mean the plan has no file.
+</ParamField>
 
-Plan file URIs **MUST** be absolute.
+`path` **MUST** be an absolute path.
+
+`content` is the plan to display whether or not `path` is set. Clients render `content` and don't need to read the file. Clients can use `path` to open the file.
 
 ### Removing plans
 

@@ -6,7 +6,7 @@
 //! See: [Agent Plan](https://agentclientprotocol.com/protocol/v1/agent-plan)
 
 #[cfg(feature = "unstable_plan_operations")]
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 #[cfg(feature = "unstable_plan_operations")]
 use derive_more::{Display, From};
@@ -155,8 +155,6 @@ impl PlanUpdate {
 pub enum PlanUpdateContent {
     /// Structured plan entries.
     Items(PlanItems),
-    /// A URI pointing to a file containing the plan.
-    File(PlanFile),
     /// Raw markdown content for the plan.
     Markdown(PlanMarkdown),
 }
@@ -169,13 +167,10 @@ impl PlanUpdateContent {
         Self::Items(PlanItems::new(plan_id, entries))
     }
 
-    /// Builds a plan update that points clients at an external plan file URI.
-    #[must_use]
-    pub fn file(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
-        Self::File(PlanFile::new(plan_id, uri))
-    }
-
     /// Builds a plan update whose plan content is inline Markdown.
+    ///
+    /// To also name the file that holds the plan, wrap a [`PlanMarkdown`] built with
+    /// [`PlanMarkdown::path`] in [`PlanUpdateContent::Markdown`].
     #[must_use]
     pub fn markdown(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self::Markdown(PlanMarkdown::new(plan_id, content))
@@ -244,59 +239,6 @@ impl PlanItems {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// A plan represented by a file URI.
-#[cfg(feature = "unstable_plan_operations")]
-#[serde_as]
-#[skip_serializing_none]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-#[non_exhaustive]
-pub struct PlanFile {
-    /// The plan ID to update.
-    pub plan_id: PlanId,
-    /// The URI of the file containing the plan.
-    pub uri: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-}
-
-#[cfg(feature = "unstable_plan_operations")]
-impl PlanFile {
-    /// Builds [`PlanFile`] with the required fields set. Optional fields start unset or empty.
-    #[must_use]
-    pub fn new(plan_id: impl Into<PlanId>, uri: impl Into<String>) -> Self {
-        Self {
-            plan_id: plan_id.into(),
-            uri: uri.into(),
-            meta: None,
-        }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
-    }
-}
-
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A plan represented as raw markdown content.
 #[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
@@ -310,6 +252,15 @@ pub struct PlanMarkdown {
     pub plan_id: PlanId,
     /// Markdown content for the plan.
     pub content: String,
+    /// The absolute path of the file that holds this plan.
+    ///
+    /// This field is optional. Omitting it or sending `null` both mean that the plan
+    /// has no file. `content` is the plan to display whether or not `path` is set.
+    /// Clients can use `path` to open the file.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub path: Option<PathBuf>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -330,8 +281,18 @@ impl PlanMarkdown {
         Self {
             plan_id: plan_id.into(),
             content: content.into(),
+            path: None,
             meta: None,
         }
+    }
+
+    /// The absolute path of the file that holds this plan.
+    ///
+    /// `content` is the plan to display whether or not `path` is set.
+    #[must_use]
+    pub fn path(mut self, path: impl IntoOption<PathBuf>) -> Self {
+        self.path = path.into_option();
+        self
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

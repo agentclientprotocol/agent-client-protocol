@@ -6267,33 +6267,6 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/dr
   The task has been successfully completed.
 </ResponseField>
 
-## <span class="font-mono">PlanFile</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A plan represented by a file URI.
-
-**Type:** Object
-
-**Properties:**
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
-  The plan ID to update.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file containing the plan.
-</ResponseField>
-
 ## <span class="font-mono">PlanId</span>
 
 **UNSTABLE**
@@ -6357,6 +6330,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="content" type={"string"} required>
   Markdown content for the plan.
+</ResponseField>
+<ResponseField name="path" type={"string | null"} >
+  The absolute path of the file that holds this plan.
+
+This field is optional. Omitting it or sending `null` both mean that the plan
+has no file. `content` is the plan to display whether or not `path` is set.
+Clients can use `path` to open the file.
+
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
@@ -6450,32 +6431,6 @@ with their current status. The client replaces that plan with each update.
 </Expandable>
 </ResponseField>
 
-<ResponseField name="file" type="object">
-A URI pointing to a file containing the plan.
-
-<Expandable title="Properties">
-
-<ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Implementations MUST NOT make assumptions about values at
-these keys.
-
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)
-
-</ResponseField>
-<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
-  The plan ID to update.
-</ResponseField>
-<ResponseField name="type" type={"string"} required>
-  The discriminator value. Must be `"file"`.
-</ResponseField>
-<ResponseField name="uri" type={"string"} required>
-  The URI of the file containing the plan.
-</ResponseField>
-
-</Expandable>
-</ResponseField>
-
 <ResponseField name="markdown" type="object">
 Raw markdown content for the plan.
 
@@ -6491,6 +6446,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 <ResponseField name="content" type={"string"} required>
   Markdown content for the plan.
+</ResponseField>
+<ResponseField name="path" type={"string | null"} >
+  The absolute path of the file that holds this plan.
+
+This field is optional. Omitting it or sending `null` both mean that the plan
+has no file. `content` is the plan to display whether or not `path` is set.
+Clients can use `path` to open the file.
+
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
   The plan ID to update.
