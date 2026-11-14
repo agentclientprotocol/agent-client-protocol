@@ -45,6 +45,7 @@
 //! For the complete protocol specification and documentation, visit
 //! <https://agentclientprotocol.com>.
 
+mod dispatch;
 pub mod rpc;
 mod serde_util;
 pub mod v1;
@@ -52,6 +53,7 @@ pub mod v1;
 pub mod v2;
 mod version;
 
+pub use dispatch::MethodDispatchError;
 pub use serde_util::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 pub use version::*;
 
