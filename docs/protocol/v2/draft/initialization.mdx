@@ -245,6 +245,29 @@ The Client opts in to other content types with the following fields. They have t
   Learn more about Prompt Suggestions
 </Card>
 
+<ParamField path="session.commands" type="CommandsCapabilities Object">
+  Groups the command types the Client understands in addition to `command`.
+  Omitted or `null` means the Client advertises none of them. This object is not
+  a support marker, and `{}` advertises nothing.
+</ParamField>
+
+<ParamField
+  path="session.commands.skill"
+  type="CommandsSkillCapabilities Object"
+>
+  The Client understands `skill` entries in `availableCommands` and invokes them
+  with `skill` content blocks. Omitted or `null` means unsupported, and `{}`
+  means supported. Agents must not send `skill` entries without this capability.
+</ParamField>
+
+<Card
+  icon="book-open"
+  horizontal
+  href="/protocol/v2/draft/slash-commands#skills-unstable"
+>
+  Learn more about Skills
+</Card>
+
 ### Agent capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:
@@ -385,6 +408,20 @@ Optionally, they **MAY** support richer types of [content](/protocol/v2/draft/co
   The prompt may include `resource` content blocks. Omitted or `null` means the
   Agent does not advertise support. Supplying `{}` means the Agent supports
   embedded context in prompts.
+</ResponseField>
+
+<ResponseField name="skill" type="PromptSkillCapabilities Object">
+  **Unstable.** The prompt may include a [`skill` content
+  block](/protocol/v2/draft/content#skill-reference-unstable). Omitted or `null`
+  means the Agent does not advertise support. Supplying `{}` means a prompt may
+  contain one `skill` block, as its first block. An Agent that sends `skill`
+  entries in `availableCommands` **MUST** advertise this capability.
+</ResponseField>
+
+<ResponseField name="skill.inline" type="PromptSkillInlineCapabilities Object">
+  **Unstable.** Omitted or `null` means the Agent does not advertise support.
+  Supplying `{}` means a prompt may contain any number of `skill` blocks, at any
+  position.
 </ResponseField>
 
 #### Session MCP capabilities

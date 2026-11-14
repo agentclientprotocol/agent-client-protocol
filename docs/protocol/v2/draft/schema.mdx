@@ -3332,6 +3332,52 @@ MUST NOT contain whitespace and MUST be unique within the command list.
 </Expandable>
 </ResponseField>
 
+<ResponseField name="skill" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+An Agent Skill the user can invoke with a `skill` content block.
+
+Agents MUST only send this entry when the Client advertised
+the `session.commands.skill` Client capability.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string"} required>
+  Human-readable description of what the skill does, shown to users.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Skill name. The Client uses it to refer to the skill in a `skill` content block.
+
+MUST NOT contain whitespace and MUST be unique within the command list,
+across commands and skills. It need not match the `name` in the skill's
+frontmatter.
+
+</ResponseField>
+<ResponseField name="path" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
+  The absolute path of the file that defines the skill, normally its
+`SKILL.md`, on the machine the Agent runs on.
+
+Omitted and `null` are equivalent and mean the skill has no such file,
+as with a skill that is built into the Agent or served by an MCP server.
+
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"skill"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
 <ResponseField name="other" type="object">
 Custom or future command kind.
 
@@ -3801,6 +3847,13 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
+<ResponseField name="commands" type={<><span><a href="#commandscapabilities">CommandsCapabilities</a></span><span> | null</span></>} >
+  Command types the client understands in addition to `command`.
+
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support
+for any of them. This object only groups capabilities. Supplying `\{\}` advertises nothing.
+
+</ResponseField>
 <ResponseField name="promptSuggestions" type={<><span><a href="#promptsuggestionscapabilities">PromptSuggestionsCapabilities</a></span><span> | null</span></>} >
   Support for `prompt_suggestions_update` session updates.
 
@@ -3871,6 +3924,63 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="toolCallId" type={<><span><a href="#toolcallid">ToolCallId</a></span><span> | null</span></>} >
   The associated tool call, when known. Omitted and `null` are equivalent.
+</ResponseField>
+
+## <span class="font-mono">CommandsCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Command types the client understands in addition to `command`.
+
+Agents MUST NOT send a command type listed here unless the client
+advertised it. This object only groups capabilities. Supplying `\{\}`
+advertises nothing.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="skill" type={<><span><a href="#commandsskillcapabilities">CommandsSkillCapabilities</a></span><span> | null</span></>} >
+  Support for `skill` command entries.
+
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
+Supplying `\{\}` means the agent may send `skill` entries in `availableCommands`. The
+client invokes them with `skill` content blocks.
+
+</ResponseField>
+
+## <span class="font-mono">CommandsSkillCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client support for `skill` command entries.
+
+Supplying `\{\}` means the agent may send `skill` entries in
+`availableCommands`. The client invokes them with `skill` content blocks.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
 </ResponseField>
 
 ## <span class="font-mono">CompactionId</span>
@@ -4242,6 +4352,40 @@ Omitted and `null` are equivalent and mean no annotations are provided.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"resource"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="skill" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A reference to a skill that the user invokes with this prompt.
+
+Requires the `skill` prompt capability when included in prompts. A skill
+reference has no meaning outside a user message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  The `name` of a `skill` entry in the session's current command list.
+
+Required and non-null. The Agent MUST reject the prompt with `-32602`
+when it cannot resolve the name to a skill the user can invoke.
+
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"skill"`.
 </ResponseField>
 
 </Expandable>
@@ -7229,6 +7373,18 @@ Optional. Omitted and `null` are equivalent and mean the agent does not advertis
 Supplying `\{\}` means the agent supports image content in prompts.
 
 </ResponseField>
+<ResponseField name="skill" type={<><span><a href="#promptskillcapabilities">PromptSkillCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Agent supports `skill` content blocks.
+
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+Supplying `\{\}` means a prompt may contain one `skill` content block, as its first block.
+An agent that sends `skill` entries in `availableCommands` MUST advertise this capability.
+
+</ResponseField>
 
 ## <span class="font-mono">PromptEmbeddedContextCapabilities</span>
 
@@ -7254,6 +7410,62 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Capabilities for image content in prompt requests.
 
 Supplying `\{\}` means the agent supports image content in prompts.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">PromptSkillCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for `skill` content blocks in prompt requests.
+
+Supplying `\{\}` means a prompt may contain one `skill` content block, as
+its first block. The agent opts in to more with the `inline` field.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="inline" type={<><span><a href="#promptskillinlinecapabilities">PromptSkillInlineCapabilities</a></span><span> | null</span></>} >
+  Agent supports `skill` content blocks at any position in a prompt.
+
+Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+Supplying `\{\}` means a prompt may contain any number of `skill` content blocks, at any
+position.
+
+</ResponseField>
+
+## <span class="font-mono">PromptSkillInlineCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for `skill` content blocks at any position in a prompt.
+
+Supplying `\{\}` means a prompt may contain any number of `skill` content
+blocks, at any position.
 
 **Type:** Object
 
@@ -10214,6 +10426,97 @@ future ACP variants.
 </ResponseField>
 
 </Expandable>
+</ResponseField>
+
+## <span class="font-mono">Skill</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+An Agent Skill the user can invoke.
+
+The `type` discriminator value is `skill`.
+
+The Client invokes a skill with a `skill` content block that names it. The
+`/name` syntax applies only to `command` entries. An Agent that sends
+`skill` entries MUST advertise the `session.prompt.skill` capability.
+
+Agents MUST only send `skill` entries when the Client advertised the
+`session.commands.skill` Client capability. Agents SHOULD advertise only
+skills the user can invoke.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="description" type={"string"} required>
+  Human-readable description of what the skill does, shown to users.
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  Skill name. The Client uses it to refer to the skill in a `skill` content block.
+
+MUST NOT contain whitespace and MUST be unique within the command list,
+across commands and skills. It need not match the `name` in the skill's
+frontmatter.
+
+</ResponseField>
+<ResponseField name="path" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
+  The absolute path of the file that defines the skill, normally its
+`SKILL.md`, on the machine the Agent runs on.
+
+Omitted and `null` are equivalent and mean the skill has no such file,
+as with a skill that is built into the Agent or served by an MCP server.
+
+</ResponseField>
+
+## <span class="font-mono">SkillReference</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A reference to a skill that the user invokes with a prompt.
+
+The Client sends it in `session/prompt` to invoke a `skill` entry from the
+session's command list. The Agent MUST treat each reference as the user
+explicitly invoking that skill for this prompt, and applies the skill to
+the prompt as a whole. The reference carries no input.
+
+An Agent that advertises the `session.prompt.skill` capability accepts one
+skill reference per prompt, as the first content block. An Agent that also
+advertises `session.prompt.skill.inline` accepts any number of them, at any
+position. Clients MUST NOT send a skill reference that the Agent's
+capability does not allow.
+
+The `type` discriminator value is `skill`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="name" type={"string"} required>
+  The `name` of a `skill` entry in the session's current command list.
+
+Required and non-null. The Agent MUST reject the prompt with `-32602`
+when it cannot resolve the name to a skill the user can invoke.
+
 </ResponseField>
 
 ## <span class="font-mono">StateUpdate</span>

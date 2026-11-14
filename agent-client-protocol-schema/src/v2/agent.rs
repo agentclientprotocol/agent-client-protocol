@@ -6929,6 +6929,20 @@ pub struct PromptCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub embedded_context: Option<PromptEmbeddedContextCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Agent supports `skill` content blocks.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain one `skill` content block, as its first block.
+    /// An agent that sends `skill` entries in `availableCommands` MUST advertise this capability.
+    #[cfg(feature = "unstable_agent_skills")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub skill: Option<PromptSkillCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -6981,6 +6995,21 @@ impl PromptCapabilities {
         embedded_context: impl IntoOption<PromptEmbeddedContextCapabilities>,
     ) -> Self {
         self.embedded_context = embedded_context.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Agent supports `skill` content blocks.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain one `skill` content block, as its first block.
+    #[cfg(feature = "unstable_agent_skills")]
+    #[must_use]
+    pub fn skill(mut self, skill: impl IntoOption<PromptSkillCapabilities>) -> Self {
+        self.skill = skill.into_option();
         self
     }
 
@@ -7099,6 +7128,121 @@ pub struct PromptEmbeddedContextCapabilities {
 
 impl PromptEmbeddedContextCapabilities {
     /// Builds an empty [`PromptEmbeddedContextCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for `skill` content blocks in prompt requests.
+///
+/// Supplying `{}` means a prompt may contain one `skill` content block, as
+/// its first block. The agent opts in to more with the `inline` field.
+#[cfg(feature = "unstable_agent_skills")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct PromptSkillCapabilities {
+    /// Agent supports `skill` content blocks at any position in a prompt.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain any number of `skill` content blocks, at any
+    /// position.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub inline: Option<PromptSkillInlineCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_agent_skills")]
+impl PromptSkillCapabilities {
+    /// Builds an empty [`PromptSkillCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Agent supports `skill` content blocks at any position in a prompt.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain any number of `skill` content blocks, at any
+    /// position.
+    #[must_use]
+    pub fn inline(mut self, inline: impl IntoOption<PromptSkillInlineCapabilities>) -> Self {
+        self.inline = inline.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for `skill` content blocks at any position in a prompt.
+///
+/// Supplying `{}` means a prompt may contain any number of `skill` content
+/// blocks, at any position.
+#[cfg(feature = "unstable_agent_skills")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptSkillInlineCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_agent_skills")]
+impl PromptSkillInlineCapabilities {
+    /// Builds an empty [`PromptSkillInlineCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -10246,6 +10390,47 @@ mod test_serialization {
         assert!(deserialized.image.is_none());
         assert!(deserialized.audio.is_none());
         assert!(deserialized.embedded_context.is_some());
+    }
+
+    #[cfg(feature = "unstable_agent_skills")]
+    #[test]
+    fn prompt_skill_capability_has_two_levels() {
+        // `{}` allows one leading skill block. `inline` allows them anywhere.
+        let leading = PromptCapabilities::new().skill(PromptSkillCapabilities::new());
+        assert_eq!(
+            serde_json::to_value(&leading).unwrap(),
+            json!({ "skill": {} })
+        );
+
+        let inline = PromptCapabilities::new()
+            .skill(PromptSkillCapabilities::new().inline(PromptSkillInlineCapabilities::new()));
+        let wire = json!({ "skill": { "inline": {} } });
+        assert_eq!(serde_json::to_value(&inline).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<PromptCapabilities>(wire).unwrap(),
+            inline
+        );
+
+        for unsupported in [
+            json!({}),
+            json!({ "skill": null }),
+            json!({ "skill": false }),
+            json!({ "skill": true }),
+        ] {
+            let caps: PromptCapabilities = serde_json::from_value(unsupported).unwrap();
+            assert!(caps.skill.is_none());
+        }
+
+        // A malformed `inline` does not withdraw the first level.
+        for leading_only in [
+            json!({ "skill": { "inline": null } }),
+            json!({ "skill": { "inline": true } }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<PromptCapabilities>(leading_only).unwrap(),
+                leading
+            );
+        }
     }
 
     #[test]

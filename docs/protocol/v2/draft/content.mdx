@@ -17,6 +17,8 @@ Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v2/
 
 ACP's `ContentBlock` is compatible with, and a superset of, the [Model Context Protocol (MCP) 2026-07-28 `ContentBlock`](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock), so Agents can forward content from MCP tool outputs unchanged. ACP adds an optional `uri` on image content, `_meta` on icons and annotations, extensible `Role` and `IconTheme` values, and the open `type` fallback described below.
 
+The unstable [`skill` content block](#skill-reference-unstable) is an ACP addition that MCP does not define.
+
 A content type from a later MCP revision that ACP doesn't define isn't forwarded as is. Agents convert it to a supported type, such as an embedded resource, or omit it.
 
 Content block `type` values can be custom or future variants when the receiver can preserve or display them generically. Custom content block types **MUST** begin with `_`. Unknown non-underscore content block types are reserved for future ACP variants. In prompts, Clients send only baseline content types (`text` and `resource_link`) and content types the Agent advertised, including custom types advertised through a [custom capability](/protocol/v2/draft/extensibility#advertising-custom-capabilities), and Agents reject others with `-32602`.
@@ -227,3 +229,24 @@ All Agents **MUST** support resource links when included in prompts.
   Optional metadata about how the content should be used or displayed. [Learn
   more](https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations).
 </ParamField>
+
+### Skill reference (unstable) <Icon icon="asterisk" size="14" />
+
+A reference to a [skill](/protocol/v2/draft/slash-commands#skills-unstable) that the user invokes with the prompt.
+
+```json
+{
+  "type": "skill",
+  "name": "pdf-processing"
+}
+```
+
+<Icon icon="asterisk" size="14" /> Requires the `skill` [prompt
+capability](/protocol/v2/draft/initialization#session-prompt-capabilities) when
+included in prompts.
+
+<ParamField path="name" type="string" required>
+  The `name` of a `skill` entry in the session's current command list
+</ParamField>
+
+A skill reference appears only in user messages: in the `prompt` of `session/prompt`, and in the `user_message` updates that report or replay that prompt. See [Invoking a skill](/protocol/v2/draft/slash-commands#invoking-a-skill) for where the block may appear in a prompt and how the Agent handles it.

@@ -104,6 +104,16 @@ pub enum ContentBlock {
     ///
     /// Requires the `embeddedContext` prompt capability when included in prompts.
     Resource(EmbeddedResource),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A reference to a skill that the user invokes with this prompt.
+    ///
+    /// Requires the `skill` prompt capability when included in prompts. A skill
+    /// reference has no meaning outside a user message.
+    #[cfg(feature = "unstable_agent_skills")]
+    Skill(SkillReference),
     /// Custom or future content block.
     ///
     /// Values beginning with `_` are reserved for implementation-specific
@@ -174,11 +184,18 @@ impl<'de> Deserialize<'de> for OtherContentBlock {
     }
 }
 
+const KNOWN_CONTENT_BLOCK_TYPES: &[&str] = &[
+    "text",
+    "image",
+    "audio",
+    "resource_link",
+    "resource",
+    #[cfg(feature = "unstable_agent_skills")]
+    "skill",
+];
+
 fn is_known_content_block_type(type_: &str) -> bool {
-    matches!(
-        type_,
-        "text" | "image" | "audio" | "resource_link" | "resource"
-    )
+    KNOWN_CONTENT_BLOCK_TYPES.contains(&type_)
 }
 
 #[cfg(feature = "schemars")]
@@ -186,7 +203,7 @@ fn other_content_block_schema(schema: &mut Schema) {
     super::schema_util::reject_known_string_discriminators(
         schema,
         "type",
-        &["text", "image", "audio", "resource_link", "resource"],
+        KNOWN_CONTENT_BLOCK_TYPES,
     );
 }
 
@@ -731,6 +748,72 @@ impl ResourceLink {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A reference to a skill that the user invokes with a prompt.
+///
+/// The Client sends it in `session/prompt` to invoke a `skill` entry from the
+/// session's command list. The Agent MUST treat each reference as the user
+/// explicitly invoking that skill for this prompt, and applies the skill to
+/// the prompt as a whole. The reference carries no input.
+///
+/// An Agent that advertises the `session.prompt.skill` capability accepts one
+/// skill reference per prompt, as the first content block. An Agent that also
+/// advertises `session.prompt.skill.inline` accepts any number of them, at any
+/// position. Clients MUST NOT send a skill reference that the Agent's
+/// capability does not allow.
+///
+/// The `type` discriminator value is `skill`.
+#[cfg(feature = "unstable_agent_skills")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SkillReference {
+    /// The `name` of a `skill` entry in the session's current command list.
+    ///
+    /// Required and non-null. The Agent MUST reject the prompt with `-32602`
+    /// when it cannot resolve the name to a skill the user can invoke.
+    pub name: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_agent_skills")]
+impl SkillReference {
+    /// Builds [`SkillReference`] with the name of the skill to invoke. Optional metadata starts unset.
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// An optionally-sized icon that can be displayed in a user interface.
 #[serde_as]
 #[skip_serializing_none]
@@ -1102,6 +1185,43 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[cfg(feature = "unstable_agent_skills")]
+    #[test]
+    fn skill_reference_uses_type_discriminator() {
+        let block = ContentBlock::Skill(SkillReference::new("pdf-processing"));
+        let json = serde_json::to_value(&block).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({ "type": "skill", "name": "pdf-processing" })
+        );
+        assert_eq!(serde_json::from_value::<ContentBlock>(json).unwrap(), block);
+
+        // `null` and malformed metadata mean no metadata.
+        for meta in [serde_json::Value::Null, serde_json::json!("oops")] {
+            let parsed: ContentBlock = serde_json::from_value(serde_json::json!({
+                "type": "skill",
+                "name": "pdf-processing",
+                "_meta": meta
+            }))
+            .unwrap();
+            assert_eq!(parsed, block);
+        }
+    }
+
+    #[cfg(feature = "unstable_agent_skills")]
+    #[test]
+    fn malformed_skill_reference_does_not_fall_through_to_other() {
+        // The Agent acts on `name`, so it stays strict.
+        for payload in [
+            serde_json::json!({ "type": "skill" }),
+            serde_json::json!({ "type": "skill", "name": null }),
+            serde_json::json!({ "type": "skill", "name": 1 }),
+        ] {
+            assert!(serde_json::from_value::<ContentBlock>(payload.clone()).is_err());
+            assert!(serde_json::from_value::<OtherContentBlock>(payload).is_err());
+        }
     }
 
     #[test]
