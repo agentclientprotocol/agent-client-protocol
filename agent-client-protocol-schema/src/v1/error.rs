@@ -42,13 +42,38 @@ pub struct Error {
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
+    #[cfg_attr(
+        all(feature = "schemars", feature = "unstable_error_classification"),
+        schemars(with = "Option<ErrorData>")
+    )]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub data: Option<serde_json::Value>,
 }
 
+/// Schema for classified error data, or an arbitrary existing value.
+#[cfg(all(feature = "schemars", feature = "unstable_error_classification"))]
+#[derive(schemars::JsonSchema)]
+#[serde(untagged)]
+#[expect(dead_code, reason = "Only used to describe Error::data")]
+enum ErrorData {
+    Classified(super::ErrorClassification),
+    Other(serde_json::Value),
+}
+
 impl Error {
+    /// Reads optional error classification without changing the original data.
+    /// Non-object data has no classification. Malformed fields are ignored individually.
+    #[cfg(feature = "unstable_error_classification")]
+    #[must_use]
+    pub fn classification(&self) -> Option<super::ErrorClassification> {
+        self.data
+            .as_ref()
+            .filter(|data| data.is_object())
+            .and_then(|data| serde_json::from_value(data.clone()).ok())
+    }
+
     /// Creates a new error with the given code and message.
     ///
     /// The code parameter can be an `ErrorCode` constant or a tuple of (code, message).

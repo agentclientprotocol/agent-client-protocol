@@ -62,6 +62,8 @@ pub struct Error {
     reason = "Only used to describe the schema of `Error::data`"
 )]
 enum ErrorData {
+    #[cfg(feature = "unstable_error_classification")]
+    Classified(super::ErrorClassification),
     UnsupportedProtocolVersion(UnsupportedProtocolVersionErrorData),
     SessionNotFound(SessionNotFoundErrorData),
     Other(serde_json::Value),
@@ -154,6 +156,17 @@ impl SessionNotFoundErrorData {
 }
 
 impl Error {
+    /// Reads optional error classification without changing the original data.
+    /// Non-object data has no classification. Malformed fields are ignored individually.
+    #[cfg(feature = "unstable_error_classification")]
+    #[must_use]
+    pub fn classification(&self) -> Option<super::ErrorClassification> {
+        self.data
+            .as_ref()
+            .filter(|data| data.is_object())
+            .and_then(|data| serde_json::from_value(data.clone()).ok())
+    }
+
     /// Creates a new error with the given code and message.
     ///
     /// The code parameter can be an `ErrorCode` constant or a tuple of (code, message).

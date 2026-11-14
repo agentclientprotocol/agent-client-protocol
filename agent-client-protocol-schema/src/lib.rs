@@ -45,6 +45,8 @@
 //! For the complete protocol specification and documentation, visit
 //! <https://agentclientprotocol.com>.
 
+#[cfg(feature = "unstable_error_classification")]
+mod error_classification;
 pub mod rpc;
 mod serde_util;
 pub mod v1;

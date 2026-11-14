@@ -4967,7 +4967,17 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
   A number indicating the error type that occurred. This must be an integer as
   defined in the JSON-RPC specification.
 </ResponseField>
-<ResponseField name="data" type={"object"}>
+<ResponseField
+  name="data"
+  type={
+    <>
+      <span>
+        <a href="#errordata">ErrorData</a>
+      </span>
+      <span> | null</span>
+    </>
+  }
+>
   Optional primitive or structured value that contains additional information
   about the error. This may include debugging information or context-specific
   details.
@@ -4975,6 +4985,33 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 <ResponseField name="message" type={"string"} required>
   A string providing a short description of the error. The message should be
   limited to a concise single sentence.
+</ResponseField>
+
+## <span class="font-mono">ErrorClassification</span>
+
+**UNSTABLE.** Optional classification fields in an object-valued error `data`.
+
+Omitted and `null` fields mean unknown. Malformed fields are ignored individually.
+Existing non-object error data remains valid and must not be wrapped or replaced.
+Authentication continues to use code `-32000`, regardless of classification.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="kind" type={<><span><a href="#errorkind">ErrorKind</a></span><span> | null</span></>} >
+  The cause of the failure. Unknown values must use generic error handling.
+</ResponseField>
+<ResponseField name="retryAfterMs" type={"integer | null"} >
+  Minimum delay from receipt before retrying, supplied by the provider or runtime.
+Only meaningful when `retryable` is true. Agents must not invent this value.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="retryable" type={"boolean | null"} >
+  Whether the same unchanged request may succeed. Absence means unknown, not false.
+This hint does not authorize automatic retries or guarantee safe side effects.
 </ResponseField>
 
 ## <span class="font-mono">ErrorCode</span>
@@ -5026,6 +5063,88 @@ range LSP reserves (-32899 to -32800).
 
 <ResponseField name="Other" type="int32">
   Other undefined error code.
+</ResponseField>
+
+## <span class="font-mono">ErrorData</span>
+
+Schema for classified error data, or an arbitrary existing value.
+
+**Type:** Union
+
+<ResponseField name="Classified">
+{""}
+
+<Expandable title="Properties">
+
+<ResponseField name="kind" type={<><span><a href="#errorkind">ErrorKind</a></span><span> | null</span></>} >
+  The cause of the failure. Unknown values must use generic error handling.
+</ResponseField>
+<ResponseField name="retryAfterMs" type={"integer | null"} >
+  Minimum delay from receipt before retrying, supplied by the provider or runtime.
+Only meaningful when `retryable` is true. Agents must not invent this value.
+
+    - Minimum: `0`
+
+</ResponseField>
+<ResponseField name="retryable" type={"boolean | null"} >
+  Whether the same unchanged request may succeed. Absence means unknown, not false.
+This hint does not authorize automatic retries or guarantee safe side effects.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="Other">{""}</ResponseField>
+
+## <span class="font-mono">ErrorKind</span>
+
+**UNSTABLE.** An open classification of a failure that ends foreground work.
+Custom values start with `_`. Other unknown values are reserved for future ACP kinds.
+
+**Type:** Union
+
+<ResponseField name="rate_limited" type="string">
+  A temporary request or throughput limit.
+</ResponseField>
+
+<ResponseField name="usage_limit" type="string">
+  An account, plan, or organization usage allowance is used up.
+</ResponseField>
+
+<ResponseField name="context_window_exceeded" type="string">
+  Input exceeds the model's context window.
+</ResponseField>
+
+<ResponseField name="budget_exceeded" type="string">
+  A configured cost or token budget was reached.
+</ResponseField>
+
+<ResponseField name="overloaded" type="string">
+  The service is temporarily out of capacity.
+</ResponseField>
+
+<ResponseField name="connection" type="string">
+  The Agent cannot reach its runtime or a required service.
+</ResponseField>
+
+<ResponseField name="invalid_request" type="string">
+  The request, configuration, or model cannot be accepted.
+</ResponseField>
+
+<ResponseField name="policy" type="string">
+  A policy blocks the operation. Normal refusals retain the refusal stop reason.
+</ResponseField>
+
+<ResponseField name="provider_error" type="string">
+  The model provider failed with no more specific known cause.
+</ResponseField>
+
+<ResponseField name="internal" type="string">
+  The Agent failed with no more specific known cause.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+  Custom or future classification. Receivers must accept unknown values.
 </ResponseField>
 
 ## <span class="font-mono">ErrorStopReason</span>
