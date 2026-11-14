@@ -3,15 +3,14 @@ title: "Tool Calls"
 description: "How Agents report tool call execution"
 ---
 
-Tool calls represent actions that language models request Agents to perform during a [session](/protocol/v2/draft/prompt-lifecycle). When an LLM determines it needs to interact with external systems—like reading files, running code, or fetching data—it generates tool calls that the Agent executes on its behalf.
+Tool calls are actions the language model asks the Agent to perform during a [session](/protocol/v2/draft/prompt-lifecycle), such as reading a file or running a command. The Agent executes them on the model's behalf.
 
-Agents report tool calls through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications, allowing Clients to display real-time progress and results to users.
+Agents report tool calls through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications, which Clients use to show progress and results to users.
 
 Tool call updates may arrive while the Agent reports `idle`. They do not change the state.
 
-While Agents handle the actual execution, they may use Client-mediated
-interactions like [permission requests](#requesting-permission) to provide a
-richer, more integrated experience.
+Agents may ask the user for approval before running a tool call. See
+[Requesting Permission](#requesting-permission).
 
 ## Reporting
 
@@ -46,26 +45,35 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="name" type="string">
   The programmatic name of the invoked tool, such as `read_file`. This
-  identifies which tool is being used; `title` describes this invocation for
+  identifies which tool is being used. `title` describes this invocation for
   users, while `kind` provides a coarse presentation category. Agents **SHOULD**
   include the name the first time they report a `toolCallId` when it is
-  available.
+  available and **SHOULD NOT** change it later except to correct metadata. Names
+  are opaque, informational metadata and do not advertise a capability or grant
+  authorization.
 </ParamField>
 
 <ParamField path="kind" type="ToolKind">
   The category of tool being invoked.
 
 <Expandable title="kinds">
-  - `read` - Reading files or data - `edit` - Modifying files or content -
-  `delete` - Removing files or data - `move` - Moving or renaming files -
-  `search` - Searching for information - `execute` - Running commands or code -
-  `think` - Internal reasoning or planning - `fetch` - Retrieving external data
-  - `other` - Other tool types (default)
+
+- `read` - Reading files or data
+- `edit` - Modifying files or content
+- `delete` - Removing files or data
+- `move` - Moving or renaming files
+- `search` - Searching for information
+- `execute` - Running commands or code
+- `think` - Internal reasoning or planning
+- `fetch` - Retrieving external data
+- `switch_mode` - Changing the session's mode, a [config option](/protocol/v2/draft/session-config-options) with the `mode` category
+- `other` - Other tool types (default)
+
 </Expandable>
 
 Tool kinds help Clients choose appropriate icons and optimize how they display tool execution progress.
 
-Custom or future tool kinds can be used when Clients can fall back to generic tool display behavior. Custom tool kinds **MUST** begin with `_`. Unknown non-underscore tool kinds are reserved for future ACP variants.
+Custom or future tool kinds can be used when Clients can fall back to generic tool display behavior. Custom tool kinds **MUST** begin with `_`. Unknown non-underscore tool kinds are reserved for future ACP variants. Clients display a tool kind they don't recognize as `other`.
 
 </ParamField>
 
@@ -81,24 +89,40 @@ Custom or future tool kinds can be used when Clients can fall back to generic to
   [File locations](#following-the-agent) affected by this tool call
 </ParamField>
 
-<ParamField path="rawInput" type="object">
-  The raw input parameters sent to the tool
+<ParamField path="rawInput" type="unknown">
+  The raw input sent to the tool. It may be any JSON value, including an object,
+  array, scalar, or `null`.
 </ParamField>
 
-<ParamField path="rawOutput" type="object">
-  The raw output returned by the tool
+<ParamField path="rawOutput" type="unknown">
+  The raw output returned by the tool. It may be any JSON value, including an
+  object, array, scalar, or `null`.
 </ParamField>
 
 The `tool_call_update` notification is an upsert keyed by `toolCallId`. For
 existing tool calls, fields other than `_meta` leave the previous value
-unchanged when omitted, explicitly clear or unset the value when `null`, and
-replace the previous value when concrete values are sent. For a new
-`toolCallId`, omitted fields use Client defaults. `content` and `locations` are
-replaced as whole arrays; send `[]` or `null` to clear them. For `_meta`, omit
-the field to leave it unchanged or set it to `null` to clear it. Use
-`tool_call_content_chunk` when a tool produces content incrementally and the
+unchanged when omitted, reset the field to its default when `null`, and
+replace the previous value when concrete values are sent. A new `toolCallId`
+starts with every field at its default: `status` is `pending`, `kind` is
+`other`, `content` and `locations` are empty, and `title`, `name`, `rawInput`,
+and `rawOutput` are unset. Clients can show a generic title when `title` is
+unset. `content` and `locations` are
+replaced as whole arrays. Send `[]` or `null` to clear them. For `_meta`, omit
+the field to leave it unchanged or set it to `null` to clear it. An object
+patches the stored metadata by top-level key: a key set to `null` is removed,
+any other value replaces that key whole, and keys the object omits are
+unchanged. See [Metadata Patches](/protocol/v2/draft/extensibility#metadata-patches).
+Use `tool_call_content_chunk` when a tool produces content incrementally and the
 Client should append each item instead of replacing the whole `content`
 collection. Display-only terminal bytes use `terminal_output_chunk` instead.
+
+`rawInput` and `rawOutput` follow the same patch rule, even though `null` is
+also a valid arbitrary JSON value: omission leaves the stored value unchanged,
+`null` clears it, and any non-null JSON value replaces it. Consequently this
+patch representation cannot distinguish storing a literal JSON `null` from
+clearing the field.
+
+The Agent **MAY** also report a tool call that the model did not request, for [background work](/protocol/v2/draft/prompt-lifecycle#background-work) that has no other tool call.
 
 ## Updating
 
@@ -130,7 +154,7 @@ As tools execute, Agents send updates to report progress and results.
 
 All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
 
-## Streaming Content
+## Streaming content
 
 As tools execute, Agents **MAY** stream individual content items with
 `tool_call_content_chunk`:
@@ -171,9 +195,18 @@ content. A later `tool_call_update` with `content` replaces all content
 currently stored for that tool call, including content accumulated from earlier
 chunks. Later chunks append to that replacement content. A `tool_call_update`
 with `content: []` or `content: null` clears the tool-call content. A
-`tool_call_content_chunk`'s `_meta`, when present, is chunk-scoped.
+`tool_call_content_chunk`'s `_meta`, when present, is chunk-scoped. A chunk for
+a `toolCallId` the Client hasn't seen creates the tool call with its
+[defaults](#reporting), then appends to its content.
 
-## Requesting Permission
+An Agent can stream a tool's text output the way it streams message text, by
+sending each piece as a text content item in its own
+`tool_call_content_chunk`. Clients can present adjacent text items as one
+continuous text.
+
+## Requesting permission
+
+Permission requests do not by themselves change the session's foreground state. While foreground work is blocked on a permission response, the Agent **SHOULD** report `requires_action`. Once reported, it **MUST** report `running` when foreground progress resumes, or `idle` if the work ends without resuming. Requests for independent background activity may arrive while the session remains `idle`. See [Waiting for User Action](/protocol/v2/draft/prompt-lifecycle#waiting-for-user-action) for concurrent requests and late answers.
 
 The Agent **MAY** request permission from the user before proceeding with an operation, such as executing a tool call, by calling the `session/request_permission` method:
 
@@ -228,13 +261,20 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   calls, use `type: "tool_call"` with a `toolCall` update containing details
   about the operation. Omitted or `null` means no structured subject was
   provided. Custom or future subject types may appear. Clients that do not
-  understand a subject should preserve it when proxying and use the common
-  prompt fields or decline according to policy.
+  understand a subject **SHOULD** preserve it when proxying and use the common
+  prompt fields or decline according to policy with the `cancelled` outcome.
 </ParamField>
+
+A permission request for listed [background work](/protocol/v2/draft/prompt-lifecycle#background-work) **SHOULD** reference the listed item in `subject`, by `toolCallId` or `terminalId`. The Agent **MUST** list that work before sending the request. `session/cancel` does not cover listed work, so these requests stay open. See [Cancellation](/protocol/v2/draft/prompt-lifecycle#cancellation).
+
+Clients apply a `tool_call` subject's `toolCall` to their stored tool call
+exactly like a [`tool_call_update`](#reporting) notification, in the order it was
+received relative to `session/update` notifications and before showing the
+prompt. A first-seen `toolCallId` creates the tool call.
 
 <ParamField path="options" type="PermissionOption[]" required>
   Available [permission options](#permission-options) for the user to choose
-  from
+  from. Must contain at least one option.
 </ParamField>
 
 For a proposed command, the subject can describe the command directly:
@@ -261,10 +301,10 @@ For a proposed command, the subject can describe the command directly:
 
 For `type: "command"`, `command` and `cwd` are required, and `cwd` **MUST** be
 an absolute path. `toolCallId`, `terminalId`, and `_meta` are optional and
-nullable; omission and `null` are equivalent and mean the value was not
+nullable. Omission and `null` are equivalent and mean the value was not
 provided. The IDs only associate the permission with displayed state and may be
 unavailable before execution starts. Selecting an allow option authorizes the
-Agent to execute the command; it does not ask the Client to execute anything.
+Agent to execute the command. It does not ask the Client to execute anything.
 
 The Client responds with the user's decision:
 
@@ -283,7 +323,7 @@ The Client responds with the user's decision:
 
 Clients **MAY** automatically allow or reject permission requests according to the user settings.
 
-If the current active work gets [cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), the Client **MUST** respond with the `"cancelled"` outcome:
+A permission request cancelled with [`$/cancel_request`](/protocol/v2/draft/cancellation), for example after [`session/cancel`](/protocol/v2/draft/prompt-lifecycle#cancellation), is answered with the `"cancelled"` outcome:
 
 ```json
 {
@@ -297,20 +337,24 @@ If the current active work gets [cancelled](/protocol/v2/draft/prompt-lifecycle#
 }
 ```
 
+Clients also send `cancelled` when the user dismisses the prompt or the Client declines it by policy, including when no `reject_*` option is offered. After a `cancelled` outcome, the Agent **MUST NOT** proceed with the operation.
+
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
   The user's decision. Known outcomes are `cancelled` when the [active work was
-  cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), and `selected`
-  with an `optionId` for the selected permission option. Custom or future
-  outcomes may appear; agents that do not understand the outcome MUST NOT treat
-  it as approval.
+  cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), the user
+  dismissed the prompt, or the Client declined it, and `selected` with an
+  `optionId` for the selected permission option. If `optionId` doesn't match an
+  offered option, the Agent **MUST** treat the request as not approved. Custom
+  or future outcomes may appear. Agents that do not understand the outcome
+  **MUST NOT** treat it as approval.
 </ResponseField>
 
-### Permission Options
+### Permission options
 
 Each permission option provided to the Client contains:
 
 <ParamField path="optionId" type="string" required>
-  Unique identifier for this option
+  Identifier for this option. **MUST** be unique within the request.
 </ParamField>
 
 <ParamField path="name" type="string" required>
@@ -329,17 +373,37 @@ Custom or future permission option kinds can be used as UI hints. Custom kinds *
 
 </ParamField>
 
+The Agent owns remembered decisions. When the user selects an `allow_always` or
+`reject_always` option, the Agent stores the decision, decides its scope (for
+example a tool, a command, or a directory) and how long it lasts, and applies
+it by not asking again. Clients **SHOULD NOT** infer the scope from `kind`. The
+option `name` describes it.
+
+### Security
+
+- Clients **SHOULD** describe the operation from `subject`, present `title` as Agent-authored text, and show commands and paths in full.
+- Agents **SHOULD NOT** give an option a `name` that contradicts its `kind`, and **SHOULD** act on a selected option according to its known `kind`.
+- Automatic approval **SHOULD NOT** rely only on `title`, `description`, or option `name`. Unless the user's policy allows all requests, it **SHOULD NOT** allow a request with an absent or unknown subject.
+- Agents **SHOULD** perform only the operation the approved request described, and **SHOULD** request again if the command or resolved target changes.
+- Agents **SHOULD** state the scope of a remembered decision (`allow_always`, `reject_always`) in the option `name` and **SHOULD NOT** apply it beyond that scope.
+- Agents **SHOULD NOT** switch to a configuration that reduces user oversight without user action.
+
 ## Status
 
 Tool calls progress through different statuses during their lifecycle:
 
 <ResponseField name="pending">
-  The tool call hasn't started running yet because the input is either streaming
-  or awaiting approval
+  The tool call hasn't started running yet, for example because its input is
+  streaming, it is awaiting approval, or it is scheduled to run later
 </ResponseField>
 
 <ResponseField name="in_progress">
   The tool call is currently running
+</ResponseField>
+
+<ResponseField name="paused">
+  The tool call has started, is not running now, and will not continue until
+  something resumes it
 </ResponseField>
 
 <ResponseField name="completed">
@@ -352,15 +416,56 @@ Tool calls progress through different statuses during their lifecycle:
   The tool call was cancelled before it completed
 </ResponseField>
 
-Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`; unknown non-underscore statuses are reserved for future ACP variants.
+Custom or future status values can be used when Clients can display a generic progress state. Custom status values **MUST** begin with `_`. Unknown non-underscore statuses are reserved for future ACP variants. Clients treat a tool call with an unrecognized status as still in progress.
+
+Clients **SHOULD** show `in_progress` as active, `pending` as waiting or scheduled, and `paused` as paused. Statuses never go back to `pending`: a scheduled wakeup goes from `pending` to `completed` when it fires, and the work it triggers is new foreground work. `in_progress` and `paused` may alternate any number of times. How work is paused and resumed is up to the Agent.
+
+`completed`, `failed`, and `cancelled` are final. If work goes on after its tool call is final, the Agent reports it on a new tool call. When foreground work ends, whether it finished, was [cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), or failed, the Agent **SHOULD** give each of that work's unfinished tool calls a final status. Tool calls in the session's [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list are not part of that work. If a tool call's [permission request](#requesting-permission) is rejected or answered with `cancelled`, the Agent reports the tool call as `cancelled` or `failed` rather than leaving it `pending`.
+
+### Cancelling tool calls
+
+A tool call can advertise that the Client may cancel it on its own, without cancelling the rest of the session's work. `tool_call_update` carries an optional `capabilities` field:
+
+```json
+{
+  "sessionUpdate": "tool_call_update",
+  "toolCallId": "call_012",
+  "status": "in_progress",
+  "capabilities": {
+    "cancel": {}
+  }
+}
+```
+
+`capabilities` is a nullable patch: omitted leaves it unchanged, `null` clears it, and an object replaces the whole previous value. Within it, an omitted or `null` `cancel` means unsupported, and `{}` advertises support. A `pending` or `paused` tool call may advertise it too, for example to delete a scheduled job. The Agent **SHOULD** stop advertising `cancel` once the tool call reaches a final status.
+
+The Client cancels the tool call with a `tool_call/cancel` request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tool_call/cancel",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "toolCallId": "call_012"
+  }
+}
+```
+
+- The Client **MUST NOT** send it unless the tool call currently advertises `capabilities.cancel`.
+- `sessionId` is the session that reports the tool call. For a [subagent](/rfds/subagents)'s tool call, that is the child session: the tool call's own `cancel` enables the request even when the child doesn't advertise `cancel`.
+- The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the work has stopped. The Agent confirms that with a `tool_call_update` to a final status, normally `cancelled`, and may send `completed` or `failed` if the work finished first.
+- The Agent responds with `-32602` if the tool call is unknown, already final, or not cancellable. This includes a request that the Client sends again after the first one was accepted and the tool call has since reached a final status. The `tool_call_update` with that status reports the outcome.
+- Cancelling a tool call does not change the foreground state by itself. This works for foreground tool calls too, so a user can stop one long-running step without cancelling the rest of the work.
 
 ## Content
 
 Tool calls can produce different types of content:
 
-Tool call content `type` values can also be custom or future variants. Implementations should preserve unknown content payloads when storing, replaying, proxying, or forwarding tool calls, and otherwise render a generic content item or ignore the item if no safe display is available.
+Tool call content `type` values can also be custom or future variants. Implementations **SHOULD** preserve unknown content payloads when storing, replaying, proxying, or forwarding tool calls, and otherwise render a generic content item or ignore the item if no safe display is available.
 
-### Regular Content
+### Regular content
 
 Standard [content blocks](/protocol/v2/draft/content) like text, images, or resources:
 
@@ -374,7 +479,7 @@ Standard [content blocks](/protocol/v2/draft/content) like text, images, or reso
 }
 ```
 
-### Display-only Terminals
+### Display-only terminals
 
 A terminal content item references an Agent-owned terminal by ID:
 
@@ -386,7 +491,7 @@ A terminal content item references an Agent-owned terminal by ID:
 ```
 
 The item is only a display anchor. `terminalId` is required. Optional nullable
-`_meta` is scoped to this content item; omission and `null` both mean that no
+`_meta` is scoped to this content item. Omission and `null` both mean that no
 item metadata was provided. `terminalId` is unique within the session, remains
 stable for the terminal's lifetime, and **MUST NOT** be reused for a different
 terminal. It is independent of `toolCallId`, even when an Agent uses the same
@@ -401,6 +506,10 @@ Agents create and update stored terminal state with `terminal_update`:
   "terminalId": "term_001",
   "command": "cargo test",
   "cwd": "/home/user/project",
+  "size": {
+    "cols": 120,
+    "rows": 40
+  },
   "output": {
     "data": "cnVubmluZyB0ZXN0cw0K"
   },
@@ -420,20 +529,26 @@ empty.
   first update when applicable.
 - `cwd` is the command's working directory and **MUST** be absolute when
   supplied.
+- `size` is the terminal size the command runs with, in character cells, with
+  required `cols` and `rows`. It is optional. When present, Clients can render output at this size so that column layouts, progress bars, and
+  cursor-positioned output display as the program wrote them. Without it,
+  Clients choose a size.
 - `output` is an authoritative replacement snapshot. Its required `data` is
   RFC 4648 base64-encoded bytes with JSON Schema `contentEncoding: "base64"`. A concrete
   snapshot is the complete byte sequence the Agent wants the Client to retain
-  for the terminal at that point. It replaces all previously stored bytes;
+  for the terminal at that point. It replaces all previously stored bytes.
   Clients **MUST NOT** merge or splice bytes from the previous snapshot into it.
-  Optional nullable `output._meta` is scoped to that snapshot; omission and
+  Optional nullable `output._meta` is scoped to that snapshot. Omission and
   `null` both mean no snapshot metadata was provided.
 - A concrete `exitStatus` marks the terminal as exited. Its optional nullable
   `exitCode` and `signal` report known exit information. Its optional nullable
   `_meta` is scoped to that exit information. For all three fields, omission
   and `null` both mean the value was not provided. Conventional POSIX signal
-  names include `SIGTERM`, `SIGKILL`, and `SIGINT`; other platforms may use
+  names include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use
   platform-specific names. Terminal exit and tool call status are independent.
-- The top-level `_meta` is terminal-scoped and follows the same patch semantics.
+- The top-level `_meta` is terminal-scoped and follows the same patch semantics,
+  except that an object patches the stored metadata by top-level key. See
+  [Metadata Patches](/protocol/v2/draft/extensibility#metadata-patches).
 
 For example, a process terminated by a POSIX termination signal can report
 `"exitStatus": { "signal": "SIGTERM" }`.
@@ -451,11 +566,46 @@ For live output, Agents send `terminal_output_chunk`:
 `terminalId` and `data` are required. Each `data` value is an independently RFC
 4648 base64-encoded byte chunk with JSON Schema `contentEncoding: "base64"`. Clients
 decode each chunk separately and append the decoded bytes in received order for
-that `terminalId`; they **MUST NOT** concatenate encoded strings before
+that `terminalId`. They **MUST NOT** concatenate encoded strings before
 decoding. Chunk boundaries may split UTF-8 code points or terminal escape
 sequences, so decoders retain parser state across chunks. Optional nullable
-`_meta` is chunk-scoped; omission and `null` both mean no chunk metadata was
-provided.
+`_meta` is chunk-scoped. Omission and `null` both mean no chunk metadata was
+provided. A chunk for a `terminalId` the Client hasn't seen creates the terminal
+with unknown fields and empty output, then appends to it.
+
+Clients **SHOULD** ignore a chunk, or the `output` snapshot of a `terminal_update`,
+whose `data` isn't valid base64, keeping the bytes they already have. The other
+fields of that `terminal_update` still apply. Agents **SHOULD** send all output before a
+concrete `exitStatus`, but Clients still append output that arrives after it.
+Clients **MAY** bound how much output they keep, for example by dropping the
+oldest bytes. A later `output` snapshot replaces whatever they kept.
+
+Terminal output is Agent content. Clients **SHOULD** render it so that it cannot write the clipboard, send input or query responses, or open links without user action, and sanitizers **SHOULD** keep state across chunks.
+
+#### Cancelling terminals
+
+A terminal may keep running after its tool call returns control to the model, as [background work](/protocol/v2/draft/prompt-lifecycle#background-work). The tool call that started it keeps referencing the terminal, so the Client can show its output in place. Terminals are display-only except for one opt-in control: `terminal_update` carries an optional `capabilities` field with the same shape and patch rules as on tool calls.
+
+```json
+{
+  "sessionUpdate": "terminal_update",
+  "terminalId": "term_003",
+  "command": "npm run dev",
+  "capabilities": {
+    "cancel": {}
+  }
+}
+```
+
+The Agent **SHOULD** stop advertising `cancel` once the terminal reports `exitStatus`. The Client stops the process with a `terminal/cancel` request with the `sessionId` and `terminalId`:
+
+- The Client **MUST NOT** send it unless the terminal currently advertises `capabilities.cancel`.
+- `sessionId` is the session that reports the terminal. For a [subagent](/rfds/subagents)'s terminal, that is the child session: the terminal's own `cancel` enables the request even when the child doesn't advertise `cancel`.
+- The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the process has stopped. The Agent confirms that with a `terminal_update` that sets `exitStatus`.
+- The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not cancellable. This includes a request that the Client sends again after the first one was accepted and the process has since exited. The `terminal_update` that sets `exitStatus` reports the outcome.
+- Cancelling stops the process but does not release the terminal: its output remains available for display and replay. It does not change the foreground state or the status of any tool call that references the terminal.
+
+Input, resize, and other interactive control remain out of scope.
 
 ### Diffs
 
@@ -463,9 +613,14 @@ File modifications shown as diffs. A diff always includes structured file
 changes and can optionally include renderable patch text.
 
 `changes` is authoritative for affected absolute paths and operations. `patch`,
-when present, provides renderable text for some or all of those changes and MUST
-be consistent with `changes`. Agents SHOULD provide `patch` whenever feasible.
-Clients MUST handle diffs where `patch` is omitted or `null`.
+when present, provides renderable text for some or all of those changes and **MUST**
+be consistent with `changes`: it describes only those paths and operations. Agents
+**SHOULD** provide `patch` whenever feasible. Clients **MUST** handle diffs where
+`patch` is omitted or `null`, and **SHOULD** follow `changes` when `patch`
+disagrees with it.
+
+A diff describes each file's change from its state before the change. Each `path` value appears in at most one entry of `changes`. A move or copy's `oldPath` may also appear as another entry's `path`, for example a file copied and then edited, or a file moved and replaced by a new one. A move or copy that also edits the
+file is a single `move` or `copy` entry, with the edits in `patch`.
 
 ```json
 {
@@ -490,14 +645,36 @@ Clients MUST handle diffs where `patch` is omitted or `null`.
 </ParamField>
 
 <ParamField path="patch" type="DiffPatch">
-  Optional renderable patch text. Agents SHOULD provide this whenever feasible.
-  Omitted or `null` means no patch text was provided.
+  Optional renderable patch text. Agents **SHOULD** provide this whenever
+  feasible. Omitted or `null` means no patch text was provided.
 </ParamField>
 
 <ParamField path="patch.format" type="string" required>
   Patch format. `git_patch`, the only ACP-defined value, is one or more `diff
-  --git` sections in Git's `--patch` (`-p`) text format. Paths MUST be absolute.
-  Surrounding commit metadata and email envelopes MUST NOT be included.
+  --git` sections in Git's `--patch` (`-p`) text format. Unlike Git, which
+  writes paths relative to the repository root, every path **MUST** be absolute,
+  including in `rename from`, `rename to`, `copy from`, and `copy to` lines, and
+  **MUST NOT** have a prefix such as Git's default `a/` and `b/`. Otherwise paths
+  follow Git: `/dev/null` names the missing side of an added or deleted file in
+  the `---` and `+++` lines, and paths with unusual characters are [quoted as Git
+  quotes them](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath). Each path, once unquoted, is the same native absolute path string as the matching `changes` entry, for example `C:\repo\src\a.rs` on Windows.
+  Surrounding commit metadata and email envelopes **MUST NOT** be included.
+  Custom formats **MUST** begin with `_`. Clients treat a `patch` with a format they don't recognize as if `patch` were omitted, and render from `changes`.
+
+Git can produce most of this. With `$ROOT` set to the repository root,
+`git diff --src-prefix="$ROOT/" --dst-prefix="$ROOT/"` writes absolute
+`diff --git`, `---`, and `+++` lines. Git never prefixes `rename from`,
+`rename to`, `copy from`, or `copy to` paths, so those still need the
+repository root prepended, with Git's quoting applied to the full path. On Windows, Git still writes `/` after the root (`C:\repo/src/a.rs`), so Agents convert those paths to native separators before quoting.
+
+Many diff parsers strip one leading path component by default to remove Git's
+`a/` and `b/` prefixes. Don't strip anything from an absolute path, which has no
+such prefix. A Client can still strip a leading `a/` or `b/` from a relative
+path to tolerate Agents that send Git's default output, as long as `changes`
+decides which file a patch belongs to. Take paths from `changes`, or from the
+`---`, `+++`, rename, and copy lines, rather than by splitting the `diff --git`
+header, which is ambiguous when paths contain spaces.
+
 </ParamField>
 
 <ParamField path="patch.text" type="string" required>
@@ -505,7 +682,9 @@ Clients MUST handle diffs where `patch` is omitted or `null`.
 </ParamField>
 
 <ParamField path="changes[].operation" type="string" required>
-  File operation: `add`, `delete`, `modify`, `move`, or `copy`.
+  File operation: `add`, `delete`, `modify`, `move`, or `copy`. Custom
+  operations **MUST** begin with `_`. Clients show an operation they don't
+  recognize generically, using `path` and `oldPath` when present.
 </ParamField>
 
 <ParamField path="changes[].path" type="string" required>
@@ -517,11 +696,14 @@ Clients MUST handle diffs where `patch` is omitted or `null`.
 </ParamField>
 
 <ParamField path="changes[].fileType" type="string">
-  Optional file kind: `text`, `binary`, `directory`, or `symlink`.
+  Optional file kind after the operation (for `delete`, of the deleted file):
+  `text`, `binary`, `directory`, or `symlink`. Custom file types **MUST** begin
+  with `_`, and Clients treat a file type they don't recognize as unknown.
 </ParamField>
 
 <ParamField path="changes[].mimeType" type="string">
-  Optional MIME type for the file contents.
+  Optional MIME type of the file contents after the operation (for `delete`, of
+  the deleted file).
 </ParamField>
 
 Omit `patch` when there is no useful text patch, such as a same-path binary
@@ -541,9 +723,41 @@ update or symlink target change:
 }
 ```
 
+Clients **SHOULD** show affected paths from `changes`, not from `patch` headers.
+
+### Sessions
+
+A session content item links the tool call to another session
+it operates on, such as a [subagent](/rfds/subagents) it spawned or waits on:
+
+```json
+{
+  "type": "session",
+  "sessionId": "sess_child_1"
+}
+```
+
+<ParamField path="sessionId" type="string" required>
+  The referenced session. It must already be known through ordinary session
+  setup or a `subagent_update` announcement.
+</ParamField>
+
+Optional nullable `_meta` is scoped to this content item. Omission and `null`
+both mean that no item metadata was provided. A tool call can reference several
+sessions. The reference is display-only. It does not establish ownership,
+enable Client-initiated controls on the referenced session, or report that
+session's work state. The task a parent
+sends a child is reported as a [session-directed message](/protocol/v2/draft/prompt-lifecycle#session-directed-messages),
+not through a tool call.
+
+`content` on `tool_call_update` replaces the whole array, so an Agent that
+sends new content includes the session references again. When a tool addresses
+a session by a name or another handle, the Agent adds a reference only if it
+can resolve the handle to a known session.
+
 ## Following the Agent
 
-Tool calls can report file locations they're working with, enabling Clients to implement "follow-along" features that track which files the Agent is accessing or modifying in real-time.
+Tool calls can report the file locations they're working with. Clients can use this to follow along, showing which files the Agent is reading or modifying as it works.
 
 ```json
 {
@@ -556,6 +770,10 @@ Tool calls can report file locations they're working with, enabling Clients to i
   The absolute file path being accessed or modified
 </ParamField>
 
-<ParamField path="line" type="number">
-  Optional line number within the file
+<ParamField path="line" type="integer | null">
+  Optional 1-based line number within the file, represented as an unsigned
+  32-bit integer. `0` is invalid. Omission and `null` are equivalent and mean no
+  specific line was provided.
 </ParamField>
+
+Locations are display metadata and do not grant file access. Clients **SHOULD NOT** automatically open locations outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security).

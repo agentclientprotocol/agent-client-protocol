@@ -80,7 +80,7 @@ The current mode can be changed at any point during a session, whether the Agent
 
 ### From the Client
 
-Typically, Clients display the available modes to the user and allow them to change the current one, which they can do by calling the [`session/set_mode`](/protocol/v1/draft/schema#session%2Fset-mode) method.
+Typically, Clients display the available modes to the user and allow them to change the current one, which they can do by calling the [`session/set_mode`](/protocol/v1/draft/schema#session%2Fset_mode) method.
 
 ```json
 {
@@ -115,7 +115,7 @@ The Agent can also change its own mode and let the Client know by sending the `c
     "sessionId": "sess_abc123def456",
     "update": {
       "sessionUpdate": "current_mode_update",
-      "modeId": "code"
+      "currentModeId": "code"
     }
   }
 }
@@ -141,8 +141,11 @@ This "switch mode" tool will usually request permission before running, which it
       "status": "pending",
       "content": [
         {
-          "type": "text",
-          "text": "## Implementation Plan..."
+          "type": "content",
+          "content": {
+            "type": "text",
+            "text": "## Implementation Plan..."
+          }
         }
       ]
     },

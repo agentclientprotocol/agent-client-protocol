@@ -1,0 +1,46 @@
+---
+title: "ACP and other protocols"
+description: "How the Agent Client Protocol relates to MCP, A2A, the Agent Communication Protocol, and LSP."
+---
+
+The Agent Client Protocol (ACP) defines how a Client, such as a code editor or another agent, talks to an AI coding Agent. Several other protocols cover nearby problems or share the acronym. This page explains where each one fits.
+
+| Protocol                                                      | Purpose                                     | Relationship to ACP                     |
+| ------------------------------------------------------------- | ------------------------------------------- | --------------------------------------- |
+| Agent Client Protocol (ACP)                                   | Drive an Agent through interactive sessions | This protocol                           |
+| [Model Context Protocol](#model-context-protocol)             | Give an Agent tools and data                | Used together with ACP                  |
+| [Agent2Agent](#agent2agent)                                   | Delegate tasks to independent agents        | Different interaction model             |
+| [Agent Communication Protocol](#agent-communication-protocol) | Messaging between agents                    | Unrelated project with the same acronym |
+| [Language Server Protocol](#language-server-protocol)         | Language features in editors                | The model ACP is based on               |
+
+## Model Context Protocol
+
+The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) connects an Agent to tools, resources, and prompts. ACP connects a Client to that Agent. You don't choose between them. Most ACP Agents are also MCP clients.
+
+The two protocols meet in a few places:
+
+- The Client passes the user's configured MCP servers to the Agent in [`session/new`](/protocol/v1/session-setup#mcp-servers), and the Agent connects to them directly.
+- A Client that wants to provide its own tools can expose them as an MCP server and include it in that list. See [Architecture](/get-started/architecture#mcp).
+- ACP reuses MCP's JSON representations where possible, such as content blocks. It adds its own types for coding UX, such as diffs, plans, and permission requests.
+
+The [MCP-over-ACP RFD](/rfds/mcp-over-acp) proposes carrying MCP requests over the existing ACP connection, so a Client doesn't need a separate MCP server process.
+
+## Agent2Agent
+
+[Agent2Agent](https://a2a-protocol.org) (A2A) is a Linux Foundation project for delegating tasks to independent agents. An A2A agent publishes an Agent Card that describes its skills and endpoint. Other agents send it tasks, and it works on them on its own and returns results and artifacts.
+
+ACP defines the interactive session between a Client and an Agent. The Client sends prompts, renders streamed updates and tool calls, answers permission requests, and can give the Agent access to its files and terminals. The Client doesn't have to be an editor. An agent can act as an ACP Client to run other coding agents as sub-agents.
+
+Use ACP when a program drives an Agent and stays involved during each turn. Use A2A when an agent hands a task to another agent, often one run by a different party, and that agent handles it on its own.
+
+## Agent Communication Protocol
+
+The [Agent Communication Protocol](https://github.com/i-am-bee/acp), from IBM's BeeAI project, also used the name "ACP". It is a separate protocol for messaging between agents, applications, and humans, and it is not related to the Agent Client Protocol.
+
+That project has merged into A2A under the Linux Foundation, and its repository was archived in August 2025. Articles that mention "ACP" together with agent-to-agent messaging, BeeAI, or IBM usually mean the Agent Communication Protocol.
+
+## Language Server Protocol
+
+The [Language Server Protocol](https://microsoft.github.io/language-server-protocol/) (LSP) lets any editor use any language server. ACP applies the same idea to coding agents: any Client can use any Agent that implements ACP.
+
+ACP follows LSP's structure. Both use JSON-RPC 2.0, the editor usually starts the server as a subprocess and talks to it over stdio, and both sides negotiate capabilities during initialization. ACP defines its own methods because the work is different. A language server answers questions about documents. An Agent runs [prompt turns](/protocol/v1/prompt-turn) that stream updates, report [tool calls](/protocol/v1/tool-calls), and ask the Client for [permission](/protocol/v1/tool-calls#requesting-permission) before acting.

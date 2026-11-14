@@ -7,7 +7,46 @@ Agents can advertise a set of slash commands that users can invoke. These comman
 
 ## Advertising commands
 
-After creating a session, the Agent **MAY** send a list of available commands via the `available_commands_update` session notification:
+### Initial commands
+
+An Agent with commands **MUST** include them in `availableCommands` in the `session/new`, `session/resume`, and, when supported, `session/fork` responses, alongside `configOptions` when supported, since a setup response replaces the Client's command list. This lets the Client display commands as soon as [session setup](/protocol/v2/draft/session-setup#initial-session-state) completes, without requiring an `available_commands_update` notification before the `session/new` response.
+
+For example, a `session/new` response can advertise a command with text input:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "sessionId": "sess_abc123def456",
+    "availableCommands": [
+      {
+        "type": "command",
+        "name": "web",
+        "description": "Search the web for information",
+        "input": {
+          "type": "text",
+          "hint": "query to search for"
+        }
+      }
+    ]
+  }
+}
+```
+
+<ResponseField name="availableCommands" type="AvailableCommand[]">
+  Optional complete list of commands available in this session. Omission or `[]`
+  means none, and Clients replace any list they hold with it. Empty lists are
+  omitted when serializing setup responses.
+</ResponseField>
+
+`null` is not a valid outbound value for this field.
+
+Agents that advertise `session.options` can also return advisory `availableCommands` from `session/options`, before a session exists. That list is a preview. The setup response replaces it. See [Options before a session exists](/protocol/v2/draft/session-config-options#options-before-a-session-exists-unstable).
+
+### Notifications
+
+After session setup, the Agent **MAY** announce commands that were not included in the response, or update the list, via the `available_commands_update` session notification:
 
 ```json
 {
@@ -19,6 +58,7 @@ After creating a session, the Agent **MAY** send a list of available commands vi
       "sessionUpdate": "available_commands_update",
       "availableCommands": [
         {
+          "type": "command",
           "name": "web",
           "description": "Search the web for information",
           "input": {
@@ -27,10 +67,12 @@ After creating a session, the Agent **MAY** send a list of available commands vi
           }
         },
         {
+          "type": "command",
           "name": "test",
           "description": "Run tests for the current project"
         },
         {
+          "type": "command",
           "name": "plan",
           "description": "Create a detailed implementation plan",
           "input": {
@@ -44,14 +86,19 @@ After creating a session, the Agent **MAY** send a list of available commands vi
 }
 ```
 
-<ResponseField name="availableCommands" type="AvailableCommand[]">
-  The list of commands available in this session
-</ResponseField>
+The notification's `availableCommands` array is the complete replacement list, not a delta. An empty array clears all advertised commands.
 
 ### AvailableCommand
 
+Each command carries a required `type` discriminator. Currently the only type is `command`, a slash command the user invokes by including it in a prompt.
+
+<ResponseField name="type" type="string" required>
+  The kind of command. Currently always `"command"`.
+</ResponseField>
+
 <ResponseField name="name" type="string" required>
-  The command name (e.g., "web", "test", "plan")
+  The command name without the leading `/`, such as `web`, `test`, or `plan`.
+  **MUST NOT** contain whitespace and **MUST** be unique within the list.
 </ResponseField>
 
 <ResponseField name="description" type="string" required>
@@ -62,6 +109,8 @@ After creating a session, the Agent **MAY** send a list of available commands vi
   Optional input specification for the command
 </ResponseField>
 
+Command entries can add custom or future `type` values. Custom command types **MUST** begin with `_`. Unknown non-underscore command types are reserved for future ACP variants. Every command type carries `name` and `description`, and each type defines how its entries are invoked. Clients that don't understand a command type should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise ignore it. They **MUST NOT** display it as a slash command. Entries without a `type`, or with a known `type` that doesn't match its schema, are invalid and are skipped like any other invalid command item.
+
 ### AvailableCommandInput
 
 Currently supports text input with `type: "text"`:
@@ -70,11 +119,11 @@ Currently supports text input with `type: "text"`:
   A hint to display when the input hasn't been provided yet
 </ResponseField>
 
-Command input specifications can add custom or future `type` values. Custom input types **MUST** begin with `_`; unknown non-underscore input types are reserved for future ACP variants. Clients that cannot render an input specification should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise display the command without structured input.
+Command input specifications can add custom or future `type` values. Custom input types **MUST** begin with `_`. Unknown non-underscore input types are reserved for future ACP variants. Clients that cannot render an input specification should preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise display the command without structured input.
 
 ## Dynamic updates
 
-The Agent can update the list of available commands at any time during a session by sending another `available_commands_update` notification. This allows commands to be added based on context, removed when no longer relevant, or modified with updated descriptions.
+The Agent can update the list of available commands at any time during a session by sending another `available_commands_update` notification. Each notification replaces the list previously advertised in a setup response or notification, including `[]` to clear it. Agents can use this to add commands as context changes, remove commands that no longer apply, or update descriptions.
 
 ## Running commands
 
@@ -97,4 +146,19 @@ Commands are included as regular user messages in prompt requests:
 }
 ```
 
-The Agent recognizes the command prefix and processes it accordingly. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
+A prompt invokes a `command` entry when its first text block starts with `/` followed by the command `name`. The Agent decides how to interpret the prompt. Clients recognizing a command for highlighting or completion **SHOULD** require the name to be followed by whitespace or the end of the text block, so `/web foo` matches `web`, `/webfoo` does not, and `/web-search foo` matches `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
+
+The same [prompt insertion contract](/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted) applies to commands: the successful response returns the inserted user message's `messageId`, and the Agent reports that message through a `user_message` update or `user_message_chunk` updates with the same ID.
+
+If a command is handled locally and the runtime does not record it, the adapter inserts a live-only user message into the ACP conversation. It need not wait for a runtime insertion event or keep a permanent transcript entry. If the command is retained and replayed later, it uses the same message ID and is not executed again.
+
+For example, an adapter can report a locally handled `/compact` as a live-only user message containing `/compact`, even if the runtime records only a summary. The ACP user message represents the command invocation. It need not match the runtime's transcript or expanded instructions.
+
+Local handling still uses the
+[foreground lifecycle](/protocol/v2/draft/prompt-lifecycle#work-boundaries-and-local-commands).
+From idle, the Agent **MUST** report an active state for command handling and
+`idle` when no foreground work remains, even if no model call or tool invocation
+occurs. A command with no user-action wait uses `running` → `idle`, and
+**SHOULD** include `stopReason: "end_turn"` for successful completion.
+Completing an individual command while other foreground activity continues
+does not require an idle boundary.

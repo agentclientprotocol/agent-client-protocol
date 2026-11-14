@@ -13,12 +13,15 @@ members = [
 ]
 resolver = "3"
 
+[workspace.package]
+rust-version = "1.88.0"
+
 [workspace.dependencies]
-agent-client-protocol-schema = { path = "agent-client-protocol-schema", version = "1.7.0" }
+agent-client-protocol-schema = { path = "agent-client-protocol-schema", version = "1.17.0" }
 
 [workspace.lints.rust]
 future_incompatible = { level = "warn", priority = -1 }
-let-underscore = "warn"
+let_underscore = "warn"
 missing_debug_implementations = "warn"
 missing_docs = "warn"
 nonstandard_style = { level = "warn", priority = -1 }

@@ -28,12 +28,12 @@ jobs:
       - name: Read MSRV from Cargo.toml
         id: msrv
         run: |
-          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' agent-client-protocol-schema/Cargo.toml)"
+          msrv="$(sed -n 's/^rust-version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' Cargo.toml)"
           test -n "$msrv"
           echo "version=$msrv" >> "$GITHUB_OUTPUT"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30
         with:
           toolchain: ${{ steps.msrv.outputs.version }}
 
@@ -49,13 +49,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Use Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: latest
+          node-version: "lts/*"
+          check-latest: true
           cache: "npm"
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30
         with:
           toolchain: nightly,stable
           components: rustfmt,clippy
@@ -67,7 +68,7 @@ jobs:
         run: npm run format:check
 
       - name: Check for typos
-        uses: crate-ci/typos@4d9c206a77c041268485162b8e2579ad7a5cb9a3
+        uses: crate-ci/typos@4c8b7f51ca60df14e3c5ca82770dfbbe6c3dae85
         with:
           config: ./typos.toml
 
@@ -87,6 +88,21 @@ jobs:
 
       - name: Run tests
         run: cargo test --all-features
+
+      # The generator builds one schema per feature set, and `--all-features`
+      # only selects the unstable v2 one, so test the other published schemas too.
+      - name: Run schema generator tests for each published schema
+        run: |
+          cargo test -p schema-generator
+          cargo test -p schema-generator --features unstable
+          cargo test -p schema-generator --features unstable_protocol_v2
+
+      # Some schema tests check behavior that only applies when an unstable
+      # feature such as `unstable_end_turn_token_usage` is off.
+      - name: Run schema tests without every unstable feature
+        run: |
+          cargo test -p agent-client-protocol-schema --features unstable_protocol_v2
+          cargo test -p agent-client-protocol-schema --features unstable_subagents
 
       - name: Check generated files are up to date
         run: |
@@ -144,12 +160,12 @@ jobs:
           persist-credentials: false
 
       - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659
+        uses: actions-rust-lang/setup-rust-toolchain@a188e68d0fd2bd36ad51dccb2b07ba6e75105f30
         with:
           toolchain: stable
 
       - name: Install cargo-hack
-        uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d
+        uses: taiki-e/install-action@3a3daafd3b7f23b8f65d9f5ba2db203fb59b79e2
         with:
           tool: cargo-hack
 

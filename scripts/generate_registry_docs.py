@@ -168,7 +168,6 @@ def _render_agent_cards(agents: list[dict], icons: dict[str, str]) -> str:
         agent_id = agent.get("id", "-")
         name = agent.get("name", agent_id)
         description = _escape_text(agent.get("description", ""))
-        version = _escape_text(agent.get("version", "-"))
         website = agent.get("website", "")
         repository = agent.get("repository", "")
         href = website or repository
@@ -186,15 +185,11 @@ def _render_agent_cards(agents: list[dict], icons: dict[str, str]) -> str:
         lines.append("  >")
         if description:
             lines.append(f"    {description}")
-        version_text = version if version not in ("", "-") else "version unknown"
-        lines.append("")
         if repository:
+            lines.append("")
             lines.append(
-                f'    **{_escape_text(version_text)}**,'
-                f' <a href="{_escape_html(repository)}"><Icon icon="github" /></a>'
+                f'    <a href="{_escape_html(repository)}"><Icon icon="github" /></a>'
             )
-        else:
-            lines.append(f"    **{_escape_text(version_text)}**")
         lines.append("  </Card>")
 
     lines.append("</CardGroup>")

@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
-use crate::SkipListener;
 
 #[cfg(feature = "schemars")]
 use super::{ELICITATION_COMPLETE_NOTIFICATION, ELICITATION_CREATE_METHOD_NAME};
@@ -86,7 +85,7 @@ pub struct EnumOption {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -119,7 +118,7 @@ impl EnumOption {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -134,7 +133,7 @@ impl EnumOption {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
@@ -197,7 +196,7 @@ pub struct StringPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -317,7 +316,7 @@ impl StringPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -370,7 +369,7 @@ pub struct NumberPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -426,7 +425,7 @@ impl NumberPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -479,7 +478,7 @@ pub struct IntegerPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -535,7 +534,7 @@ impl IntegerPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -578,7 +577,7 @@ pub struct BooleanPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -620,7 +619,7 @@ impl BooleanPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -644,7 +643,7 @@ pub struct StringMultiSelectItems {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -665,7 +664,7 @@ impl StringMultiSelectItems {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -689,7 +688,7 @@ pub struct TitledMultiSelectItems {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -713,7 +712,7 @@ impl TitledMultiSelectItems {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -819,6 +818,8 @@ pub enum MultiSelectItems {
     #[serde(untagged)]
     Other(OtherMultiSelectItems),
     /// Titled multi-select items with human-readable labels.
+    ///
+    /// As in MCP, titled items omit `type` and are identified by `anyOf`.
     #[serde(untagged)]
     Titled(TitledMultiSelectItems),
 }
@@ -860,7 +861,7 @@ pub struct MultiSelectPropertySchema {
     /// Default selected values.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no default selections are provided.
-    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_, SkipListener>>>")]
+    #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default)]
     pub default: Option<Vec<String>>,
@@ -870,7 +871,7 @@ pub struct MultiSelectPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -948,7 +949,7 @@ impl MultiSelectPropertySchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -959,8 +960,8 @@ impl MultiSelectPropertySchema {
 /// Property schema for elicitation form fields.
 ///
 /// Each variant corresponds to a JSON Schema `"type"` value.
-/// Single-select enums use the `String` variant with `enum` or `oneOf` set.
-/// Multi-select enums use the `Array` variant.
+/// Single-select enums use `type: "string"` with `enum` or `oneOf` set.
+/// Multi-select enums use `type: "array"`.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -1159,7 +1160,7 @@ pub struct ElicitationSchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1207,7 +1208,7 @@ impl ElicitationSchema {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1326,7 +1327,7 @@ pub struct ElicitationCapabilities {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1383,7 +1384,7 @@ impl ElicitationCapabilities {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1407,7 +1408,7 @@ pub struct ElicitationFormCapabilities {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1416,7 +1417,7 @@ pub struct ElicitationFormCapabilities {
 }
 
 impl ElicitationFormCapabilities {
-    /// Builds an empty [`ElicitationFormCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ElicitationFormCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1428,7 +1429,7 @@ impl ElicitationFormCapabilities {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1452,7 +1453,7 @@ pub struct ElicitationUrlCapabilities {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1461,7 +1462,7 @@ pub struct ElicitationUrlCapabilities {
 }
 
 impl ElicitationUrlCapabilities {
-    /// Builds an empty [`ElicitationUrlCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ElicitationUrlCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1473,7 +1474,7 @@ impl ElicitationUrlCapabilities {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1496,7 +1497,7 @@ pub enum ElicitationScope {
 
 /// Session-scoped elicitation, optionally tied to a specific tool call.
 ///
-/// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+/// When `toolCallId` is set, the elicitation is tied to a specific tool call.
 /// This is useful when an agent receives an elicitation from an MCP server
 /// during a tool call and needs to redirect it to the user.
 #[serde_as]
@@ -1519,7 +1520,7 @@ pub struct ElicitationSessionScope {
 }
 
 impl ElicitationSessionScope {
-    /// Builds [`ElicitationSessionScope`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationSessionScope`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1548,7 +1549,7 @@ pub struct ElicitationRequestScope {
 }
 
 impl ElicitationRequestScope {
-    /// Builds [`ElicitationRequestScope`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationRequestScope`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(request_id: impl Into<RequestId>) -> Self {
         Self {
@@ -1593,7 +1594,7 @@ pub struct CreateElicitationRequest {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1602,7 +1603,7 @@ pub struct CreateElicitationRequest {
 }
 
 impl CreateElicitationRequest {
-    /// Builds [`CreateElicitationRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`CreateElicitationRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(mode: impl Into<ElicitationMode>, message: impl Into<String>) -> Self {
         Self {
@@ -1624,7 +1625,7 @@ impl CreateElicitationRequest {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1661,7 +1662,7 @@ pub enum ElicitationMode {
 /// object for clients that store, replay, proxy, or forward elicitation
 /// requests.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_mode_schema))]
 #[serde(rename_all = "camelCase")]
@@ -1814,7 +1815,7 @@ pub struct ElicitationFormMode {
 }
 
 impl ElicitationFormMode {
-    /// Builds [`ElicitationFormMode`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationFormMode`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(scope: impl Into<ElicitationScope>, requested_schema: ElicitationSchema) -> Self {
         Self {
@@ -1841,7 +1842,7 @@ pub struct ElicitationUrlMode {
 }
 
 impl ElicitationUrlMode {
-    /// Builds [`ElicitationUrlMode`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationUrlMode`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         scope: impl Into<ElicitationScope>,
@@ -1874,7 +1875,7 @@ pub struct CreateElicitationResponse {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1883,7 +1884,7 @@ pub struct CreateElicitationResponse {
 }
 
 impl CreateElicitationResponse {
-    /// Builds [`CreateElicitationResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`CreateElicitationResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(action: impl Into<ElicitationAction>) -> Self {
         Self {
@@ -1898,7 +1899,7 @@ impl CreateElicitationResponse {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1937,7 +1938,7 @@ pub enum ElicitationAction {
 /// response object for agents that store, replay, proxy, or forward elicitation
 /// responses.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[cfg_attr(feature = "schemars", schemars(transform = other_elicitation_action_schema))]
 #[serde(rename_all = "camelCase")]
@@ -2047,7 +2048,7 @@ pub struct ElicitationAcceptAction {
 }
 
 impl ElicitationAcceptAction {
-    /// Builds [`ElicitationAcceptAction`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationAcceptAction`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self { content: None }
@@ -2064,7 +2065,7 @@ impl ElicitationAcceptAction {
     }
 }
 
-/// Allowed wire representations for [`ElicitationContentValue`].
+/// Allowed wire representations for `ElicitationContentValue`.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
@@ -2153,7 +2154,7 @@ pub struct CompleteElicitationNotification {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2162,7 +2163,7 @@ pub struct CompleteElicitationNotification {
 }
 
 impl CompleteElicitationNotification {
-    /// Builds [`CompleteElicitationNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`CompleteElicitationNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(elicitation_id: impl Into<ElicitationId>) -> Self {
         Self {
@@ -2177,7 +2178,7 @@ impl CompleteElicitationNotification {
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();

@@ -6,7 +6,7 @@ use crate::IntoOption;
 
 /// Notification to cancel an ongoing request.
 ///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -15,13 +15,14 @@ use crate::IntoOption;
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelRequestNotification {
-    /// The ID of the request to cancel.
+    /// The ID of the request to cancel: a request that the sender of this notification issued.
+    /// Receivers match it only against requests they received from that sender.
     pub request_id: RequestId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -30,7 +31,7 @@ pub struct CancelRequestNotification {
 }
 
 impl CancelRequestNotification {
-    /// Builds [`CancelRequestNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`CancelRequestNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(request_id: impl Into<RequestId>) -> Self {
         Self {
@@ -40,10 +41,10 @@ impl CancelRequestNotification {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -96,11 +97,15 @@ pub enum ProtocolLevelNotification {
     ///
     /// 1. MAY cancel the corresponding request activity and all nested activities
     /// 2. MAY send any pending notifications.
-    /// 3. MUST send one of these responses for the original request:
-    ///   - Valid response with appropriate data (partial results or cancellation marker)
-    ///   - Error response with code `-32800` (Cancelled)
+    /// 3. MUST still send a response for the original request. If the request already finished
+    ///    or is not cancelled, that is its normal response. If it is cancelled, it is either the
+    ///    method's defined cancellation result (for example an inserted `session/prompt`, or a
+    ///    `cancelled` permission outcome) or an error with code `-32800` (Request Cancelled).
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/cancellation)
+    /// Receivers MUST ignore this notification for an unknown or already-answered request ID,
+    /// and MUST NOT send a second response for it.
+    ///
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
     CancelRequestNotification(CancelRequestNotification),
 }
 

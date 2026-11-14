@@ -52,7 +52,6 @@ pub mod v1;
 pub mod v2;
 mod version;
 
-pub(crate) use serde_util::SkipListener;
 pub use serde_util::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 pub use version::*;
 

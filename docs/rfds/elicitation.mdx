@@ -762,7 +762,7 @@ ACP requires the supported mode or modes to be explicit.
 This structure:
 
 1. Allows clients to declare partial support based on their environment
-2. Enables agents to pass capabilities along to MCP servers they connect to
+2. Enables agents to translate capabilities for MCP servers they connect to
 3. Retains MCP's form and URL mode structure while making support explicit
 4. Provides clear semantics for graceful degradation
 
@@ -905,7 +905,7 @@ Agents should always design to gracefully degrade:
 - Describe what they're requesting in turn content (text) as fallback
 - Continue only when the fallback is appropriate for the operation
 - Never use a form or turn text as a fallback for secrets or credentials; use another safe out-of-band flow or fail the operation
-- For agents connecting to MCP servers: pass the client's elicitation capabilities to the MCP server so it can also make informed decisions
+- For agents connecting to MCP servers: translate the client's elicitation capabilities for the MCP server so it can also make informed decisions. Advertise each supported mode explicitly, and omit the MCP capability when the client advertises no modes, since an empty MCP capability means form support
 
 ### Can we extend this to replace the existing Permission-Request mechanism?
 
@@ -931,6 +931,7 @@ For v1, we recommend starting with JSON Schema validation only. If more complex 
 
 ## Revision history
 
+- 2026-10-29: Agents translate, rather than pass through, elicitation capabilities for MCP servers, since `{}` means no modes in ACP but form support in MCP.
 - 2026-07-22: Moved to Completed and stabilized elicitation in the protocol artifacts. Audited the data model and safety guidance against the locked MCP 2026-07-28 release candidate and documented ACP's direct-request, capability, scope, and URL-completion differences.
 - 2026-07-09: Moved to Preview.
 - 2026-07-01: Removed the separate URL-required error flow; URL elicitations use `elicitation/create` and optional `elicitation/complete`.

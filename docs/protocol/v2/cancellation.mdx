@@ -7,9 +7,9 @@ ACP uses JSON-RPC 2.0 for making requests and getting responses.
 
 The JSON-RPC specification doesn't define any standard mechanism for request cancellation and keeps it up to the implementation.
 
-## `$/cancel_request` Notification
+## `$/cancel_request` notification
 
-In order to provide a consistent approach to cancellation, ACP defines a `$/cancel_request` notification that can be sent to cancel requests.
+To make cancellation consistent, ACP defines a `$/cancel_request` notification that can be sent to cancel requests. Its `requestId` identifies a request that the sender of `$/cancel_request` issued. Receivers match it only against requests they received from that sender, since each side chooses its own request IDs.
 
 Cancellation remains optional as it might not be implementable in all clients or servers. For example if the implementation uses a single threaded synchronous programming language then there is little it can do to react to a `$/cancel_request` notification.
 
@@ -17,27 +17,50 @@ When a `$/cancel_request` notification is received by a supporting implementatio
 
 - **MAY** cancel the corresponding request activity and all nested activities related to that request
 - **MAY** finish sending any pending notifications before responding
-- **MUST** send one of these responses for the original request:
-  - A valid response with appropriate data (such as partial results or cancellation marker)
-  - An error response with code [`-32800` (Request Cancelled)](/protocol/v2/schema#errorcode)
+- **MUST** still send a response for the original request
 
-The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
+If the request already finished, or the receiver doesn't cancel it, the receiver sends its normal response.
+
+Receivers **MUST** ignore a `$/cancel_request` for a request ID that is unknown or already answered, and **MUST NOT** send a second response for it.
+
+If the receiver does cancel the request, it sends one of these responses:
+
+- A successful response, where the method defines one for cancellation: `session/prompt` after its user message is inserted (with its `messageId`), `session/request_permission` with the `cancelled` outcome, or `elicitation/create` with the `cancel` action
+- An error response with code [`-32800` (Request Cancelled)](/protocol/v2/schema#errorcode)
+
+A sender that stops waiting for a response, for example after a timeout or because the work that needed it ended, **SHOULD** send `$/cancel_request` for that request so the receiver can stop work or dismiss UI. The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
 
 Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios, such as cancellation of [active session work](/protocol/v2/prompt-lifecycle#cancellation).
 
-## Internal Cancellation
+`session/cancel` and `$/cancel_request` have different scopes. Cancelling one
+permission or elicitation request does not automatically cancel the whole
+foreground workflow or determine its state. The Agent applies the aggregate
+[state-transition rules](/protocol/v2/prompt-lifecycle#state-transitions).
+
+On `session/cancel`, the Agent stops waiting for pending permission requests of the cancelled foreground work and **SHOULD** cancel each of them with `$/cancel_request`. Clients **MAY** answer such a request with the `cancelled` outcome without waiting for `$/cancel_request`. After cancellation completes, Agents **SHOULD** ignore late
+answers rather than use them to resume the cancelled work. After aborting active
+foreground work and sending its final updates, the Agent **MUST** report `idle`
+with `stopReason: "cancelled"`. No additional completion update is required if
+no foreground work was active. See [Elicitation Cancellation](/protocol/v2/elicitation#session-cancellation)
+for selective cancellation of related requests and external URL interactions.
+
+## Internal cancellation
 
 Requests can also be cancelled internally by the executing party without receiving `$/cancel_request`:
 
-- **Client-side examples**: User closes IDE, switches to different project, file becomes unavailable
-- **Agent-side examples**: LLM context limit reached, internal timeout, resource constraints
+- On the Client, the user closes the IDE or switches projects, or a file becomes unavailable.
+- On the Agent, the LLM context limit is reached, an internal timeout fires, or resources run out.
 
 When internal cancellation occurs, the executing party **SHOULD**:
 
-- Send the same `-32800` (Cancelled) error response as if `$/cancel_request` was received
+- Send the same response it would send for `$/cancel_request`: the method's defined cancellation result where one exists (an inserted prompt's `messageId`, a `cancelled` permission outcome, or an elicitation `cancel` action), otherwise `-32800` (Request Cancelled)
 - Ensure consistent behavior regardless of cancellation source
 
-## Example: Cascading Cancellation Flow
+Both kinds of cancellation answer `session/prompt` with `-32800` only before the user message is inserted. Once it is inserted, the Agent responds successfully with its `messageId`, and the work it started is stopped with [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation) or ends with the matching [stop reason](/protocol/v2/prompt-lifecycle#stop-reasons). See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted).
+
+## Example: cascading cancellation flow
+
+Sending `session/cancel` does not automatically cancel outstanding Agent-to-Client requests. The Agent sends `$/cancel_request` for the permission requests of the cancelled work, as specified in [active session work cancellation](/protocol/v2/prompt-lifecycle#cancellation), and the Client answers each one with the `cancelled` outcome.
 
 ```mermaid
 sequenceDiagram
@@ -46,7 +69,8 @@ sequenceDiagram
 
     Note over Client,Agent: 1. Session prompt in progress
     Client->>Agent: session/prompt (id=1, "Analyze file X")
-    Agent-->>Client: response to id=1 ({})
+    Agent-->>Client: response to id=1 (messageId)
+    Agent->>Client: session/update (user_message)
     Agent->>Client: session/update (state_update: running)
 
     Note over Client,Agent: 2. Agent makes concurrent permission requests
@@ -56,14 +80,12 @@ sequenceDiagram
     Note over Client,Agent: 3. Client cancels active session work
     Client->>Agent: session/cancel (sessionId)
 
-    Note over Client,Agent: 4. Agent cascades cancellation internally
-    Agent->>Client: $/cancel_request (id=2) [permission request]
-    Agent->>Client: $/cancel_request (id=3) [permission request]
+    Note over Client,Agent: 4. Agent cancels pending permission requests
+    Agent->>Client: $/cancel_request (requestId=2)
+    Agent->>Client: $/cancel_request (requestId=3)
+    Client->>Agent: response to id=2 (outcome: cancelled)
+    Client->>Agent: response to id=3 (outcome: cancelled)
 
-    Note over Client,Agent: 5. Client confirms individual cancellations
-    Client->>Agent: response to id=2 (error -32800 "Cancelled")
-    Client->>Agent: response to id=3 (error -32800 "Cancelled")
-
-    Note over Client,Agent: 6. Agent reports cancellation completion
+    Note over Client,Agent: 5. Agent stops active work and reports cancellation completion
     Agent->>Client: session/update (state_update: idle, stopReason: "cancelled")
 ```
