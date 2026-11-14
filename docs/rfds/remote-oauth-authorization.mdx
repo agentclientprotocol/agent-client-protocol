@@ -1,0 +1,191 @@
+---
+title: "OAuth Authorization for Remote Agents"
+---
+
+- Author(s): [@akos-zsolt-toth](https://github.com/akos-zsolt-toth)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Remote Agents that serve many users need the Client to hold a credential that survives a reconnect. ACP has no standard way to do that today, so every reconnect to a remote Agent becomes a new interactive login.
+
+We propose:
+
+- A standard authentication method type, `oauth`, and a Client capability, `capabilities.auth.oauth`, that carries the Client's obligations.
+- The method names the Agent's [OAuth 2.0 Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728). The Client discovers the authorization server from it, runs OAuth 2.1 with PKCE, and stores and refreshes the token itself, the same way an [MCP Client authorizes to an MCP server](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization).
+- The Client presents the token at the **transport** on every connection: an `Authorization: Bearer` header where it can set headers, and a short-lived, single-use connect ticket in the WebSocket URL where it can't, as in browsers.
+- URL-mode elicitation inside `auth/login` stays as the fallback for Clients that don't advertise the capability.
+
+Nothing changes for local Agents or for stdio.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP defines two authentication method types ([Authentication](/protocol/v2/authentication#authentication-method-types)):
+
+- `agent`: the Agent handles login through `auth/login`, for example by opening a local browser and running a local callback.
+- `terminal`: the Client runs the Agent program in a terminal, and then reconnects.
+
+Both assume the Agent runs on the user's machine and keeps credentials where later connections find them. The authentication docs say so: "Whether authentication outlasts the connection is up to the Agent. Credentials are often stored where other connections can use them." For a local Agent that store is the keychain or a config file, shared by every connection from the same machine.
+
+A remote Agent has no such store to share. To recognise a new connection as a returning user, it needs the Client to present something, and ACP defines nothing for that. In practice a remote Agent:
+
+1. Answers `auth/login` with a URL-mode [elicitation](/protocol/v2/elicitation) scoped to the request. The user signs in with the Agent's identity provider in a browser.
+2. Has to tie the result to that elicitation and that connection, and **MUST NOT** apply it to a different connection, because there is no authenticated user yet ([Elicitation](/protocol/v2/elicitation), URL mode security). That rule is right: it is what OAuth `state` does against login-link phishing.
+3. Therefore loses the login when the connection drops. The next connection starts anonymous, and the user signs in again.
+
+The [remote transport RFD](/rfds/streamable-http-websocket-transport) doesn't close the gap. Clients must keep cookies "for the duration of the connection" and may discard them afterwards. Cookies are also ambient credentials, browsers withhold them from cross-site WebSocket connections under `SameSite`, and every non-browser Client would need its own cookie store.
+
+What this costs:
+
+- **Every reconnect is an interactive login.** A network blip or a laptop waking from sleep sends the user back through their identity provider.
+- **Agents invent their own workarounds.** Each one is custom, and none has the refresh, revocation or audience binding that a standard token flow provides.
+- **Clients can't plan for login.** A generic `agent` method that only works by opening a browser looks the same as one that runs locally. A Client without a browser can't tell in advance that the method will fail.
+- **Hosted Agents have no shared answer.** For example, the GitHub Copilot language server has a request to support URL elicitation or a device code for machines with no browser ([copilot-language-server-release#54](https://github.com/github/copilot-language-server-release/issues/54)). ACP gives every hosted Agent the same problem and no standard solution.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### 1. An `oauth` authentication method type
+
+```json
+{
+  "methodId": "sso",
+  "name": "Sign in with Example SSO",
+  "type": "oauth",
+  "resourceMetadata": "https://agent.example.com/.well-known/oauth-protected-resource/acp",
+  "scopes": ["acp"]
+}
+```
+
+- `resourceMetadata` (required): the URL of the Agent's Protected Resource Metadata document ([RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728)).
+- `scopes` (optional): the scopes the Client requests. If they're omitted, the Client uses `scopes_supported` from the metadata.
+
+The method is meaningful only on HTTP-based transports. Agents **MUST NOT** advertise it over stdio.
+
+### 2. A Client capability
+
+```json
+{
+  "capabilities": {
+    "auth": {
+      "oauth": {}
+    }
+  }
+}
+```
+
+Supplying `capabilities.auth.oauth` means the Client takes on these obligations:
+
+- It runs the authorization flow in §3.
+- It stores the tokens per Agent resource.
+- It refreshes them.
+- It presents them on every connection as described in §4.
+
+Agents **MUST NOT** advertise an `oauth` method unless this capability is present. This mirrors `capabilities.auth.terminal`. A Client that doesn't advertise the capability keeps today's behaviour.
+
+### 3. The authorization flow
+
+The Client follows the [MCP authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization), with the Agent as the protected resource:
+
+1. It fetches `resourceMetadata`, and then the authorization server's metadata ([RFC 8414](https://datatracker.ietf.org/doc/html/rfc8414)).
+2. It registers or identifies itself the way MCP Clients do: a Client ID Metadata Document, Dynamic Client Registration, or a pre-registered client.
+3. It runs the authorization code grant with PKCE ([RFC 7636](https://datatracker.ietf.org/doc/html/rfc7636)), and sends the Agent's resource identifier as the `resource` parameter ([RFC 8707](https://datatracker.ietf.org/doc/html/rfc8707)). A Client without a browser **MAY** use the device authorization grant ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)) if the authorization server supports it. Opening a browser follows the existing rule that Clients need the user's consent before opening a URL.
+4. It stores the access token and the refresh token, keyed by the Agent's resource identifier.
+5. It closes the anonymous connection, opens a new one presenting the token (§4), and resumes any sessions it wants to keep with `session/resume`. This is the same reconnect step as `terminal` authentication.
+
+The Client **MUST NOT** call `auth/login` for an `oauth` method. No credential travels in an ACP message.
+
+### 4. Presenting the token
+
+| Transport | How the token is presented |
+| --- | --- |
+| Streamable HTTP | `Authorization: Bearer <token>` on every request, including the GET streams |
+| WebSocket, Client can set headers | `Authorization: Bearer <token>` on the upgrade request |
+| WebSocket, Client can't set headers (browsers) | a connect ticket in the upgrade URL, described below |
+
+**Connect tickets.** The Agent's Protected Resource Metadata advertises `acp_connect_ticket_endpoint`. To connect:
+
+1. The Client `POST`s to that endpoint with `Authorization: Bearer <token>`.
+2. The Agent answers `{ "ticket": "<opaque>", "expires_in": 30 }`.
+3. The Client opens `wss://agent.example.com/acp?acp_ticket=<opaque>`.
+
+The ticket rules:
+
+- A ticket is single-use and expires within 60 seconds.
+- It is bound to the token's subject and to the Agent resource.
+- The Agent **MUST** reject a reused or expired ticket, and **MUST NOT** log the full upgrade URL.
+- The endpoint answers CORS preflight requests for the origins the Agent accepts.
+
+The ticket is the only credential that ever appears in a URL, and it is worth nothing after first use.
+
+### 5. Failure, expiry and logout
+
+- **HTTP:** a missing or invalid token gets `401` with `WWW-Authenticate: Bearer resource_metadata="…"` (RFC 9728 §5.1), as in MCP.
+- **WebSocket:** a browser can't read the status code or headers of a failed upgrade. An Agent that receives an invalid or expired token or ticket **SHOULD** therefore accept the upgrade and close the socket with close code `4401`. Browsers can read close codes, so the Client can tell "authorization needed" apart from a network failure. The Client then refreshes the token, or runs §3 again, and reconnects.
+- **Expiry during a connection:** the Agent **MAY** close the connection with `4401` when the token's lifetime ends. Agents **SHOULD** avoid this while a prompt is in progress.
+- **`auth/logout`:** the Client discards the stored tokens and, if the authorization server supports it, revokes them ([RFC 7009](https://datatracker.ietf.org/doc/html/rfc7009)). The Agent ends the authenticated state of the connection, as it does today.
+
+### 6. Relationship to elicitation
+
+URL-mode elicitation is unchanged. On a connection authorized by this method there is an authenticated user, so elicitations use the stronger rule: the user who completes the external step must be the user who started it. The connection-only binding is needed only for Agents without user authentication, and for Clients that fall back to URL-mode login.
+
+Elicitation also keeps the job MCP gives it: an Agent obtaining access to **third-party** services, such as a source-control host the Agent calls for the user. The Client's token is for the Agent only. Agents **MUST NOT** pass it through to other services.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+- A user signs in to a hosted Agent once, through their organisation's identity provider. After that, reconnects are silent until the refresh token expires or the user logs out.
+- Editors that already run MCP's OAuth flow reuse that code for ACP Agents.
+- Browser Clients connect with a ticket and never see a long-lived credential in a URL.
+- Machines without a browser sign in with a device code.
+- Remote Agents stop inventing their own token schemes, and the connection-only elicitation binding becomes a rare fallback.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Schema: the `oauth` variant of `AuthMethod` and `capabilities.auth.oauth`.
+2. Documentation: an "OAuth authorization" section in [Authentication](/protocol/v2/authentication), and a short paragraph in the remote transport RFD that points at it, covering header and ticket presentation and close code `4401`.
+3. SDKs: Client helpers for discovery, token storage and refresh, and ticket exchange. The TypeScript SDK's browser WebSocket helper gains ticket support.
+4. Prototype: ship the method in an example Agent and Client under a custom `_oauth` type, and standardise the type once that has been exercised.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **URL elicitation plus an Agent-issued credential.** After the URL login, the Agent returns a credential that the Client stores and presents when it reconnects. This is small and works over any transport. But it invents an ACP-specific token scheme without the standard pieces: expiry, refresh, revocation, audience. It also puts a credential into ACP messages, and it would need an exception to the rule that a pre-login elicitation result never applies to another connection. The Client still has to keep a token store, so it does most of what this proposal does without the interoperability.
+- **Keep cookies across connections.** The transport RFD would change "MAY discard cookies" into a requirement to keep them. This is a tiny change, and browsers already behave that way for same-site pages. But cookies are ambient credentials, browsers withhold them from cross-site WebSocket Clients, and non-browser Clients need a cookie store.
+- **Pure MCP-style discovery via `401` only.** This works for HTTP, but a browser can't read the response to a failed WebSocket upgrade. Advertising the method in `authMethods` makes discovery work on every transport, from inside the protocol.
+
+### Why reconnect instead of sending the token on the open connection?
+
+It keeps credentials out of ACP messages, and the transport is then authenticated before `initialize`. It also matches `terminal` authentication, which already ends with a reconnect.
+
+### Doesn't MCP's URL-elicitation proposal reject OAuth-specific mechanisms?
+
+SEP-1036 rejects having the Client obtain **third-party** tokens on the server's behalf, because that leads to token passthrough. It keeps the Client's own authorization to the server in MCP's authorization specification, which is OAuth-based. This proposal follows the same split.
+
+### Why not carry the token in `Sec-WebSocket-Protocol`?
+
+Some systems do this to get a credential through a browser. It abuses subprotocol negotiation, the value may be echoed back or logged by intermediaries, and it is a long-lived credential. A single-use ticket avoids all three.
+
+### Does this conflict with the remote transport RFD?
+
+No. It builds on that RFD's endpoint and identity model, and could become a section of it. It covers what the transport RFD leaves open: how a remote Client signs in, and how it signs in again after a reconnect.
+
+### Open questions
+
+- The names `acp_connect_ticket_endpoint` and `acp_ticket`, and close code `4401`.
+- Whether the device authorization grant belongs in the first version.
+- Whether `scopes` should be on the method or only in the metadata.
+
+## Revision history
+
+- 2026-11-10: initial draft.
