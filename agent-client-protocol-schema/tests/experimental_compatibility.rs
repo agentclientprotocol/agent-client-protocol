@@ -51,6 +51,25 @@ fn experimental_plan_removal_roundtrips_with_or_without_local_support() {
 }
 
 #[test]
+fn experimental_prompt_suggestions_roundtrip_with_or_without_local_support() {
+    for suggestions in [
+        json!([]),
+        json!([{"prompt": [{"type": "text", "text": "Run the tests"}]}]),
+    ] {
+        let wire = json!({
+            "sessionUpdate": "prompt_suggestions_update",
+            "suggestions": suggestions
+        });
+        let update = decode_update(&wire);
+        #[cfg(feature = "unstable_prompt_suggestions")]
+        assert!(matches!(update, SessionUpdate::PromptSuggestionsUpdate(_)));
+        #[cfg(not(feature = "unstable_prompt_suggestions"))]
+        assert!(matches!(update, SessionUpdate::Other(_)));
+        assert_eq!(serde_json::to_value(update).unwrap(), wire);
+    }
+}
+
+#[test]
 fn unknown_standard_and_custom_updates_preserve_their_payloads() {
     for tag in ["future_display_update", "_acme_display_update"] {
         let wire = json!({
@@ -118,6 +137,28 @@ fn plan_fallback_schema_excludes_only_locally_recognized_variants() {
                 .iter()
                 .any(|variant| variant["properties"]["type"]["const"] == tag),
             tag == "items" || cfg!(feature = "unstable_plan_operations")
+        );
+    }
+}
+
+#[cfg(feature = "schemars")]
+#[test]
+fn session_update_fallback_schema_excludes_only_locally_recognized_variants() {
+    let schema = serde_json::to_value(schemars::schema_for!(OtherSessionUpdate)).unwrap();
+    let excluded = schema["not"]["anyOf"].as_array().unwrap();
+    for (tag, recognized) in [
+        ("plan_update", true),
+        ("plan_removed", cfg!(feature = "unstable_plan_operations")),
+        (
+            "prompt_suggestions_update",
+            cfg!(feature = "unstable_prompt_suggestions"),
+        ),
+    ] {
+        assert_eq!(
+            excluded
+                .iter()
+                .any(|variant| variant["properties"]["sessionUpdate"]["const"] == tag),
+            recognized
         );
     }
 }

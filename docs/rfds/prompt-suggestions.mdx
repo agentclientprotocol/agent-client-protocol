@@ -276,5 +276,6 @@ No. The next prompt arrives as an ordinary `session/prompt`, and nothing marks i
 
 ## Revision history
 
+- 2026-11-14: Phases 1 and 2 landed. `prompt_suggestions_update` and the `session.promptSuggestions` Client capability are in the v1 and v2 unstable schemas, behind the `unstable_prompt_suggestions` feature. The rules are in the draft v1 [Prompt Turn](/protocol/v1/draft/prompt-turn#prompt-suggestions-unstable) and v2 [Prompt Lifecycle](/protocol/v2/draft/prompt-lifecycle#prompt-suggestions-unstable) pages.
 - 2026-11-14: Rename the update to `prompt_suggestions_update`. Suggestions carry `ContentBlock[]` prompt content instead of a text string. The Agent owns the list and withdraws it when a prompt makes it out of date. Require the Client capability in v2 as well as v1, with opt-in content types. Allow a Client to send a suggestion on any explicit user action.
 - 2026-10-15: Initial draft.

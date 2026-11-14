@@ -32,6 +32,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history. Requires the Client's `session.notices` capability.                                    |
 | `compaction_update`         | Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.                                                    |
 | `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.                                         |
+| `prompt_suggestions_update` | **Draft only.** Replaces the session's current list of [prompt suggestions](#prompt-suggestions-unstable). Requires the Client's `session.promptSuggestions` capability.  |
 
 This is the complete set of variants defined in the current draft [`SessionUpdate` schema](/protocol/v1/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 
@@ -354,6 +355,73 @@ Notices have no ID or Agent-managed lifecycle. Each occurrence is an
 independent live event, not conversation history, and **SHOULD NOT** be included
 in session replay. If a condition remains relevant after reconnecting, the
 Agent may emit a new notice.
+
+#### Prompt suggestions (unstable)
+
+A prompt suggestion is a prompt the Agent predicts the user will send next. The Client offers suggestions where the user writes the next prompt.
+
+The Agent **MUST NOT** send `prompt_suggestions_update` unless the Client advertised support by supplying `clientCapabilities.session.promptSuggestions` in its `initialize` request. Omitting `session` or `promptSuggestions`, or setting either field to `null`, means the Client does not advertise support.
+
+Each update replaces the session's current list of suggestions:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "prompt_suggestions_update",
+      "suggestions": [
+        {
+          "prompt": [
+            { "type": "text", "text": "Run the test suite and fix what breaks" }
+          ]
+        },
+        {
+          "prompt": [
+            { "type": "text", "text": "Add tests for " },
+            {
+              "type": "resource_link",
+              "uri": "file:///home/user/project/src/parser.rs",
+              "name": "parser.rs"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+`suggestions` is a required, non-null list, ordered most likely first. An empty list withdraws the suggestions the Client is offering. Suggestions have no IDs, and an update cannot append to the list or remove a single entry.
+
+Each suggestion has a required, non-null `prompt`. It is a list of at least one [content block](/protocol/v1/draft/content), the same type as the `prompt` field of `session/prompt`. A Client can send an accepted suggestion in that field unchanged. `_meta` is an optional, nullable object on the update and on each suggestion. Omission and `null` both mean no metadata.
+
+Each suggestion's `prompt` **MUST** be valid as the `prompt` of a `session/prompt` request for the session. Agents **MUST NOT** send a suggestion whose only content is empty or whitespace-only text. Agents **MUST** only use content types that both sides support:
+
+- `text` and `resource_link` are always allowed.
+- `image`, `audio`, and `resource` blocks are allowed only when the Agent advertised the type in its [prompt capabilities](/protocol/v1/draft/initialization#prompt-capabilities) and the Client advertised it under [`session.promptSuggestions`](/protocol/v1/draft/initialization#prompt-suggestions-unstable).
+
+A Client skips a suggestion it cannot use and keeps the rest, for example one with a block it cannot parse. The Client **SHOULD** skip the whole suggestion rather than offer the remaining blocks, because dropping a block changes what the prompt asks for.
+
+The Agent owns the list. A session starts with an empty list. The `suggestions` in the most recent update are the current list until the Agent sends another update. The Agent keeps the list up to date:
+
+- Agents **MUST** predict a list from the conversation as it stands when they send it. If the conversation changes before the Agent has sent a prediction, for example because a `session/prompt` arrived, the Agent **MUST** discard that prediction.
+- When the Agent accepts a `session/prompt` for the session, a list it sent earlier is out of date. If the current list is not empty, the Agent **MUST** replace it or withdraw it with `suggestions: []`.
+- Agents **SHOULD** replace or withdraw the list when it stops applying for another reason.
+
+Agents **MAY** send the update at any time, including outside a prompt turn. An Agent typically sends it after the `session/prompt` response. An Agent is never required to send one, so Clients do not wait for an update before they accept the user's next prompt.
+
+Clients decide how and when to show the current list. A Client **MAY** stop offering it at any time, for example when the user dismisses it, starts typing, or sends a prompt. The Client does not tell the Agent when it stops offering a list, and the Agent does not learn whether a suggestion was shown, accepted, or edited.
+
+A Client **MUST NOT** send a suggestion as a prompt without an explicit user action. Receiving or displaying a suggestion is not a user action. Each of the following is:
+
+- The user accepts a suggestion into the composer and then sends it.
+- The user selects a suggestion in a UI that sends on selection, such as a row of chips. That UI **SHOULD** show the full text and identify every other block, such as a linked file, before the user selects the suggestion.
+- The user turns on a Client setting that sends suggestions automatically.
+
+Suggestions are not conversation history. Agents **SHOULD NOT** include them in session replay. A loaded session starts with an empty list, and the Agent may send a new update after `session/load` completes.
 
 #### Session compaction
 
