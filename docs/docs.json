@@ -232,6 +232,7 @@
               "rfds/session-options",
               "rfds/speed-config-category",
               "rfds/prompt-suggestions",
+              "rfds/agent-skills",
               "rfds/session-cursors"
             ]
           },

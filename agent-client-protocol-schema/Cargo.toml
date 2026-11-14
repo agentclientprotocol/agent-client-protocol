@@ -1,7 +1,7 @@
 [package]
 name = "agent-client-protocol-schema"
 authors = ["Zed <hi@zed.dev>"]
-version = "1.17.0"
+version = "1.18.0"
 edition = "2024"
 license = "Apache-2.0"
 description = "A protocol for standardizing communication between code editors and AI coding agents"
@@ -27,10 +27,12 @@ default = ["schemars"]
 # omit the dependency and those impls with `default-features = false`.
 schemars = ["dep:schemars", "serde_with/schemars_1"]
 unstable = [
+    "unstable_agent_skills",
     "unstable_auth_status",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
     "unstable_plan_operations",
+    "unstable_prompt_suggestions",
     "unstable_proxy_chains",
     "unstable_session_archive",
     "unstable_session_fork",
@@ -45,10 +47,12 @@ unstable = [
 # It introduces a parallel `v2` module with a different wire version, so it
 # must be opted into explicitly.
 unstable_protocol_v2 = []
+unstable_agent_skills = []
 unstable_auth_status = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
 unstable_plan_operations = []
+unstable_prompt_suggestions = []
 unstable_proxy_chains = []
 unstable_session_archive = []
 unstable_session_fork = []

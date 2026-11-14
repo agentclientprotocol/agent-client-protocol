@@ -1,0 +1,328 @@
+---
+title: "Agent Skills"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt), building on [#370](https://github.com/agentclientprotocol/agent-client-protocol/pull/370) by [@ignatov](https://github.com/ignatov)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Give [Agent Skills](https://agentskills.io/specification) their own type in ACP v2, so Clients can show them as skills and invoke them with a structured reference instead of `/name` text.
+
+- A Client advertises a new `session.commands.skill` capability to say it understands skills.
+- An Agent then advertises its skills as `skill` entries in `availableCommands`. A `skill` entry has a `name`, a `description`, and an optional `path` to the skill's `SKILL.md`. Clients that don't advertise the capability keep getting skills as plain commands.
+- A Client invokes a skill with a new `skill` content block that names it. Every Agent that sends `skill` entries accepts the block at the start of a prompt. Agents that advertise `session.prompt.skill.inline` accept it anywhere in a prompt, any number of times.
+
+It adds no new protocol surface for Clients that want to supply skills to an Agent. That works today through `additionalDirectories`, and in future through MCP servers that implement the MCP [Skills extension](https://modelcontextprotocol.io/seps/2640-skills-extension).
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Most Agents that implement ACP support Agent Skills: directories containing a `SKILL.md` with YAML frontmatter. ACP has no concept of a skill, so every Agent that exposes skills to Clients sends them as ordinary available commands. Each one marks them in its own way:
+
+| Agent                           | How skills are advertised over ACP                                                                                                       |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Agent (claude-agent-acp) | Commands under the skill's name. JetBrains AIR clients also get `_meta.jetbrains.air.kind: "skill"` and `skillPath`, the `SKILL.md` path |
+| Codex (codex-acp)               | Commands named `$name`, which Clients display as `/$name`. JetBrains AIR clients also get `skillPath`                                    |
+| Goose                           | Commands with `_meta.commandType: "Skill"` and `sourcePath`                                                                              |
+| Qwen Code                       | Commands, plus `availableSkillDetails` in the update's `_meta`, with `filePath`, `level`, and `modelInvocable`                           |
+| Kimi Code, Pi                   | Commands named `skill:name`                                                                                                              |
+| Mistral Vibe                    | Commands, with nothing that marks them as skills                                                                                         |
+| Gemini CLI, OpenCode            | Not advertised over ACP, although both support skills natively                                                                           |
+
+This causes three problems.
+
+**Clients can't tell skills from commands.** A Client can't label skills or list them separately without vendor-specific code. JetBrains AIR shows skill chips by reading `_meta` that two adapters send only to it. Zed's native agent has a skill picker that ACP Agents can't populate.
+
+**The skill's location has no standard field.** Every Agent above that sends extra data includes the path to the skill's file, under a different `_meta` key each time. Agents that send nothing mark skills in the command name instead (`$name`, `skill:name`), and the prefix leaks into what the user sees and types.
+
+**A skill can't be invoked from the middle of a prompt.** An ACP command runs only when the prompt's first text block starts with `/name`. Several Agents let users invoke skills anywhere in a message, and more than one per message:
+
+- Codex: `$name` anywhere in the text. Its app-server protocol also takes a structured `{ "type": "skill", "name", "path" }` input item next to the text.
+- OpenCode: `@skill` mentions, sent as `skills: [{ id }]` in the prompt input.
+- Copilot CLI, Mistral Vibe, Factory Droid: `/name` anywhere in the message.
+- Zed's native agent: a skill mention embeds the skill's `SKILL.md` in the prompt as context.
+
+codex-acp gets mid-prompt invocation today only because Codex scans the prompt text for `$name` itself. Other Agents have no way to receive it over ACP.
+
+Separately, most of the discussion on [#370](https://github.com/agentclientprotocol/agent-client-protocol/pull/370) was about Clients supplying skills _to_ Agents. Two routes exist for that without new ACP surface. A Client can add workspace roots with [`additionalDirectories`](./additional-directories), and Claude Code and Codex discover skills under them. And MCP has finalized its Skills extension (SEP-2640), which serves skills as MCP resources with `skills/list` and `skills/get`. Support among coding agents is still early: of the Agents that implement ACP, MCP's client matrix lists only fast-agent, with partial support.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Advertising skills
+
+A Client that understands skills says so in its `initialize` request:
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "commands": {
+        "skill": {}
+      }
+    }
+  }
+}
+```
+
+Commands belong to a session, so the capability goes in the `session` group of the Client's capabilities. v2 Clients have no such group today. The [prompt suggestions RFD](./prompt-suggestions) proposes the same group, and whichever of the two lands first adds it. The group only holds session-scoped capabilities. Unlike the Agent's `capabilities.session`, `session: {}` advertises nothing.
+
+An Agent can then send `skill` entries in `availableCommands`:
+
+```json
+{
+  "type": "skill",
+  "name": "pdf-processing",
+  "description": "Extract text and tables from PDF files",
+  "path": "/home/alice/.agents/skills/pdf-processing/SKILL.md"
+}
+```
+
+- `name` and `description` follow the same rules as on `command`. `name` is unique across the whole list, commands and skills together, and it is how the Client refers to the skill. It need not match the `name` in the skill's frontmatter. An Agent with two skills of the same name, or a skill and a command of the same name, qualifies one of them, for example as `plugin:pdf-processing`. How it does so is up to the Agent.
+- `description` is shown to users. A skill's frontmatter description is written for the model and can run to a thousand characters, so an Agent that has a shorter description meant for users **SHOULD** send that one.
+- `path` is optional. It is the absolute path, on the machine the Agent runs on, of the file that defines the skill, normally its `SKILL.md`. Agents omit it for skills with no such file, such as skills built into the Agent or served by an MCP server. Clients can use it to show where a skill lives or to open it. A Client that doesn't share a filesystem with the Agent can't open it.
+- Agents **SHOULD** advertise only skills the user can invoke. Skills that only the model can use, such as Claude Code skills with `user-invocable: false`, are left out, because a Client can't do anything with them.
+
+Agents **MUST NOT** send `skill` entries to a Client that didn't advertise `session.commands.skill`. Such a Client would ignore them: in v2, [each command type defines how its entries are invoked](/protocol/v2/draft/slash-commands#availablecommand), and a Client doesn't display an entry of a type it doesn't understand. For those Clients, an Agent keeps advertising its skills as `command` entries, as Agents do today.
+
+Skills are delivered like other commands, in setup responses and `available_commands_update` notifications. When an Agent's skills change, it sends the full list again.
+
+### Invoking a skill
+
+A Client invokes a skill by putting a `skill` content block in the prompt:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/prompt",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "prompt": [
+      { "type": "skill", "name": "pdf-processing" },
+      {
+        "type": "text",
+        "text": "Pull the tables out of report.pdf and summarize them."
+      }
+    ]
+  }
+}
+```
+
+Agents advertise where the block may appear with a new prompt capability:
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "prompt": {
+        "skill": {
+          "inline": {}
+        }
+      }
+    }
+  }
+}
+```
+
+- `skill` means a prompt may contain one `skill` block, and it has to be the first block. An Agent that sends `skill` entries **MUST** advertise it.
+- `skill.inline` means a prompt may contain any number of `skill` blocks, at any position:
+
+  ```json
+  [
+    { "type": "text", "text": "Pull the tables out of report.pdf with " },
+    { "type": "skill", "name": "pdf-processing" },
+    { "type": "text", "text": ", then chart them with " },
+    { "type": "skill", "name": "charts" },
+    { "type": "text", "text": "." }
+  ]
+  ```
+
+The rules for the block are the same at both levels:
+
+- `name` is the `name` of a `skill` entry in the session's current command list. The block carries no input.
+- The Agent **MUST** treat each block as the user explicitly invoking that skill for this prompt, and applies the skill to the prompt as a whole. How it does that is up to the Agent. It can, for example, load the skill's instructions for the turn, or run the skill with the rest of the prompt as its input.
+- Clients **MUST NOT** send a `skill` block that the Agent's capability doesn't allow. The Agent **MUST** reject a prompt that contains one, or one whose `name` it can't resolve to a skill the user can invoke, with `-32602` and without inserting it, as it does for other prompt content it can't accept.
+- Like all prompt content, the block is part of the inserted user message, so the Agent reports it in `user_message` and replays it. When replaying to a Client that didn't advertise `session.commands.skill`, the Agent **MAY** replace it with text. A `skill` block has no meaning outside a user message.
+- The block is the only way ACP defines to invoke a `skill` entry. `/name` applies only to `command` entries, and a `resource_link` or embedded resource that points at a skill's file is ordinary context. As with any prompt, the Agent decides how to interpret the rest, and the model can still decide to use a skill.
+
+How the Client lets the user pick a skill, with `$`, `@`, `/`, or a menu, is up to the Client.
+
+### Supplying skills to the Agent
+
+This RFD adds nothing here. Two routes exist:
+
+- **Workspace roots.** A Client lists a directory in `additionalDirectories`, and the Agent applies the same skill discovery there as under `cwd`. ACP doesn't define where skills live under a root. Clients should use `.agents/skills/<name>/SKILL.md`: the Agent Skills [client guide](https://agentskills.io/client-implementation/adding-skills-support) recommends it for sharing skills across clients, and most Agents scan it. Claude Code looks for `.claude/skills/`. A skill the Agent discovered shows up in `availableCommands` with a `path` under that root, so the Client can tell whether it worked.
+- **MCP.** A Client provides an MCP server that implements the MCP Skills extension, through `mcpServers` or [MCP-over-ACP](./mcp-over-acp). An Agent that consumes these skills follows SEP-2640's rules on origin, approval, and name shadowing, and asks for approval through `session/request_permission` where the SEP requires it. It advertises the ones the user can invoke like any other skill.
+
+Two things are left to a follow-up, once Agents ship support for MCP-served skills: a capability that tells Clients whether an Agent consumes them, and a field that shows which server a skill came from.
+
+### Non-goals
+
+- Enabling, disabling, installing, or editing skills from the Client.
+- Listing skills the user can't invoke, or a general inventory of what an Agent has loaded.
+- Defining a skill format or a directory layout, or sending skill content inline over ACP.
+- Reporting when the Agent uses a skill.
+- Changes to v1.
+
+The FAQ covers each of these.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A user opens the skill picker in their editor and sees the Agent's skills, labeled as skills and listed apart from its built-in commands. They pick `pdf-processing` and type their request after it. With an Agent that supports inline references, they can also pick it in the middle of a sentence, and a second skill later in the same message. The Agent receives structured references and applies them, whether it is Claude, Codex, Goose, or OpenCode. Clicking a skill opens its `SKILL.md`.
+
+Agents drop the `$` and `skill:` prefixes and their vendor-specific `_meta` keys for these Clients. Clients that don't advertise skill support keep getting skills as plain commands in their `/` menu. A [proxy](./proxy-chains) can add skills to an Agent that has none, by adding `skill` entries to the command list and expanding the references itself.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Schema and documentation
+
+Everything here is additive to v2 and gated by capabilities on both sides, so it can land before or after v2 is stable. It starts behind the `unstable_agent_skills` feature.
+
+- `ClientCapabilities` gets `session`, an object that groups session-scoped Client capabilities, unless the prompt suggestions RFD has added it by then. `session` gets `commands`, an object with an optional `skill` field. `skill: {}` advertises support. Omitting `session`, `commands`, or `skill`, or setting any of them to `null`, means the Client doesn't advertise it.
+- `PromptCapabilities` gets `skill`, an object with an optional `inline` field, with the same conventions.
+- Add `AvailableCommand::Skill(Skill)`, and add `"skill"` to the known `AvailableCommand` discriminators, so a malformed skill entry is skipped instead of being treated as an unknown type. `Skill` has these fields:
+  - `name: String`
+  - `description: String`
+  - `path: Option<AbsolutePath>`
+  - `_meta`
+
+  For `path` and `_meta`, omitted and `null` are equivalent. They only affect display, so an invalid value is treated as absent instead of dropping the entry.
+
+- Add `ContentBlock::Skill` with a required `name` string and `_meta`, and add `"skill"` to the known content block types.
+- Slash commands, content, and initialization pages: document the entry, the block, and both capabilities.
+
+The one change to existing v2 behavior that this design depends on has already landed in [#2816](https://github.com/agentclientprotocol/agent-client-protocol/pull/2816): Clients ignore command types they don't understand instead of displaying them as plain commands.
+
+### Security considerations
+
+- `name`, `description`, and `path` come from the Agent and, through it, from whoever wrote the skill. Clients treat them as untrusted, as they do command names and descriptions today, and open `path` only on a user action.
+- Invoking a skill can do more than add text to the context. In Claude Code, for example, a skill can pre-approve tools for the turn, switch the model, or run in a subagent. An invocation therefore has to reflect a deliberate choice by the user. This is why a skill is invoked by a block that names it, and not by a link to its file.
+- A `skill` block names an entry the Agent advertised, so a Client can't use it to make the Agent load an arbitrary file as a skill.
+
+### Expected adapter mapping
+
+For Clients that advertise `session.commands.skill`:
+
+| Agent        | `path`                                                                       | `skill` block                                             |
+| ------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Codex        | `SkillMetadata.path`                                                         | A `UserInput::Skill { name, path }` item next to the text |
+| Claude Agent | `SKILL.md` path from the SDK's context usage data, when the skill has a file | `/name` followed by the rest of the prompt                |
+| Goose        | `sourcePath`                                                                 | Load the skill as it does for `/name`                     |
+| OpenCode     | Skill file path                                                              | `skills: [{ id }]` in the prompt input                    |
+
+Codex and OpenCode already take several skill references per prompt, so their adapters can advertise `inline`. Claude Code only runs a skill named at the start of a prompt, and one per prompt, so its adapter advertises `skill` without `inline`. For Clients that don't advertise `session.commands.skill`, every adapter keeps doing what it does today.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why does a Client need to tell skills from commands?
+
+This came up on #370: if a user can invoke a skill, how is it different from a command? Two things differ.
+
+- Users treat skills as instructions they install and can read. Clients want to label them, list them apart from the Agent's built-in commands, and open the file behind them.
+- A skill can be used inside a longer request and combined with other skills. A command takes over the whole prompt.
+
+### Why a command variant instead of a separate `available_skills_update`?
+
+#370 proposed a separate `AvailableSkill` type and notification. Skills and commands are both things the user picks from the Agent's list, Clients show them in the same menu, and Agents send skills as commands today. Keeping them in one list means one delivery mechanism and one namespace, and an Agent serves Clients with and without skill support from the same entries, changing little more than their type. The v2 `AvailableCommand` union was made extensible for this.
+
+### Why is a skill invoked with a content block instead of `/name`?
+
+An earlier version of this proposal kept `/name` for the start of a prompt and added the block only for references elsewhere. That gave Clients two ways to invoke the same skill, chosen by position and by what the Agent supported.
+
+With the block as the only way, a Client applies a skill the same way everywhere, and the Agent's capability only says where the block may go. The Agent doesn't parse text to find the skill, and a replayed message shows a skill reference instead of text that used to name one.
+
+### Why does the Client have to advertise support?
+
+A v2 Client ignores command types it doesn't understand, because it doesn't know how to invoke them. Without the capability, an Agent that switched its skills to `skill` entries would make them disappear from every Client that hadn't implemented the type yet. With it, the Agent knows which Clients can use `skill` entries, and the rest keep getting `command` entries.
+
+v2 already does this for authentication: a Client advertises `auth.terminal` before an Agent may send `type: "terminal"` auth methods.
+
+### Why two levels in the Agent's capability?
+
+Some Agents can only apply a skill named at the start of a prompt, and one per prompt. Claude Code is one. The first level lets those Agents use the structured block anyway, and `inline` is for Agents that can take references anywhere.
+
+### Why a new content block instead of `resource_link`?
+
+An earlier version of this proposal referenced a skill with a `resource_link` whose `uri` matched one the Agent had advertised. That needs no capability, since every Agent accepts resource links.
+
+But a resource link already has a meaning in a prompt: here is a resource you may be able to read. Clients send one whenever a user mentions a file. A user who mentions a skill's `SKILL.md` to ask for changes to it would send the same block as a user who wants to run the skill, and the Agent couldn't tell them apart. Clients that know nothing about skills send such links today. Comparing URIs is also fragile across encodings and platforms, and a Client replaying a session couldn't tell a skill reference from a file link without the command list from that moment.
+
+A dedicated block is unambiguous and renders from its own fields.
+
+`skill` is the first content block type that ACP defines and MCP doesn't. ACP's `ContentBlock` is documented as a superset of MCP's, and Agents can still forward MCP content unchanged.
+
+### Why identify a skill by `name` instead of a URI?
+
+Names are already unique within the command list, so the name is an identifier the protocol has today. A URI would be a second identity. Agents would have to invent one for skills with no file, and keep it unique across MCP servers, which can serve the same `skill://` URI because SEP-2640 identifies a skill by server and URI together. When names collide, the Agent qualifies them, as Agents do today.
+
+### Why `path` instead of a URI?
+
+Every Agent that sends a skill's location today sends an absolute path, and ACP uses absolute paths for other files in the Agent's environment, such as tool call locations. A skill without a file has nothing a Client could open, so it omits the field. A URI for MCP-served skills can be added together with the rest of that follow-up.
+
+### Why not have the Client read `SKILL.md` and embed it?
+
+Zed's native agent does this, and with `path` a Client could do the same for ACP Agents using an embedded resource. It stops working when the Client can't read the Agent's filesystem. It also bypasses what the Agent does when it activates one of its own skills: substituting arguments, applying the skill's tool permissions, resolving the skill's scripts and reference files relative to its directory, and keeping the instructions through compaction. The Agent owns the skill, so the Agent activates it.
+
+### Why only user-invocable skills?
+
+A Client can do two things with an entry in this list: show it and invoke it. A skill that only the model may use can't be invoked by the user. Most Agents already leave these out: Claude's SDK, Mistral Vibe, Cursor, and Kimi Code all do.
+
+A full inventory of what an Agent has loaded, including model-only skills, MCP servers, and subagents, is a different feature and out of scope here.
+
+### Why no `source` field?
+
+An earlier version had an optional `source` saying where a skill came from: built in, user, project, plugin, or MCP server. Agents categorize differently. Codex has user, repo, system, and admin scopes, and Claude Code has enterprise, personal, project, plugin, and bundled skills. No Client needs the field to work, and `path` covers the common cases. It can be added later as an optional field.
+
+MCP-served skills need it most, because SEP-2640 expects hosts to show which server a skill came from. It belongs with that follow-up.
+
+### Why no `input` on a skill entry?
+
+An earlier version gave `skill` entries the optional `input` hint that `command` entries have. The Agent Skills specification defines no arguments for a skill. Claude Code adds them as its own extension, with `argument-hint` and `$ARGUMENTS`, and the other Agents surveyed have no equivalent.
+
+The hint also doesn't fit the block. A `skill` block carries no input, and with `inline` it can sit in the middle of a sentence.
+
+### Why not pass through frontmatter, `allowed-tools`, or a model-invocable flag?
+
+None of these change what a Client can do with a skill.
+
+- `license`, `compatibility`, and `metadata` are display-only.
+- `allowed-tools` is a permission grant that the Agent enforces. Showing it to the Client invites treating it as a trust signal, and SEP-2640 requires hosts to ignore it for remote skills unless the user approves.
+- Only Qwen Code exposes a model-invocable flag today.
+- Display names, icons, and brand colors exist only in Codex.
+
+### Why not standardize the `$` mention syntax?
+
+Agents use `$`, `@`, and `/` for this, and Clients have their own conventions for mentions. The wire format is what matters for interoperability, and the UI syntax can differ between Clients.
+
+### What about enabling and disabling skills?
+
+Only Codex exposes this (`skills/config/write`). It is out of scope here and can be added later, either as a session config option or as a dedicated method.
+
+### What about showing when the Agent uses a skill?
+
+Out of scope. When the model activates a skill itself, Agents typically report it as a tool call, and how they label it is up to them. A standard way to mark those tool calls can be proposed separately.
+
+### Why not let Clients send skills inline in `session/new`?
+
+That was proposed in #2163. It would invent a skill format separate from both the Agent Skills specification and SEP-2640, and it overlaps with the [client system prompt](./client-system-prompt). `additionalDirectories` and MCP already provide routes that Agents can adopt without ACP defining a skill format.
+
+### Why v2 only?
+
+v1's `AvailableCommand` has no `type` discriminator, and its `ContentBlock` is a closed union, so a v1 Client that loads a session containing a block type it doesn't know can fail to parse the replayed message. v1 Agents keep advertising skills as plain commands.
+
+## Revision history
+
+- 2026-11-14: Schema landed. The `skill` command entry, the `skill` content block, the `session.commands.skill` Client capability, and the `session.prompt.skill` Agent capability are in the v2 unstable schema, behind the `unstable_agent_skills` feature. The rules are in the draft v2 [Slash Commands](/protocol/v2/draft/slash-commands#skills-unstable) and [Content](/protocol/v2/draft/content#skill-reference-unstable) pages.
+- 2026-11-14: Remove `input` from the `skill` entry. The Agent Skills specification defines no arguments for a skill.
+- 2026-11-13: Initial draft, reworking [#370](https://github.com/agentclientprotocol/agent-client-protocol/pull/370) around `AvailableCommand` and the MCP Skills extension.

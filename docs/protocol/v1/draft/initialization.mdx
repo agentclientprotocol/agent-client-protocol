@@ -241,6 +241,51 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Notices
 </Card>
 
+#### Prompt suggestions (unstable)
+
+<ParamField
+  path="session.promptSuggestions"
+  type="PromptSuggestionsCapabilities Object"
+>
+  The Client can offer the suggestions in `prompt_suggestions_update` session
+  updates to the user. This field is optional and nullable. Omitting `session`
+  or `promptSuggestions`, or setting either to `null`, means unsupported.
+  Supplying `{}` means the Client can offer suggestions made of `text` and
+  `resource_link` content blocks. Agents must not send
+  `prompt_suggestions_update` without this capability.
+</ParamField>
+
+The Client opts in to other content types with the following fields. They have the same names as the Agent's [prompt capabilities](#prompt-capabilities), but each one is an object. Omitted or `null` means unsupported. Supplying `{}` means supported.
+
+<ParamField
+  path="session.promptSuggestions.image"
+  type="PromptSuggestionsImageCapabilities Object"
+>
+  Suggestions may include `image` content blocks.
+</ParamField>
+
+<ParamField
+  path="session.promptSuggestions.audio"
+  type="PromptSuggestionsAudioCapabilities Object"
+>
+  Suggestions may include `audio` content blocks.
+</ParamField>
+
+<ParamField
+  path="session.promptSuggestions.embeddedContext"
+  type="PromptSuggestionsEmbeddedContextCapabilities Object"
+>
+  Suggestions may include `resource` content blocks.
+</ParamField>
+
+<Card
+  icon="lightbulb"
+  horizontal
+  href="/protocol/v1/draft/prompt-turn#prompt-suggestions-unstable"
+>
+  Learn more about Prompt Suggestions
+</Card>
+
 ### Agent capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:

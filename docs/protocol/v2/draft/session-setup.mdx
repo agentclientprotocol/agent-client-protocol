@@ -227,6 +227,7 @@ Replay does not include:
 
 - Historical `state_update` notifications. See [Current-State Synchronization](#current-state-synchronization).
 - [Notices](/protocol/v2/draft/prompt-lifecycle#session-notices), which are live-only and **SHOULD NOT** be replayed. If the condition is still relevant after resuming, the Agent may send a new notice.
+- [Prompt suggestions](/protocol/v2/draft/prompt-lifecycle#prompt-suggestions-unstable), which are live-only and **SHOULD NOT** be replayed. A resumed session starts with an empty list of suggestions, and the Agent may send a new `prompt_suggestions_update` after resuming.
 - Pending permission requests and elicitations. See [Current-State Synchronization](#current-state-synchronization).
 
 Agents need not replay historical `usage_update`, `session_info_update`, `config_option_update`, or `available_commands_update` notifications, since they describe past values rather than current ones. See [Current-State Synchronization](#current-state-synchronization).

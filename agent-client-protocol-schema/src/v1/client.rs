@@ -161,6 +161,16 @@ pub enum SessionUpdate {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
+    /// Replaces the session's current list of prompt suggestions.
+    ///
+    /// Agents MUST only send this update when the Client advertised
+    /// the `session.promptSuggestions` Client capability.
+    #[cfg(feature = "unstable_prompt_suggestions")]
+    PromptSuggestionsUpdate(PromptSuggestionsUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
     /// Announces a child session created and owned by this session, or updates
     /// that ownership association's metadata.
     #[cfg(feature = "unstable_subagents")]
@@ -2078,6 +2088,133 @@ impl IntoOption<MessageId> for &str {
     }
 }
 
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Replaces the session's current list of prompt suggestions.
+///
+/// A prompt suggestion is a prompt the Agent predicts the user will send next.
+/// The Client offers suggestions where the user writes the next prompt. The
+/// list in the most recent update is the current list until the Agent sends
+/// another update. A session starts with an empty list.
+///
+/// Suggestions are not part of session history. Agents SHOULD NOT include
+/// this update when they replay a session.
+///
+/// Agents MUST only send this update when the Client advertised
+/// the `session.promptSuggestions` Client capability.
+#[cfg(feature = "unstable_prompt_suggestions")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct PromptSuggestionsUpdate {
+    /// The suggestions the Client can offer, ordered most likely first.
+    ///
+    /// Required and non-null. An empty list withdraws the suggestions the
+    /// Client is offering. A Client skips an entry it cannot parse and keeps
+    /// the rest.
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
+    pub suggestions: Vec<PromptSuggestion>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_prompt_suggestions")]
+impl PromptSuggestionsUpdate {
+    /// Builds [`PromptSuggestionsUpdate`] with the required fields set. Optional fields start unset or empty.
+    ///
+    /// Pass an empty list to withdraw the suggestions the Client is offering.
+    #[must_use]
+    pub fn new(suggestions: Vec<PromptSuggestion>) -> Self {
+        Self {
+            suggestions,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A prompt the Agent predicts the user will send next.
+#[cfg(feature = "unstable_prompt_suggestions")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct PromptSuggestion {
+    /// The content of the suggested prompt.
+    ///
+    /// Required and non-null. Must contain at least one content block. This is
+    /// the same type as the `prompt` field of `session/prompt`, and the Client
+    /// can send it in that field unchanged.
+    ///
+    /// Agents MUST only use `text` and `resource_link` content blocks, and
+    /// other content block types that both the Agent's prompt capabilities
+    /// and the Client's `session.promptSuggestions` capability advertise.
+    /// Agents MUST NOT send a prompt whose only content is empty or
+    /// whitespace-only text.
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
+    pub prompt: Vec<ContentBlock>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_prompt_suggestions")]
+impl PromptSuggestion {
+    /// Builds [`PromptSuggestion`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(prompt: Vec<ContentBlock>) -> Self {
+        Self { prompt, meta: None }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
 /// Available commands are ready or have changed
 #[serde_as]
 #[skip_serializing_none]
@@ -3588,6 +3725,20 @@ pub struct ClientSessionCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub notices: Option<NoticeCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Support for `prompt_suggestions_update` session updates.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client can offer prompt suggestions made of
+    /// `text` and `resource_link` content blocks.
+    #[cfg(feature = "unstable_prompt_suggestions")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub prompt_suggestions: Option<PromptSuggestionsCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3634,6 +3785,21 @@ impl ClientSessionCapabilities {
         self
     }
 
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Advertises support for `prompt_suggestions_update` session updates.
+    #[cfg(feature = "unstable_prompt_suggestions")]
+    #[must_use]
+    pub fn prompt_suggestions(
+        mut self,
+        prompt_suggestions: impl IntoOption<PromptSuggestionsCapabilities>,
+    ) -> Self {
+        self.prompt_suggestions = prompt_suggestions.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -3673,6 +3839,244 @@ impl NoticeCapabilities {
     #[must_use]
     pub fn new() -> Self {
         Self {}
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Client support for `prompt_suggestions_update` session updates.
+///
+/// Supplying `{}` means the client can offer prompt suggestions made of `text`
+/// and `resource_link` content blocks. The client opts in to other content
+/// block types with the fields below. They have the same names as the agent's
+/// prompt capabilities.
+#[cfg(feature = "unstable_prompt_suggestions")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct PromptSuggestionsCapabilities {
+    /// Whether prompt suggestions may include `image` content blocks.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client can offer suggestions that include images.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub image: Option<PromptSuggestionsImageCapabilities>,
+    /// Whether prompt suggestions may include `audio` content blocks.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client can offer suggestions that include audio.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub audio: Option<PromptSuggestionsAudioCapabilities>,
+    /// Whether prompt suggestions may include `resource` content blocks.
+    ///
+    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Supplying `{}` means the client can offer suggestions that include
+    /// embedded resources.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub embedded_context: Option<PromptSuggestionsEmbeddedContextCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_prompt_suggestions")]
+impl PromptSuggestionsCapabilities {
+    /// Builds an empty [`PromptSuggestionsCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Whether prompt suggestions may include `image` content blocks.
+    #[must_use]
+    pub fn image(mut self, image: impl IntoOption<PromptSuggestionsImageCapabilities>) -> Self {
+        self.image = image.into_option();
+        self
+    }
+
+    /// Whether prompt suggestions may include `audio` content blocks.
+    #[must_use]
+    pub fn audio(mut self, audio: impl IntoOption<PromptSuggestionsAudioCapabilities>) -> Self {
+        self.audio = audio.into_option();
+        self
+    }
+
+    /// Whether prompt suggestions may include `resource` content blocks.
+    #[must_use]
+    pub fn embedded_context(
+        mut self,
+        embedded_context: impl IntoOption<PromptSuggestionsEmbeddedContextCapabilities>,
+    ) -> Self {
+        self.embedded_context = embedded_context.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for image content in prompt suggestions.
+///
+/// Supplying `{}` means the client can offer suggestions that include images.
+#[cfg(feature = "unstable_prompt_suggestions")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptSuggestionsImageCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_prompt_suggestions")]
+impl PromptSuggestionsImageCapabilities {
+    /// Builds an empty [`PromptSuggestionsImageCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for audio content in prompt suggestions.
+///
+/// Supplying `{}` means the client can offer suggestions that include audio.
+#[cfg(feature = "unstable_prompt_suggestions")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptSuggestionsAudioCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_prompt_suggestions")]
+impl PromptSuggestionsAudioCapabilities {
+    /// Builds an empty [`PromptSuggestionsAudioCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for embedded resources in prompt suggestions.
+///
+/// Supplying `{}` means the client can offer suggestions that include
+/// `resource` content blocks.
+#[cfg(feature = "unstable_prompt_suggestions")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptSuggestionsEmbeddedContextCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_prompt_suggestions")]
+impl PromptSuggestionsEmbeddedContextCapabilities {
+    /// Builds an empty [`PromptSuggestionsEmbeddedContextCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
+    /// these keys.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
     }
 }
 
@@ -4424,6 +4828,223 @@ mod tests {
             .unwrap(),
             json!({})
         );
+    }
+
+    #[cfg(feature = "unstable_prompt_suggestions")]
+    #[test]
+    fn prompt_suggestions_update_round_trips_prompt_content_and_meta() {
+        use crate::v1::{ResourceLink, TextContent};
+        use serde_json::json;
+
+        let mut meta = Meta::new();
+        meta.insert("rank".into(), json!(1));
+        let update = SessionUpdate::PromptSuggestionsUpdate(PromptSuggestionsUpdate::new(vec![
+            PromptSuggestion::new(vec![ContentBlock::Text(TextContent::new(
+                "Run the test suite and fix what breaks",
+            ))])
+            .meta(meta),
+            PromptSuggestion::new(vec![
+                ContentBlock::Text(TextContent::new("Add tests for ")),
+                ContentBlock::ResourceLink(ResourceLink::new(
+                    "parser.rs",
+                    "file:///home/user/project/src/parser.rs",
+                )),
+            ]),
+        ]));
+        let wire = json!({
+            "sessionUpdate": "prompt_suggestions_update",
+            "suggestions": [
+                {
+                    "prompt": [
+                        { "type": "text", "text": "Run the test suite and fix what breaks" }
+                    ],
+                    "_meta": { "rank": 1 }
+                },
+                {
+                    "prompt": [
+                        { "type": "text", "text": "Add tests for " },
+                        {
+                            "type": "resource_link",
+                            "name": "parser.rs",
+                            "uri": "file:///home/user/project/src/parser.rs"
+                        }
+                    ]
+                }
+            ]
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+            update
+        );
+    }
+
+    #[cfg(feature = "unstable_prompt_suggestions")]
+    #[test]
+    fn prompt_suggestions_update_with_an_empty_list_withdraws_suggestions() {
+        use serde_json::json;
+
+        let update = SessionUpdate::PromptSuggestionsUpdate(PromptSuggestionsUpdate::new(vec![]));
+        let wire = json!({
+            "sessionUpdate": "prompt_suggestions_update",
+            "suggestions": []
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+            update
+        );
+
+        // The list is required and non-null. Only its entries are lenient.
+        for malformed in [json!(null), json!("none"), json!({ "prompt": [] })] {
+            assert!(
+                serde_json::from_value::<SessionUpdate>(json!({
+                    "sessionUpdate": "prompt_suggestions_update",
+                    "suggestions": malformed
+                }))
+                .is_err()
+            );
+        }
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({
+                "sessionUpdate": "prompt_suggestions_update"
+            }))
+            .is_err()
+        );
+    }
+
+    #[cfg(feature = "unstable_prompt_suggestions")]
+    #[test]
+    fn prompt_suggestions_update_skips_whole_suggestions_it_cannot_parse() {
+        use crate::v1::TextContent;
+        use serde_json::json;
+
+        let text =
+            |text: &str| PromptSuggestion::new(vec![ContentBlock::Text(TextContent::new(text))]);
+
+        // One bad block fails the whole suggestion. Dropping only that block
+        // would change what the prompt asks for.
+        let update: SessionUpdate = serde_json::from_value(json!({
+            "sessionUpdate": "prompt_suggestions_update",
+            "suggestions": [
+                { "prompt": [{ "type": "text", "text": "Keep the first" }] },
+                { "text": "A suggestion without a prompt" },
+                { "prompt": "Not a list" },
+                { "prompt": [{ "type": "text", "text": "Open " }, { "type": "text" }] },
+                { "prompt": [{ "type": "hologram", "data": "AAAA" }] },
+                "not an object",
+                { "prompt": [{ "type": "text", "text": "Keep the last" }], "_meta": false }
+            ]
+        }))
+        .unwrap();
+
+        assert_eq!(
+            update,
+            SessionUpdate::PromptSuggestionsUpdate(PromptSuggestionsUpdate::new(vec![
+                text("Keep the first"),
+                text("Keep the last"),
+            ]))
+        );
+    }
+
+    #[cfg(feature = "unstable_prompt_suggestions")]
+    #[test]
+    fn prompt_suggestions_capability_advertises_support_and_content_types() {
+        use serde_json::json;
+
+        let capabilities = ClientCapabilities::new().session(
+            ClientSessionCapabilities::new()
+                .prompt_suggestions(PromptSuggestionsCapabilities::new()),
+        );
+        let value = serde_json::to_value(&capabilities).unwrap();
+        assert_eq!(value["session"], json!({ "promptSuggestions": {} }));
+        assert_eq!(
+            serde_json::from_value::<ClientCapabilities>(value).unwrap(),
+            capabilities
+        );
+
+        let content_types = PromptSuggestionsCapabilities::new()
+            .image(PromptSuggestionsImageCapabilities::new())
+            .audio(PromptSuggestionsAudioCapabilities::new())
+            .embedded_context(PromptSuggestionsEmbeddedContextCapabilities::new());
+        let wire = json!({ "image": {}, "audio": {}, "embeddedContext": {} });
+        assert_eq!(serde_json::to_value(&content_types).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<PromptSuggestionsCapabilities>(wire).unwrap(),
+            content_types
+        );
+
+        for unsupported in [
+            json!({}),
+            json!({ "session": null }),
+            json!({ "session": {} }),
+            json!({ "session": { "promptSuggestions": null } }),
+            json!({ "session": { "promptSuggestions": false } }),
+            json!({ "session": { "promptSuggestions": true } }),
+            json!({ "session": { "promptSuggestions": "supported" } }),
+        ] {
+            let capabilities: ClientCapabilities = serde_json::from_value(unsupported).unwrap();
+            assert!(
+                capabilities
+                    .session
+                    .and_then(|session| session.prompt_suggestions)
+                    .is_none()
+            );
+        }
+
+        // A content type is advertised only by an object. The other types and
+        // the capability itself are unaffected by a malformed one.
+        assert_eq!(
+            serde_json::from_value::<PromptSuggestionsCapabilities>(json!({
+                "image": true,
+                "audio": null,
+                "embeddedContext": {}
+            }))
+            .unwrap(),
+            PromptSuggestionsCapabilities::new()
+                .embedded_context(PromptSuggestionsEmbeddedContextCapabilities::new())
+        );
+    }
+
+    #[cfg(all(feature = "schemars", feature = "unstable_prompt_suggestions"))]
+    #[test]
+    fn prompt_suggestions_schema_requires_the_list_and_a_non_empty_prompt() {
+        use serde_json::json;
+
+        let update = serde_json::to_value(schemars::schema_for!(PromptSuggestionsUpdate)).unwrap();
+        assert_eq!(update["required"], json!(["suggestions"]));
+        assert_eq!(update["properties"]["suggestions"]["type"], "array");
+
+        let suggestion = serde_json::to_value(schemars::schema_for!(PromptSuggestion)).unwrap();
+        assert_eq!(suggestion["required"], json!(["prompt"]));
+        assert_eq!(suggestion["properties"]["prompt"]["type"], "array");
+        assert_eq!(suggestion["properties"]["prompt"]["minItems"], 1);
+
+        let capabilities =
+            serde_json::to_value(schemars::schema_for!(ClientSessionCapabilities)).unwrap();
+        assert!(
+            capabilities["properties"]["promptSuggestions"]["anyOf"]
+                .as_array()
+                .unwrap()
+                .contains(&json!({"type": "null"}))
+        );
+        assert!(
+            !capabilities["required"]
+                .as_array()
+                .is_some_and(|required| required.contains(&json!("promptSuggestions")))
+        );
+
+        let content_types =
+            serde_json::to_value(schemars::schema_for!(PromptSuggestionsCapabilities)).unwrap();
+        assert!(content_types.get("required").is_none());
+        for field in ["image", "audio", "embeddedContext"] {
+            assert!(
+                content_types["properties"][field]["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .contains(&json!({"type": "null"}))
+            );
+        }
     }
 
     #[test]
