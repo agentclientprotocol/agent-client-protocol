@@ -10,7 +10,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt), building on [#370](https:
 
 Give [Agent Skills](https://agentskills.io/specification) their own type in ACP v2, so Clients can show them as skills and invoke them with a structured reference instead of `/name` text.
 
-- A Client advertises a new `commands.skill` capability to say it understands skills.
+- A Client advertises a new `session.commands.skill` capability to say it understands skills.
 - An Agent then advertises its skills as `skill` entries in `availableCommands`. A `skill` entry has a command's fields plus an optional `path` to the skill's `SKILL.md`. Clients that don't advertise the capability keep getting skills as plain commands.
 - A Client invokes a skill with a new `skill` content block that names it. Every Agent that sends `skill` entries accepts the block at the start of a prompt. Agents that advertise `session.prompt.skill.inline` accept it anywhere in a prompt, any number of times.
 
@@ -60,12 +60,16 @@ A Client that understands skills says so in its `initialize` request:
 ```json
 {
   "capabilities": {
-    "commands": {
-      "skill": {}
+    "session": {
+      "commands": {
+        "skill": {}
+      }
     }
   }
 }
 ```
+
+Commands belong to a session, so the capability goes in the `session` group of the Client's capabilities. v2 Clients have no such group today. The [prompt suggestions RFD](./prompt-suggestions) proposes the same group, and whichever of the two lands first adds it. The group only holds session-scoped capabilities. Unlike the Agent's `capabilities.session`, `session: {}` advertises nothing.
 
 An Agent can then send `skill` entries in `availableCommands`:
 
@@ -85,7 +89,7 @@ An Agent can then send `skill` entries in `availableCommands`:
 - `path` is optional. It is the absolute path, on the machine the Agent runs on, of the file that defines the skill, normally its `SKILL.md`. Agents omit it for skills with no such file, such as skills built into the Agent or served by an MCP server. Clients can use it to show where a skill lives or to open it. A Client that doesn't share a filesystem with the Agent can't open it.
 - Agents **SHOULD** advertise only skills the user can invoke. Skills that only the model can use, such as Claude Code skills with `user-invocable: false`, are left out, because a Client can't do anything with them.
 
-Agents **MUST NOT** send `skill` entries to a Client that didn't advertise `commands.skill`. Such a Client would ignore them: in v2, [each command type defines how its entries are invoked](/protocol/v2/draft/slash-commands#availablecommand), and a Client doesn't display an entry of a type it doesn't understand. For those Clients, an Agent keeps advertising its skills as `command` entries, as Agents do today.
+Agents **MUST NOT** send `skill` entries to a Client that didn't advertise `session.commands.skill`. Such a Client would ignore them: in v2, [each command type defines how its entries are invoked](/protocol/v2/draft/slash-commands#availablecommand), and a Client doesn't display an entry of a type it doesn't understand. For those Clients, an Agent keeps advertising its skills as `command` entries, as Agents do today.
 
 Skills are delivered like other commands, in setup responses and `available_commands_update` notifications. When an Agent's skills change, it sends the full list again.
 
@@ -145,7 +149,7 @@ The rules for the block are the same at both levels:
 - `name` is the `name` of a `skill` entry in the session's current command list. The block carries no input.
 - The Agent **MUST** treat each block as the user explicitly invoking that skill for this prompt, and applies the skill to the prompt as a whole. How it does that is up to the Agent. It can, for example, load the skill's instructions for the turn, or run the skill with the rest of the prompt as its input.
 - Clients **MUST NOT** send a `skill` block that the Agent's capability doesn't allow. The Agent **MUST** reject a prompt that contains one, or one whose `name` it can't resolve to a skill the user can invoke, with `-32602` and without inserting it, as it does for other prompt content it can't accept.
-- Like all prompt content, the block is part of the inserted user message, so the Agent reports it in `user_message` and replays it. When replaying to a Client that didn't advertise `commands.skill`, the Agent **MAY** replace it with text. A `skill` block has no meaning outside a user message.
+- Like all prompt content, the block is part of the inserted user message, so the Agent reports it in `user_message` and replays it. When replaying to a Client that didn't advertise `session.commands.skill`, the Agent **MAY** replace it with text. A `skill` block has no meaning outside a user message.
 - The block is the only way ACP defines to invoke a `skill` entry. `/name` applies only to `command` entries, and a `resource_link` or embedded resource that points at a skill's file is ordinary context. As with any prompt, the Agent decides how to interpret the rest, and the model can still decide to use a skill.
 
 How the Client lets the user pick a skill, with `$`, `@`, `/`, or a menu, is up to the Client.
@@ -185,7 +189,7 @@ Agents drop the `$` and `skill:` prefixes and their vendor-specific `_meta` keys
 
 Everything here is additive to v2 and gated by capabilities on both sides, so it can land before or after v2 is stable. It starts behind the `unstable_agent_skills` feature.
 
-- `ClientCapabilities` gets `commands`, an object with an optional `skill` field. `{}` advertises support. Omitted or `null` means the Client doesn't advertise it.
+- `ClientCapabilities` gets `session`, an object that groups session-scoped Client capabilities, unless the prompt suggestions RFD has added it by then. `session` gets `commands`, an object with an optional `skill` field. `skill: {}` advertises support. Omitting `session`, `commands`, or `skill`, or setting any of them to `null`, means the Client doesn't advertise it.
 - `PromptCapabilities` gets `skill`, an object with an optional `inline` field, with the same conventions.
 - Add `AvailableCommand::Skill(Skill)`, and add `"skill"` to the known `AvailableCommand` discriminators, so a malformed skill entry is skipped instead of being treated as an unknown type. `Skill` has these fields:
   - `name: String`
@@ -209,7 +213,7 @@ The one change to existing v2 behavior that this design depends on has already l
 
 ### Expected adapter mapping
 
-For Clients that advertise `commands.skill`:
+For Clients that advertise `session.commands.skill`:
 
 | Agent        | `path`                                                                       | `skill` block                                             |
 | ------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -218,7 +222,7 @@ For Clients that advertise `commands.skill`:
 | Goose        | `sourcePath`                                                                 | Load the skill as it does for `/name`                     |
 | OpenCode     | Skill file path                                                              | `skills: [{ id }]` in the prompt input                    |
 
-Codex and OpenCode already take several skill references per prompt, so their adapters can advertise `inline`. Claude Code only runs a skill named at the start of a prompt, and one per prompt, so its adapter advertises `skill` without `inline`. For Clients that don't advertise `commands.skill`, every adapter keeps doing what it does today.
+Codex and OpenCode already take several skill references per prompt, so their adapters can advertise `inline`. Claude Code only runs a skill named at the start of a prompt, and one per prompt, so its adapter advertises `skill` without `inline`. For Clients that don't advertise `session.commands.skill`, every adapter keeps doing what it does today.
 
 ## Frequently asked questions
 
