@@ -1,0 +1,280 @@
+---
+title: "Prompt Suggestions"
+---
+
+- Author(s): [@nikita-ashihmin](https://github.com/nikita-ashihmin)
+- Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `prompt_suggestions_update` session update to ACP v1 and v2. It carries prompts that the Agent predicts the user will send next. Clients offer them in the composer, where the user writes the next prompt. Clients advertise support with a capability, and Agents only send the update to Clients that do.
+
+Each suggestion is a `ContentBlock[]`, the same type that `session/prompt` takes:
+
+```json
+{
+  "sessionUpdate": "prompt_suggestions_update",
+  "suggestions": [
+    {
+      "prompt": [
+        { "type": "text", "text": "Run the test suite and fix what breaks" }
+      ]
+    }
+  ]
+}
+```
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Some Agents predict the user's next prompt when they finish responding. The prediction reuses the prompt cache for the conversation, so it costs little. A Client can show it as grayed-out text in an empty composer. The user accepts it with Tab, or dismisses it by pressing Escape or typing.
+
+ACP has no session update for this. A predicted prompt is not an agent message, because it is not part of the conversation and must not enter history. It is not a plan, a notice, or session metadata either. An Agent and a Client that want the feature today have to agree on a channel of their own. The Claude Agent adapter and the JetBrains AIR Client use `session_info_update._meta.promptSuggestions` ([claude-agent-acp PR #1356](https://github.com/agentclientprotocol/claude-agent-acp/pull/1356)). The adapter sends it only to that Client, through an allowlist.
+
+Two more problems come from having no protocol update:
+
+- An Agent cannot tell whether a Client will show a prediction. It either predicts for every Client and wastes the work when a Client has nowhere to show it, or it keeps a Client allowlist.
+- There is no agreed way to withdraw a prediction. A prediction applies to one point in the conversation, so a Client either keeps showing an outdated one or makes up its own expiry rule.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a `prompt_suggestions_update` variant to `SessionUpdate` in ACP v1 and v2.
+
+### The update
+
+```json
+{
+  "sessionUpdate": "prompt_suggestions_update",
+  "suggestions": [
+    {
+      "prompt": [
+        { "type": "text", "text": "Run the test suite and fix what breaks" }
+      ]
+    },
+    {
+      "prompt": [
+        { "type": "text", "text": "Add tests for " },
+        {
+          "type": "resource_link",
+          "uri": "file:///home/user/project/src/parser.rs",
+          "name": "parser.rs"
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `suggestions` is a required, non-null list of suggestion objects, ordered most likely first. An empty list withdraws the suggestions the Client is offering.
+- Each suggestion has a required, non-null `prompt`. It is a list of at least one `ContentBlock`, the same type as the `prompt` field of `session/prompt`. A Client can send an accepted suggestion in that field unchanged.
+- `_meta` is optional and nullable on the update and on each suggestion. Omission and `null` are equivalent and mean that the Agent supplied no metadata.
+
+Each update replaces the session's current list of suggestions. Suggestions have no IDs, and an update cannot append to the list or remove a single entry.
+
+### Suggestion content
+
+Each suggestion's `prompt` **MUST** be valid as the `prompt` of a `session/prompt` request for the session. Agents **MUST NOT** send a suggestion whose only content is empty or whitespace-only text.
+
+Agents **MUST** only use content types that both sides support:
+
+- `text` and `resource_link` are always allowed. Every Agent accepts them in prompts, and every Client that advertises `promptSuggestions` can offer them.
+- `image`, `audio`, and `resource` blocks are allowed only when both sides advertise the type. The Agent advertises it in its prompt capabilities, which are [`agentCapabilities.promptCapabilities`](/protocol/v1/initialization#prompt-capabilities) in v1 and [`capabilities.session.prompt`](/protocol/v2/initialization#session-prompt-capabilities) in v2. The Client advertises it under `promptSuggestions`, as described in [Content types](#content-types).
+
+A Client skips a suggestion it cannot use and keeps the rest, for example one with a block it cannot parse. The Client **SHOULD** skip the whole suggestion rather than offer the remaining blocks, because dropping a block changes what the prompt asks for.
+
+If the Client skips every suggestion, the update still replaces the current list, and the Client offers nothing.
+
+### Lifetime
+
+A suggestion applies to the conversation as it stands when the Agent sends it. It is an offer for the user's next prompt and is not part of the conversation history.
+
+The Agent owns the list. A session starts with an empty list. The `suggestions` in the most recent update are the current list until the Agent sends another update. The Agent keeps the list up to date:
+
+- Agents **MUST** predict a list from the conversation as it stands when they send it. If the conversation changes before the Agent has sent a prediction, for example because a `session/prompt` arrived, the Agent **MUST** discard that prediction.
+- When the Agent accepts a `session/prompt` for the session, a list it sent earlier is out of date. If the current list is not empty, the Agent **MUST** replace it or withdraw it with `suggestions: []`. In v2, the Agent accepts a prompt when it inserts the user message.
+- Agents **SHOULD** replace or withdraw the list when it stops applying for another reason. In v2, that includes [foreground work](/protocol/v2/prompt-lifecycle#foreground-and-background-work) that starts without a prompt.
+
+Clients decide whether and when to show the current list. A Client **MAY** stop offering it at any time, for example when the user dismisses it, starts typing, or sends a prompt. The Client does not need to wait for the Agent to withdraw the list.
+
+An update and a prompt can cross in transit. The Client then receives a list that the Agent sent before it saw the prompt. The Agent replaces or withdraws that list when it accepts the prompt, so the Client does not need to detect this case.
+
+The Client does not tell the Agent when it stops offering a list. The Agent does not learn whether a suggestion was shown, accepted, or edited. Reporting that to the Agent is out of scope for this RFD.
+
+### Timing
+
+Agents **MAY** send an update at any time. The update is not tied to a session state or to the end of a response.
+
+Typical examples of when an Agent sends one:
+
+- In v1, after the `session/prompt` response. V1 already allows [session updates outside a prompt turn](/protocol/v1/prompt-turn#session-updates).
+- In v2, after the `state_update` that reports `idle`. V2 already allows [session updates while the session is idle](/protocol/v2/prompt-lifecycle#session-updates).
+
+An Agent can also send one while it is working. In v2, Clients can [send `session/prompt` in any state](/protocol/v2/prompt-lifecycle#prompts-during-active-work), so a suggestion can apply while the session is `running` or `requires_action`.
+
+An Agent is never required to send an update. For example, an Agent might not predict after the first prompt of a session, after an API error, or when the account is rate-limited. Clients do not wait for an update before they accept the user's next prompt.
+
+### Replay and resuming
+
+Agents **SHOULD NOT** include suggestions in session replay. That covers [`session/load` history](/protocol/v1/session-setup#loading-sessions) in v1 and [`session/resume` replay](/protocol/v2/session-setup#replay-contents) in v2. A loaded or resumed session starts with an empty list.
+
+After `session/load` or `session/resume` completes, the Agent may send a new update with suggestions for the session as it stands.
+
+### Client presentation
+
+Clients decide how to present suggestions. That includes how many to show, where to show them, which key accepts one, and whether to show any at all. Grayed-out text in the composer is one option. A row of chips or a menu are others.
+
+A Client **MUST NOT** send a suggestion as a prompt without an explicit user action. Receiving or displaying a suggestion is not a user action. Each of the following is:
+
+- The user accepts a suggestion into the composer and then sends it.
+- The user selects a suggestion in a UI that sends on selection, such as a row of chips. That UI **SHOULD** show the full text and identify every other block, such as a linked file, before the user selects the suggestion.
+- The user turns on a Client setting that sends suggestions automatically.
+
+### Capability
+
+Clients advertise support with an optional `promptSuggestions` object in the `session` group of their capabilities.
+
+In v1, add it to `ClientSessionCapabilities`:
+
+```json
+{
+  "clientCapabilities": {
+    "session": {
+      "promptSuggestions": {}
+    }
+  }
+}
+```
+
+V2 Clients have no `session` capability group today. Add one to the Client's `capabilities`, with `promptSuggestions` as its first field:
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "promptSuggestions": {}
+    }
+  }
+}
+```
+
+In both versions, omitting `session`, setting `session` to `null`, omitting `promptSuggestions`, or setting it to `null` all mean the Client does not advertise support. Supplying `promptSuggestions: {}` means the Client can offer suggestions as this RFD describes. Agents **MUST NOT** send `prompt_suggestions_update` unless the Client advertises this capability.
+
+The Client's `session` object only groups session-scoped capabilities. Unlike the Agent's `capabilities.session`, it is not a support marker, and `session: {}` advertises nothing.
+
+V2 could send the update without a capability, as it does for notices and compaction. See [Why does v2 need a capability?](#why-does-v2-need-a-capability)
+
+#### Content types
+
+`promptSuggestions: {}` means the Client can offer suggestions made of `text` and `resource_link` blocks. These are the same baseline types that every Agent accepts in prompts. The Client opts in to other types with the same three fields as the Agent's prompt capabilities:
+
+```json
+{
+  "promptSuggestions": {
+    "image": {},
+    "audio": {},
+    "embeddedContext": {}
+  }
+}
+```
+
+- `image`: suggestions may include `image` blocks.
+- `audio`: suggestions may include `audio` blocks.
+- `embeddedContext`: suggestions may include `resource` blocks.
+
+Each field is optional and nullable. Omitted or `null` means the Client does not advertise support for that type. Supplying `{}` means it does. The fields are objects in both versions, although v1's `promptCapabilities` uses booleans.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+An Agent that predicts the next prompt sends it in one update, and any Client that advertises the capability can offer it. Neither side needs a private `_meta` key or a Client allowlist. A Client implements suggestions once and gets them from every Agent that sends the update. An Agent skips the prediction when the Client does not advertise the capability.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Proposed phases
+
+1. Define `PromptSuggestion`, with a `prompt` list of `ContentBlock`, and `PromptSuggestionsUpdate`. Add the `prompt_suggestions_update` variant of `SessionUpdate` and the `ClientSessionCapabilities.promptSuggestions` capability, with its `image`, `audio`, and `embeddedContext` fields, in both protocol versions. In v2, that also adds the `session` field to `ClientCapabilities`. Put all of it behind the `unstable_prompt_suggestions` feature.
+2. Document the update and its content, lifetime, timing, and replay rules in the draft v1 and v2 protocol pages.
+3. Migrate the Claude Agent adapter and the AIR Client from `_meta.promptSuggestions` to the update. Each `{ "text": ... }` entry becomes a `prompt` with one `text` block. Keep the `_meta` key for one release for older peers.
+4. Get feedback from at least one more Client implementation before moving out of Draft.
+
+### Existing implementation evidence
+
+One Agent adapter and one Client already ship this through `_meta`:
+
+| Implementation       | Reference                                                                     | Behavior                                                                                                                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| JetBrains AIR Client | Ships in the IDE                                                              | Reads `session_info_update._meta.promptSuggestions`. Shows the first non-blank text as grayed-out text in an empty composer, fills the composer with it on Tab without sending, and drops it when the user types.        |
+| Claude Agent adapter | [PR #1356](https://github.com/agentclientprotocol/claude-agent-acp/pull/1356) | Forwards one prediction per prompt turn after the turn's result. Clears it on the next prompt and on a conversation reset, drops a prediction that the next prompt overtook, and sends the value only to the AIR Client. |
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not a field on `session_info_update`?
+
+The existing `_meta` implementations put it there. The [Session Info Update](/rfds/session-info-update) RFD keeps `SessionInfoUpdate` aligned with the `SessionInfo` that `session/list` returns, and a predicted prompt does not belong in a session listing. It applies to one point in the conversation and is out of date once the user sends a prompt. With a separate variant behind a capability, a Client that does not offer suggestions never receives them.
+
+### Why a list instead of one suggestion?
+
+Grayed-out composer text shows one suggestion, but a row of chips or a menu can show several. An Agent that has several ranked candidates can send all of them, and a Client can use only the first. An update with a single suggestion would need a second update type once a Client wanted more than one.
+
+### Why is there no "the Agent is still deciding" state?
+
+A `pending` state would let a Client hold its idle composer hint, instead of showing the hint and replacing it a moment later. It was left out because nothing bounds how long the state lasts. An Agent that decides not to predict sends nothing, so a Client would need its own timeout to leave the state. A Client that wants to avoid the flicker can briefly delay its idle hint after the Agent finishes responding. A `pending` signal with a defined expiry can be added later without changing this update.
+
+### Why can a Client not send a suggestion on its own?
+
+A suggestion is model output, and content the Agent read while it worked can influence it. It should not be sent as the user's prompt unless the user chose that. Putting the suggestion in the composer first also lets the user edit or clear a wrong prediction.
+
+The user action does not have to happen in the composer or once per suggestion. A Client can let one action both accept and send a suggestion, as long as the user could see what it contains first. A setting that the user turns on to send suggestions automatically also counts. A setting that is on by default does not.
+
+### Why does the Agent own the list?
+
+The Agent knows when the conversation changes. It accepts each prompt, and in v2 it can start foreground work without one. The update has no message ID, so a Client cannot tell which point in the conversation a list was predicted for. If both sides had rules for when a list is out of date, the rules could disagree.
+
+The requirements are therefore on the Agent. It predicts from the current conversation and replaces or withdraws a list when a prompt makes it out of date. The Client shows the most recent list and may stop offering it at any time. If that is not enough in practice, a later revision can add a field that tells the Client which message a list follows.
+
+### Why does v2 need a capability?
+
+V2 lets an Agent send an [informational addition with a safe fallback](/protocol/v2/extensibility#when-a-capability-is-required) without a capability, as it does for notices and compaction. A v2 Client would preserve or ignore an unknown `prompt_suggestions_update`, so the capability is not needed for safety. It is required for two other reasons.
+
+The first is cost. A notice costs nothing to produce, and an Agent can put its text in an agent message when the Client does not support notices. A prediction costs a model call, and it has no other use. Without a capability, an Agent would predict for Clients that never show the result, or go back to a Client allowlist.
+
+The second is presentation. The v2 rule expects that a receiver may display the update generically and that the sender does not depend on feature-specific presentation. A suggestion is only useful when the Client presents it as a suggestion. A predicted prompt displayed in the transcript would look like part of the conversation.
+
+V1 has a third reason. Its `SessionUpdate` union is closed, so a Client that does not know the variant cannot accept it.
+
+The capability also tells the Agent which content types the Client can offer. See [Content types](#content-types).
+
+### Why content blocks rather than a plain string?
+
+A suggestion is a prompt the user has not sent yet, so it uses the type that `session/prompt` takes. A Client passes an accepted suggestion to `session/prompt` without converting it. A suggestion can reference a file with a `resource_link` block, as a user's prompt does. A plain string would need mention syntax for that, and each Client parses mentions differently.
+
+An earlier revision of this RFD used a plain `text` string, so that a Client would not receive content its composer cannot show. The capability covers that case. A Client that advertises `promptSuggestions: {}` only receives `text` and `resource_link` blocks, and it opts in to `image`, `audio`, and `resource` blocks separately.
+
+### How does this interact with slash commands and other composer features?
+
+Suggestions do not replace them. If a Client's composer expands slash commands, a suggestion whose text starts with one behaves as if the user had typed it. If several composer features apply at once, the Client decides which one wins.
+
+### Does the Agent learn whether the suggestion was used?
+
+No. The next prompt arrives as an ordinary `session/prompt`, and nothing marks it as an accepted suggestion. Reporting acceptance would help Agents evaluate their predictions, but it raises privacy questions and is out of scope for this RFD.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **A field on `session_info_update`:** A predicted prompt does not belong in session metadata. See the first question above.
+- **A `session/prompt_suggestions` request from the Client:** The Client would poll for a prediction that the Agent can send as soon as it has one, and the extra round trip adds latency the user can see.
+- **Leaving it to `_meta`:** This is the status quo. It only works between an Agent and a Client that agreed on a key in advance.
+
+## Revision history
+
+- 2026-11-14: Rename the update to `prompt_suggestions_update`. Suggestions carry `ContentBlock[]` prompt content instead of a text string. The Agent owns the list and withdraws it when a prompt makes it out of date. Require the Client capability in v2 as well as v1, with opt-in content types. Allow a Client to send a suggestion on any explicit user action.
+- 2026-10-15: Initial draft.
