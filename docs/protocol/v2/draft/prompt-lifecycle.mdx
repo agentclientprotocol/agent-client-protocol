@@ -13,32 +13,33 @@ Before sending prompts, Clients **MUST** first complete the [initialization](/pr
 
 Agents send `session/update` notifications to report streamed content, tool activity, and changes to session state. The `sessionUpdate` field inside `params.update` identifies the variant:
 
-| `sessionUpdate` value       | Description                                                                                                                            |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                    |
-| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                           |
-| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                              |
-| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                         |
-| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                             |
-| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                               |
-| `subagent_update`           | Announces an owned child session or updates its display metadata, working directories, capabilities, and mirrored work-state snapshot. |
-| `session_message`           | Creates or updates a [message addressed to another session](#session-directed-messages).                                               |
-| `session_message_chunk`     | Appends content to a [session-directed message](#session-directed-messages).                                                           |
-| `state_update`              | A snapshot of the Agent's [foreground activity](#session-states).                                                                      |
-| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/draft/tool-calls#streaming-content).                                             |
-| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/draft/tool-calls#reporting).                                                             |
-| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                    |
-| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                               |
-| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/draft/agent-plan) identified by ID.                                            |
-| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v2/draft/agent-plan#removing-plans) identified by ID.                                    |
-| `available_commands_update` | The set of [available slash commands](/protocol/v2/draft/slash-commands) is ready or has changed.                                      |
-| `config_option_update`      | The session's [configuration options](/protocol/v2/draft/session-config-options#from-the-agent) have changed.                          |
-| `session_info_update`       | [Session metadata](/protocol/v2/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.     |
-| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                      |
-| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                     |
-| `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                        |
-| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                             |
-| `replay_complete`           | Marks the [end of a history replay](/protocol/v2/draft/session-setup#replay-complete) requested by `session/resume`.                   |
+| `sessionUpdate` value       | Description                                                                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `user_message_chunk`        | A streamed chunk of a user message.                                                                                                                                      |
+| `user_message`              | Creates or updates a user message identified by `messageId`.                                                                                                             |
+| `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                                                                |
+| `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                                                           |
+| `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                                               |
+| `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                                                                 |
+| `subagent_update`           | Announces an owned child session or updates its display metadata, working directories, capabilities, and mirrored work-state snapshot.                                   |
+| `session_message`           | Creates or updates a [message addressed to another session](#session-directed-messages).                                                                                 |
+| `session_message_chunk`     | Appends content to a [session-directed message](#session-directed-messages).                                                                                             |
+| `state_update`              | A snapshot of the Agent's [foreground activity](#session-states).                                                                                                        |
+| `tool_call_content_chunk`   | Appends a [content chunk to a tool call](/protocol/v2/draft/tool-calls#streaming-content).                                                                               |
+| `tool_call_update`          | Creates or updates a [tool call](/protocol/v2/draft/tool-calls#reporting).                                                                                               |
+| `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                                                      |
+| `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/draft/tool-calls#display-only-terminals).                                                                 |
+| `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/draft/agent-plan) identified by ID.                                                                              |
+| `plan_removed`              | **Draft only.** [Removal of a plan](/protocol/v2/draft/agent-plan#removing-plans) identified by ID.                                                                      |
+| `available_commands_update` | The set of [available slash commands](/protocol/v2/draft/slash-commands) is ready or has changed.                                                                        |
+| `config_option_update`      | The session's [configuration options](/protocol/v2/draft/session-config-options#from-the-agent) have changed.                                                            |
+| `session_info_update`       | [Session metadata](/protocol/v2/draft/session-list#updating-session-metadata), such as the title or last update time, has changed.                                       |
+| `usage_update`              | The session's [context window usage and cumulative cost](#session-usage-updates).                                                                                        |
+| `notice`                    | A live [user-facing notice](#session-notices) that is not part of session history.                                                                                       |
+| `compaction_update`         | Creates or updates a [context compaction](#session-compaction).                                                                                                          |
+| `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction).                                                                                               |
+| `replay_complete`           | Marks the [end of a history replay](/protocol/v2/draft/session-setup#replay-complete) requested by `session/resume`.                                                     |
+| `prompt_suggestions_update` | **Draft only.** Replaces the session's current list of [prompt suggestions](#prompt-suggestions-unstable). Requires the Client's `session.promptSuggestions` capability. |
 
 This is the complete set of standard variants defined in the current draft [`SessionUpdate` schema](/protocol/v2/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 
@@ -622,6 +623,73 @@ Notices have no ID or Agent-managed lifecycle. Each occurrence is an
 independent live event, not conversation history, and **SHOULD NOT** be included
 in session replay. If a condition remains relevant after reconnecting, the
 Agent may emit a new notice.
+
+#### Prompt suggestions (unstable)
+
+A prompt suggestion is a prompt the Agent predicts the user will send next. The Client offers suggestions where the user writes the next prompt.
+
+The Agent **MUST NOT** send `prompt_suggestions_update` unless the Client advertised support by supplying `capabilities.session.promptSuggestions` in its `initialize` request. Omitting `session` or `promptSuggestions`, or setting either field to `null`, means the Client does not advertise support. Unlike notices and compaction, this update requires a capability in v2. A prediction costs a model call, and it is only useful when the Client presents it as a suggestion.
+
+Each update replaces the session's current list of suggestions:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "prompt_suggestions_update",
+      "suggestions": [
+        {
+          "prompt": [
+            { "type": "text", "text": "Run the test suite and fix what breaks" }
+          ]
+        },
+        {
+          "prompt": [
+            { "type": "text", "text": "Add tests for " },
+            {
+              "type": "resource_link",
+              "uri": "file:///home/user/project/src/parser.rs",
+              "name": "parser.rs"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+`suggestions` is a required, non-null list, ordered most likely first. An empty list withdraws the suggestions the Client is offering. Suggestions have no IDs, and an update cannot append to the list or remove a single entry.
+
+Each suggestion has a required, non-null `prompt`. It is a list of at least one [content block](/protocol/v2/draft/content), the same type as the `prompt` field of `session/prompt`. A Client can send an accepted suggestion in that field unchanged. `_meta` is an optional, nullable object on the update and on each suggestion. Omission and `null` both mean no metadata.
+
+Each suggestion's `prompt` **MUST** be valid as the `prompt` of a `session/prompt` request for the session. Agents **MUST NOT** send a suggestion whose only content is empty or whitespace-only text. Agents **MUST** only use content types that both sides support:
+
+- `text` and `resource_link` are always allowed.
+- `image`, `audio`, and `resource` blocks are allowed only when the Agent advertised the type in its [`session.prompt` capability](/protocol/v2/draft/initialization#session-prompt-capabilities) and the Client advertised it under [`session.promptSuggestions`](/protocol/v2/draft/initialization#session-unstable).
+
+A Client skips a suggestion it cannot use and keeps the rest, for example one with a block it cannot parse or a content type it does not understand. The Client **SHOULD** skip the whole suggestion rather than offer the remaining blocks, because dropping a block changes what the prompt asks for.
+
+The Agent owns the list. A session starts with an empty list. The `suggestions` in the most recent update are the current list until the Agent sends another update. The Agent keeps the list up to date:
+
+- Agents **MUST** predict a list from the conversation as it stands when they send it. If the conversation changes before the Agent has sent a prediction, for example because a `session/prompt` arrived, the Agent **MUST** discard that prediction.
+- When the Agent accepts a `session/prompt` for the session, a list it sent earlier is out of date. If the current list is not empty, the Agent **MUST** replace it or withdraw it with `suggestions: []`. The Agent accepts a prompt when it [inserts the user message](#2-prompt-accepted).
+- Agents **SHOULD** replace or withdraw the list when it stops applying for another reason, such as [foreground work](#foreground-and-background-work) that starts without a prompt.
+
+Agents **MAY** send the update at any time. It is not tied to a session state. An Agent typically sends it after the `state_update` that reports `idle`. Clients can [send `session/prompt` in any state](#prompts-during-active-work), so a suggestion can also apply while the session is `running` or `requires_action`. An Agent is never required to send one, so Clients do not wait for an update before they accept the user's next prompt.
+
+Clients decide how and when to show the current list. A Client **MAY** stop offering it at any time, for example when the user dismisses it, starts typing, or sends a prompt. The Client does not tell the Agent when it stops offering a list, and the Agent does not learn whether a suggestion was shown, accepted, or edited.
+
+A Client **MUST NOT** send a suggestion as a prompt without an explicit user action. Receiving or displaying a suggestion is not a user action. Each of the following is:
+
+- The user accepts a suggestion into the composer and then sends it.
+- The user selects a suggestion in a UI that sends on selection, such as a row of chips. That UI **SHOULD** show the full text and identify every other block, such as a linked file, before the user selects the suggestion.
+- The user turns on a Client setting that sends suggestions automatically.
+
+Suggestions are not conversation history. Agents **SHOULD NOT** include them in [session replay](/protocol/v2/draft/session-setup#replay-contents). A resumed session starts with an empty list, and the Agent may send a new update after `session/resume` completes.
 
 #### Session compaction
 

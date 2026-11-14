@@ -638,6 +638,97 @@ mod schema_annotation_tests {
         );
     }
 
+    #[cfg(feature = "unstable")]
+    #[test]
+    fn generated_unstable_prompt_suggestions_update_is_lenient_per_suggestion_only() {
+        let schema = root_schema_value();
+
+        let update = def_schema(&schema, "PromptSuggestionsUpdate");
+        assert_eq!(update["required"], serde_json::json!(["suggestions"]));
+        assert!(update["description"].as_str().unwrap().contains("UNSTABLE"));
+        let suggestions = property_schema(&schema, "PromptSuggestionsUpdate", "suggestions");
+        assert!(schema_contains_ref(suggestions, "#/$defs/PromptSuggestion"));
+        assert_bool_extension(suggestions, SKIP_INVALID_ITEMS_EXTENSION);
+
+        // A malformed block fails its whole suggestion. The prompt list itself
+        // must not skip or default, or a Client would offer a partial prompt.
+        let suggestion = def_schema(&schema, "PromptSuggestion");
+        assert_eq!(suggestion["required"], serde_json::json!(["prompt"]));
+        let prompt = property_schema(&schema, "PromptSuggestion", "prompt");
+        assert!(schema_contains_ref(prompt, "#/$defs/ContentBlock"));
+        assert_eq!(prompt["minItems"], 1);
+        assert_no_extension(prompt, SKIP_INVALID_ITEMS_EXTENSION);
+        assert_no_extension(prompt, DEFAULT_ON_ERROR_EXTENSION);
+
+        let updates = def_schema(&schema, "SessionUpdate");
+        let variants = updates
+            .get("oneOf")
+            .or_else(|| updates.get("anyOf"))
+            .and_then(Value::as_array)
+            .unwrap();
+        let variant = variants
+            .iter()
+            .find(|variant| {
+                variant.pointer("/properties/sessionUpdate/const")
+                    == Some(&Value::from("prompt_suggestions_update"))
+            })
+            .expect("missing prompt_suggestions_update variant");
+        assert!(schema_contains_ref(
+            variant,
+            "#/$defs/PromptSuggestionsUpdate"
+        ));
+        assert_eq!(variant["required"], serde_json::json!(["sessionUpdate"]));
+        assert!(
+            variant["description"]
+                .as_str()
+                .unwrap()
+                .contains("UNSTABLE")
+        );
+
+        let capability = property_schema(&schema, "ClientSessionCapabilities", "promptSuggestions");
+        assert!(schema_contains_ref(
+            capability,
+            "#/$defs/PromptSuggestionsCapabilities"
+        ));
+        assert_bool_extension(capability, DEFAULT_ON_ERROR_EXTENSION);
+        assert!(
+            def_schema(&schema, "PromptSuggestionsCapabilities")
+                .get("required")
+                .is_none()
+        );
+        for field in ["image", "audio", "embeddedContext"] {
+            assert_bool_extension(
+                property_schema(&schema, "PromptSuggestionsCapabilities", field),
+                DEFAULT_ON_ERROR_EXTENSION,
+            );
+        }
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            let session = property_schema(&schema, "ClientCapabilities", "session");
+            assert!(schema_contains_ref(
+                session,
+                "#/$defs/ClientSessionCapabilities"
+            ));
+            assert_bool_extension(session, DEFAULT_ON_ERROR_EXTENSION);
+
+            let fallback = variants
+                .iter()
+                .find(|variant| variant["title"] == "other")
+                .unwrap();
+            assert!(
+                fallback["not"]["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| {
+                        variant.pointer("/properties/sessionUpdate/const")
+                            == Some(&Value::from("prompt_suggestions_update"))
+                    })
+            );
+        }
+    }
+
     #[cfg(not(feature = "unstable_protocol_v2"))]
     #[test]
     fn generated_v1_compaction_capability_is_optional_nullable_and_stable() {

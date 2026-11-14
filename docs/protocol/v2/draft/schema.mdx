@@ -3764,6 +3764,51 @@ Optional. Omitted and `null` are equivalent and mean the client does not adverti
 elicitation support.
 
 </ResponseField>
+<ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session-related capabilities supported by the client.
+
+Optional. Omitted and `null` are equivalent and mean the client does not advertise any
+session-related capabilities. This object only groups capabilities. Supplying `\{\}`
+advertises nothing.
+
+</ResponseField>
+
+## <span class="font-mono">ClientSessionCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Session-related capabilities supported by the client.
+
+This object only groups capabilities. Unlike the agent's `session`
+capability, it is not a support marker, and supplying `\{\}` advertises
+nothing.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="promptSuggestions" type={<><span><a href="#promptsuggestionscapabilities">PromptSuggestionsCapabilities</a></span><span> | null</span></>} >
+  Support for `prompt_suggestions_update` session updates.
+
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
+Supplying `\{\}` means the client can offer prompt suggestions made of
+`text` and `resource_link` content blocks.
+
+</ResponseField>
 
 ## <span class="font-mono">Command</span>
 
@@ -7223,6 +7268,198 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 
+## <span class="font-mono">PromptSuggestion</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A prompt the Agent predicts the user will send next.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="prompt" type={<a href="#contentblock">ContentBlock[]</a>} required>
+  The content of the suggested prompt.
+
+Required and non-null. This is the same type as the `prompt` field of
+`session/prompt`, and the Client can send it in that field unchanged.
+
+Agents MUST only use `text` and `resource_link` content blocks, and
+other content block types that both the Agent's `session.prompt`
+capability and the Client's `session.promptSuggestions` capability
+advertise. Agents MUST NOT send a prompt whose only content is empty
+or whitespace-only text.
+
+</ResponseField>
+
+## <span class="font-mono">PromptSuggestionsAudioCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for audio content in prompt suggestions.
+
+Supplying `\{\}` means the client can offer suggestions that include audio.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">PromptSuggestionsCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Client support for `prompt_suggestions_update` session updates.
+
+Supplying `\{\}` means the client can offer prompt suggestions made of `text`
+and `resource_link` content blocks. The client opts in to other content
+block types with the fields below. They have the same names as the agent's
+`session.prompt` capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="audio" type={<><span><a href="#promptsuggestionsaudiocapabilities">PromptSuggestionsAudioCapabilities</a></span><span> | null</span></>} >
+  Whether prompt suggestions may include `audio` content blocks.
+
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
+Supplying `\{\}` means the client can offer suggestions that include audio.
+
+</ResponseField>
+<ResponseField name="embeddedContext" type={<><span><a href="#promptsuggestionsembeddedcontextcapabilities">PromptSuggestionsEmbeddedContextCapabilities</a></span><span> | null</span></>} >
+  Whether prompt suggestions may include `resource` content blocks.
+
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
+Supplying `\{\}` means the client can offer suggestions that include
+embedded resources.
+
+</ResponseField>
+<ResponseField name="image" type={<><span><a href="#promptsuggestionsimagecapabilities">PromptSuggestionsImageCapabilities</a></span><span> | null</span></>} >
+  Whether prompt suggestions may include `image` content blocks.
+
+Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
+Supplying `\{\}` means the client can offer suggestions that include images.
+
+</ResponseField>
+
+## <span class="font-mono">PromptSuggestionsEmbeddedContextCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for embedded resources in prompt suggestions.
+
+Supplying `\{\}` means the client can offer suggestions that include
+`resource` content blocks.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">PromptSuggestionsImageCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capabilities for image content in prompt suggestions.
+
+Supplying `\{\}` means the client can offer suggestions that include images.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">PromptSuggestionsUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Replaces the session's current list of prompt suggestions.
+
+A prompt suggestion is a prompt the Agent predicts the user will send next.
+The Client offers suggestions where the user writes the next prompt. The
+list in the most recent update is the current list until the Agent sends
+another update. A session starts with an empty list.
+
+Suggestions are not part of session history. Agents SHOULD NOT include
+this update when they replay a session.
+
+Agents MUST only send this update when the Client advertised
+the `session.promptSuggestions` Client capability.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="suggestions" type={<a href="#promptsuggestion">PromptSuggestion[]</a>} required>
+  The suggestions the Client can offer, ordered most likely first.
+
+Required and non-null. An empty list withdraws the suggestions the
+Client is offering. A Client skips an entry it cannot parse and keeps
+the rest.
+
+</ResponseField>
+
 ## <span class="font-mono">ProtocolVersion</span>
 
 Protocol version identifier.
@@ -9754,6 +9991,41 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"replay_complete"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="prompt_suggestions_update" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Replaces the session's current list of prompt suggestions.
+
+Agents MUST only send this update when the Client advertised
+the `session.promptSuggestions` Client capability.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"prompt_suggestions_update"`.
+</ResponseField>
+<ResponseField name="suggestions" type={<a href="#promptsuggestion">PromptSuggestion[]</a>} required>
+  The suggestions the Client can offer, ordered most likely first.
+
+Required and non-null. An empty list withdraws the suggestions the
+Client is offering. A Client skips an entry it cannot parse and keeps
+the rest.
+
 </ResponseField>
 
 </Expandable>

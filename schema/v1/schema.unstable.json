@@ -4888,6 +4888,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReplaces the session's current list of prompt suggestions.\n\nAgents MUST only send this update when the Client advertised\nthe `session.promptSuggestions` Client capability.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "prompt_suggestions_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/PromptSuggestionsUpdate"
+            }
+          ]
+        },
+        {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAnnounces a child session created and owned by this session, or updates\nthat ownership association's metadata.",
           "type": "object",
           "properties": {
@@ -5663,6 +5679,49 @@
         }
       },
       "required": ["compactionId", "content"]
+    },
+    "PromptSuggestion": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA prompt the Agent predicts the user will send next.",
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "description": "The content of the suggested prompt.\n\nRequired and non-null. This is the same type as the `prompt` field of\n`session/prompt`, and the Client can send it in that field unchanged.\n\nAgents MUST only use `text` and `resource_link` content blocks, and\nother content block types that both the Agent's prompt capabilities\nand the Client's `session.promptSuggestions` capability advertise.\nAgents MUST NOT send a prompt whose only content is empty or\nwhitespace-only text.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "minItems": 1
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["prompt"]
+    },
+    "PromptSuggestionsUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nReplaces the session's current list of prompt suggestions.\n\nA prompt suggestion is a prompt the Agent predicts the user will send next.\nThe Client offers suggestions where the user writes the next prompt. The\nlist in the most recent update is the current list until the Agent sends\nanother update. A session starts with an empty list.\n\nSuggestions are not part of session history. Agents SHOULD NOT include\nthis update when they replay a session.\n\nAgents MUST only send this update when the Client advertised\nthe `session.promptSuggestions` Client capability.",
+      "type": "object",
+      "properties": {
+        "suggestions": {
+          "description": "The suggestions the Client can offer, ordered most likely first.\n\nRequired and non-null. An empty list withdraws the suggestions the\nClient is offering. A Client skips an entry it cannot parse and keeps\nthe rest.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PromptSuggestion"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["suggestions"]
     },
     "SubagentSessionCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability. Support for the method\non ordinary sessions does not grant support on a child.",
@@ -6749,6 +6808,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "promptSuggestions": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSupport for `prompt_suggestions_update` session updates.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client can offer prompt suggestions made of\n`text` and `resource_link` content blocks.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptSuggestionsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
           "type": ["object", "null"],
@@ -6800,6 +6871,90 @@
     "NoticeCapabilities": {
       "description": "Client support for presenting live notices to the user.",
       "type": "object"
+    },
+    "PromptSuggestionsCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient support for `prompt_suggestions_update` session updates.\n\nSupplying `{}` means the client can offer prompt suggestions made of `text`\nand `resource_link` content blocks. The client opts in to other content\nblock types with the fields below. They have the same names as the agent's\nprompt capabilities.",
+      "type": "object",
+      "properties": {
+        "image": {
+          "description": "Whether prompt suggestions may include `image` content blocks.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client can offer suggestions that include images.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptSuggestionsImageCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "audio": {
+          "description": "Whether prompt suggestions may include `audio` content blocks.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client can offer suggestions that include audio.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptSuggestionsAudioCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "embeddedContext": {
+          "description": "Whether prompt suggestions may include `resource` content blocks.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client can offer suggestions that include\nembedded resources.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptSuggestionsEmbeddedContextCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "PromptSuggestionsImageCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for image content in prompt suggestions.\n\nSupplying `{}` means the client can offer suggestions that include images.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "PromptSuggestionsAudioCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for audio content in prompt suggestions.\n\nSupplying `{}` means the client can offer suggestions that include audio.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "PromptSuggestionsEmbeddedContextCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for embedded resources in prompt suggestions.\n\nSupplying `{}` means the client can offer suggestions that include\n`resource` content blocks.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "SubagentCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability marker for exposing reusable child sessions as restricted ACP sessions.\n\nSupplying `{}` advertises support for child association and state updates,\nsession-directed messages, and restricted-session semantics. The client\nmust advertise this capability before the agent sends subagent updates or\nsession-directed messages.",
