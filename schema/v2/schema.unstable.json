@@ -6009,6 +6009,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE.** A replayable failure history entry, upserted by failure ID.\nThis entry does not change foreground state. Only the following idle update ends work.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "failure"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            }
+          ]
+        },
+        {
           "description": "A chunk of tool-call content being streamed.",
           "type": "object",
           "properties": {
@@ -6384,6 +6400,16 @@
                 "properties": {
                   "sessionUpdate": {
                     "type": "string",
+                    "const": "failure"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
                     "const": "tool_call_content_chunk"
                   }
                 },
@@ -6683,6 +6709,183 @@
         }
       },
       "required": ["messageId"]
+    },
+    "FailureId": {
+      "description": "**UNSTABLE.** An Agent-generated failure ID, unique within the session.",
+      "type": "string"
+    },
+    "Failure": {
+      "description": "**UNSTABLE.** A history entry explaining why foreground work failed.\n\nA repeated `failureId` replaces the entry. It does not append a duplicate.\nAgents send it after the work's other updates and before its idle `state_update`.\nThe idle update alone ends foreground work and still reports the same stop reason.\nRetained entries replay in their original history position, with the same ID when possible.\nA failure is current only while it is the latest conversation entry and the session is idle.\nThis type does not execute retries or implement history storage.",
+      "type": "object",
+      "properties": {
+        "failureId": {
+          "description": "Unique ID within the enclosing session. Repeated IDs replace the existing entry.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/FailureId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "Optional metadata. Omitted and `null` mean no metadata.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["failureId"],
+      "anyOf": [
+        {
+          "description": "The active work ended because the agent reached the maximum number of tokens.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_tokens"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent reached the maximum number of\nmodel requests for the foreground work.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_turn_requests"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because the agent refused to continue.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "refusal"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The active work ended because something failed.\n\nThis includes pre-insertion foreground work. A prompt failure before\ninsertion also requires an error response to `session/prompt`. After\ninsertion, the prompt's response remains successful.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "error"
+            }
+          },
+          "required": ["stopReason"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorStopReason"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["stopReason"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "end_turn"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_tokens"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_turn_requests"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "refusal"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "cancelled"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "error"
+                  }
+                },
+                "required": ["stopReason"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "stopReason": {
+                "type": "string",
+                "const": "end_turn"
+              }
+            },
+            "required": ["stopReason"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "stopReason": {
+                "type": "string",
+                "const": "cancelled"
+              }
+            },
+            "required": ["stopReason"]
+          }
+        ]
+      }
     },
     "ToolCallContentChunk": {
       "description": "A streamed item of tool-call content.\n\nTool-call content chunks append one `ToolCallContent` item to the current\ncontent for the matching `toolCallId`. Agents can send a `tool_call_update`\nwith `content` when they need to replace the whole content collection\ninstead.",

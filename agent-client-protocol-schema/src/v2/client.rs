@@ -121,6 +121,10 @@ pub enum SessionUpdate {
     AgentThought(AgentThought),
     /// A snapshot of the session's aggregate foreground activity.
     StateUpdate(StateUpdate),
+    /// **UNSTABLE.** A replayable failure history entry, upserted by failure ID.
+    /// This entry does not change foreground state. Only the following idle update ends work.
+    #[cfg(feature = "unstable_failure_entries")]
+    Failure(super::Failure),
     /// A chunk of tool-call content being streamed.
     ToolCallContentChunk(ToolCallContentChunk),
     /// A tool call has been created or updated.
@@ -1286,6 +1290,10 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
 }
 
 fn is_known_session_update(session_update: &str) -> bool {
+    #[cfg(feature = "unstable_failure_entries")]
+    if session_update == "failure" {
+        return true;
+    }
     if session_update == "notice" {
         return true;
     }
@@ -1343,6 +1351,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             "agent_thought_chunk",
             "agent_thought",
             "state_update",
+            #[cfg(feature = "unstable_failure_entries")]
+            "failure",
             "tool_call_content_chunk",
             "tool_call_update",
             "terminal_update",

@@ -5617,6 +5617,122 @@ protocol compatibility.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
+## <span class="font-mono">Failure</span>
+
+**UNSTABLE.** A history entry explaining why foreground work failed.
+
+A repeated `failureId` replaces the entry. It does not append a duplicate.
+Agents send it after the work's other updates and before its idle `state_update`.
+The idle update alone ends foreground work and still reports the same stop reason.
+Retained entries replay in their original history position, with the same ID when possible.
+A failure is current only while it is the latest conversation entry and the session is idle.
+This type does not execute retries or implement history storage.
+
+**Type:** Union
+
+**Shared properties:**
+
+<ResponseField name="_meta" type={"object | null"}>
+  Optional metadata. Omitted and `null` mean no metadata.
+</ResponseField>
+<ResponseField
+  name="failureId"
+  type={<a href="#failureid">FailureId</a>}
+  required
+>
+  Unique ID within the enclosing session. Repeated IDs replace the existing
+  entry.
+</ResponseField>
+
+**Variants:**
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+model requests for the foreground work.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+This includes pre-insertion foreground work. A prompt failure before
+insertion also requires an error response to `session/prompt`. After
+insertion, the prompt's response remains successful.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">FailureId</span>
+
+**UNSTABLE.** An Agent-generated failure ID, unique within the session.
+
+**Type:** `string`
+
 ## <span class="font-mono">HttpHeader</span>
 
 An HTTP header to set when making requests to the MCP server.
@@ -9509,6 +9625,114 @@ state arrives.
 
 <ResponseField name="state" type={"string"} required>
   Custom or future session state.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+</ResponseField>
+
+<ResponseField name="failure" type="object">
+**UNSTABLE.** A replayable failure history entry, upserted by failure ID.
+This entry does not change foreground state. Only the following idle update ends work.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"}>
+  Optional metadata. Omitted and `null` mean no metadata.
+</ResponseField>
+<ResponseField
+  name="failureId"
+  type={<a href="#failureid">FailureId</a>}
+  required
+>
+  Unique ID within the enclosing session. Repeated IDs replace the existing
+  entry.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"failure"`.
+</ResponseField>
+
+</Expandable>
+
+**Alternatives (`anyOf`):**
+
+<ResponseField name="max_tokens" type="object">
+The active work ended because the agent reached the maximum number of tokens.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_tokens"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="max_turn_requests" type="object">
+The active work ended because the agent reached the maximum number of
+model requests for the foreground work.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"max_turn_requests"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="refusal" type="object">
+The active work ended because the agent refused to continue.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"refusal"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="error" type="object">
+The active work ended because something failed.
+
+This includes pre-insertion foreground work. A prompt failure before
+insertion also requires an error response to `session/prompt`. After
+insertion, the prompt's response remains successful.
+
+<Expandable title="Properties">
+
+<ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
+  The failure, as a JSON-RPC error object.
+
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
+Agents SHOULD include it.
+
+</ResponseField>
+<ResponseField name="stopReason" type={"string"} required>
+  The discriminator value. Must be `"error"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future stop reason.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+<Expandable title="Properties">
+
+<ResponseField name="stopReason" type={"string"} required>
+  Custom or future stop reason.
 
 Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
