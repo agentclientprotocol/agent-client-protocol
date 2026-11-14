@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [1.18.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.17.0...v1.18.0) - 2026-11-14
+
+### Added
+
+- *(unstable-v2)* add skill command entries and skill content blocks ([#2822](https://github.com/agentclientprotocol/agent-client-protocol/pull/2822))
+- *(unstable)* add prompt suggestions session update and client capability ([#2821](https://github.com/agentclientprotocol/agent-client-protocol/pull/2821))
+- *(unstable-v2)* include subagents in v2 without unstable_subagents ([#2817](https://github.com/agentclientprotocol/agent-client-protocol/pull/2817))
+- *(unstable)* replace file plan type with path on markdown plans ([#2815](https://github.com/agentclientprotocol/agent-client-protocol/pull/2815))
+- *(unstable-v2)* add replay_complete session update ([#2813](https://github.com/agentclientprotocol/agent-client-protocol/pull/2813))
+- *(unstable)* add speed session config option category ([#2809](https://github.com/agentclientprotocol/agent-client-protocol/pull/2809))
+- *(unstable)* accept initial config options on session/fork and clarify notifications ([#2794](https://github.com/agentclientprotocol/agent-client-protocol/pull/2794))
+
+### Other
+
+- *(unstable-v2)* ignore command types the client doesn't understand ([#2816](https://github.com/agentclientprotocol/agent-client-protocol/pull/2816))
+- *(rust)* fix clippy map_unwrap_or lint in schema generator ([#2806](https://github.com/agentclientprotocol/agent-client-protocol/pull/2806))
+- *(unstable)* clarify subagent message views, unknown state, and session references ([#2801](https://github.com/agentclientprotocol/agent-client-protocol/pull/2801))
+
 ## [1.17.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.16.0...v1.17.0) - 2026-11-10
 
 ### Added
