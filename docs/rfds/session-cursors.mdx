@@ -1,0 +1,357 @@
+---
+title: "Session cursors"
+---
+
+- Author(s): [@SteffenDE](https://github.com/SteffenDE)
+- Champion: [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Some session operations act at a position in the conversation, not on the whole session. Forking at an earlier message is one. Rewinding a session and replaying part of its history are others.
+
+A message ID is not enough to name such a position. The Client can't tell from an ID whether the Agent can act at that message, or which operations work there. Some positions are also not at a message, such as the point after a tool call.
+
+This RFD adds session cursors to ACP v1 and v2, with some [differences in v1](#differences-in-v1):
+
+- A cursor names one position in one session. The Agent identifies it with a `cursorId`, an opaque string.
+- The Agent announces cursors with a new `cursor_update` session update. Its `capabilities` say which methods accept the cursor. Its `anchor` places the position before or after an entity the Client holds, such as a message or a tool call.
+- A method that acts at a position takes a `cursorId` as a parameter. This RFD does not change any method. The RFD for each such method adopts cursors, starting with [session fork](./session-fork.mdx#forking-at-a-cursor).
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The [session fork RFD](./session-fork.mdx) added `session/fork`, which copies a whole session. It expected a later extension that forks at a specific message. [PR #629](https://github.com/agentclientprotocol/agent-client-protocol/pull/629) proposed that extension with a message ID, and the discussion found three problems:
+
+- **Not every message is a valid position.** An Agent may be able to fork before a user message but not in the middle of its own output. A Client that only has message IDs has to try one and handle the error.
+- **Not every position is at a message.** A position can follow a tool call or a compaction.
+- **Validity depends on the operation.** A position the Agent can fork from is not always one it can rewind to.
+
+Other operations need positions too:
+
+- v2 `session/resume` has a `replayFrom` parameter, but its only value is `{ "type": "start" }`. The [Session Resume Replay RFD](./v2/session-resume-replay.mdx) leaves room for values that replay from a later position, and the [Replay Complete Signal RFD](./v2/session-replay-complete.mdx#open-questions) asks whether `replay_complete` should carry one.
+- A method that rewinds a session or edits an earlier message has to name where to cut.
+- When several Clients share a session, they have to mean the same position.
+
+ACP has no shared way to name a position. Each of these features would otherwise define its own, with its own rules for which positions are allowed.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Cursors
+
+A cursor names one position in the session it was announced on. `cursorId` is an opaque, Agent-owned string. It is unique within the session and never reused for another position.
+
+A position is a point in the session's timeline: between two neighboring entities, before the first one, or after the last one.
+
+- Clients **MUST NOT** parse, change, or construct a `cursorId`.
+- Two cursors may name the same position.
+- A cursor belongs to the session named by the `sessionId` of the `session/update` notification that announced it. Its `cursorId` has no meaning in any other session, including a fork or a child session of that session.
+- A cursor is not tied to a connection or to a Client. Any Client that has the session active can pass its `cursorId`.
+- A `cursorId` is not a credential. It only has meaning in a session the caller can already use.
+
+### The `cursor_update` session update
+
+The Agent announces a cursor with a `cursor_update` session update:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "cursor_update",
+      "cursorId": "cur_9f2c41",
+      "capabilities": {
+        "fork": {}
+      },
+      "anchor": {
+        "type": "user_message",
+        "messageId": "msg_user_2",
+        "position": "before"
+      }
+    }
+  }
+}
+```
+
+| Field          | Rules                                                                                     |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| `cursorId`     | Required, non-null.                                                                       |
+| `capabilities` | Optional, nullable patch. See [Cursor capabilities](#cursor-capabilities).                |
+| `anchor`       | Required on the first update for a cursor, and fixed after that. See [Anchors](#anchors). |
+| `_meta`        | Optional. It follows the `_meta` rules of the protocol version.                           |
+
+`cursor_update` is an upsert keyed by `cursorId`. Clients initialize a first-seen `cursorId` with no capabilities, then apply the update:
+
+- `capabilities` is a nullable patch. Omitted leaves the stored value unchanged, `null` clears it, and an object replaces the whole previous value.
+- `anchor` is fixed. The Agent chooses one anchor when it first announces the cursor and **MUST NOT** change it afterwards. A later update can omit `anchor` or repeat the same one, and omitted and `null` are equivalent. Clients keep the first anchor they receive for a cursor.
+
+A cursor never moves. To offer a different position, the Agent announces a new cursor. Later updates change only `capabilities`, for example to add a method that became possible at the position or to remove one that no longer is.
+
+The Agent can send a `cursor_update` at any time, like other session updates. Agents announce the positions they support, not one cursor for every entity.
+
+### Cursor capabilities
+
+`capabilities` says which methods accept the cursor. It has the same shape and rules as the `capabilities` of [tool calls and terminals](./v2/background-work.mdx#cancellable-tool-calls) and of [subagents](./subagents.mdx):
+
+- Each capability is an optional, nullable object. Omitted or `null` means unsupported, and `{}` advertises support. It may carry `_meta`, and a later RFD can add fields to it.
+- The object is replaced as a whole, not patched by key. `capabilities: null` and `capabilities: {}` both mean that no method accepts the cursor. So does a cursor whose `capabilities` was never supplied.
+- This RFD defines no capability. The RFD for each method that accepts cursors adds one, such as `fork` in the [session fork RFD](./session-fork.mdx#forking-at-a-cursor).
+- Clients ignore capabilities they don't recognize.
+
+One cursor can advertise several capabilities.
+
+### Anchors
+
+An anchor says where the position is, relative to an entity the Client already holds:
+
+| `type`            | ID field       | Entity                                                                                |
+| ----------------- | -------------- | ------------------------------------------------------------------------------------- |
+| `user_message`    | `messageId`    | A user message                                                                        |
+| `agent_message`   | `messageId`    | An agent message                                                                      |
+| `agent_thought`   | `messageId`    | An agent thought                                                                      |
+| `session_message` | `messageId`    | A [session-directed message](/protocol/v2/prompt-lifecycle#session-directed-messages) |
+| `tool_call`       | `toolCallId`   | A tool call                                                                           |
+| `compaction`      | `compactionId` | A compaction                                                                          |
+
+The anchor names the entity type because an entity is identified by [its type together with its ID](/protocol/v2/prompt-lifecycle#entity-ids). v1 uses the same shape.
+
+An anchor type is an entity that every Client places in the timeline and that is part of the conversation history. Two entity types with a timeline position are left out:
+
+- **Terminals.** A Client shows a terminal through the tool call that references it. The Agent anchors to that tool call.
+- **Plans.** A Client may show a plan outside the timeline, such as in a plan panel, and then has no place for the cursor.
+
+Updates without an entity ID, such as `notice` and `state_update`, have no timeline position and can't be anchored to.
+
+A position lies between two neighboring entities, so it can be named from either side. `position` says which:
+
+- `before` names the position by the entity that follows it. The history before the position does not include the entity.
+- `after` names the position by the entity that precedes it. The history before the position includes the entity and nothing that follows it in the timeline.
+
+When one entity directly follows another, `after` the first and `before` the second are the same position. Both sides exist because each end of the session has only one. `before` is the only anchor for the position ahead of the first entity, and `after` is the only anchor for the current end of the session. The Agent chooses one of the two when it announces the cursor. It anchors to the entity where the Client is likely to show the action, for example `before` a user message for editing it, or `after` an agent message for branching from it.
+
+- The entity **MUST** belong to the same session.
+- The Agent **MUST** report the entity on that session before it sends a `cursor_update` anchored to it. In a replay, that means after the replayed entity.
+- An anchor fixes the position no matter when the update arrives. The Agent can announce a cursor for an earlier message later, for example when the position becomes usable for a method.
+- `type` and `position` are open in both protocol versions, under the [v2 enum extension rules](./v2/enum-variant-extension.mdx). A Client that doesn't recognize one of them can't place the cursor, and it **MUST NOT** guess a position for it.
+
+Every cursor has an anchor, in both protocol versions:
+
+- The first `cursor_update` for a `cursorId` **MUST** include `anchor`.
+- A Client that holds a cursor without an anchor, for example because it missed the first update, can't place the cursor. It **MUST NOT** guess a position for it.
+- v1 message IDs are optional, but an anchor to a message needs one. A v1 Agent that announces cursors **MUST** send a `messageId` on every message it anchors to. See [Differences in v1](#differences-in-v1) for a prompt the Agent does not report.
+
+Clients show actions on entities, and an anchor stays correct when the session continues, when the Agent announces the cursor late, and when a replay delivers updates in a different order. A cursor for the current end of the session is anchored `after` the last entity, and that anchor still holds once later entities follow it.
+
+### Passing a cursor to a method
+
+These rules apply to every method that accepts a cursor:
+
+- Clients **MUST** only pass a cursor that the Agent announced on that session and that currently advertises the capability for the method.
+- Clients **MUST** pass the `cursorId`. They **MUST NOT** pass the anchor's entity ID in its place.
+- The Agent **MUST** reject the request with `-32602` (Invalid params) when it did not issue the `cursorId` for that session, when it no longer accepts the cursor, or when the cursor does not support that method. It **MUST NOT** act at a different position, and it **MUST NOT** handle the request as if the `cursorId` had been omitted.
+- Proxies and conductors forward `cursorId` values unchanged in `cursor_update` notifications and in requests.
+
+### What each method defines
+
+This RFD defines how a position is named and the rules above. It does not change any method. The RFD for a method that acts at a position adopts cursors and defines:
+
+- **A capability.** The name of its capability in the cursor's `capabilities`, and any fields that capability carries.
+- **A parameter.** The request parameter that carries the `cursorId`.
+- **What the method does at the position.** Methods describe this as the history before the position or the history after it. They don't need to say whether a message is included, because the anchor already says which side of the entity the position is on.
+- **Invalidation.** Which cursors the method invalidates, if any.
+- **Lifetime.** Any stronger lifetime rule for cursors that advertise its capability. For example, a cursor for partial replay has to stay usable across connections and Agent restarts.
+
+An Agent advertises a capability on a cursor only where it can meet that method's rules. An Agent that can't keep a `cursorId` usable after a restart can still offer the cursor for `session/fork` without offering it for replay.
+
+The [session fork RFD](./session-fork.mdx#forking-at-a-cursor) is the first to do this, with a `fork` capability and a `cursorId` parameter on `session/fork`.
+
+Two kinds of position are already visible:
+
+- **A point in the history.** `session/fork` copies the history before the position. A rewind would remove the history after it.
+- **A point in what was delivered.** A partial replay would send what the Client has not received since the position. Entities before the position can still change after it, for example when a tool call finishes or a message is replaced, and a replay from that position has to deliver those changes.
+
+`capabilities` keeps the two apart. An Agent that can serve both with one cursor advertises both capabilities on it. An Agent that can't announces separate cursors.
+
+### Lifetime
+
+A cursor stays valid until the Agent invalidates it. The end of a connection, `session/close`, and `session/resume` do not invalidate a cursor.
+
+- Agents **SHOULD** accept a cursor for as long as they retain the history at its position, including across connections and Agent restarts.
+- Clients **MAY** store cursors with their copy of the session and pass them on a later connection.
+
+An Agent can stop accepting a cursor at any time, for example when it removes, compacts, or no longer retains the history at the position. A Client learns this in one of three ways:
+
+- The Agent sends a `cursor_update` that clears the cursor's `capabilities`. Agents **SHOULD** do this when they stop accepting a cursor while the session is active on a connection.
+- A full replay does not announce the cursor. See [Replay](#replay).
+- A request with the `cursorId` fails with `-32602`. The Client **SHOULD** then stop offering the cursor.
+
+A method that removes history can define that it invalidates every cursor after the cut, so the Agent doesn't send one update per cursor.
+
+A `cursorId` is not a `session/list` pagination cursor. A [pagination cursor](/protocol/v2/session-list#pagination) continues one listing, and Clients must not persist it. A `cursorId` names a position in stored history, and Clients can persist it.
+
+### Replay
+
+Cursors are part of the history that v1 `session/load` and v2 `session/resume` with `replayFrom` replay.
+
+- When an Agent replays history, it **SHOULD** send a `cursor_update` for each cursor in that history that it still accepts. A replayed update carries the cursor's `capabilities` and `anchor`, like a first update, and follows the replayed entity it is anchored to.
+- In v2, replayed `cursor_update` notifications are replayed history and come before [`replay_complete`](/protocol/v2/session-setup#replay-complete).
+- Agents **SHOULD** use the same `cursorId` for the same position in every replay. An Agent that issues a new `cursorId` still accepts or rejects the old one as [Passing a cursor to a method](#passing-a-cursor-to-a-method) requires.
+- A full replay rebuilds the session's cursors, like its other entities. The Client **SHOULD** discard the cursors it held for the session and build them again from the replayed `cursor_update` notifications. A replayed cursor can carry a different anchor than it had before, for example when a `messageId` changed across the replay.
+- A resume without replay announces no cursors for earlier history. The cursors the Client already holds stay usable under the [lifetime](#lifetime) rules.
+
+### Client and Agent capabilities
+
+- **v2.** No capability is needed. The v2 `SessionUpdate` union is open, so a Client that doesn't know `cursor_update` ignores it.
+- **v1.** The v1 `SessionUpdate` union is closed, and an older Client can fail on an unknown variant. v1 adds an optional `cursors` object at `clientCapabilities.session.cursors`. Supplying `{}` means the Client handles `cursor_update`. Omitting it or setting it to `null` means it does not. Agents **MUST** only send `cursor_update` to a v1 Client that advertises it, in live delivery and in replay.
+- **Agents.** There is no Agent capability for cursors in `initialize`. An Agent that supports them announces them. An Agent that doesn't never sends a `cursor_update`, so the Client has no `cursorId` to pass. A method that accepts a `cursorId` still requires its own capability, such as `session.fork` for `session/fork`.
+
+### Differences in v1
+
+Cursors have the same shape in v1 and v2. v1 differs in five ways:
+
+1. **Client capability.** A v1 Client opts in with `clientCapabilities.session.cursors`. v2 needs no capability. See [Client and Agent capabilities](#client-and-agent-capabilities).
+2. **A live prompt may have no user message to anchor to.** v1 does not require the Agent to report the user's prompt as a session update, and the `session/prompt` response carries no `messageId`. The Client then holds no user message for that prompt, and the Agent can't anchor `before` it. The Agent anchors the same position `after` the last message, tool call, or compaction before the prompt. The first prompt of a session has nothing before it, so that position has no cursor.
+3. **User message anchors appear after `session/load`.** A load replays user messages as `user_message_chunk` updates. When they carry a `messageId`, the Agent anchors `before` or `after` them as in v2. The same position can therefore have a different anchor live and after a load.
+4. **Message IDs need not survive a load.** v1 does not require a `messageId` to stay the same across `session/load`. A Client uses the cursors of the latest load and does not match their anchors to entities it held before.
+5. **Only `session/fork` adopts cursors.** Partial replay builds on `replayFrom`, which v1 does not have. An RFD that adopts cursors says whether it applies to v1.
+
+For a Client, item 2 means that the cursor for editing a prompt it sent on this connection is the one anchored `after` the entity that precedes that prompt in its timeline. To edit the first prompt, the Client starts a new session.
+
+The v1 and v2 parts of this RFD can stabilize separately, as the [Message ID RFD](./message-id.mdx) did. The v1 part stays unstable until Clients and Agents have tried the anchoring in item 2.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A Client renders a conversation and receives `cursor_update` notifications with it. It shows an edit action on each user message that has a cursor anchored `before` it with the `fork` capability, and no action where the Agent announced none. The user edits the third message. The Client forks at that cursor and sends the new text to the new session. The Client never guesses which messages are valid fork points.
+
+Each method that acts at a position adopts the same cursors in its own RFD, without defining a new position type:
+
+- **Fork at a position.** The [session fork RFD](./session-fork.mdx#forking-at-a-cursor) adds a `fork` capability and a `cursorId` on `session/fork`.
+- **Partial replay.** v2 `session/resume` already has `replayFrom` for the position to replay from. A cursor fits there as a new variant, `{ "type": "cursor", "cursorId": "..." }`, with a capability of its own. It does not need a second parameter.
+- **Current position.** An Agent can announce a cursor for the current end of the session, anchored `after` the last entity, for example after `replay_complete` or when foreground work becomes idle. A Client stores the latest one and uses it to catch up after it reconnects.
+- **Rewind and edit in place.** A rewind method takes a `cursorId` for the cut and adds its own capability. The update that reports the cut names it by the same `cursorId`, so every Client on the session converges on the same history.
+- **Several Clients on one session.** Cursors belong to the session, so every Client receives the same cursors and can use them.
+
+Each of these defines what its method does at the position. None of them needs another way to name one.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Adapter validation
+
+The table shows what claude-agent-acp and codex-acp could offer. It comes from reading the two adapters and the runtime APIs they call, not from an implementation.
+
+|                                        | claude-agent-acp on Claude Code                                                                                                                | codex-acp on Codex                                                                                                               |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Position the runtime acts at           | Any transcript entry, by its `uuid`. `forkSession` keeps the history up to and including that entry.                                           | A turn boundary, by turn ID. `thread/fork` keeps the history through a turn. `thread/revert` removes a turn and every later one. |
+| Positions the adapter could announce   | Before or after a user message, after a tool call's result, and after an agent message that ends a turn.                                       | Before the first user message of a turn, and after the last entity of a completed turn.                                          |
+| When the adapter learns a position     | With the user message, for a position at a user message. After the chunks of an agent message, for a position after it.                        | When the turn completes.                                                                                                         |
+| What a `cursorId` can be derived from  | The entry `uuid`, which the transcript stores.                                                                                                 | The turn ID.                                                                                                                     |
+| `cursorId` across replays and restarts | The same, while the transcript exists.                                                                                                         | The same for threads with paginated history. Codex can assign new item IDs when it restores an older thread.                     |
+| Anchor IDs, live and in replay         | The same for user messages, agent messages, and tool calls. A compaction has a different ID in replay.                                         | The same for threads with paginated history.                                                                                     |
+| The user's prompt in v1                | Not reported while the session is live.                                                                                                        | Not reported while the session is live.                                                                                          |
+| Forking at a position today            | An extension in `_meta` that names an agent message by ID, with a fingerprint of the message text as a fallback.                               | The same extension. The fork is rounded forward to the end of the turn that contains the message.                                |
+| Rewind                                 | No request rewinds a running conversation. A restart with `resumeSessionAt` truncates it. `rewindFiles` restores files, at user messages only. | `thread/revert` removes history and does not restore files.                                                                      |
+| Replay from a position                 | Not supported. Replay reads the whole transcript.                                                                                              | Not supported. Codex can list the turns and items of a thread in pages.                                                          |
+
+What follows from that:
+
+- **The `cursorId` has to be opaque.** Neither runtime acts at ACP entities. Codex acts at turn boundaries only, and one Claude agent message spans several transcript entries. A reference to an entity would name positions the Agent can't act at, which is why the Codex extension rounds a message to the end of its turn.
+- **The update has to be separate.** Both adapters learn most positions after they sent the anchored entity, and neither reports the user's prompt in v1.
+- **`before` a user message is the position both runtimes share.** It is the position a Client needs to edit a message. Claude Code can also act after a tool call's result, so anchors can't be limited to messages.
+- **Both adapters can derive a `cursorId` from an ID the runtime stores.** Neither needs storage of its own, and the `cursorId` is the same in every replay and after a restart. The exceptions are older Codex threads and Claude compaction anchors. They are why a full replay rebuilds cursors, and why the rules for a stable `cursorId` are **SHOULD** and not **MUST**.
+- **File restore differs between runtimes.** A rewind capability needs a field for it.
+
+Not determined: whether Claude Code accepts a fork that ends on a tool use without its result, and whether Codex keeps turn IDs when it restores an older thread.
+
+### Plan
+
+1. **Schema.** Add the following to v1 and v2, behind an `unstable_session_cursors` feature:
+   - A `CursorId` string type, like `MessageId`.
+   - `CursorUpdate` with `cursorId`, `capabilities`, `anchor`, and `_meta`, and a `cursor_update` variant in `SessionUpdate`. `capabilities` is a three-state patch field. `anchor` is optional in the schema, because later updates can omit it, and omitted and `null` are equivalent.
+   - `CursorCapabilities` with `_meta`, mirroring `ToolCallCapabilities`. It starts with no capabilities, and each RFD that adopts cursors adds its own. A malformed value falls back to unsupported, so the Client never passes a cursor to a method the Agent did not advertise.
+   - `CursorAnchor`, a union tagged by `type` with the message, tool call, and compaction variants and a fallback that preserves unknown types. A known `type` with a malformed payload still fails. In v1, the `session_message` variant is behind `unstable_subagents`.
+   - `ClientSessionCapabilities.cursors` in v1.
+2. **Docs.** Describe cursors in the draft prompt lifecycle and session setup pages for both versions: the `cursor_update` update, the rules for passing a `cursorId`, and cursors in replay contents. Add `cursor_update` to the session update tables and cursors to the v2 entity ID table.
+3. **SDKs.** Expose the types. A Client SDK can track the cursors of a session and drop them on a full replay.
+4. **Validation.** Implement cursors together with the first method that adopts them, in at least one Agent adapter and one Client before Preview. Cover a cursor announced after its entity, a cursor announced again in replay, a cursor whose capabilities were cleared, a `cursorId` passed to a method the cursor does not advertise, and a `cursorId` from another session. In v1, also cover a cursor for a live prompt that is anchored `after` the preceding entity, and the same position after a `session/load`.
+5. **Stabilization.** Decide on the v1 part separately from the v2 part, after that validation.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Are cursors still valid after `session/resume`?
+
+Yes. A cursor belongs to the session, not to a connection. A cursor that is valid for replay is only ever used after a reconnect, so a rule that resume invalidates cursors would make it useless. The Agent can still invalidate any cursor under the [lifetime](#lifetime) rules, and a full replay tells the Client which cursors remain.
+
+### Why not use message IDs?
+
+An ID names a message. It doesn't say whether the Agent can act there, for which method, or on which side of the message. A cursor is announced only for positions the Agent supports, and its `capabilities` name the methods.
+
+### Why a separate update and not a field on message updates?
+
+A field on the anchored entity's own update, such as `cursors` on `user_message`, would save the Client a lookup. It fits one case: a cursor before a user message in v2, which the Agent knows when it reports the message. It does not fit the others:
+
+- An Agent often learns that a position is usable after it sent the entity, for example when a turn completes. The field would then need a second, patch-only update for that entity.
+- Agents stream agent messages as chunks. A chunk appends content and has no patch rules for another field.
+- v1 messages are chunk-only, and a v1 Agent may not report the user's prompt at all.
+
+A separate update handles every anchor type the same way in both versions. A later `cursor_update` can also change `capabilities` without another update for the entity.
+
+### Why a `capabilities` object and not a list of method names?
+
+Tool calls, terminals, and subagents already advertise what a Client can do with them in a `capabilities` object. Cursors follow the same pattern. An object per capability also leaves room for options, for example whether a rewind also restores files. A list of method names has no place for them. Method names also differ between protocol versions, such as `session/load` and `session/resume`, and one method could take cursors in more than one parameter.
+
+### Why both `before` and `after`?
+
+A position is a gap between two entities, and a Client shows the action on one of them. `before` a user message is where a Client offers to edit it. `after` an agent message is where it offers to branch from it.
+
+With only one side, the Client would have to find the neighboring entity itself, which fails when it doesn't render that entity. One end of the session could not be anchored at all. Agents also differ. Some keep a checkpoint before each user message, and others resume at a given agent message. An Agent that knows one side can't always name the other when it announces the cursor, for example because the next message does not exist yet.
+
+### Why does every cursor need an anchor?
+
+Without an anchor, a Client could only place a cursor by the order in which updates arrive. That order is not reliable when the Agent announces a cursor late, when several Clients share a session, or when a replay sends an entity's current state in place of its original updates. An anchor names the position directly.
+
+This means a v1 Agent that announces cursors also sends message IDs. v1 already defines `messageId` as an optional field, so the Agent needs no other protocol change. It does not give a v1 Client a user message for a prompt the Agent never reports. [Differences in v1](#differences-in-v1) covers that case.
+
+### Why not make cursors v2-only?
+
+Most Clients still use v1, and forking at a position is the feature they ask for. The shape is the same in both versions, so v1 costs one Client capability and the differences listed in [Differences in v1](#differences-in-v1). The v1 part can stay unstable, or be dropped, without changing v2.
+
+### Why is the anchor fixed when `capabilities` can change?
+
+What an Agent can do at a position changes over time. A method can become possible later or stop being possible, and the Agent reports that on the same cursor. A Client that missed such an update gets `-32602` when it tries the method, which is safe.
+
+A position has no such check. A Client can hold a cursor across connections and resume without a replay. If the Agent could move a cursor, a Client that missed the update would show it in one place and act at another, and the Agent could not detect that. So the Agent chooses one anchor when it announces the cursor, and announces a new cursor to offer another position.
+
+A full replay rebuilds the session's cursors, so an ID that changed across a replay does not need an anchor edit either.
+
+### Why is there no Agent capability?
+
+A capability in `initialize` says that an Agent supports a feature. It can't say which positions are valid, so the Client still has to wait for `cursor_update`. A Client also can't pass a `cursorId` that no Agent announced. That covers Agents that ignore unknown parameters: they never announce a cursor, so they never receive one.
+
+### Why does this RFD not change any method?
+
+Each method that acts at a position has its own RFD, and its parameters and behavior belong there. Cursors are then defined once, and each method adopts them when its own design is ready. The [session fork RFD](./session-fork.mdx#forking-at-a-cursor) already does. Partial replay and rewind still need their own designs.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+A fork-specific `forkPoint` update was considered in [PR #629](https://github.com/agentclientprotocol/agent-client-protocol/pull/629). It covered forking, but rewind and replay would each have needed their own way to name a position.
+
+### Open questions
+
+- **Error detail.** Should an invalid `cursorId` get its own error code or a `data` field, so a Client can tell it from other `-32602` errors?
+
+## Revision history
+
+- 2026-11-14: Cursors are now identified by `cursorId` and announced with `cursor_update`, an upsert that carries per-cursor `capabilities` in place of `validFor`. Replaced `beforeMessageId` and `afterMessageId` with a typed `anchor` that also covers tool calls and compactions. Every cursor has an anchor, so a v1 Agent that announces cursors also sends message IDs. Defined lifetime, invalidation, replay, the `-32602` rule, the v1 Client capability, and the differences in v1. Added an adapter validation for claude-agent-acp and codex-acp. Moved the method changes out of this RFD. Each method's RFD adopts cursors, starting with session fork.
+- 2026-09-07: Initial draft
