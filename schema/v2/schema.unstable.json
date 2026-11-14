@@ -778,6 +778,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA reference to a skill that the user invokes with this prompt.\n\nRequires the `skill` prompt capability when included in prompts. A skill\nreference has no meaning outside a user message.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "skill"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SkillReference"
+            }
+          ]
+        },
+        {
           "title": "other",
           "description": "Custom or future content block.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content block type should preserve\nthe raw payload when storing, replaying, proxying, or forwarding content,\nand otherwise ignore it or display it generically. Agents MUST reject a\n`session/prompt` request with a content block type they do not support\nwith `-32602`.",
           "type": "object",
@@ -836,6 +852,16 @@
                   "type": {
                     "type": "string",
                     "const": "resource"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "skill"
                   }
                 },
                 "required": ["type"]
@@ -1282,6 +1308,23 @@
         }
       },
       "required": ["resource"]
+    },
+    "SkillReference": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA reference to a skill that the user invokes with a prompt.\n\nThe Client sends it in `session/prompt` to invoke a `skill` entry from the\nsession's command list. The Agent MUST treat each reference as the user\nexplicitly invoking that skill for this prompt, and applies the skill to\nthe prompt as a whole. The reference carries no input.\n\nAn Agent that advertises the `session.prompt.skill` capability accepts one\nskill reference per prompt, as the first content block. An Agent that also\nadvertises `session.prompt.skill.inline` accepts any number of them, at any\nposition. Clients MUST NOT send a skill reference that the Agent's\ncapability does not allow.\n\nThe `type` discriminator value is `skill`.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The `name` of a `skill` entry in the session's current command list.\n\nRequired and non-null. The Agent MUST reject the prompt with `-32602`\nwhen it cannot resolve the name to a skill the user can invoke.",
+          "type": "string"
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["name"]
     },
     "Content": {
       "description": "Standard content block (text, images, resources).",
@@ -3323,6 +3366,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "skill": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAgent supports `skill` content blocks.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means a prompt may contain one `skill` content block, as its first block.\nAn agent that sends `skill` entries in `availableCommands` MUST advertise this capability.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptSkillCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -3357,6 +3412,42 @@
     },
     "PromptEmbeddedContextCapabilities": {
       "description": "Capabilities for embedded context in prompt requests.\n\nSupplying `{}` means the agent supports embedded context in prompts.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "PromptSkillCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for `skill` content blocks in prompt requests.\n\nSupplying `{}` means a prompt may contain one `skill` content block, as\nits first block. The agent opts in to more with the `inline` field.",
+      "type": "object",
+      "properties": {
+        "inline": {
+          "description": "Agent supports `skill` content blocks at any position in a prompt.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means a prompt may contain any number of `skill` content blocks, at any\nposition.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptSkillInlineCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "PromptSkillInlineCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for `skill` content blocks at any position in a prompt.\n\nSupplying `{}` means a prompt may contain any number of `skill` content\nblocks, at any position.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -4465,6 +4556,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn Agent Skill the user can invoke with a `skill` content block.\n\nAgents MUST only send this entry when the Client advertised\nthe `session.commands.skill` Client capability.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "skill"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/Skill"
+            }
+          ]
+        },
+        {
           "title": "other",
           "description": "Custom or future command kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this command type should preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the command. They MUST NOT display it as a\nslash command.",
           "type": "object",
@@ -4491,6 +4598,16 @@
                   "type": {
                     "type": "string",
                     "const": "command"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "skill"
                   }
                 },
                 "required": ["type"]
@@ -4583,6 +4700,39 @@
           "anyOf": [
             {
               "$ref": "#/$defs/AvailableCommandInput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["name", "description"]
+    },
+    "Skill": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAn Agent Skill the user can invoke.\n\nThe `type` discriminator value is `skill`.\n\nThe Client invokes a skill with a `skill` content block that names it. The\n`/name` syntax applies only to `command` entries. An Agent that sends\n`skill` entries MUST advertise the `session.prompt.skill` capability.\n\nAgents MUST only send `skill` entries when the Client advertised the\n`session.commands.skill` Client capability. Agents SHOULD advertise only\nskills the user can invoke.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Skill name. The Client uses it to refer to the skill in a `skill` content block.\n\nMUST NOT contain whitespace and MUST be unique within the command list,\nacross commands and skills. It need not match the `name` in the skill's\nfrontmatter.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Human-readable description of what the skill does, shown to users.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The absolute path of the file that defines the skill, normally its\n`SKILL.md`, on the machine the Agent runs on.\n\nOmitted and `null` are equivalent and mean the skill has no such file,\nas with a skill that is built into the Agent or served by an MCP server.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AbsolutePath"
             },
             {
               "type": "null"
@@ -8266,6 +8416,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "commands": {
+          "description": "Command types the client understands in addition to `command`.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support\nfor any of them. This object only groups capabilities. Supplying `{}` advertises nothing.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommandsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -8348,6 +8510,42 @@
     },
     "PromptSuggestionsEmbeddedContextCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapabilities for embedded resources in prompt suggestions.\n\nSupplying `{}` means the client can offer suggestions that include\n`resource` content blocks.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "CommandsCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCommand types the client understands in addition to `command`.\n\nAgents MUST NOT send a command type listed here unless the client\nadvertised it. This object only groups capabilities. Supplying `{}`\nadvertises nothing.",
+      "type": "object",
+      "properties": {
+        "skill": {
+          "description": "Support for `skill` command entries.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support.\nSupplying `{}` means the agent may send `skill` entries in `availableCommands`. The\nclient invokes them with `skill` content blocks.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CommandsSkillCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "CommandsSkillCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient support for `skill` command entries.\n\nSupplying `{}` means the agent may send `skill` entries in\n`availableCommands`. The client invokes them with `skill` content blocks.",
       "type": "object",
       "properties": {
         "_meta": {

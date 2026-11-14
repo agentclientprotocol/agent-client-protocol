@@ -11,7 +11,7 @@ Author(s): [@benbrandt](https://github.com/benbrandt), building on [#370](https:
 Give [Agent Skills](https://agentskills.io/specification) their own type in ACP v2, so Clients can show them as skills and invoke them with a structured reference instead of `/name` text.
 
 - A Client advertises a new `session.commands.skill` capability to say it understands skills.
-- An Agent then advertises its skills as `skill` entries in `availableCommands`. A `skill` entry has a command's fields plus an optional `path` to the skill's `SKILL.md`. Clients that don't advertise the capability keep getting skills as plain commands.
+- An Agent then advertises its skills as `skill` entries in `availableCommands`. A `skill` entry has a `name`, a `description`, and an optional `path` to the skill's `SKILL.md`. Clients that don't advertise the capability keep getting skills as plain commands.
 - A Client invokes a skill with a new `skill` content block that names it. Every Agent that sends `skill` entries accepts the block at the start of a prompt. Agents that advertise `session.prompt.skill.inline` accept it anywhere in a prompt, any number of times.
 
 It adds no new protocol surface for Clients that want to supply skills to an Agent. That works today through `additionalDirectories`, and in future through MCP servers that implement the MCP [Skills extension](https://modelcontextprotocol.io/seps/2640-skills-extension).
@@ -78,13 +78,11 @@ An Agent can then send `skill` entries in `availableCommands`:
   "type": "skill",
   "name": "pdf-processing",
   "description": "Extract text and tables from PDF files",
-  "input": { "type": "text", "hint": "file or instructions" },
   "path": "/home/alice/.agents/skills/pdf-processing/SKILL.md"
 }
 ```
 
-- `name`, `description`, and `input` follow the same rules as on `command`. `name` is unique across the whole list, commands and skills together, and it is how the Client refers to the skill. It need not match the `name` in the skill's frontmatter. An Agent with two skills of the same name, or a skill and a command of the same name, qualifies one of them, for example as `plugin:pdf-processing`. How it does so is up to the Agent.
-- `input` hints at what the user is expected to write along with the skill.
+- `name` and `description` follow the same rules as on `command`. `name` is unique across the whole list, commands and skills together, and it is how the Client refers to the skill. It need not match the `name` in the skill's frontmatter. An Agent with two skills of the same name, or a skill and a command of the same name, qualifies one of them, for example as `plugin:pdf-processing`. How it does so is up to the Agent.
 - `description` is shown to users. A skill's frontmatter description is written for the model and can run to a thousand characters, so an Agent that has a shorter description meant for users **SHOULD** send that one.
 - `path` is optional. It is the absolute path, on the machine the Agent runs on, of the file that defines the skill, normally its `SKILL.md`. Agents omit it for skills with no such file, such as skills built into the Agent or served by an MCP server. Clients can use it to show where a skill lives or to open it. A Client that doesn't share a filesystem with the Agent can't open it.
 - Agents **SHOULD** advertise only skills the user can invoke. Skills that only the model can use, such as Claude Code skills with `user-invocable: false`, are left out, because a Client can't do anything with them.
@@ -194,11 +192,10 @@ Everything here is additive to v2 and gated by capabilities on both sides, so it
 - Add `AvailableCommand::Skill(Skill)`, and add `"skill"` to the known `AvailableCommand` discriminators, so a malformed skill entry is skipped instead of being treated as an unknown type. `Skill` has these fields:
   - `name: String`
   - `description: String`
-  - `input: Option<AvailableCommandInput>`
   - `path: Option<AbsolutePath>`
   - `_meta`
 
-  For `input`, `path`, and `_meta`, omitted and `null` are equivalent. They only affect display, so an invalid value is treated as absent instead of dropping the entry.
+  For `path` and `_meta`, omitted and `null` are equivalent. They only affect display, so an invalid value is treated as absent instead of dropping the entry.
 
 - Add `ContentBlock::Skill` with a required `name` string and `_meta`, and add `"skill"` to the known content block types.
 - Slash commands, content, and initialization pages: document the entry, the block, and both capabilities.
@@ -289,14 +286,20 @@ An earlier version had an optional `source` saying where a skill came from: buil
 
 MCP-served skills need it most, because SEP-2640 expects hosts to show which server a skill came from. It belongs with that follow-up.
 
+### Why no `input` on a skill entry?
+
+An earlier version gave `skill` entries the optional `input` hint that `command` entries have. The Agent Skills specification defines no arguments for a skill. Claude Code adds them as its own extension, with `argument-hint` and `$ARGUMENTS`, and the other Agents surveyed have no equivalent.
+
+The hint also doesn't fit the block. A `skill` block carries no input, and with `inline` it can sit in the middle of a sentence.
+
 ### Why not pass through frontmatter, `allowed-tools`, or a model-invocable flag?
 
 None of these change what a Client can do with a skill.
 
-- `license`, `compatibility`, and `metadata` are display-only. They can go in `_meta`, or become optional fields later if Clients need them.
+- `license`, `compatibility`, and `metadata` are display-only.
 - `allowed-tools` is a permission grant that the Agent enforces. Showing it to the Client invites treating it as a trust signal, and SEP-2640 requires hosts to ignore it for remote skills unless the user approves.
 - Only Qwen Code exposes a model-invocable flag today.
-- Display names, icons, and brand colors exist only in Codex. `_meta` can carry them until more Agents have them.
+- Display names, icons, and brand colors exist only in Codex.
 
 ### Why not standardize the `$` mention syntax?
 
@@ -320,4 +323,6 @@ v1's `AvailableCommand` has no `type` discriminator, and its `ContentBlock` is a
 
 ## Revision history
 
+- 2026-11-14: Schema landed. The `skill` command entry, the `skill` content block, the `session.commands.skill` Client capability, and the `session.prompt.skill` Agent capability are in the v2 unstable schema, behind the `unstable_agent_skills` feature. The rules are in the draft v2 [Slash Commands](/protocol/v2/draft/slash-commands#skills-unstable) and [Content](/protocol/v2/draft/content#skill-reference-unstable) pages.
+- 2026-11-14: Remove `input` from the `skill` entry. The Agent Skills specification defines no arguments for a skill.
 - 2026-11-13: Initial draft, reworking [#370](https://github.com/agentclientprotocol/agent-client-protocol/pull/370) around `AvailableCommand` and the MCP Skills extension.

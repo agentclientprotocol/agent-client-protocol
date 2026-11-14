@@ -90,10 +90,11 @@ The notification's `availableCommands` array is the complete replacement list, n
 
 ### AvailableCommand
 
-Each command carries a required `type` discriminator. Currently the only type is `command`, a slash command the user invokes by including it in a prompt.
+Each command carries a required `type` discriminator. The stable type is `command`, a slash command the user invokes by including it in a prompt. The unstable `skill` type is described in [Skills](#skills-unstable). The fields below are those of a `command` entry.
 
 <ResponseField name="type" type="string" required>
-  The kind of command. Currently always `"command"`.
+  The kind of command. `"command"`, or `"skill"` for a
+  [skill](#skills-unstable).
 </ResponseField>
 
 <ResponseField name="name" type="string" required>
@@ -162,3 +163,97 @@ occurs. A command with no user-action wait uses `running` → `idle`, and
 **SHOULD** include `stopReason: "end_turn"` for successful completion.
 Completing an individual command while other foreground activity continues
 does not require an idle boundary.
+
+## Skills (unstable)
+
+A `skill` entry advertises an [Agent Skill](https://agentskills.io/specification) that the user can invoke. Clients use the type to label skills, list them apart from the Agent's other commands, and open the file that defines a skill. See the [RFD](/rfds/agent-skills).
+
+The Agent **MUST NOT** send `skill` entries unless the Client advertised support by supplying `capabilities.session.commands.skill` in its `initialize` request. Omitting `session`, `commands`, or `skill`, or setting any of them to `null`, means the Client does not advertise support. For those Clients, an Agent can advertise its skills as `command` entries.
+
+An Agent that sends `skill` entries **MUST** advertise the [`session.prompt.skill` capability](/protocol/v2/draft/initialization#session-prompt-capabilities).
+
+Skills are delivered like other commands, in `availableCommands` in setup responses and `available_commands_update` notifications:
+
+```json
+{
+  "type": "skill",
+  "name": "pdf-processing",
+  "description": "Extract text and tables from PDF files",
+  "path": "/home/alice/.agents/skills/pdf-processing/SKILL.md"
+}
+```
+
+<ResponseField name="name" type="string" required>
+  The name the Client uses to refer to the skill. **MUST NOT** contain
+  whitespace and **MUST** be unique within the list, across commands and skills.
+  It need not match the `name` in the skill's frontmatter. An Agent with two
+  skills of the same name, or a skill and a command of the same name, qualifies
+  one of them, for example as `plugin:pdf-processing`.
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Human-readable description of what the skill does, shown to users. A skill's
+  frontmatter description is written for the model and can be long. An Agent
+  that has a shorter description meant for users **SHOULD** send that one.
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  Optional absolute path, on the machine the Agent runs on, of the file that
+  defines the skill, normally its `SKILL.md`. Agents omit it for skills with no
+  such file, such as skills built into the Agent or served by an MCP server.
+  Clients can use it to show where a skill lives or to open it. A Client that
+  doesn't share a filesystem with the Agent can't open it.
+</ResponseField>
+
+A `skill` entry has no `input` specification. For `path` and `_meta`, omission and `null` are equivalent. A Client treats an invalid value in one of these fields as absent and keeps the entry.
+
+Agents **SHOULD** advertise only skills the user can invoke.
+
+`name`, `description`, and `path` come from the Agent and, through it, from whoever wrote the skill. Clients treat them as untrusted, as they do command names and descriptions, and open `path` only on a user action.
+
+### Invoking a skill
+
+A Client invokes a skill by putting a [`skill` content block](/protocol/v2/draft/content#skill-reference-unstable) in the prompt. The `/name` syntax in [Running commands](#running-commands) applies only to `command` entries.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "session/prompt",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "prompt": [
+      { "type": "skill", "name": "pdf-processing" },
+      {
+        "type": "text",
+        "text": "Pull the tables out of report.pdf and summarize them."
+      }
+    ]
+  }
+}
+```
+
+The Agent's `session.prompt.skill` capability says where the block may appear:
+
+- `skill: {}` means a prompt may contain one `skill` block, and it has to be the first block.
+- `skill: { "inline": {} }` means a prompt may contain any number of `skill` blocks, at any position:
+
+  ```json
+  [
+    { "type": "text", "text": "Pull the tables out of report.pdf with " },
+    { "type": "skill", "name": "pdf-processing" },
+    { "type": "text", "text": ", then chart them with " },
+    { "type": "skill", "name": "charts" },
+    { "type": "text", "text": "." }
+  ]
+  ```
+
+The same rules apply at both levels:
+
+- `name` is the `name` of a `skill` entry in the session's current command list. The block carries no input.
+- The Agent **MUST** treat each block as the user explicitly invoking that skill for this prompt, and applies the skill to the prompt as a whole. How it does that is up to the Agent. It can, for example, load the skill's instructions for the turn, or run the skill with the rest of the prompt as its input.
+- Clients **MUST NOT** send a `skill` block that the Agent's capability doesn't allow. The Agent **MUST** reject a prompt that contains one, or one whose `name` it can't resolve to a skill the user can invoke, with `-32602` and without inserting it.
+- The block is part of the inserted user message, so the Agent reports it in `user_message` and replays it. When replaying to a Client that didn't advertise `session.commands.skill`, the Agent **MAY** replace it with text.
+- A `resource_link` or embedded resource that points at a skill's file is ordinary context. It does not invoke the skill.
+
+How the Client lets the user pick a skill, with `$`, `@`, `/`, or a menu, is up to the Client.
