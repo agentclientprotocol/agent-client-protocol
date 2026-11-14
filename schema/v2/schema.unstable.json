@@ -7514,7 +7514,7 @@
       "type": "object",
       "properties": {
         "prompt": {
-          "description": "The content of the suggested prompt.\n\nRequired and non-null. This is the same type as the `prompt` field of\n`session/prompt`, and the Client can send it in that field unchanged.\n\nAgents MUST only use `text` and `resource_link` content blocks, and\nother content block types that both the Agent's `session.prompt`\ncapability and the Client's `session.promptSuggestions` capability\nadvertise. Agents MUST NOT send a prompt whose only content is empty\nor whitespace-only text.",
+          "description": "The content of the suggested prompt.\n\nRequired and non-null. Must contain at least one content block. This is\nthe same type as the `prompt` field of `session/prompt`, and the Client\ncan send it in that field unchanged.\n\nAgents MUST only use `text` and `resource_link` content blocks, and\nother content block types that both the Agent's `session.prompt`\ncapability and the Client's `session.promptSuggestions` capability\nadvertise. Agents MUST NOT send a prompt whose only content is empty\nor whitespace-only text.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"

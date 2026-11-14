@@ -2704,8 +2704,9 @@ impl PromptSuggestionsUpdate {
 pub struct PromptSuggestion {
     /// The content of the suggested prompt.
     ///
-    /// Required and non-null. This is the same type as the `prompt` field of
-    /// `session/prompt`, and the Client can send it in that field unchanged.
+    /// Required and non-null. Must contain at least one content block. This is
+    /// the same type as the `prompt` field of `session/prompt`, and the Client
+    /// can send it in that field unchanged.
     ///
     /// Agents MUST only use `text` and `resource_link` content blocks, and
     /// other content block types that both the Agent's `session.prompt`

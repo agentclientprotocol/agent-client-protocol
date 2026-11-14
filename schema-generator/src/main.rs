@@ -649,6 +649,9 @@ mod schema_annotation_tests {
         let suggestions = property_schema(&schema, "PromptSuggestionsUpdate", "suggestions");
         assert!(schema_contains_ref(suggestions, "#/$defs/PromptSuggestion"));
         assert_bool_extension(suggestions, SKIP_INVALID_ITEMS_EXTENSION);
+        // v1 and v2 share one shape. The list is required, and only its
+        // entries are lenient.
+        assert_no_extension(suggestions, DEFAULT_ON_ERROR_EXTENSION);
 
         // A malformed block fails its whole suggestion. The prompt list itself
         // must not skip or default, or a Client would offer a partial prompt.

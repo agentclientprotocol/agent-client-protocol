@@ -628,7 +628,7 @@ Agent may emit a new notice.
 
 A prompt suggestion is a prompt the Agent predicts the user will send next. The Client offers suggestions where the user writes the next prompt.
 
-The Agent **MUST NOT** send `prompt_suggestions_update` unless the Client advertised support by supplying `capabilities.session.promptSuggestions` in its `initialize` request. Omitting `session` or `promptSuggestions`, or setting either field to `null`, means the Client does not advertise support. Unlike notices and compaction, this update requires a capability in v2. A prediction costs a model call, and it is only useful when the Client presents it as a suggestion.
+The Agent **MUST NOT** send `prompt_suggestions_update` unless the Client advertised support by supplying `capabilities.session.promptSuggestions` in its `initialize` request. Omitting `session` or `promptSuggestions`, or setting either field to `null`, means the Client does not advertise support.
 
 Each update replaces the session's current list of suggestions:
 

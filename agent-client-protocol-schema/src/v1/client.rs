@@ -2117,8 +2117,8 @@ pub struct PromptSuggestionsUpdate {
     /// Required and non-null. An empty list withdraws the suggestions the
     /// Client is offering. A Client skips an entry it cannot parse and keeps
     /// the rest.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub suggestions: Vec<PromptSuggestion>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -2172,8 +2172,9 @@ impl PromptSuggestionsUpdate {
 pub struct PromptSuggestion {
     /// The content of the suggested prompt.
     ///
-    /// Required and non-null. This is the same type as the `prompt` field of
-    /// `session/prompt`, and the Client can send it in that field unchanged.
+    /// Required and non-null. Must contain at least one content block. This is
+    /// the same type as the `prompt` field of `session/prompt`, and the Client
+    /// can send it in that field unchanged.
     ///
     /// Agents MUST only use `text` and `resource_link` content blocks, and
     /// other content block types that both the Agent's prompt capabilities
@@ -4894,19 +4895,16 @@ mod tests {
             update
         );
 
-        // A malformed list means no suggestions, so the Client offers nothing.
+        // The list is required and non-null. Only its entries are lenient.
         for malformed in [json!(null), json!("none"), json!({ "prompt": [] })] {
-            assert_eq!(
+            assert!(
                 serde_json::from_value::<SessionUpdate>(json!({
                     "sessionUpdate": "prompt_suggestions_update",
                     "suggestions": malformed
                 }))
-                .unwrap(),
-                update
+                .is_err()
             );
         }
-
-        // The list itself is required.
         assert!(
             serde_json::from_value::<SessionUpdate>(json!({
                 "sessionUpdate": "prompt_suggestions_update"
