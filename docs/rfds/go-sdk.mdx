@@ -1,0 +1,102 @@
+---
+title: "Official Go SDK"
+---
+
+Author(s): [@yumosx](https://github.com/yumosx)
+
+## Elevator pitch
+
+Provide an officially maintained Go SDK for building ACP Agents, Clients, and integrations. The SDK should offer typed protocol values, idiomatic Go connection APIs, transport support, and test utilities while remaining aligned with the canonical ACP schemas.
+
+The first release should target stable ACP v1 and the common case of a Client starting an Agent over stdio. The design should leave room for other transports, concurrent sessions, cancellation, and future protocol versions.
+
+## Status quo
+
+ACP does not currently provide an official Go SDK. The documentation lists several community implementations, including [acp-go-sdk](https://github.com/coder/acp-go-sdk), [acp-go](https://github.com/ironpark/acp-go), and [Eino ACP](https://github.com/eino-contrib/acp).
+
+These projects demonstrate demand for Go support, but their APIs, protocol coverage, and maintenance models differ. Go developers must also implement or select JSON-RPC routing, message types, cancellation, and schema synchronization themselves. There is no official target for Go compatibility or a shared place for Go-specific interoperability work.
+
+## What we propose to do about it
+
+Create a dedicated official Go SDK repository and module under the Agent Client Protocol organization. The repository should have clear ownership, a stable import path, and a documented release policy. It should synchronize protocol types with the canonical ACP schemas through automation. The ACP protocol documentation and schemas remain the authority for wire behavior; the SDK should not redefine protocol semantics.
+
+The SDK should provide:
+
+- Typed ACP v1 protocol values, generated from the canonical schema where practical.
+- JSON-RPC request, response, and notification routing with concurrent in-flight requests.
+- Context-aware cancellation, error propagation, and connection shutdown.
+- A transport interface with stdio support in the first release.
+- Client APIs for initialization, session setup, prompts, and streamed updates.
+- Agent APIs for typed handlers, update delivery, and requests sent to the Client.
+- In-memory transports, fixtures, and examples for testing both sides.
+
+The public API should follow Go conventions. Blocking operations should accept `context.Context`; errors should preserve JSON-RPC or ACP details; and ownership, shutdown, backpressure, and cancellation behavior should be documented. Context cancellation should map to the applicable ACP cancellation mechanism where one exists, with best-effort behavior and cleanup rules made explicit. The SDK should support both Client and Agent use cases without mechanically copying another language SDK.
+
+Stable v1 and draft protocol features should be clearly separated. Draft behavior must not silently become part of the stable v1 API.
+
+## Shiny future
+
+A Go developer can start an ACP Agent, build a Client, or connect the two using typed values and standard Go I/O. A Client can start an Agent over stdio, create a session, send a prompt, consume updates, and cancel work without implementing JSON-RPC routing.
+
+Protocol updates can flow from the canonical schema into generated SDK types through CI. Fixtures and interoperability tests can verify behavior against other ACP implementations. Contributors can add transports, examples, conformance cases, and API improvements in one official project.
+
+## Initial scope
+
+The first milestone should include:
+
+- Stable ACP v1 types and JSON encoding/decoding.
+- JSON-RPC routing, request correlation, concurrent requests, and cancellation.
+- A transport abstraction and stdio support for `os/exec.Cmd`.
+- Client and Agent support for initialization, session setup, prompt turns, and streamed updates.
+- Client support for the v1 requests required by the initial workflows, including permission, file-system, and terminal operations.
+- An in-memory test transport, protocol fixtures, and minimal Client and Agent examples.
+- Documentation for compatibility, errors, shutdown, and cancellation.
+
+The first interoperability target should be a Go Client and Agent that communicate over an in-memory transport and a Go Client that starts a known ACP Agent over stdio.
+
+The first milestone does not include new protocol methods, MCP implementation, a full proxy or conductor framework, transports beyond the agreed initial scope, ACP v2 draft support, or model orchestration APIs.
+
+## Implementation details and plan
+
+1. **API and compatibility design**: confirm the repository name, module path, v1 method coverage, package layout, generated-code boundary, and semantics for contexts, shutdown, backpressure, and streamed updates.
+2. **Core runtime**: implement JSON-RPC framing, routing, request correlation, error propagation, cancellation, the transport interface, stdio, and an in-memory transport.
+3. **Client and Agent slice**: implement initialization, session setup, prompt turns, ordered updates, handlers, examples, and interoperability tests.
+4. **v1 coverage and release**: add the remaining agreed methods, fixtures, compatibility tests, documentation, and release automation.
+
+Generated protocol types and hand-written runtime APIs should remain separate. Regeneration must be reproducible in CI. Public APIs should follow Go module compatibility rules; draft protocol APIs should be explicitly versioned or marked experimental.
+
+## Frequently asked questions
+
+### Why an official SDK when community SDKs exist?
+
+Community SDKs are valuable prior art. An official SDK would provide a maintained compatibility target, coordinated schema updates, and a place for contributors to improve Go support. Existing projects should inform the design and may contribute code, tests, or migration guidance.
+
+### Where should the official SDK repository live?
+
+The SDK should have its own official repository because it is an independently released Go module with Go-specific APIs, tooling, examples, and compatibility requirements. The repository should remain under the Agent Client Protocol organization and synchronize protocol types with the main ACP repository through automated generation and interoperability tests. The final repository name and module path remain open for discussion.
+
+### Should protocol types be generated?
+
+Wire types should be generated from the canonical schema where there is a direct mapping. Hand-written wrappers should provide idiomatic session, update, and handler APIs.
+
+### Should v1 and v2 share one package?
+
+Stable v1 should come first. Version-specific packages or namespaces should make protocol differences visible. Draft v2 support should follow only after the v1 API and versioning model are validated.
+
+### Who will maintain it?
+
+I am willing to help design and implement the SDK, write interoperability tests and examples, and participate in its ongoing maintenance. The project should still have an official champion and a clear maintainer group responsible for releases, reviews, and long-term compatibility. The RFD should move to Preview only after the agreed implementation is complete and these responsibilities are clear.
+
+## Open questions
+
+- What official repository name and module path should be used?
+- Which remaining stable v1 methods should follow the initial release, and in what order?
+- Should the API use one generic connection type or separate Client and Agent types?
+- Should streamed updates use callbacks, channels, or both?
+- Should a generic stream transport be provided alongside the stdio transport, and what interfaces should it expose for separate input and output streams?
+- Which cross-language fixtures and interoperability tests are required before release?
+- Who will champion and maintain the project?
+
+## Revision history
+
+- Initial draft.
