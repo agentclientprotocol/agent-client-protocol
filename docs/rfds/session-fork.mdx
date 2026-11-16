@@ -69,6 +69,61 @@ As with `session/new`, the forked session is active once the agent responds, set
 Agents may reply with an error if forking of that specific session or with the given options is not supported,
 for example if the agent does not support forking with a different working directory than the initial session.
 
+### Forking at a cursor
+
+By default, `session/fork` copies the whole session. To fork at an earlier position, the client passes a [session cursor](./session-cursors.mdx) in an optional `cursorId` parameter:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/fork",
+  "params": {
+    "sessionId": "sess_789xyz",
+    "cursorId": "cur_9f2c41",
+    "cwd": "/home/user/project",
+    "mcpServers": []
+  }
+}
+```
+
+The agent says which cursors it can fork at with a `fork` capability on the cursor:
+
+```json
+{
+  "sessionUpdate": "cursor_update",
+  "cursorId": "cur_9f2c41",
+  "capabilities": {
+    "fork": {}
+  },
+  "anchor": {
+    "type": "user_message",
+    "messageId": "msg_user_2",
+    "position": "before"
+  }
+}
+```
+
+- `cursorId` is optional. Omitted and `null` are equivalent and fork the whole session.
+- `fork` is an optional, nullable capability object. Omitted or `null` means unsupported, and `{}` advertises support. It may carry `_meta`.
+- The client **MUST NOT** send a `cursorId` unless that cursor currently advertises `capabilities.fork`. The agent rejects any other `cursorId` with `-32602`, as the [session cursors RFD](./session-cursors.mdx#passing-a-cursor-to-a-method) requires. It does not fall back to forking the whole session.
+- The new session's history is the source session's history before the cursor's position. The agent copies nothing after it.
+- The source session does not change, and its cursors stay valid.
+- The response is the same as for a fork without a cursor, and the new session is active once the agent responds.
+- The new session does not inherit the source session's cursors. The client learns the new session's cursors from `cursor_update` notifications on the new session.
+
+With a cursor, a client can build:
+
+- **Edit a message.** Fork at a cursor anchored `before` the user message, then send the replacement with `session/prompt` in the new session.
+- **Regenerate a response.** Fork at the same cursor and send the original prompt again.
+- **Branch from a reply.** Fork at a cursor anchored `after` an agent message.
+
+In v1, the cursor before a prompt the client sent on this connection is anchored `after` the entity that precedes the prompt. See [differences in v1](./session-cursors.mdx#differences-in-v1).
+
+Forking at a cursor adds nothing to the `session.fork` capability object. An agent that supports it announces cursors with the `fork` capability, and an agent that doesn't never announces one.
+
+In the schema, `ForkSessionRequest` gains an optional `cursorId` and `CursorCapabilities` gains `fork`. A malformed `cursorId` fails with `-32602` and is not treated as omitted.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -90,6 +145,17 @@ Moreover, allowing to pass different options also allows features like dynamical
 to existing sessions to work by forking them with the new options, if the agent supports it. If it
 does not, the client can still show an appropriate error message.
 
+**Q: Why does forking at a position take a cursor and not a message ID?**
+
+A message ID does not say whether the agent can fork at that message, and some positions are not at a message. A [session cursor](./session-cursors.mdx) is announced only for positions the agent supports.
+[PR #629](https://github.com/agentclientprotocol/agent-client-protocol/pull/629) proposed a message ID first.
+
+**Q: Does a fork inherit the source session's cursors?**
+
+No. A fork is a new session with its own `sessionId`, and the protocol does not require a fork to keep the source session's message IDs.
+The client gets the new session's cursors from `cursor_update` notifications on that session, for example through `session/resume` with replay.
+A cheaper way to get the IDs and cursors of a new fork is an open question.
+
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It must be validated against other agents too.
@@ -100,3 +166,4 @@ None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It
 - 2025-11-20: Added request format and updated capabilities format.
 - 2025-12-10: Adjust fork options to align with `session/load`.
 - 2026-10-12: Clarify that a forked session is active once the agent responds, so the client does not need to resume it before prompting.
+- 2026-11-14: Added forking at a [session cursor](./session-cursors.mdx), with an optional `cursorId` on `session/fork` and a `fork` cursor capability.
