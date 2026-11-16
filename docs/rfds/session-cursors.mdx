@@ -93,7 +93,7 @@ The Agent announces a cursor with a `cursor_update` session update:
 
 A cursor never moves. To offer a different position, the Agent announces a new cursor. Later updates change only `capabilities`, for example to add a method that became possible at the position or to remove one that no longer is.
 
-The Agent can send a `cursor_update` at any time, like other session updates. Agents announce the positions they support, not one cursor for every entity.
+The Agent can send a `cursor_update` at any time, like other session updates. It announces a cursor only for a position where at least one method works, so it does not need a cursor for every entity. A Client can't act at a position that has no cursor.
 
 ### Cursor capabilities
 
