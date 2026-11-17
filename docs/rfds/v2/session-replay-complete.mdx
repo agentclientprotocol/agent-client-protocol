@@ -100,7 +100,7 @@ A `session/resume` that the Client cancels with `$/cancel_request` still gets a 
 
 The v2 `SessionUpdate` union is open under the [enum variant extension rule](./enum-variant-extension.mdx). A Client that does not know the variant ignores it and waits for the response, as it does today. The marker needs no Client capability.
 
-We propose that the marker is **required** for Agents that advertise `capabilities.session`. No Agent capability is needed, and a Client can apply the outcome table to every v2 Agent.
+The marker is **required** for Agents that advertise `capabilities.session`. No Agent capability is needed, and a Client can apply the outcome table to every v2 Agent.
 
 A required update has to be in v2 before v2 is stable. After that, it would need an Agent capability, and a Client could not apply the outcome table to Agents that do not advertise it.
 
@@ -213,16 +213,19 @@ No. A future method that replays history should use the same marker.
 
 Not in this RFD. v1 `session/load` has the same gap, but the v1 `SessionUpdate` union is closed, and an older Client can fail on an unknown variant. A v1 marker would need two capabilities. An Agent capability tells the Client that a missing marker means a truncated replay. A Client capability tells the Agent that the Client accepts the variant. This could be proposed for v1 separately. Until then, v1 Clients rely on the response or on adapter-specific extensions.
 
-### Open questions
+### Resolved questions
 
-- **Name.** Alternatives are `history_replayed` and `replay_end`.
-- **Required or capability?** This RFD proposes required. With a capability, a Client cannot rely on the marker from every v2 Agent.
-- **Request correlation.** Should the marker carry an optional request identifier?
-- **Resume position.** Should the marker carry an opaque cursor for a future `replayFrom` variant?
-- **Known gaps.** Should the marker carry a flag for incomplete retained history, or is a session notice enough?
+These were open while the RFD was a draft. They are closed for the v2 Preview.
+
+- **Name.** The update is named `replay_complete`. It matches the `replayFrom` parameter. `history_replayed` and `replay_end` were considered.
+- **Required or capability?** Required, with no capability. With a capability, a Client could not rely on the marker from every v2 Agent.
+- **Request correlation.** The marker does not carry a request identifier. Clients **SHOULD NOT** send a second replaying `session/resume` for a session while the first one is pending. An optional identifier can be added later.
+- **Resume position.** The marker does not carry a cursor. Whether a [session cursor](../session-cursors.mdx#open-questions) can name the point a replay starts from is a question for the RFD that adds partial replay. That RFD can add a `replayFrom` variant or an optional field on the marker.
+- **Known gaps.** The marker does not carry a flag for incomplete retained history. Agents **SHOULD** report known gaps after the marker, for example with a session notice. An optional field can be added later. It could only report that history is incomplete, because a marker without it has to keep meaning that the Agent did not say.
 
 ## Revision history
 
+- 2026-11-17: Closed the open questions for the v2 Preview. The update keeps the name `replay_complete` and stays required with no capability. The marker carries no request identifier, cursor, or known-gaps flag. Each can be added later as an optional field. The rule against two pending replaying resumes for one session is on the [Session Setup](/protocol/v2/session-setup#replay-complete) page.
 - 2026-11-17: In v2, the parent's marker is the freshness boundary for a child's work state and capabilities. Before, it was the response. `subagent_update` is in the stable v2 schema, so the child session rules are on the stable [Session Setup](/protocol/v2/session-setup#child-sessions) and [Subagents](/protocol/v2/subagents#resuming) pages.
 - 2026-11-13: Steps 1 and 2 landed. `replay_complete` is in the v2 schema as `SessionUpdate::ReplayComplete`, without a separate feature flag, like the other v2 RFDs. The rules are in the v2 [Session Setup](/protocol/v2/session-setup#replay-complete) page. The child session rules are in its draft copy, because `subagent_update` is still unstable.
 - 2026-11-13: Narrowed to v2 and moved into the v2 RFD collection. Added the `state_update` snapshot and v1 questions. Removed the guidance on when Clients render history. Gave each replayed child session its own marker.

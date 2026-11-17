@@ -31,7 +31,7 @@ The [session fork RFD](./session-fork.mdx) added `session/fork`, which copies a 
 
 Other operations need positions too:
 
-- v2 `session/resume` has a `replayFrom` parameter, but its only value is `{ "type": "start" }`. The [Session Resume Replay RFD](./v2/session-resume-replay.mdx) leaves room for values that replay from a later position, and the [Replay Complete Signal RFD](./v2/session-replay-complete.mdx#open-questions) asks whether `replay_complete` should carry one.
+- v2 `session/resume` has a `replayFrom` parameter, but its only value is `{ "type": "start" }`. The [Session Resume Replay RFD](./v2/session-resume-replay.mdx) leaves room for values that replay from a later position, and the [Replay Complete Signal RFD](./v2/session-replay-complete.mdx#resolved-questions) leaves a position on `replay_complete` to the RFD that adds partial replay.
 - A method that rewinds a session or edits an earlier message has to name where to cut.
 - When several Clients share a session, they have to mean the same position.
 

@@ -392,6 +392,8 @@ A `session/resume` that is cancelled with [`$/cancel_request`](/protocol/v2/draf
 
 An Agent that rejects the `replayFrom` cursor with `-32602` replays nothing and does not send `replay_complete`.
 
+Clients **SHOULD NOT** send a second `session/resume` with a `replayFrom` cursor for a session while the first one is pending.
+
 #### Child sessions
 
 A resume with replay can also replay the history of [child sessions](/protocol/v2/draft/subagents#replayed-child-history), at any depth. Each session has its own `replay_complete` on its own `sessionId`, and the rules above apply to each session separately:
