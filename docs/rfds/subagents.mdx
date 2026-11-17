@@ -1204,43 +1204,28 @@ state.
 
 ### Cost covers descendant sessions
 
-When a session has child sessions, its `usage_update.cost` covers its own work
-and the work of all its descendants: its children, their children, and so on.
-This includes model calls the Agent makes for any of them, such as compaction
-or title generation, and subagents it does not expose as child sessions. A
-root session's cost is the cost of its whole tree. A session without children
-reports its own cost as before, so this changes nothing for v1 Agents that do
-not announce children. See
+When a session has child sessions, its `usage_update.cost` includes the costs
+of its descendants: its children, their children, and so on. A root session's
+cost is the Agent's total for the whole tree. A descendant's cost can reach its
+ancestors later, for example once the descendant's work stops. A session
+without children reports its own cost as before, so this changes nothing for
+v1 Agents that do not announce children. See
 [Why does a session's cost include its descendants?](#why-does-a-sessions-cost-include-its-descendants)
 
-Cost reporting remains optional. When an Agent reports a session's cost, the
-amount **MUST** include every descendant cost known to the Agent. Cost is
-cumulative, so a descendant cost that the Agent learns later, for example from
-a background child that finishes after the parent's turn ends, goes into a
-later `usage_update` for each ancestor. Successive cumulative updates and
-repeated messages to a session are not additional costs.
+Cost reporting remains optional for parents and children. A child without a
+reported cost has an unknown cost, not zero.
 
-Child costs remain optional. A child without a reported cost has an unknown
-cost, not zero, and its ancestors' costs can still include it. Agents
-**MUST NOT** derive a child's cost from incomplete token counts or by
-splitting an ancestor's cost.
+Clients **MUST NOT** add a child's cost to an ancestor's, because the
+ancestor's cost already includes it. To show what a session and its
+descendants cost, a Client shows that session's cost. Context-window usage
+remains local to each session and is not summed across the tree.
 
-Clients **MUST NOT** add a session's cost to an ancestor's, because the
-ancestor's cost already includes it. Clients also **MUST NOT** subtract child
-costs from a parent's to get the parent's own cost. Updates for different
-sessions arrive at different times, and a child can report no cost. To show
-what a session and its descendants cost, a Client shows that session's cost.
-
-For example, a parent reports USD 1.20, its child reports USD 0.30, and that
-child's own child reports USD 0.10. The parent's USD 1.20 includes the child's
-USD 0.30, which includes the USD 0.10. The whole tree's cost is USD 1.20. A
-Client does not show USD 1.60 as the combined cost, or USD 0.90 as the
-parent's own cost.
+For example, a parent reports USD 1.20, its child USD 0.30, and that child's
+own child USD 0.10. Each amount includes the ones below it, so the whole tree
+cost USD 1.20, not USD 1.60.
 
 This RFD adds no field for a session's own cost. A future usage extension can
-add one. Amounts in different currencies are not added without conversion.
-Context-window usage remains local to each session and is not summed across
-the tree.
+add one.
 
 ### Subagents in ACP v2
 
@@ -1458,11 +1443,9 @@ implementation of child routing or the replay freshness boundary.
 - Lose a child's activity feed while ACP stays connected: report `unknown`
   without inventing an outcome, and accept later state for the same child.
 - Report costs for a parent, a child, and a grandchild, plus a second child
-  that reports no cost. Verify that each reported cost includes the known
-  costs of that session's descendants, that a child cost learned after the
-  parent's turn ends reaches a later parent update, and that a Client shows a
-  session's cost as the cost of its subtree without adding or subtracting
-  child values.
+  that reports no cost. Verify that each reported cost includes its
+  descendants' costs once their work stops, and that a Client shows a
+  session's cost as the cost of its subtree without adding child costs to it.
 
 ## Frequently asked questions
 
@@ -1710,7 +1693,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
-- 2026-11-17: A session's cost covers its own work and all its descendants' costs, in both versions. Clients show a session's cost as the cost of its subtree and do not add or subtract child costs.
+- 2026-11-17: A session's cost includes its descendants' costs, in both versions. Clients show a session's cost as the cost of its subtree and do not add child costs to it.
 - 2026-11-17: Agents **SHOULD** reject a Client-initiated request that is not permitted for a child with `-32602`, in both versions.
 - 2026-11-17: The v1 rules are on the v1 draft [Subagents](/protocol/v1/draft/subagents) page. The v1 draft pages link to it instead of to this RFD.
 - 2026-11-17: Added to the scope of the v2 Preview. The v2 rules are on the

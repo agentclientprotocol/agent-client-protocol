@@ -539,15 +539,12 @@ For example, `root` owns `coordinator`, which owns `worker`, and only `worker` i
 
 ## Usage and cost
 
-A child reports its context window usage and cost with [`usage_update`](/protocol/v1/draft/prompt-turn#session-usage-updates) on its own `sessionId`. Cost reporting stays optional.
+A child reports its context window usage and cost with [`usage_update`](/protocol/v1/draft/prompt-turn#session-usage-updates) on its own `sessionId`. Cost reporting stays optional for parents and children.
 
-When a session has child sessions, its cost covers its own work and the work of all its descendants: its children, their children, and so on. This includes model calls the Agent makes for any of them, such as compaction, and subagents it does not expose as child sessions. A root session's cost is the cost of its whole tree.
+When a session has child sessions, its cost includes the costs of its descendants: its children, their children, and so on. A root session's cost is the Agent's total for the whole tree. A descendant's cost can reach its ancestors later, for example once the descendant's work stops.
 
-- When an Agent reports a session's cost, the amount **MUST** include every descendant cost known to the Agent. A descendant cost that the Agent learns later, for example from a background child that finishes after the parent's prompt turn ends, goes into a later `usage_update` for each ancestor.
-- A child without a reported cost has an unknown cost, not zero. Its ancestors' costs can still include it.
-- Agents **MUST NOT** derive a child's cost from incomplete token counts or by splitting an ancestor's cost.
-- Clients **MUST NOT** add a session's cost to an ancestor's, because the ancestor's cost already includes it. They also **MUST NOT** subtract child costs from a parent's to get the parent's own cost. Updates for different sessions arrive at different times, and a child can report no cost.
-- To show what a session and its descendants cost, a Client shows that session's cost.
+- A child without a reported cost has an unknown cost, not zero.
+- Clients **MUST NOT** add a child's cost to an ancestor's, because the ancestor's cost already includes it. To show what a session and its descendants cost, a Client shows that session's cost.
 - Context window usage belongs to each session and is not summed across sessions.
 
-For example, a parent reports USD 1.20, its child reports USD 0.30, and that child's own child reports USD 0.10. The parent's USD 1.20 includes the child's USD 0.30, which includes the USD 0.10. The whole tree's cost is USD 1.20. A Client does not show USD 1.60 as the combined cost, or USD 0.90 as the parent's own cost.
+For example, a parent reports USD 1.20, its child USD 0.30, and that child's own child USD 0.10. Each amount includes the ones below it, so the whole tree cost USD 1.20, not USD 1.60.
