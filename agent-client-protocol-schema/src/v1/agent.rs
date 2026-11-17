@@ -7118,46 +7118,42 @@ pub enum ClientRequest {
     ExtMethodRequest(ExtRequest),
 }
 
-impl ClientRequest {
-    /// Returns the corresponding method name of the request.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::InitializeRequest(_) => AGENT_METHOD_NAMES.initialize,
-            Self::AuthenticateRequest(_) => AGENT_METHOD_NAMES.authenticate,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
-            Self::LogoutRequest(_) => AGENT_METHOD_NAMES.logout,
-            #[cfg(feature = "unstable_auth_status")]
-            Self::AuthStatusRequest(_) => AGENT_METHOD_NAMES.auth_status,
-            Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
-            Self::LoadSessionRequest(_) => AGENT_METHOD_NAMES.session_load,
-            Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
-            Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
-            #[cfg(feature = "unstable_session_fork")]
-            Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
-            #[cfg(feature = "unstable_session_archive")]
-            Self::ArchiveSessionRequest(_) => AGENT_METHOD_NAMES.session_archive,
-            #[cfg(feature = "unstable_session_archive")]
-            Self::UnarchiveSessionRequest(_) => AGENT_METHOD_NAMES.session_unarchive,
-            #[cfg(feature = "unstable_session_status")]
-            Self::SessionStatusRequest(_) => AGENT_METHOD_NAMES.session_status,
-            #[cfg(feature = "unstable_session_options")]
-            Self::SessionOptionsRequest(_) => AGENT_METHOD_NAMES.session_options,
-            #[cfg(feature = "unstable_session_set_title")]
-            Self::SetSessionTitleRequest(_) => AGENT_METHOD_NAMES.session_set_title,
-            Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
-            Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
-            Self::SetSessionModeRequest(_) => AGENT_METHOD_NAMES.session_set_mode,
-            Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
-            Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
-            Self::ExtMethodRequest(ext_request) => &ext_request.method,
-        }
+impl_request_dispatch! {
+    ClientRequest => AgentResponse {
+        InitializeRequest => InitializeResponse: AGENT_METHOD_NAMES.initialize,
+        AuthenticateRequest => AuthenticateResponse: AGENT_METHOD_NAMES.authenticate,
+        #[cfg(feature = "unstable_llm_providers")]
+        ListProvidersRequest => ListProvidersResponse: AGENT_METHOD_NAMES.providers_list,
+        #[cfg(feature = "unstable_llm_providers")]
+        SetProviderRequest => SetProviderResponse: AGENT_METHOD_NAMES.providers_set,
+        #[cfg(feature = "unstable_llm_providers")]
+        DisableProviderRequest => DisableProviderResponse: AGENT_METHOD_NAMES.providers_disable,
+        LogoutRequest => LogoutResponse: AGENT_METHOD_NAMES.logout,
+        #[cfg(feature = "unstable_auth_status")]
+        AuthStatusRequest => AuthStatusResponse: AGENT_METHOD_NAMES.auth_status,
+        NewSessionRequest => NewSessionResponse: AGENT_METHOD_NAMES.session_new,
+        LoadSessionRequest => LoadSessionResponse: AGENT_METHOD_NAMES.session_load,
+        ListSessionsRequest => ListSessionsResponse: AGENT_METHOD_NAMES.session_list,
+        DeleteSessionRequest => DeleteSessionResponse: AGENT_METHOD_NAMES.session_delete,
+        #[cfg(feature = "unstable_session_fork")]
+        ForkSessionRequest => ForkSessionResponse: AGENT_METHOD_NAMES.session_fork,
+        #[cfg(feature = "unstable_session_archive")]
+        ArchiveSessionRequest => ArchiveSessionResponse: AGENT_METHOD_NAMES.session_archive,
+        #[cfg(feature = "unstable_session_archive")]
+        UnarchiveSessionRequest => UnarchiveSessionResponse: AGENT_METHOD_NAMES.session_unarchive,
+        #[cfg(feature = "unstable_session_status")]
+        SessionStatusRequest => SessionStatusResponse: AGENT_METHOD_NAMES.session_status,
+        #[cfg(feature = "unstable_session_options")]
+        SessionOptionsRequest => SessionOptionsResponse: AGENT_METHOD_NAMES.session_options,
+        #[cfg(feature = "unstable_session_set_title")]
+        SetSessionTitleRequest => SetSessionTitleResponse: AGENT_METHOD_NAMES.session_set_title,
+        ResumeSessionRequest => ResumeSessionResponse: AGENT_METHOD_NAMES.session_resume,
+        CloseSessionRequest => CloseSessionResponse: AGENT_METHOD_NAMES.session_close,
+        SetSessionModeRequest => SetSessionModeResponse: AGENT_METHOD_NAMES.session_set_mode,
+        SetSessionConfigOptionRequest => SetSessionConfigOptionResponse: AGENT_METHOD_NAMES.session_set_config_option,
+        PromptRequest => PromptResponse: AGENT_METHOD_NAMES.session_prompt,
     }
+    extension ExtMethodRequest(ExtRequest) => ExtMethodResponse;
 }
 
 /// All possible responses that an agent can send to a client.
@@ -7272,17 +7268,13 @@ pub enum ClientNotification {
     ExtNotification(ExtNotification),
 }
 
-impl ClientNotification {
-    /// Returns the corresponding method name of the notification.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::CancelNotification(_) => AGENT_METHOD_NAMES.session_cancel,
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpNotification(_) => AGENT_METHOD_NAMES.mcp_message,
-            Self::ExtNotification(ext_notification) => &ext_notification.method,
-        }
+impl_message_dispatch! {
+    ClientNotification {
+        CancelNotification => AGENT_METHOD_NAMES.session_cancel,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        MessageMcpNotification => AGENT_METHOD_NAMES.mcp_message,
     }
+    extension ExtNotification(ExtNotification);
 }
 
 /// Notification to cancel ongoing operations for a session.

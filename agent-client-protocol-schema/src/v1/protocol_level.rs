@@ -105,12 +105,8 @@ pub enum ProtocolLevelNotification {
     CancelRequestNotification(CancelRequestNotification),
 }
 
-impl ProtocolLevelNotification {
-    /// Returns the corresponding method name of the notification.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::CancelRequestNotification(..) => PROTOCOL_LEVEL_METHOD_NAMES.cancel_request,
-        }
+impl_message_dispatch! {
+    ProtocolLevelNotification {
+        CancelRequestNotification => PROTOCOL_LEVEL_METHOD_NAMES.cancel_request,
     }
 }

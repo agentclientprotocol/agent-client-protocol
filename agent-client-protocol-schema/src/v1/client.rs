@@ -5124,25 +5124,21 @@ pub enum AgentRequest {
     ExtMethodRequest(ExtRequest),
 }
 
-impl AgentRequest {
-    /// Returns the corresponding method name of the request.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::WriteTextFileRequest(_) => CLIENT_METHOD_NAMES.fs_write_text_file,
-            Self::ReadTextFileRequest(_) => CLIENT_METHOD_NAMES.fs_read_text_file,
-            Self::RequestPermissionRequest(_) => CLIENT_METHOD_NAMES.session_request_permission,
-            Self::CreateTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_create,
-            Self::TerminalOutputRequest(_) => CLIENT_METHOD_NAMES.terminal_output,
-            Self::ReleaseTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_release,
-            Self::WaitForTerminalExitRequest(_) => CLIENT_METHOD_NAMES.terminal_wait_for_exit,
-            Self::KillTerminalRequest(_) => CLIENT_METHOD_NAMES.terminal_kill,
-            Self::CreateElicitationRequest(_) => CLIENT_METHOD_NAMES.elicitation_create,
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpRequest(_) => CLIENT_METHOD_NAMES.mcp_message,
-            Self::ExtMethodRequest(ext_request) => &ext_request.method,
-        }
+impl_request_dispatch! {
+    AgentRequest => ClientResponse {
+        WriteTextFileRequest => WriteTextFileResponse: CLIENT_METHOD_NAMES.fs_write_text_file,
+        ReadTextFileRequest => ReadTextFileResponse: CLIENT_METHOD_NAMES.fs_read_text_file,
+        RequestPermissionRequest => RequestPermissionResponse: CLIENT_METHOD_NAMES.session_request_permission,
+        CreateTerminalRequest => CreateTerminalResponse: CLIENT_METHOD_NAMES.terminal_create,
+        TerminalOutputRequest => TerminalOutputResponse: CLIENT_METHOD_NAMES.terminal_output,
+        ReleaseTerminalRequest => ReleaseTerminalResponse: CLIENT_METHOD_NAMES.terminal_release,
+        WaitForTerminalExitRequest => WaitForTerminalExitResponse: CLIENT_METHOD_NAMES.terminal_wait_for_exit,
+        KillTerminalRequest => KillTerminalResponse: CLIENT_METHOD_NAMES.terminal_kill,
+        CreateElicitationRequest => CreateElicitationResponse: CLIENT_METHOD_NAMES.elicitation_create,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        MessageMcpRequest => MessageMcpResponse: CLIENT_METHOD_NAMES.mcp_message,
     }
+    extension ExtMethodRequest(ExtRequest) => ExtMethodResponse;
 }
 
 /// All possible responses that a client can send to an agent.
@@ -5230,18 +5226,14 @@ pub enum AgentNotification {
     ExtNotification(ExtNotification),
 }
 
-impl AgentNotification {
-    /// Returns the corresponding method name of the notification.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::SessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
-            Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
-            #[cfg(feature = "unstable_auth_status")]
-            Self::AuthStatusUpdateNotification(_) => CLIENT_METHOD_NAMES.auth_status_update,
-            Self::ExtNotification(ext_notification) => &ext_notification.method,
-        }
+impl_message_dispatch! {
+    AgentNotification {
+        SessionNotification => CLIENT_METHOD_NAMES.session_update,
+        CompleteElicitationNotification => CLIENT_METHOD_NAMES.elicitation_complete,
+        #[cfg(feature = "unstable_auth_status")]
+        AuthStatusUpdateNotification => CLIENT_METHOD_NAMES.auth_status_update,
     }
+    extension ExtNotification(ExtNotification);
 }
 
 #[cfg(test)]
