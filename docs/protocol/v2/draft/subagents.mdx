@@ -489,12 +489,12 @@ A resume with replay replays the parent's history as [Replay contents](/protocol
 
 ## Usage and cost
 
-A child reports its context window usage and cost with [`usage_update`](/protocol/v2/draft/prompt-lifecycle#session-usage-updates) on its own `sessionId`. Cost reporting stays optional, and exposing subagents does not change what a session's reported cost covers.
+A child reports its context window usage and cost with [`usage_update`](/protocol/v2/draft/prompt-lifecycle#session-usage-updates) on its own `sessionId`. Cost reporting stays optional for parents and children.
 
-- A parent's cost can already include its children's work. Child costs can overlap the parent's.
-- A missing child cost is unknown, not zero.
-- Agents **MUST NOT** derive an exclusive parent or child amount from incomplete token counts or from an aggregate total.
-- Clients **MUST NOT** add parent and child costs into a total for the tree, or subtract them to get exclusive costs. They can show each session's latest reported value.
+When a session has child sessions, its cost includes the costs of its descendants: its children, their children, and so on. A root session's cost is the Agent's total for the whole tree. A descendant's cost can reach its ancestors later, for example once the descendant's work stops.
+
+- A child without a reported cost has an unknown cost, not zero.
+- Clients **MUST NOT** add a child's cost to an ancestor's, because the ancestor's cost already includes it. To show what a session and its descendants cost, a Client shows that session's cost.
 - Context window usage belongs to each session and is not summed across sessions.
 
-For example, a parent's reported USD 1.20 may already include a child's USD 0.30. A Client can show both values. It does not show USD 1.50 as the combined cost.
+For example, a parent reports USD 1.20, its child USD 0.30, and that child's own child USD 0.10. Each amount includes the ones below it, so the whole tree cost USD 1.20, not USD 1.60.

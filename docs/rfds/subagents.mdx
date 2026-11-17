@@ -280,7 +280,7 @@ addressed to its own session ID:
 | The child's own conversation title        | Child-addressed `session_info_update`                                                                                |
 | Model, reasoning level, and other options | Child-addressed `config_option_update`; see [Child configuration](#child-configuration)                              |
 | Current work state                        | See [Current work state](#current-work-state)                                                                        |
-| Plan, token usage, and cost               | Child-addressed `plan` and `usage_update`; see [Cost reporting](#cost-reporting-without-inferred-aggregation)        |
+| Plan, token usage, and cost               | Child-addressed `plan` and `usage_update`; see [Cost](#cost-covers-descendant-sessions)                              |
 
 In v1, an Agent that still uses legacy session modes may report a child's
 current mode with a child-addressed `current_mode_update`. As with
@@ -1202,37 +1202,30 @@ response. There is no new child-termination barrier that requires every
 outstanding request in a reusable session to resolve before reporting work
 state.
 
-### Cost reporting without inferred aggregation
+### Cost covers descendant sessions
 
-Exposing child sessions does not make existing `usage_update.cost` values
-exclusive or additive. Cost reporting remains optional. An Agent may continue
-reporting the provider's cumulative cost for the parent session even when it
-includes child work or internal helper calls. Exposing subagents does not
-require changing that accounting scope, producing an exclusive breakdown, or
-discarding a useful inclusive total.
+When a session has child sessions, its `usage_update.cost` includes the costs
+of its descendants: its children, their children, and so on. A root session's
+cost is the Agent's total for the whole tree. A descendant's cost can reach its
+ancestors later, for example once the descendant's work stops. A session
+without children reports its own cost as before, so this changes nothing for
+v1 Agents that do not announce children. See
+[Why does a session's cost include its descendants?](#why-does-a-sessions-cost-include-its-descendants)
 
-Child costs remain optional and may overlap the parent's reported cost.
-Missing child cost is unknown, not zero. Agents **MUST NOT** fabricate an
-exclusive parent or child amount from incomplete token counts or an aggregate
-total.
+Cost reporting remains optional for parents and children. A child without a
+reported cost has an unknown cost, not zero.
 
-Clients **MUST NOT** infer a combined tree total by adding parent and child
-values, or infer exclusive costs by subtracting them, unless a separate
-accounting contract establishes their coverage and how any overlap is handled.
-Clients may display each session's latest reported cumulative value without
-claiming an accounting scope that has not been established. Successive
-cumulative updates and repeated messages to a session are not additional costs.
+Clients **MUST NOT** add a child's cost to an ancestor's, because the
+ancestor's cost already includes it. To show what a session and its
+descendants cost, a Client shows that session's cost. Context-window usage
+remains local to each session and is not summed across the tree.
 
-For example, a parent's reported USD 1.20 may already include a child's USD
-0.30. Both values can be shown, but the Client must not synthesize USD 1.50 as
-the combined cost from the session tree alone. A missing cost for another child
-does not invalidate the provider's USD 1.20 report.
+For example, a parent reports USD 1.20, its child USD 0.30, and that child's
+own child USD 0.10. Each amount includes the ones below it, so the whole tree
+cost USD 1.20, not USD 1.60.
 
-This RFD adds no cost-scope field or accounting negotiation. A future usage
-extension can define explicit inclusive/exclusive breakdowns where available.
-Amounts in different currencies must not be added without conversion under
-such an accounting contract. Context-window usage remains local to each session
-and is not summed across the tree.
+This RFD adds no field for a session's own cost. A future usage extension can
+add one.
 
 ### Subagents in ACP v2
 
@@ -1365,8 +1358,9 @@ or that the existing adapters already implement this revision.
   `toolUseID`, `stopTask(taskId)`, and child transcript APIs such as
   `listSubagents` and `getSubagentMessages`. Adapters may need to correlate
   these IDs where their scopes differ from ACP conversation identity.
-  Permission callbacks can precede spawn metadata. Query cost totals may
-  already include child and internal work.
+  Permission callbacks can precede spawn metadata. The query's
+  `total_cost_usd` already includes subagent and internal calls, so it fits
+  the root session's cost.
 - **Codex 0.156.1:** thread/turn identifiers, thread status and approval/input
   wait flags, `turn/interrupt(threadId, turnId)`, and thread history support
   the corresponding mapping. The server
@@ -1448,9 +1442,10 @@ implementation of child routing or the replay freshness boundary.
   Client attach/subscribe request or universal after-response hook is required.
 - Lose a child's activity feed while ACP stays connected: report `unknown`
   without inventing an outcome, and accept later state for the same child.
-- Report an inclusive parent cost with missing or overlapping child costs:
-  retain the parent report and do not synthesize a tree total or exclusive
-  shares from the message traffic.
+- Report costs for a parent, a child, and a grandchild, plus a second child
+  that reports no cost. Verify that each reported cost includes its
+  descendants' costs once their work stops, and that a Client shows a
+  session's cost as the cost of its subtree without adding child costs to it.
 
 ## Frequently asked questions
 
@@ -1656,6 +1651,24 @@ from existing context. This RFD covers Agent-created sessions with a parent
 relationship and restricted Client controls. An Agent may use a fork
 internally to implement a subagent, but the wire semantics are different.
 
+### Why does a session's cost include its descendants?
+
+Most Agents that delegate to subagents already report a session total that
+includes them. As of November 2026, Claude Code's `total_cost_usd`, Gemini CLI
+and Copilot CLI session usage, Goose, Crush, Kilo, Cline's CLI, and the
+OpenHands SDK all include subagent work. They keep one ledger for the whole
+tree, add a child's cost when it finishes, or sum the session tree when they
+read the total. Where a displayed total left subagents out, users reported it
+as a bug. Codex, Zed, and Mistral Vibe report each thread separately, and Vibe
+still applies its budgets across the tree.
+
+The Agent is also the only party that sees every billed call. Compaction,
+title generation, classifiers, and subagents the Agent does not expose all
+cost money, so a Client that adds up child sessions still undercounts. A
+Client that adds child costs to an inclusive parent counts them twice. A
+session's own cost, without its descendants, is left to a future usage
+extension.
+
 ### What alternative approaches did you consider, and why did you settle on this one?
 
 - Put a `subagentId` on every existing update. This would duplicate routing
@@ -1680,6 +1693,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-17: A session's cost includes its descendants' costs, in both versions. Clients show a session's cost as the cost of its subtree and do not add child costs to it.
 - 2026-11-17: Agents **SHOULD** reject a Client-initiated request that is not permitted for a child with `-32602`, in both versions.
 - 2026-11-17: The v1 rules are on the v1 draft [Subagents](/protocol/v1/draft/subagents) page. The v1 draft pages link to it instead of to this RFD.
 - 2026-11-17: Added to the scope of the v2 Preview. The v2 rules are on the
