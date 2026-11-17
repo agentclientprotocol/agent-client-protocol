@@ -433,7 +433,9 @@ snapshot, after any requested replay. Resume does not imply idle, and Agents
 See [Current-State Synchronization](/protocol/v2/session-setup#current-state-synchronization)
 and the [transition table and lifecycle examples](/protocol/v2/prompt-lifecycle#state-transitions).
 
-The v1 stop reasons (`end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled`) are unchanged. They just moved from the `session/prompt` response to the idle `state_update` and describe why foreground work stopped.
+The v1 stop reasons (`end_turn`, `max_tokens`, `max_turn_requests`, `refusal`, `cancelled`) keep their names. They moved from the `session/prompt` response to the idle `state_update` and describe why foreground work stopped.
+
+`refusal` lost one meaning. The v1 schema said that the user prompt and everything after it would not be included in the next prompt, and that the UI should show this. In v2, `refusal` only reports that the Agent refused to continue. The idle update names no message, and foreground work can cover no user message or several, so a Client does not remove or mark messages because of it.
 
 v2 adds the `error` stop reason. v1 reported a failure during the turn as an error response to the pending `session/prompt`. In v2, once the user message is inserted, a failure ends foreground work with an idle `state_update` whose `stopReason` is `error` and whose optional `error` field carries the same JSON-RPC error object. An error response to `session/prompt` now always means the message was not inserted. See [Failures](/protocol/v2/prompt-lifecycle#failures).
 
@@ -978,7 +980,7 @@ See [Errors](/protocol/v2/error).
 3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
 5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, exit state, command subjects, structured diffs, and child session announcements, routing, and resume.
-6. **Stop reasons.** Model the idle update's stop reason as a union tagged by `stopReason` and flattened into the update, so a stop reason can carry fields of its own, such as the `error` stop reason's `error`. Keep unknown stop reasons with their fields, and treat a missing, `null`, or non-string `stopReason` as no stop reason rather than rejecting the update.
+6. **Stop reasons.** Don't remove or mark the user's message on `refusal`. Model the idle update's stop reason as a union tagged by `stopReason` and flattened into the update, so a stop reason can carry fields of its own, such as the `error` stop reason's `error`. Keep unknown stop reasons with their fields, and treat a missing, `null`, or non-string `stopReason` as no stop reason rather than rejecting the update.
 
 ## Supporting v1 and v2 side by side
 
