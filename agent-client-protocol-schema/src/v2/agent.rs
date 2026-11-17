@@ -20,6 +20,11 @@ use super::{
 };
 use crate::{IntoOption, ProtocolVersion};
 
+#[cfg(all(
+    feature = "unstable_session_fork",
+    feature = "unstable_session_cursors"
+))]
+use super::CursorId;
 #[cfg(feature = "unstable_session_status")]
 use super::StateUpdate;
 
@@ -1528,6 +1533,21 @@ impl NewSessionResponse {
 pub struct ForkSessionRequest {
     /// The ID of the session to fork.
     pub session_id: SessionId,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The session cursor to fork at. The new session's history is the source
+    /// session's history before the cursor.
+    ///
+    /// Optional. Omitted and `null` are equivalent and fork the whole session.
+    /// Clients MUST only send the ID of a cursor that the Agent announced on the
+    /// source session and that currently advertises `capabilities.fork`. The Agent
+    /// rejects any other ID with `-32602`. It does not fall back to forking the
+    /// whole session.
+    #[cfg(feature = "unstable_session_cursors")]
+    #[serde(default)]
+    pub cursor_id: Option<CursorId>,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: AbsolutePath,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -1595,6 +1615,8 @@ impl ForkSessionRequest {
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             session_id: session_id.into(),
+            #[cfg(feature = "unstable_session_cursors")]
+            cursor_id: None,
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
@@ -1603,6 +1625,21 @@ impl ForkSessionRequest {
             config_options: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The session cursor to fork at. Omitting it forks the whole session.
+    ///
+    /// Clients MUST only send the ID of a cursor that the Agent announced on the
+    /// source session and that currently advertises `capabilities.fork`.
+    #[cfg(feature = "unstable_session_cursors")]
+    #[must_use]
+    pub fn cursor_id(mut self, cursor_id: impl IntoOption<CursorId>) -> Self {
+        self.cursor_id = cursor_id.into_option();
+        self
     }
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -10696,6 +10733,49 @@ mod test_serialization {
         assert_eq!(
             serde_json::to_value(&notification).unwrap(),
             json!({"state": "unauthenticated"})
+        );
+    }
+
+    #[cfg(all(
+        feature = "unstable_session_fork",
+        feature = "unstable_session_cursors"
+    ))]
+    #[test]
+    fn fork_session_request_cursor_id_is_optional_and_strict() {
+        let request = ForkSessionRequest::new("sess_abc123", "/home/user/project")
+            .cursor_id(CursorId::new("cur_1"));
+        let wire = json!({
+            "sessionId": "sess_abc123",
+            "cursorId": "cur_1",
+            "cwd": "/home/user/project"
+        });
+        assert_eq!(serde_json::to_value(&request).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<ForkSessionRequest>(wire).unwrap(),
+            request
+        );
+
+        // Omitted and `null` both fork the whole session.
+        for wire in [
+            json!({ "sessionId": "sess_abc123", "cwd": "/home/user/project" }),
+            json!({ "sessionId": "sess_abc123", "cwd": "/home/user/project", "cursorId": null }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<ForkSessionRequest>(wire)
+                    .unwrap()
+                    .cursor_id,
+                None
+            );
+        }
+
+        // A malformed cursor ID fails the request. It never forks the whole session.
+        assert!(
+            serde_json::from_value::<ForkSessionRequest>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "cursorId": 7
+            }))
+            .is_err()
         );
     }
 }

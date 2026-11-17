@@ -149,6 +149,13 @@ capability.
 
 [Prompt suggestions](/protocol/v1/draft/prompt-turn#prompt-suggestions-unstable) are not conversation history and **SHOULD NOT** be replayed. A loaded session starts with an empty list of suggestions. After loading finishes, the Agent may send a new `prompt_suggestions_update`, subject to the Client's `session.promptSuggestions` capability.
 
+Unstable [session cursors](/protocol/v1/draft/prompt-turn#session-cursors-unstable) are part of the replayed history, subject to the Client's `session.cursors` capability:
+
+- The Agent **SHOULD** send a `cursor_update` for each cursor in the loaded history that it still accepts. A replayed update carries the cursor's `capabilities` and `anchor`, like a first update, and follows the replayed entity it is anchored to.
+- Agents **SHOULD** use the same `cursorId` for the same position in every load.
+- A load rebuilds the session's cursors. The Client **SHOULD** discard the cursors it held for the session and build them again from the replayed `cursor_update` notifications.
+- Message IDs need not stay the same across a load, so the Client does not match a replayed anchor to an entity it held before.
+
 For example, a user message from the conversation history:
 
 ```json

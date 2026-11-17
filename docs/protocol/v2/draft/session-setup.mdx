@@ -320,6 +320,13 @@ mention. When the Client may already hold metadata for an entity, the Agent
 removes stale keys by setting them to `null`, or sends `_meta: null` before the
 current object.
 
+Replay also reports unstable [session cursors](/protocol/v2/draft/prompt-lifecycle#session-cursors-unstable):
+
+- When an Agent replays history, it **SHOULD** send a `cursor_update` for each cursor in that history that it still accepts. A replayed update carries the cursor's `capabilities` and `anchor`, like a first update, and follows the replayed entity it is anchored to.
+- Agents **SHOULD** use the same `cursorId` for the same position in every replay.
+- A full replay rebuilds the session's cursors, like its other entities. The Client **SHOULD** discard the cursors it held for the session and build them again from the replayed `cursor_update` notifications. A replayed cursor can carry a different anchor than it had before, for example when a `messageId` changed across the replay.
+- A resume without replay announces no cursors for earlier history. The cursors the Client already holds stay usable.
+
 When all requested replay entries have been reported to the Client, the Agent
 **MUST** send [`replay_complete`](#replay-complete), synchronize current state
 as described below, then respond to the original `session/resume` request.
