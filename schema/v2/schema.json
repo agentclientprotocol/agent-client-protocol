@@ -1559,11 +1559,12 @@
       "type": "object",
       "properties": {
         "changes": {
-          "description": "Structured file changes described by this diff.\n\nClients can use this field without parsing patch text to determine affected paths.",
+          "description": "Structured file changes described by this diff. Agents MUST include at least one entry.\n\nClients can use this field without parsing patch text to determine affected paths.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/DiffChange"
           },
+          "minItems": 1,
           "x-deserialize-skip-invalid-items": true
         },
         "patch": {
