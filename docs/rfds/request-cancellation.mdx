@@ -197,12 +197,13 @@ This ensures clients always receive meaningful responses and prevents race condi
 
 Implementations can propagate cancellation to nested activities and outstanding child requests, and clean up resources associated with cancelled work. For requests sent to the other party, they can send `$/cancel_request` using each child request's ID. This is explicit implementation behavior, not an automatic or mandatory cascade, and the receiving party may still complete a request normally.
 
-Each outstanding request still requires a response. Where a feature defines its own cancellation semantics, those semantics apply: for example, `session/cancel` requires the Client to answer pending `session/request_permission` requests with the `cancelled` outcome, regardless of whether the Agent sends `$/cancel_request`.
+Each outstanding request still requires a response. Where a feature defines its own cancellation semantics, those semantics apply: for example, v1 `session/cancel` requires the Client to answer pending `session/request_permission` requests with the `cancelled` outcome, regardless of whether the Agent sends `$/cancel_request`. In v2, the Agent stops waiting for those requests and cancels them with `$/cancel_request`.
 
 See the protocol's [v1 prompt turn cancellation](/protocol/v1/prompt-turn#cancellation) and [v2 active session work cancellation](/protocol/v2/prompt-lifecycle#cancellation) rules for the Agent's cleanup and completion obligations.
 
 ## Revision history
 
+- 2026-11-17: Noted that the Client's duty to answer pending permission requests on `session/cancel` is v1 only.
 - 2026-06-29: Moved to Completed and stabilized request cancellation in the protocol artifacts.
 - 2026-06-24: Move to Preview stage
 - 2025-12-09: Mirror LSP behavior.

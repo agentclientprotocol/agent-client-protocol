@@ -117,7 +117,7 @@ That RFD already lets live child traffic proceed during a replay when later repl
 
 No marker means that the replay of every session is complete. The successful response does, because the Agent sends all history selected for the replay before it.
 
-The markers do not move the freshness boundary of that RFD. Child work state and capabilities that arrive before the response stay historical.
+A `subagent_update` is an update for the parent session, so the parent's marker is the freshness boundary for a child's work state and capabilities. Those in a replayed `subagent_update` are historical. Those in a `subagent_update` after the parent's marker are current. The Client still waits for the successful response before it sends `session/cancel` for a child. In v1 the response stays the boundary, as that RFD defines.
 
 ### Replay cursors
 
@@ -167,7 +167,7 @@ The ordering rule of (a) gives the benefit of (b) without its costs.
 **(c) The response first, then the history.**
 
 - A success response no longer certifies the history, so the Client still needs an end marker. This is (a) with a reordered response.
-- It breaks the freshness boundary of the [Subagent Sessions RFD](../subagents.mdx#reconnection-and-replay).
+- It broke the freshness boundary that the [Subagent Sessions RFD](../subagents.mdx#reconnection-and-replay) defined at the time, which was the response.
 - A prompt could interleave with the history in one stream.
 - The slow Agent work still comes before the session is usable.
 
@@ -191,7 +191,7 @@ Clients rely on the response as the point where the session is active. Some Agen
 
 ### What does the Client do with updates after `replay_complete` but before the response?
 
-They are not replay. The Client applies them as it does after a resume without replay. The subagent freshness rules apply until the response.
+They are not replay. The Client applies them as it does after a resume without replay. It still sends `session/cancel` for a child only after the response succeeds.
 
 ### Why does each child session get its own marker?
 
@@ -223,6 +223,7 @@ Not in this RFD. v1 `session/load` has the same gap, but the v1 `SessionUpdate` 
 
 ## Revision history
 
+- 2026-11-17: In v2, the parent's marker is the freshness boundary for a child's work state and capabilities. Before, it was the response. `subagent_update` is in the stable v2 schema, so the child session rules are on the stable [Session Setup](/protocol/v2/session-setup#child-sessions) and [Subagents](/protocol/v2/subagents#resuming) pages.
 - 2026-11-13: Steps 1 and 2 landed. `replay_complete` is in the v2 schema as `SessionUpdate::ReplayComplete`, without a separate feature flag, like the other v2 RFDs. The rules are in the v2 [Session Setup](/protocol/v2/session-setup#replay-complete) page. The child session rules are in its draft copy, because `subagent_update` is still unstable.
 - 2026-11-13: Narrowed to v2 and moved into the v2 RFD collection. Added the `state_update` snapshot and v1 questions. Removed the guidance on when Clients render history. Gave each replayed child session its own marker.
 - 2026-10-16: Initial draft.
