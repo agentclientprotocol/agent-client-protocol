@@ -58,7 +58,7 @@ Some methods already define what a repeat does. `session/close` is idempotent, `
 
 ### Give every method a retry class
 
-Each method's documentation states one of four classes:
+The overview page states one of four classes for each method:
 
 | Class       | Meaning                                                                                                                          | Retry rule                                                                                              |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -260,7 +260,7 @@ Both runtimes store an ID that the adapter chooses with each user message, and b
 ### Plan
 
 1. Add an optional, nullable `idempotencyKey` to `PromptRequest` in the v2 schema, as an `IdempotencyKey` string type with a length of 1 to 255. Keep it strict: a malformed value fails with `-32602`.
-2. Document the retry classes in the v2 overview and on each method's page, and add the keyed-prompt rules to the prompt lifecycle, session setup, and transport pages. Replace the "outcome remains uncertain" paragraph in the prompt lifecycle with the keyed behavior.
+2. Document the retry classes in one table on the v2 overview page, and add the keyed-prompt rules to the prompt lifecycle, session setup, and transport pages. Replace the "outcome remains uncertain" paragraph in the prompt lifecycle with the keyed behavior.
 3. Add serialization and schema coverage for a valid key, `null`, an empty string, a string over 255 characters, and a non-string value.
 4. Exercise these traces in SDK tests and conformance suites: a retry on the same connection, a retry after `session/resume` on a new connection, a retry after an Agent restart with a stored session, a retry while the prompt is held, a retry after an error, the same key in another session, and a retry of a prompt that was inserted during active work.
 5. Have Client SDKs generate keys by default, and give Agent SDKs a helper that records keys for a session.
@@ -335,6 +335,7 @@ This RFD doesn't change v1. A v1 `session/prompt` response arrives at the end of
 
 ## Revision history
 
+- 2026-11-17: The retry classes and the class of each method are documented in one table on the overview page, not on each method's page.
 - 2026-11-17: An Agent may insert or discard held prompts when the connection that sent them ends. Withdrawing a held prompt with `$/cancel_request` is best effort. `session/cancel` and `session/close` are the guaranteed ways to drop one.
 - 2026-11-17: Steps 1 and 3 landed. `idempotencyKey` and the `IdempotencyKey` type are in the v2 schema, and a malformed key fails deserialization. From step 2, the keyed-prompt rules are on the prompt lifecycle, session setup, and transports pages. The retry classes are not on the method pages yet.
 - 2026-11-13: Initial draft.

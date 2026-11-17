@@ -42,7 +42,7 @@ sequenceDiagram
 
 To end the connection, the Client closes the Agent's `stdin`. The Agent treats end of input as the end of the connection: its sessions stop being [active](/protocol/v2/session-setup#session-lifecycle), and it **SHOULD** exit once it has finished or stopped its work. If the Agent does not exit within a reasonable time, the Client **MAY** terminate the process, for example with `SIGTERM` and then `SIGKILL`.
 
-When the connection ends, either side treats requests it sent that have no response as failed. A failed request may still have taken effect. A Client can send a `session/prompt` again on a new connection with the same `idempotencyKey`. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).
+When the connection ends, either side treats requests it sent that have no response as failed. A failed request may still have taken effect. [Retrying requests](/protocol/v2/overview#retrying-requests) lists which requests can be sent again. A Client can send a `session/prompt` again on a new connection with the same `idempotencyKey`. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).
 
 ## Message timing
 
