@@ -203,6 +203,49 @@ Clients provide the interface between users and agents. They are typically code 
 
 Either side can send [`$/cancel_request`](/protocol/v2/cancellation) to cancel a request it sent (no response expected).
 
+## Retrying requests
+
+When a response is lost, for example because the connection ended, the sender cannot tell whether the request took effect. Each method has one of four retry classes:
+
+| Class       | Meaning                                                                                                                          | Retry rule                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender may send it again as is. The response reports current state.                                 |
+| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client may send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
+| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client may send it again. If the first request also took effect, what it created is left unused.    |
+| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.             |
+
+Requests the Client sends:
+
+| Method                                | Class       | Sending it again with the same parameters                                                                                                                                                                      |
+| ------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize`                          | Not retried | The Client can repeat it before its first other request, and the latest successful one applies. It is not sent again after that. See [Version negotiation](/protocol/v2/initialization#version-negotiation).   |
+| `auth/login`                          | Idempotent  | Leads to the same authenticated state. The Agent may show the user a second login flow.                                                                                                                        |
+| `auth/logout`                         | Idempotent  | Succeeds when the authenticated state has already ended.                                                                                                                                                       |
+| `session/new`                         | Duplicating | Creates a second session. If the first response was lost, the Client never learned that session's ID. The Agent [may discard](/protocol/v2/session-setup#session-lifecycle) a session that was never prompted. |
+| `session/resume`                      | Idempotent  | Synchronizes the session again. The request's MCP servers and workspace roots replace the previous ones, which are the same on a retry.                                                                        |
+| `session/prompt`                      | Keyed       | Without a key, inserts a second user message and may start the work twice. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).                                                           |
+| `session/set_config_option`           | Idempotent  | Sets the same value and returns the complete current options. A retry sent after a later change to the same option overwrites that change, so Clients retry before sending further changes.                    |
+| `session/list`                        | Idempotent  | Read-only.                                                                                                                                                                                                     |
+| `session/close`                       | Idempotent  | Succeeds.                                                                                                                                                                                                      |
+| `session/delete`                      | Idempotent  | Succeeds. A Client treats `-32002` as a successful delete.                                                                                                                                                     |
+| `tool_call/cancel`, `terminal/cancel` | Idempotent  | Has no second effect. Once the tool call is final or the terminal has exited, the retry gets `-32602`, and the `tool_call_update` or `terminal_update` reports what happened.                                  |
+
+Requests the Agent sends:
+
+| Method                       | Class      | Sending it again with the same parameters                                                                                                                                                                                                                               |
+| ---------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session/request_permission` | Idempotent | The Client shows the request again. The response is the user's decision, and the action it allows stays with the Agent. After the connection is lost, the Agent [reestablishes or resolves](/protocol/v2/session-setup#current-state-synchronization) pending requests. |
+| `elicitation/create`         | Idempotent | The same as `session/request_permission`. A URL-mode request carries an `elicitationId` that links the completion notification.                                                                                                                                         |
+
+Notifications:
+
+| Method                 | Class       | Sending it again with the same parameters                                                                                                                                                                        |
+| ---------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session/cancel`       | Not retried | Does nothing on an idle session. A copy that arrives after new work has started cancels that work, so the Client does not send it again later.                                                                   |
+| `$/cancel_request`     | Not retried | Receivers ignore a request ID that is unknown or already answered.                                                                                                                                               |
+| `session/update`       | Not retried | Upserts replace state by entity ID, but chunks append, so a resent chunk duplicates content. A Client that missed updates requests replay with [`session/resume`](/protocol/v2/session-setup#resuming-sessions). |
+| `elicitation/complete` | Not retried | Reports the same state again.                                                                                                                                                                                    |
+
 ## Argument requirements
 
 - All file paths in the protocol **MUST** be absolute, in the native syntax of the machine the Agent runs on (for example `/home/user/project`, `C:\Users\user\project`, or `\\server\share\project`), and are not URIs.

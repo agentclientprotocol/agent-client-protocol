@@ -411,7 +411,7 @@ The [foreground lifecycle](#foreground-and-background-work) applies independentl
 
 #### Retrying a prompt
 
-A Client that never receives the response to a `session/prompt` request cannot tell whether the message was inserted. To be able to send the request again, the Client includes an `idempotencyKey`:
+A Client that never receives the response to a `session/prompt` request cannot tell whether the message was inserted. `session/prompt` is the one [keyed](/protocol/v2/overview#retrying-requests) method. To be able to send the request again, the Client includes an `idempotencyKey`:
 
 ```json
 {
