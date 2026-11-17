@@ -10161,6 +10161,17 @@
           },
           "minItems": 1
         },
+        "idempotencyKey": {
+          "description": "Identifies this submission, so the Client can send the request again without the\nuser message being inserted twice.\n\nOptional. Omitted and `null` are equivalent and mean no key. The Agent then handles\nthe prompt without duplicate detection.\n\nThe Client generates the key and sends the same key on every attempt for the same\nsubmission. The Agent inserts at most one user message for a key in a session, and\nanswers a retry with the `messageId` of the message it already inserted. Agents that\nadvertise `capabilities.session` MUST support the key.\n\nWhen present, the value is an opaque, case-sensitive string of 1 to 255 characters.\nAgents MUST reject any other value with `-32602` (Invalid params) and MUST NOT treat\nit as omitted.\n\nSee protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#retrying-a-prompt)",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IdempotencyKey"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -10171,6 +10182,12 @@
       "required": ["sessionId", "prompt"],
       "x-side": "agent",
       "x-method": "session/prompt"
+    },
+    "IdempotencyKey": {
+      "description": "A key the Client generates to identify one `session/prompt` submission across attempts.\n\nThe key is an opaque, case-sensitive string of 1 to 255 characters. It is scoped to the\nsession named by the request's `sessionId`.\n\nSee protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#retrying-a-prompt)",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
     },
     "ClientResponse": {
       "description": "A JSON-RPC response object.",

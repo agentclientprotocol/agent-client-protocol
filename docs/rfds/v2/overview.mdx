@@ -74,6 +74,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Add the `cancelled` status for tool calls and plan entries.
 - Add [background work](./background-work.mdx): a `paused` tool call status, opt-in `capabilities.cancel` on tool calls and terminals with `tool_call/cancel` and `terminal/cancel`, and a `background` list on state snapshots.
 - Add the [`replay_complete`](./session-replay-complete.mdx) session update, which marks the end of the history replay requested by `session/resume`. A resume that ends without it delivered a truncated replay.
+- Add an optional [`idempotencyKey`](./idempotency-keys.mdx) to `session/prompt`. Agents that advertise `capabilities.session` insert at most one user message for a key in a session and answer a retry with the original `messageId`. They reject a malformed key with `-32602`.
 - Allow initial `configOptions` and `availableCommands` in `session/new` and `session/resume` responses, and add `type` discriminators to commands (`command`) and command input (`text`).
 - Reject `initialize` with `-32022` (Unsupported protocol version) when no supported version is at or below the requested one, with the requested and supported versions in the error data.
 - Require a `type` discriminator on `session/set_config_option` values, and rename the config option `group` field to `groupId`.
@@ -133,6 +134,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-17: Added `idempotencyKey` on `session/prompt` to the change list now that it is in the v2 schema.
 - 2026-11-13: Added the v2 Idempotency Keys RFD for retry classes on every method and an optional `idempotencyKey` on `session/prompt`.
 - 2026-11-13: Added the `replay_complete` session update to the change list now that it is in the v2 schema.
 - 2026-11-13: Added the v2 Replay Complete Signal RFD for a `replay_complete` update that marks the end of history replay on `session/resume`.

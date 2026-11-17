@@ -58,6 +58,9 @@
 //! Consumers that only need serialization can disable default features to omit
 //! the dependency and those trait implementations.
 //!
+//! The `uuid` feature adds `IdempotencyKey::generate` to the `v2` module, which
+//! creates a key from a random UUID. It is off by default.
+//!
 //! ## Versioning
 //!
 //! Stable protocol types are exposed through explicit version modules. For
@@ -75,6 +78,13 @@ pub mod v1;
 #[cfg(feature = "unstable_protocol_v2")]
 pub mod v2;
 mod version;
+
+// The `uuid` feature only adds API to the `v2` module. With `uuid` on and
+// `unstable_protocol_v2` off, the dependency is enabled and nothing uses it.
+// That combination is valid, so reference the crate to say so. Remove this
+// once the `v2` module is no longer behind `unstable_protocol_v2`.
+#[cfg(all(feature = "uuid", not(feature = "unstable_protocol_v2")))]
+use uuid as _;
 
 pub use dispatch::MethodDispatchError;
 pub use serde_util::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
