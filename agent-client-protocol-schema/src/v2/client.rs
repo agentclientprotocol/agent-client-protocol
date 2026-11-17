@@ -5249,18 +5249,14 @@ pub enum AgentRequest {
     ExtMethodRequest(Box<ExtRequest>),
 }
 
-impl AgentRequest {
-    /// Returns the corresponding method name of the request.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::RequestPermissionRequest(_) => CLIENT_METHOD_NAMES.session_request_permission,
-            Self::CreateElicitationRequest(_) => CLIENT_METHOD_NAMES.elicitation_create,
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpRequest(_) => CLIENT_METHOD_NAMES.mcp_message,
-            Self::ExtMethodRequest(ext_request) => &ext_request.method,
-        }
+impl_request_dispatch! {
+    AgentRequest => ClientResponse {
+        RequestPermissionRequest => RequestPermissionResponse: CLIENT_METHOD_NAMES.session_request_permission,
+        CreateElicitationRequest => CreateElicitationResponse: CLIENT_METHOD_NAMES.elicitation_create,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        MessageMcpRequest => MessageMcpResponse: CLIENT_METHOD_NAMES.mcp_message,
     }
+    extension ExtMethodRequest(Box<ExtRequest>) => ExtMethodResponse;
 }
 
 /// All possible responses that a client can send to an agent.
@@ -5334,18 +5330,14 @@ pub enum AgentNotification {
     ExtNotification(Box<ExtNotification>),
 }
 
-impl AgentNotification {
-    /// Returns the corresponding method name of the notification.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::UpdateSessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
-            Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
-            #[cfg(feature = "unstable_auth_status")]
-            Self::AuthStatusUpdateNotification(_) => CLIENT_METHOD_NAMES.auth_status_update,
-            Self::ExtNotification(ext_notification) => &ext_notification.method,
-        }
+impl_message_dispatch! {
+    AgentNotification {
+        UpdateSessionNotification => CLIENT_METHOD_NAMES.session_update,
+        CompleteElicitationNotification => CLIENT_METHOD_NAMES.elicitation_complete,
+        #[cfg(feature = "unstable_auth_status")]
+        AuthStatusUpdateNotification => CLIENT_METHOD_NAMES.auth_status_update,
     }
+    extension ExtNotification(Box<ExtNotification>);
 }
 
 #[cfg(test)]
