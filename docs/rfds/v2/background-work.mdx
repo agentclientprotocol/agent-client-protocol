@@ -78,7 +78,7 @@ Clients **SHOULD** show `in_progress` as active, for example with a spinner, `pe
 
 Status transitions:
 
-- Statuses never go back to `pending`. When a scheduled tool call fires, the work it triggers is new foreground work, not the tool call running:
+- An Agent does not move a tool call back to `pending`. When a scheduled tool call fires, the work it triggers is new foreground work, not the tool call running:
   - A scheduled wakeup goes `pending` → `completed` when it fires.
   - A recurring cron job stays `pending` until the job is deleted or the session closes, then becomes `completed` or `cancelled`.
 - `in_progress` and `paused` may alternate any number of times. A paused tool call reaches a final status when it is cancelled, fails, or is discarded.
@@ -348,7 +348,7 @@ The list exists for work the user can reason about: something the user or the mo
 
 ### Why add `paused` instead of using `pending` or `_meta`?
 
-`pending` means work that will start without anyone acting on it, and statuses never go back to it. Paused work has already run, keeps its state, and will not continue until something resumes it. Claude Code pauses workflows this way. A paused item also needs different treatment from a running one: a Client can show the session as not busy while still warning that closing will discard the paused work. Putting the status in `_meta` would hide that from every Client that does not know the agent's extension.
+`pending` means work that will start without anyone acting on it, and an Agent does not move a tool call back to it. Paused work has already run, keeps its state, and will not continue until something resumes it. Claude Code pauses workflows this way. A paused item also needs different treatment from a running one: a Client can show the session as not busy while still warning that closing will discard the paused work. Putting the status in `_meta` would hide that from every Client that does not know the agent's extension.
 
 This RFD does not add Client-initiated pause or resume. If agents expose those controls, they can be added later as `pause` and `resume` capabilities next to `cancel`.
 
@@ -380,6 +380,7 @@ Not in this RFD. The `background` list belongs on the session-level `state_updat
 
 ## Revision history
 
+- 2026-11-17: Worded the status rules as rules for the Agent. An Agent does not move a tool call back to `pending`, including with `status: null`, and does not change a final status. A Client applies each `tool_call_update` as an upsert, so it shows the latest status it received.
 - 2026-11-17: On `session/cancel`, the Agent **MUST** send `$/cancel_request` for each pending permission request it stops waiting for. This was a SHOULD. The Agent still decides which requests belong to the cancelled work, and requests for listed work stay open. A Client that receives `$/cancel_request` for a pending permission request or elicitation **SHOULD** dismiss the prompt and answer with the cancellation result. Clients **SHOULD** dismiss permission prompts for a closed session.
 - 2026-11-09: An Agent that knows a tool call's work continues in the background keeps that tool call open and lists it. Background work without a tool call to report it on, or whose tool call already has a final status, is reported on a tool call the Agent starts itself. Final statuses stay final. This replaces vendor-specific list items such as the earlier `_claude/task` in `claude-agent-acp`. The tool call and prompt lifecycle pages say that an Agent may report tool calls the model did not request, and that work continuing after a final status gets a new tool call.
 

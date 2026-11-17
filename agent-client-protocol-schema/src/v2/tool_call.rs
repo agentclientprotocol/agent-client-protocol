@@ -69,7 +69,8 @@ pub struct ToolCallUpdate {
     /// Current execution status of the tool call.
     ///
     /// Omission leaves the status unchanged, `null` resets it to `pending`, and a value
-    /// replaces it. A new tool call starts as `pending`.
+    /// replaces it. A new tool call starts as `pending`. Agents do not move a tool call
+    /// back to `pending` once it has another status.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]

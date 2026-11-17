@@ -359,7 +359,7 @@
           "x-deserialize-default-on-error": true
         },
         "status": {
-          "description": "Current execution status of the tool call.\n\nOmission leaves the status unchanged, `null` resets it to `pending`, and a value\nreplaces it. A new tool call starts as `pending`.",
+          "description": "Current execution status of the tool call.\n\nOmission leaves the status unchanged, `null` resets it to `pending`, and a value\nreplaces it. A new tool call starts as `pending`. Agents do not move a tool call\nback to `pending` once it has another status.",
           "anyOf": [
             {
               "$ref": "#/$defs/ToolCallStatus"
