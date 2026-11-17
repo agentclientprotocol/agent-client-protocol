@@ -223,7 +223,6 @@
                   "rfds/v2/idempotency-keys"
                 ]
               },
-              "rfds/plan-operations",
               "rfds/end-turn-token-usage",
               "rfds/get-auth-state",
               "rfds/session-status",
@@ -233,12 +232,13 @@
               "rfds/speed-config-category",
               "rfds/prompt-suggestions",
               "rfds/agent-skills",
+              "rfds/session-cursors",
               "rfds/go-sdk"
             ]
           },
           {
             "group": "Preview",
-            "pages": ["rfds/subagents"]
+            "pages": ["rfds/plan-operations", "rfds/subagents"]
           },
           {
             "group": "Completed",

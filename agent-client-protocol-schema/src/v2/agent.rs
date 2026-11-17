@@ -20,6 +20,11 @@ use super::{
 };
 use crate::{IntoOption, ProtocolVersion};
 
+#[cfg(all(
+    feature = "unstable_session_fork",
+    feature = "unstable_session_cursors"
+))]
+use super::CursorId;
 #[cfg(feature = "unstable_session_status")]
 use super::StateUpdate;
 
@@ -1528,6 +1533,21 @@ impl NewSessionResponse {
 pub struct ForkSessionRequest {
     /// The ID of the session to fork.
     pub session_id: SessionId,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The session cursor to fork at. The new session's history is the source
+    /// session's history before the cursor.
+    ///
+    /// Optional. Omitted and `null` are equivalent and fork the whole session.
+    /// Clients MUST only send the ID of a cursor that the Agent announced on the
+    /// source session and that currently advertises `capabilities.fork`. The Agent
+    /// rejects any other ID with `-32602`. It does not fall back to forking the
+    /// whole session.
+    #[cfg(feature = "unstable_session_cursors")]
+    #[serde(default)]
+    pub cursor_id: Option<CursorId>,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: AbsolutePath,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -1595,6 +1615,8 @@ impl ForkSessionRequest {
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             session_id: session_id.into(),
+            #[cfg(feature = "unstable_session_cursors")]
+            cursor_id: None,
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
@@ -1603,6 +1625,21 @@ impl ForkSessionRequest {
             config_options: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The session cursor to fork at. Omitting it forks the whole session.
+    ///
+    /// Clients MUST only send the ID of a cursor that the Agent announced on the
+    /// source session and that currently advertises `capabilities.fork`.
+    #[cfg(feature = "unstable_session_cursors")]
+    #[must_use]
+    pub fn cursor_id(mut self, cursor_id: impl IntoOption<CursorId>) -> Self {
+        self.cursor_id = cursor_id.into_option();
+        self
     }
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -7925,46 +7962,42 @@ pub enum ClientRequest {
     ExtMethodRequest(Box<ExtRequest>),
 }
 
-impl ClientRequest {
-    /// Returns the corresponding method name of the request.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::InitializeRequest(_) => AGENT_METHOD_NAMES.initialize,
-            Self::LoginAuthRequest(_) => AGENT_METHOD_NAMES.auth_login,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
-            Self::LogoutAuthRequest(_) => AGENT_METHOD_NAMES.auth_logout,
-            #[cfg(feature = "unstable_auth_status")]
-            Self::AuthStatusRequest(_) => AGENT_METHOD_NAMES.auth_status,
-            Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
-            Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
-            Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
-            #[cfg(feature = "unstable_session_fork")]
-            Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
-            #[cfg(feature = "unstable_session_archive")]
-            Self::ArchiveSessionRequest(_) => AGENT_METHOD_NAMES.session_archive,
-            #[cfg(feature = "unstable_session_archive")]
-            Self::UnarchiveSessionRequest(_) => AGENT_METHOD_NAMES.session_unarchive,
-            #[cfg(feature = "unstable_session_status")]
-            Self::SessionStatusRequest(_) => AGENT_METHOD_NAMES.session_status,
-            #[cfg(feature = "unstable_session_options")]
-            Self::SessionOptionsRequest(_) => AGENT_METHOD_NAMES.session_options,
-            #[cfg(feature = "unstable_session_set_title")]
-            Self::SetSessionTitleRequest(_) => AGENT_METHOD_NAMES.session_set_title,
-            Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
-            Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
-            Self::CancelToolCallRequest(_) => AGENT_METHOD_NAMES.tool_call_cancel,
-            Self::CancelTerminalRequest(_) => AGENT_METHOD_NAMES.terminal_cancel,
-            Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
-            Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
-            Self::ExtMethodRequest(ext_request) => &ext_request.method,
-        }
+impl_request_dispatch! {
+    ClientRequest => AgentResponse {
+        InitializeRequest => InitializeResponse: AGENT_METHOD_NAMES.initialize,
+        LoginAuthRequest => LoginAuthResponse: AGENT_METHOD_NAMES.auth_login,
+        #[cfg(feature = "unstable_llm_providers")]
+        ListProvidersRequest => ListProvidersResponse: AGENT_METHOD_NAMES.providers_list,
+        #[cfg(feature = "unstable_llm_providers")]
+        SetProviderRequest => SetProviderResponse: AGENT_METHOD_NAMES.providers_set,
+        #[cfg(feature = "unstable_llm_providers")]
+        DisableProviderRequest => DisableProviderResponse: AGENT_METHOD_NAMES.providers_disable,
+        LogoutAuthRequest => LogoutAuthResponse: AGENT_METHOD_NAMES.auth_logout,
+        #[cfg(feature = "unstable_auth_status")]
+        AuthStatusRequest => AuthStatusResponse: AGENT_METHOD_NAMES.auth_status,
+        NewSessionRequest => NewSessionResponse: AGENT_METHOD_NAMES.session_new,
+        ListSessionsRequest => ListSessionsResponse: AGENT_METHOD_NAMES.session_list,
+        DeleteSessionRequest => DeleteSessionResponse: AGENT_METHOD_NAMES.session_delete,
+        #[cfg(feature = "unstable_session_fork")]
+        ForkSessionRequest => ForkSessionResponse: AGENT_METHOD_NAMES.session_fork,
+        #[cfg(feature = "unstable_session_archive")]
+        ArchiveSessionRequest => ArchiveSessionResponse: AGENT_METHOD_NAMES.session_archive,
+        #[cfg(feature = "unstable_session_archive")]
+        UnarchiveSessionRequest => UnarchiveSessionResponse: AGENT_METHOD_NAMES.session_unarchive,
+        #[cfg(feature = "unstable_session_status")]
+        SessionStatusRequest => SessionStatusResponse: AGENT_METHOD_NAMES.session_status,
+        #[cfg(feature = "unstable_session_options")]
+        SessionOptionsRequest => SessionOptionsResponse: AGENT_METHOD_NAMES.session_options,
+        #[cfg(feature = "unstable_session_set_title")]
+        SetSessionTitleRequest => SetSessionTitleResponse: AGENT_METHOD_NAMES.session_set_title,
+        ResumeSessionRequest => ResumeSessionResponse: AGENT_METHOD_NAMES.session_resume,
+        CloseSessionRequest => CloseSessionResponse: AGENT_METHOD_NAMES.session_close,
+        CancelToolCallRequest => CancelToolCallResponse: AGENT_METHOD_NAMES.tool_call_cancel,
+        CancelTerminalRequest => CancelTerminalResponse: AGENT_METHOD_NAMES.terminal_cancel,
+        SetSessionConfigOptionRequest => SetSessionConfigOptionResponse: AGENT_METHOD_NAMES.session_set_config_option,
+        PromptRequest => PromptResponse: AGENT_METHOD_NAMES.session_prompt,
     }
+    extension ExtMethodRequest(Box<ExtRequest>) => ExtMethodResponse;
 }
 
 /// All possible responses that an agent can send to a client.
@@ -8096,17 +8129,13 @@ pub enum ClientNotification {
     ExtNotification(Box<ExtNotification>),
 }
 
-impl ClientNotification {
-    /// Returns the corresponding method name of the notification.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::CancelSessionNotification(_) => AGENT_METHOD_NAMES.session_cancel,
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpNotification(_) => AGENT_METHOD_NAMES.mcp_message,
-            Self::ExtNotification(ext_notification) => &ext_notification.method,
-        }
+impl_message_dispatch! {
+    ClientNotification {
+        CancelSessionNotification => AGENT_METHOD_NAMES.session_cancel,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        MessageMcpNotification => AGENT_METHOD_NAMES.mcp_message,
     }
+    extension ExtNotification(Box<ExtNotification>);
 }
 
 #[cfg(test)]
@@ -10696,6 +10725,49 @@ mod test_serialization {
         assert_eq!(
             serde_json::to_value(&notification).unwrap(),
             json!({"state": "unauthenticated"})
+        );
+    }
+
+    #[cfg(all(
+        feature = "unstable_session_fork",
+        feature = "unstable_session_cursors"
+    ))]
+    #[test]
+    fn fork_session_request_cursor_id_is_optional_and_strict() {
+        let request = ForkSessionRequest::new("sess_abc123", "/home/user/project")
+            .cursor_id(CursorId::new("cur_1"));
+        let wire = json!({
+            "sessionId": "sess_abc123",
+            "cursorId": "cur_1",
+            "cwd": "/home/user/project"
+        });
+        assert_eq!(serde_json::to_value(&request).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<ForkSessionRequest>(wire).unwrap(),
+            request
+        );
+
+        // Omitted and `null` both fork the whole session.
+        for wire in [
+            json!({ "sessionId": "sess_abc123", "cwd": "/home/user/project" }),
+            json!({ "sessionId": "sess_abc123", "cwd": "/home/user/project", "cursorId": null }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<ForkSessionRequest>(wire)
+                    .unwrap()
+                    .cursor_id,
+                None
+            );
+        }
+
+        // A malformed cursor ID fails the request. It never forks the whole session.
+        assert!(
+            serde_json::from_value::<ForkSessionRequest>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "cursorId": 7
+            }))
+            .is_err()
         );
     }
 }

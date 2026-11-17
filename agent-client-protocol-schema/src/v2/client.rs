@@ -171,6 +171,16 @@ pub enum SessionUpdate {
     /// the `session.promptSuggestions` Client capability.
     #[cfg(feature = "unstable_prompt_suggestions")]
     PromptSuggestionsUpdate(PromptSuggestionsUpdate),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// A session cursor has been announced or its capabilities have changed.
+    ///
+    /// No Client capability is required. Clients that do not understand
+    /// cursors may ignore this update.
+    #[cfg(feature = "unstable_session_cursors")]
+    CursorUpdate(CursorUpdate),
     /// Announces a child session created and owned by this session, or updates
     /// that ownership association's metadata.
     SubagentUpdate(SubagentUpdate),
@@ -894,6 +904,564 @@ impl CompactionSummaryChunk {
     }
 }
 
+// Session cursors
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Unique identifier for a session cursor within a session.
+///
+/// The Agent generates it, and it is never reused for another position in the
+/// session. Clients MUST NOT parse, change, or construct it.
+///
+/// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+#[cfg(feature = "unstable_session_cursors")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
+#[serde(transparent)]
+#[from(forward)]
+#[non_exhaustive]
+pub struct CursorId(pub Arc<str>);
+
+#[cfg(feature = "unstable_session_cursors")]
+impl CursorId {
+    /// Wraps a protocol string as a typed [`CursorId`].
+    #[must_use]
+    pub fn new(id: impl Into<Self>) -> Self {
+        id.into()
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A session cursor upsert. A cursor names one position in the session's timeline.
+///
+/// The first update for a `cursorId` MUST include `anchor`. The anchor is fixed
+/// after that, and later updates change only `capabilities`.
+///
+/// `capabilities` and `_meta` have patch semantics: omission leaves the stored
+/// value unchanged, `null` clears it, and an object replaces `capabilities` as a
+/// whole. A concrete `_meta` object patches the stored metadata by top-level key
+/// instead of replacing it.
+///
+/// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+#[cfg(feature = "unstable_session_cursors")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CursorUpdate {
+    /// The Agent-owned ID of this cursor, unique within the session.
+    pub cursor_id: CursorId,
+    /// The methods that currently accept this cursor.
+    ///
+    /// Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+    /// the whole previous value. A new cursor starts with none.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub capabilities: MaybeUndefined<CursorCapabilities>,
+    /// Where the cursor is, relative to an entity the Client holds.
+    ///
+    /// Required on the first update for a cursor. The Agent MUST NOT change it afterwards.
+    /// A later update can omit it or repeat the same anchor. Omitted and `null` are
+    /// equivalent and leave the stored anchor unchanged.
+    #[serde(default)]
+    pub anchor: Option<CursorAnchor>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+impl CursorUpdate {
+    /// Builds a cursor update with the anchor and patch fields omitted.
+    #[must_use]
+    pub fn new(cursor_id: impl Into<CursorId>) -> Self {
+        Self {
+            cursor_id: cursor_id.into(),
+            capabilities: MaybeUndefined::Undefined,
+            anchor: None,
+            meta: MaybeUndefined::Undefined,
+        }
+    }
+
+    /// Replaces, clears, or leaves unchanged the methods that accept this cursor.
+    #[must_use]
+    pub fn capabilities(
+        mut self,
+        capabilities: impl IntoMaybeUndefined<CursorCapabilities>,
+    ) -> Self {
+        self.capabilities = capabilities.into_maybe_undefined();
+        self
+    }
+
+    /// Sets the anchor. The first update for a cursor MUST carry one.
+    #[must_use]
+    pub fn anchor(mut self, anchor: impl IntoOption<CursorAnchor>) -> Self {
+        self.anchor = anchor.into_option();
+        self
+    }
+
+    /// Patches, clears, or leaves unchanged cursor metadata.
+    ///
+    /// A concrete object patches stored metadata by top-level key. See
+    /// [`apply_meta_update`](super::apply_meta_update).
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// The methods that currently accept a session cursor.
+///
+/// A malformed value falls back to no capabilities, so the Client never passes a
+/// cursor to a method the Agent did not advertise.
+///
+/// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+#[cfg(feature = "unstable_session_cursors")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CursorCapabilities {
+    /// Permits the Client to fork the session at this cursor with `session/fork`.
+    ///
+    /// Omitted and `null` are equivalent and mean unsupported. An object (including `{}`)
+    /// means supported.
+    #[cfg(feature = "unstable_session_fork")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub fork: Option<CursorForkCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+impl CursorCapabilities {
+    /// Builds an empty capability set. No method accepts the cursor.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Permits or stops permitting `session/fork` at this cursor.
+    #[cfg(feature = "unstable_session_fork")]
+    #[must_use]
+    pub fn fork(mut self, fork: impl IntoOption<CursorForkCapabilities>) -> Self {
+        self.fork = fork.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capability to fork the session at a cursor with `session/fork`.
+///
+/// Supplying `{}` advertises support. An omitted or `null` `fork` does not.
+#[cfg(all(
+    feature = "unstable_session_cursors",
+    feature = "unstable_session_fork"
+))]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct CursorForkCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(all(
+    feature = "unstable_session_cursors",
+    feature = "unstable_session_fork"
+))]
+impl CursorForkCapabilities {
+    /// Builds an empty capability object advertising fork support.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Where a session cursor is, relative to an entity the Client holds.
+///
+/// The anchor names the entity by its type and ID, and `position` says on which
+/// side of that entity the cursor is. A known `type` with a malformed payload is
+/// an error. It does not fall back to the unknown-type variant.
+///
+/// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+#[cfg(feature = "unstable_session_cursors")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum CursorAnchor {
+    /// The cursor is next to a user message.
+    UserMessage(CursorMessageAnchor),
+    /// The cursor is next to an agent message.
+    AgentMessage(CursorMessageAnchor),
+    /// The cursor is next to an agent thought.
+    AgentThought(CursorMessageAnchor),
+    /// The cursor is next to a session-directed message.
+    SessionMessage(CursorMessageAnchor),
+    /// The cursor is next to a tool call.
+    ToolCall(CursorToolCallAnchor),
+    /// The cursor is next to a compaction.
+    Compaction(CursorCompactionAnchor),
+    /// Custom or future anchor type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    ///
+    /// A Client that does not recognize the type cannot place the cursor and
+    /// MUST NOT guess a place for it.
+    #[serde(untagged)]
+    Other(OtherCursorAnchor),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// On which side of the anchored entity a session cursor is.
+#[cfg(feature = "unstable_session_cursors")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum CursorAnchorPosition {
+    /// The cursor is immediately before the entity. The history before the
+    /// cursor does not include the entity.
+    Before,
+    /// The cursor is immediately after the entity. The history before the
+    /// cursor includes the entity and nothing that follows it in the timeline.
+    After,
+    /// Custom or future position.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Other unknown values are reserved for future ACP positions.
+    /// A Client that does not recognize the value cannot place the cursor.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A session cursor anchor to a message. The anchor's `type` names the kind of message.
+#[cfg(feature = "unstable_session_cursors")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CursorMessageAnchor {
+    /// The ID of the anchored message.
+    pub message_id: MessageId,
+    /// On which side of the message the cursor is.
+    pub position: CursorAnchorPosition,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+impl CursorMessageAnchor {
+    /// Builds an anchor to a message without metadata.
+    #[must_use]
+    pub fn new(message_id: impl Into<MessageId>, position: CursorAnchorPosition) -> Self {
+        Self {
+            message_id: message_id.into(),
+            position,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A session cursor anchor to a tool call.
+#[cfg(feature = "unstable_session_cursors")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CursorToolCallAnchor {
+    /// The ID of the anchored tool call.
+    pub tool_call_id: ToolCallId,
+    /// On which side of the tool call the cursor is.
+    pub position: CursorAnchorPosition,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+impl CursorToolCallAnchor {
+    /// Builds an anchor to a tool call without metadata.
+    #[must_use]
+    pub fn new(tool_call_id: impl Into<ToolCallId>, position: CursorAnchorPosition) -> Self {
+        Self {
+            tool_call_id: tool_call_id.into(),
+            position,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// A session cursor anchor to a compaction.
+#[cfg(feature = "unstable_session_cursors")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CursorCompactionAnchor {
+    /// The ID of the anchored compaction.
+    pub compaction_id: CompactionId,
+    /// On which side of the compaction the cursor is.
+    pub position: CursorAnchorPosition,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+impl CursorCompactionAnchor {
+    /// Builds an anchor to a compaction without metadata.
+    #[must_use]
+    pub fn new(compaction_id: impl Into<CompactionId>, position: CursorAnchorPosition) -> Self {
+        Self {
+            compaction_id: compaction_id.into(),
+            position,
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Custom or future session cursor anchor payload.
+///
+/// This preserves the unknown `type` discriminator and the rest of the anchor
+/// object for implementations that store, replay, proxy, or forward cursors.
+#[cfg(feature = "unstable_session_cursors")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(inline))]
+#[cfg_attr(feature = "schemars", schemars(transform = other_cursor_anchor_schema))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct OtherCursorAnchor {
+    /// Custom or future anchor type.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(rename = "type")]
+    pub type_: String,
+    /// The remaining fields of the unknown anchor payload, preserved verbatim,
+    /// including `_meta`.
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+impl OtherCursorAnchor {
+    /// Builds [`OtherCursorAnchor`] from an unknown discriminator and preserves the remaining extension fields.
+    #[must_use]
+    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
+        fields.remove("type");
+        Self {
+            type_: type_.into(),
+            fields,
+        }
+    }
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+impl<'de> Deserialize<'de> for OtherCursorAnchor {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields
+            .remove("type")
+            .ok_or_else(|| serde::de::Error::missing_field("type"))?;
+        let serde_json::Value::String(type_) = type_ else {
+            return Err(serde::de::Error::custom("`type` must be a string"));
+        };
+
+        if KNOWN_CURSOR_ANCHOR_TYPES.contains(&type_.as_str()) {
+            return Err(serde::de::Error::custom(format!(
+                "known cursor anchor `{type_}` did not match its schema"
+            )));
+        }
+
+        Ok(Self { type_, fields })
+    }
+}
+
+#[cfg(feature = "unstable_session_cursors")]
+const KNOWN_CURSOR_ANCHOR_TYPES: &[&str] = &[
+    "user_message",
+    "agent_message",
+    "agent_thought",
+    "session_message",
+    "tool_call",
+    "compaction",
+];
+
+#[cfg(all(feature = "unstable_session_cursors", feature = "schemars"))]
+fn other_cursor_anchor_schema(schema: &mut Schema) {
+    super::schema_util::reject_known_string_discriminators(
+        schema,
+        "type",
+        KNOWN_CURSOR_ANCHOR_TYPES,
+    );
+}
+
 /// Marks the end of the history replay requested by `session/resume`.
 ///
 /// The Agent sends this once on a session for each `session/resume` request
@@ -1303,6 +1871,10 @@ fn is_known_session_update(session_update: &str) -> bool {
     if session_update == "prompt_suggestions_update" {
         return true;
     }
+    #[cfg(feature = "unstable_session_cursors")]
+    if session_update == "cursor_update" {
+        return true;
+    }
     if matches!(
         session_update,
         "subagent_update" | "session_message" | "session_message_chunk"
@@ -1360,6 +1932,8 @@ fn other_session_update_schema(schema: &mut Schema) {
             "replay_complete",
             #[cfg(feature = "unstable_prompt_suggestions")]
             "prompt_suggestions_update",
+            #[cfg(feature = "unstable_session_cursors")]
+            "cursor_update",
             "subagent_update",
             "session_message",
             "session_message_chunk",
@@ -4675,18 +5249,14 @@ pub enum AgentRequest {
     ExtMethodRequest(Box<ExtRequest>),
 }
 
-impl AgentRequest {
-    /// Returns the corresponding method name of the request.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::RequestPermissionRequest(_) => CLIENT_METHOD_NAMES.session_request_permission,
-            Self::CreateElicitationRequest(_) => CLIENT_METHOD_NAMES.elicitation_create,
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpRequest(_) => CLIENT_METHOD_NAMES.mcp_message,
-            Self::ExtMethodRequest(ext_request) => &ext_request.method,
-        }
+impl_request_dispatch! {
+    AgentRequest => ClientResponse {
+        RequestPermissionRequest => RequestPermissionResponse: CLIENT_METHOD_NAMES.session_request_permission,
+        CreateElicitationRequest => CreateElicitationResponse: CLIENT_METHOD_NAMES.elicitation_create,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        MessageMcpRequest => MessageMcpResponse: CLIENT_METHOD_NAMES.mcp_message,
     }
+    extension ExtMethodRequest(Box<ExtRequest>) => ExtMethodResponse;
 }
 
 /// All possible responses that a client can send to an agent.
@@ -4760,18 +5330,14 @@ pub enum AgentNotification {
     ExtNotification(Box<ExtNotification>),
 }
 
-impl AgentNotification {
-    /// Returns the corresponding method name of the notification.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::UpdateSessionNotification(_) => CLIENT_METHOD_NAMES.session_update,
-            Self::CompleteElicitationNotification(_) => CLIENT_METHOD_NAMES.elicitation_complete,
-            #[cfg(feature = "unstable_auth_status")]
-            Self::AuthStatusUpdateNotification(_) => CLIENT_METHOD_NAMES.auth_status_update,
-            Self::ExtNotification(ext_notification) => &ext_notification.method,
-        }
+impl_message_dispatch! {
+    AgentNotification {
+        UpdateSessionNotification => CLIENT_METHOD_NAMES.session_update,
+        CompleteElicitationNotification => CLIENT_METHOD_NAMES.elicitation_complete,
+        #[cfg(feature = "unstable_auth_status")]
+        AuthStatusUpdateNotification => CLIENT_METHOD_NAMES.auth_status_update,
     }
+    extension ExtNotification(Box<ExtNotification>);
 }
 
 #[cfg(test)]
@@ -7540,5 +8106,212 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[cfg(feature = "unstable_session_cursors")]
+    #[test]
+    fn cursor_updates_round_trip_and_patch_capabilities() {
+        use serde_json::json;
+
+        let update = SessionUpdate::CursorUpdate(
+            CursorUpdate::new("cur_1")
+                .capabilities(CursorCapabilities::new())
+                .anchor(CursorAnchor::UserMessage(CursorMessageAnchor::new(
+                    "msg_user_2",
+                    CursorAnchorPosition::Before,
+                ))),
+        );
+        let wire = json!({
+            "sessionUpdate": "cursor_update",
+            "cursorId": "cur_1",
+            "capabilities": {},
+            "anchor": { "type": "user_message", "messageId": "msg_user_2", "position": "before" }
+        });
+        assert_eq!(serde_json::to_value(&update).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<SessionUpdate>(wire).unwrap(),
+            update
+        );
+
+        // A later update can carry the ID alone. Nothing is changed.
+        let SessionUpdate::CursorUpdate(omitted) = serde_json::from_value(json!({
+            "sessionUpdate": "cursor_update",
+            "cursorId": "cur_1"
+        }))
+        .unwrap() else {
+            panic!("expected cursor update");
+        };
+        assert!(omitted.capabilities.is_undefined());
+        assert_eq!(omitted.anchor, None);
+        assert!(omitted.meta.is_undefined());
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::CursorUpdate(CursorUpdate::new("cur_1"))).unwrap(),
+            json!({ "sessionUpdate": "cursor_update", "cursorId": "cur_1" })
+        );
+
+        // `null` clears the capabilities. A `null` anchor is the same as an omitted one.
+        let SessionUpdate::CursorUpdate(cleared) = serde_json::from_value(json!({
+            "sessionUpdate": "cursor_update",
+            "cursorId": "cur_1",
+            "capabilities": null,
+            "anchor": null
+        }))
+        .unwrap() else {
+            panic!("expected cursor update");
+        };
+        assert!(cleared.capabilities.is_null());
+        assert_eq!(cleared.anchor, None);
+        assert_eq!(
+            serde_json::to_value(SessionUpdate::CursorUpdate(
+                CursorUpdate::new("cur_1").capabilities(None)
+            ))
+            .unwrap(),
+            json!({ "sessionUpdate": "cursor_update", "cursorId": "cur_1", "capabilities": null })
+        );
+    }
+
+    #[cfg(feature = "unstable_session_cursors")]
+    #[test]
+    fn cursor_anchors_cover_each_entity_type_and_preserve_unknown_ones() {
+        use serde_json::json;
+
+        for (anchor, wire) in [
+            (
+                CursorAnchor::AgentMessage(CursorMessageAnchor::new(
+                    "msg_agent_1",
+                    CursorAnchorPosition::After,
+                )),
+                json!({ "type": "agent_message", "messageId": "msg_agent_1", "position": "after" }),
+            ),
+            (
+                CursorAnchor::AgentThought(CursorMessageAnchor::new(
+                    "msg_agent_1",
+                    CursorAnchorPosition::After,
+                )),
+                json!({ "type": "agent_thought", "messageId": "msg_agent_1", "position": "after" }),
+            ),
+            (
+                CursorAnchor::SessionMessage(CursorMessageAnchor::new(
+                    "msg_session_1",
+                    CursorAnchorPosition::Before,
+                )),
+                json!({ "type": "session_message", "messageId": "msg_session_1", "position": "before" }),
+            ),
+            (
+                CursorAnchor::ToolCall(CursorToolCallAnchor::new(
+                    "call_1",
+                    CursorAnchorPosition::After,
+                )),
+                json!({ "type": "tool_call", "toolCallId": "call_1", "position": "after" }),
+            ),
+            (
+                CursorAnchor::Compaction(CursorCompactionAnchor::new(
+                    "cmp_1",
+                    CursorAnchorPosition::Before,
+                )),
+                json!({ "type": "compaction", "compactionId": "cmp_1", "position": "before" }),
+            ),
+        ] {
+            assert_eq!(serde_json::to_value(&anchor).unwrap(), wire);
+            assert_eq!(
+                serde_json::from_value::<CursorAnchor>(wire).unwrap(),
+                anchor
+            );
+        }
+
+        // An unknown anchor type keeps its payload.
+        let wire = json!({ "type": "_acme_marker", "markerId": "mk_1", "position": "after" });
+        let other = serde_json::from_value::<CursorAnchor>(wire.clone()).unwrap();
+        assert!(matches!(other, CursorAnchor::Other(_)));
+        assert_eq!(serde_json::to_value(&other).unwrap(), wire);
+
+        // An unknown position keeps its value.
+        let wire =
+            json!({ "type": "user_message", "messageId": "msg_user_2", "position": "inside" });
+        let future = serde_json::from_value::<CursorAnchor>(wire.clone()).unwrap();
+        assert_eq!(
+            future,
+            CursorAnchor::UserMessage(CursorMessageAnchor::new(
+                "msg_user_2",
+                CursorAnchorPosition::Other("inside".into()),
+            ))
+        );
+        assert_eq!(serde_json::to_value(&future).unwrap(), wire);
+    }
+
+    #[cfg(feature = "unstable_session_cursors")]
+    #[test]
+    fn malformed_cursor_anchor_fails_the_update() {
+        use serde_json::json;
+
+        // A wrong anchor would place the cursor somewhere else, so it is never defaulted.
+        for anchor in [
+            json!({ "type": "user_message", "position": "before" }),
+            json!({ "type": "tool_call", "toolCallId": 7, "position": "after" }),
+            json!({ "type": "compaction", "compactionId": "cmp_1" }),
+            json!({ "messageId": "msg_user_2", "position": "before" }),
+            json!("before"),
+        ] {
+            assert!(
+                serde_json::from_value::<SessionUpdate>(json!({
+                    "sessionUpdate": "cursor_update",
+                    "cursorId": "cur_1",
+                    "anchor": anchor
+                }))
+                .is_err(),
+                "{anchor}"
+            );
+        }
+        // A malformed known update does not fall back to the unknown-update variant.
+        assert!(
+            serde_json::from_value::<SessionUpdate>(json!({ "sessionUpdate": "cursor_update" }))
+                .is_err()
+        );
+    }
+
+    #[cfg(feature = "unstable_session_cursors")]
+    #[test]
+    fn malformed_cursor_capabilities_are_not_advertised() {
+        use serde_json::json;
+
+        // Malformed capabilities are treated as omitted. The update still parses.
+        let SessionUpdate::CursorUpdate(update) = serde_json::from_value(json!({
+            "sessionUpdate": "cursor_update",
+            "cursorId": "cur_1",
+            "capabilities": "fork"
+        }))
+        .unwrap() else {
+            panic!("expected cursor update");
+        };
+        assert!(update.capabilities.is_undefined());
+
+        // Capabilities this implementation does not know are ignored.
+        assert_eq!(
+            serde_json::from_value::<CursorCapabilities>(json!({ "futureMethod": {} })).unwrap(),
+            CursorCapabilities::new()
+        );
+
+        #[cfg(feature = "unstable_session_fork")]
+        {
+            assert_eq!(
+                serde_json::to_value(CursorCapabilities::new().fork(CursorForkCapabilities::new()))
+                    .unwrap(),
+                json!({ "fork": {} })
+            );
+            assert_eq!(
+                serde_json::from_value::<CursorCapabilities>(json!({ "fork": {} }))
+                    .unwrap()
+                    .fork,
+                Some(CursorForkCapabilities::new())
+            );
+            for fork in [json!(null), json!(true), json!("yes")] {
+                assert_eq!(
+                    serde_json::from_value::<CursorCapabilities>(json!({ "fork": fork }))
+                        .unwrap()
+                        .fork,
+                    None
+                );
+            }
+        }
     }
 }

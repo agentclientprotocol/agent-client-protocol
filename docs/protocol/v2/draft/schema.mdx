@@ -823,6 +823,21 @@ and SHOULD NOT send other `session/update` notifications caused by applying them
 before it responds.
 
 </ResponseField>
+<ResponseField name="cursorId" type={<><span><a href="#cursorid">CursorId</a></span><span> | null</span></>} >
+  **UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The session cursor to fork at. The new session's history is the source
+session's history before the cursor.
+
+Optional. Omitted and `null` are equivalent and fork the whole session.
+Clients MUST only send the ID of a cursor that the Agent announced on the
+source session and that currently advertises `capabilities.fork`. The Agent
+rejects any other ID with `-32602`. It does not fall back to forking the
+whole session.
+
+</ResponseField>
 <ResponseField name="cwd" type={<a href="#absolutepath">AbsolutePath</a>} required>
   The working directory for this session. Must be an absolute path.
 </ResponseField>
@@ -4468,6 +4483,435 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="currency" type={"string"} required>
   Unit of `amount`: an ISO 4217 currency code (e.g., "USD", "EUR") for money, or another
 unit such as "credits".
+</ResponseField>
+
+## <span class="font-mono">CursorAnchor</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Where a session cursor is, relative to an entity the Client holds.
+
+The anchor names the entity by its type and ID, and `position` says on which
+side of that entity the cursor is. A known `type` with a malformed payload is
+an error. It does not fall back to the unknown-type variant.
+
+See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+
+**Type:** Union
+
+<ResponseField name="user_message" type="object">
+The cursor is next to a user message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  The ID of the anchored message.
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the message the cursor is.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"user_message"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="agent_message" type="object">
+The cursor is next to an agent message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  The ID of the anchored message.
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the message the cursor is.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"agent_message"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="agent_thought" type="object">
+The cursor is next to an agent thought.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  The ID of the anchored message.
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the message the cursor is.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"agent_thought"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="session_message" type="object">
+The cursor is next to a session-directed message.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  The ID of the anchored message.
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the message the cursor is.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"session_message"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="tool_call" type="object">
+The cursor is next to a tool call.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the tool call the cursor is.
+</ResponseField>
+<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
+  The ID of the anchored tool call.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"tool_call"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="compaction" type="object">
+The cursor is next to a compaction.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="compactionId" type={<a href="#compactionid">CompactionId</a>} required>
+  The ID of the anchored compaction.
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the compaction the cursor is.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"compaction"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="other" type="object">
+Custom or future anchor type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+A Client that does not recognize the type cannot place the cursor and
+MUST NOT guess a place for it.
+
+<Expandable title="Properties">
+
+<ResponseField name="type" type={"string"} required>
+  Custom or future anchor type.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Unknown values that do not begin with `_` are reserved for
+future ACP variants.
+
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+## <span class="font-mono">CursorAnchorPosition</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+On which side of the anchored entity a session cursor is.
+
+**Type:** Union
+
+<ResponseField name="before" type="string">
+  The cursor is immediately before the entity. The history before the cursor
+  does not include the entity.
+</ResponseField>
+
+<ResponseField name="after" type="string">
+  The cursor is immediately after the entity. The history before the cursor
+  includes the entity and nothing that follows it in the timeline.
+</ResponseField>
+
+<ResponseField name="other" type="string">
+Custom or future position.
+
+Values beginning with `_` are reserved for implementation-specific
+extensions. Other unknown values are reserved for future ACP positions.
+A Client that does not recognize the value cannot place the cursor.
+
+</ResponseField>
+
+## <span class="font-mono">CursorCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+The methods that currently accept a session cursor.
+
+A malformed value falls back to no capabilities, so the Client never passes a
+cursor to a method the Agent did not advertise.
+
+See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="fork" type={<><span><a href="#cursorforkcapabilities">CursorForkCapabilities</a></span><span> | null</span></>} >
+  Permits the Client to fork the session at this cursor with `session/fork`.
+
+Omitted and `null` are equivalent and mean unsupported. An object (including `\{\}`)
+means supported.
+
+</ResponseField>
+
+## <span class="font-mono">CursorCompactionAnchor</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A session cursor anchor to a compaction.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="compactionId" type={<a href="#compactionid">CompactionId</a>} required>
+  The ID of the anchored compaction.
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the compaction the cursor is.
+</ResponseField>
+
+## <span class="font-mono">CursorForkCapabilities</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Capability to fork the session at a cursor with `session/fork`.
+
+Supplying `\{\}` advertises support. An omitted or `null` `fork` does not.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+
+## <span class="font-mono">CursorId</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+Unique identifier for a session cursor within a session.
+
+The Agent generates it, and it is never reused for another position in the
+session. Clients MUST NOT parse, change, or construct it.
+
+See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+
+**Type:** `string`
+
+## <span class="font-mono">CursorMessageAnchor</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A session cursor anchor to a message. The anchor's `type` names the kind of message.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="messageId" type={<a href="#messageid">MessageId</a>} required>
+  The ID of the anchored message.
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the message the cursor is.
+</ResponseField>
+
+## <span class="font-mono">CursorToolCallAnchor</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A session cursor anchor to a tool call.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+Implementations MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
+
+</ResponseField>
+<ResponseField name="position" type={<a href="#cursoranchorposition">CursorAnchorPosition</a>} required>
+  On which side of the tool call the cursor is.
+</ResponseField>
+<ResponseField name="toolCallId" type={<a href="#toolcallid">ToolCallId</a>} required>
+  The ID of the anchored tool call.
+</ResponseField>
+
+## <span class="font-mono">CursorUpdate</span>
+
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A session cursor upsert. A cursor names one position in the session's timeline.
+
+The first update for a `cursorId` MUST include `anchor`. The anchor is fixed
+after that, and later updates change only `capabilities`.
+
+`capabilities` and `_meta` have patch semantics: omission leaves the stored
+value unchanged, `null` clears it, and an object replaces `capabilities` as a
+whole. A concrete `_meta` object patches the stored metadata by top-level key
+instead of replacing it.
+
+See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
+
+</ResponseField>
+<ResponseField name="anchor" type={<><span><a href="#cursoranchor">CursorAnchor</a></span><span> | null</span></>} >
+  Where the cursor is, relative to an entity the Client holds.
+
+Required on the first update for a cursor. The Agent MUST NOT change it afterwards.
+A later update can omit it or repeat the same anchor. Omitted and `null` are
+equivalent and leave the stored anchor unchanged.
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#cursorcapabilities">CursorCapabilities</a></span><span> | null</span></>} >
+  The methods that currently accept this cursor.
+
+Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+the whole previous value. A new cursor starts with none.
+
+</ResponseField>
+<ResponseField name="cursorId" type={<a href="#cursorid">CursorId</a>} required>
+  The Agent-owned ID of this cursor, unique within the session.
 </ResponseField>
 
 ## <span class="font-mono">Diff</span>
@@ -10239,6 +10683,54 @@ Required and non-null. An empty list withdraws the suggestions the
 Client is offering. A Client skips an entry it cannot parse and keeps
 the rest.
 
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="cursor_update" type="object">
+**UNSTABLE**
+
+This capability is not part of the spec yet, and may be removed or changed at any point.
+
+A session cursor has been announced or its capabilities have changed.
+
+No Client capability is required. Clients that do not understand
+cursors may ignore this update.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT assign meaning to keys they do not recognize.
+
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/draft/extensibility#metadata-patches)
+
+</ResponseField>
+<ResponseField name="anchor" type={<><span><a href="#cursoranchor">CursorAnchor</a></span><span> | null</span></>} >
+  Where the cursor is, relative to an entity the Client holds.
+
+Required on the first update for a cursor. The Agent MUST NOT change it afterwards.
+A later update can omit it or repeat the same anchor. Omitted and `null` are
+equivalent and leave the stored anchor unchanged.
+
+</ResponseField>
+<ResponseField name="capabilities" type={<><span><a href="#cursorcapabilities">CursorCapabilities</a></span><span> | null</span></>} >
+  The methods that currently accept this cursor.
+
+Omission leaves the capabilities unchanged, `null` clears them, and an object replaces
+the whole previous value. A new cursor starts with none.
+
+</ResponseField>
+<ResponseField name="cursorId" type={<a href="#cursorid">CursorId</a>} required>
+  The Agent-owned ID of this cursor, unique within the session.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"cursor_update"`.
 </ResponseField>
 
 </Expandable>

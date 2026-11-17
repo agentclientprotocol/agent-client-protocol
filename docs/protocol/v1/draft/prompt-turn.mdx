@@ -33,6 +33,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `compaction_update`         | Creates or updates a [context compaction](#session-compaction). Requires the Client's `session.compaction` capability.                                                    |
 | `compaction_summary_chunk`  | Appends content to a [compaction's retained summary](#session-compaction). Requires the Client's `session.compaction` capability.                                         |
 | `prompt_suggestions_update` | **Draft only.** Replaces the session's current list of [prompt suggestions](#prompt-suggestions-unstable). Requires the Client's `session.promptSuggestions` capability.  |
+| `cursor_update`             | **Draft only.** Announces a [session cursor](#session-cursors-unstable) or changes the methods that accept it. Requires the Client's `session.cursors` capability.        |
 
 This is the complete set of variants defined in the current draft [`SessionUpdate` schema](/protocol/v1/draft/schema#sessionupdate), which describes each payload in detail. Draft-only variants are unstable and may change or be removed. The walkthrough below illustrates common uses of these updates.
 
@@ -572,6 +573,140 @@ Compaction does not instruct the Client to discard earlier conversation
 history. Collapsing it is a local presentation choice. It also does not replace
 [`usage_update`](#session-usage-updates), which reports current context-window
 usage and cost rather than a compaction boundary.
+
+#### Session cursors (unstable)
+
+A session cursor names one position in the session's timeline where the Client can
+run a method, such as forking the session there. The Agent announces a cursor only
+for a position where at least one method works. A Client can't act at a position
+that has no cursor.
+
+The Agent **MUST NOT** send `cursor_update` unless the Client advertised support by
+supplying `clientCapabilities.session.cursors: {}` in its `initialize` request.
+Omitting `session` or `cursors`, or setting either field to `null`, means the
+Client does not support these updates. This requirement applies to both live
+updates and `session/load` replay. There is no Agent capability. An Agent that
+supports cursors announces them.
+
+The Agent announces a cursor with a `cursor_update`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "cursor_update",
+      "cursorId": "cur_9f2c41",
+      "capabilities": {
+        "fork": {}
+      },
+      "anchor": {
+        "type": "user_message",
+        "messageId": "msg_user_2",
+        "position": "before"
+      }
+    }
+  }
+}
+```
+
+`cursor_update` is an upsert keyed by `cursorId`:
+
+- `cursorId` is required and non-null. It is an opaque, Agent-owned string, unique within the session and never reused for another position. Clients **MUST NOT** parse, change, or construct it.
+- `capabilities` is an optional, nullable patch that says which methods currently accept the cursor. Omitted leaves the stored value unchanged, `null` clears it, and an object replaces the whole previous value. A new cursor starts with none.
+- `anchor` places the cursor. The first update for a `cursorId` **MUST** include it, and the Agent **MUST NOT** change it afterwards. A later update can omit it or repeat the same anchor. Omitted and `null` are equivalent and leave the stored anchor unchanged.
+- `_meta` is an optional, nullable patch. Omitted leaves the stored value unchanged, `null` clears it, and an object replaces it.
+
+A cursor never moves. To offer a different position, the Agent announces a new
+cursor. Later updates change only `capabilities`, for example to add a method that
+became possible at the position or to remove one that no longer is.
+
+Each capability in `capabilities` is an optional, nullable object. Omitted or `null`
+means unsupported, and `{}` advertises support. `capabilities: null` and
+`capabilities: {}` both mean that no method accepts the cursor. Clients ignore
+capabilities they don't recognize. A malformed `capabilities` value is treated as
+omitted.
+
+| Capability | Meaning                                              |
+| ---------- | ---------------------------------------------------- |
+| `fork`     | `session/fork` accepts the cursor in its `cursorId`. |
+
+`anchor` names an entity the Client holds by its `type` and ID:
+
+| `type`            | ID field       | Entity                                                            |
+| ----------------- | -------------- | ----------------------------------------------------------------- |
+| `user_message`    | `messageId`    | A user message                                                    |
+| `agent_message`   | `messageId`    | An agent message                                                  |
+| `agent_thought`   | `messageId`    | An agent thought                                                  |
+| `session_message` | `messageId`    | A [session-directed message](#session-directed-messages-unstable) |
+| `tool_call`       | `toolCallId`   | A tool call                                                       |
+| `compaction`      | `compactionId` | A compaction                                                      |
+
+The anchor's `position` field says on which side of the entity the cursor is:
+
+- `before`: the cursor is immediately before the entity. The history before the cursor does not include the entity.
+- `after`: the cursor is immediately after the entity. The history before the cursor includes the entity and nothing that follows it in the timeline.
+
+The entity **MUST** belong to the same session, and the Agent **MUST** report it on
+that session before it sends a `cursor_update` anchored to it. A malformed anchor
+makes the whole update invalid. Unknown `type` and `position` values are preserved, so a later version or an extension can add more.
+
+v1 message IDs are optional, but an anchor to a message needs one. An Agent that
+announces cursors **MUST** send a `messageId` on every message it anchors to.
+
+v1 does not require the Agent to report the user's prompt as a session update, and
+the `session/prompt` response carries no `messageId`. The Client then holds no user
+message for that prompt, and the Agent can't anchor `before` it. The Agent anchors
+the same position `after` the last message, tool call, or compaction before the
+prompt. The first prompt of a session has nothing before it, so that position has
+no cursor. After `session/load`, replayed user messages that carry a `messageId`
+can be anchored `before` or `after`.
+
+A Client can't place a cursor in three cases:
+
+- It holds no anchor for the cursor, for example because it missed the first update.
+- It does not hold the anchored entity, for example because it resumed without a replay.
+- It doesn't recognize the anchor's `type` or `position`.
+
+The Client **MUST NOT** guess a place for such a cursor. A
+[replay](/protocol/v1/draft/session-setup#loading-sessions) delivers each entity before the cursors anchored to it.
+
+A method that accepts a cursor takes its `cursorId`:
+
+- Clients **MUST** only pass a cursor that the Agent announced on that session and that currently advertises the capability for the method.
+- Clients **MUST** pass the `cursorId`. They **MUST NOT** pass the anchor's entity ID in its place.
+- The Agent **MUST** reject the request with `-32602` (Invalid params) when it did not issue the `cursorId` for that session, when it no longer accepts the cursor, or when the cursor does not support that method. It **MUST NOT** act at a different position, and it **MUST NOT** handle the request as if the `cursorId` had been omitted.
+
+`session/fork` is the first method that accepts a cursor. With a `cursorId`, the new
+session's history is the source session's history before the cursor:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "session/fork",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "cursorId": "cur_9f2c41",
+    "cwd": "/home/user/project"
+  }
+}
+```
+
+`cursorId` is optional. Omitted and `null` are equivalent and fork the whole
+session. The source session does not change, and its cursors stay valid. The new
+session does not inherit them. The Client learns the new session's cursors from
+`cursor_update` notifications on the new session.
+
+A cursor belongs to its session, not to a connection or a Client. It stays valid
+until the Agent invalidates it. The end of a connection, `session/close`, `session/load`, and `session/resume` do not
+invalidate a cursor. Agents **SHOULD** accept a cursor for as long as they retain
+the history at its position, and Clients **MAY** store cursors with their copy of
+the session. The Agent can stop accepting a cursor at any time. It **SHOULD** then
+send a `cursor_update` that clears the cursor's `capabilities`, if the session is
+active on a connection.
 
 #### Session usage updates
 

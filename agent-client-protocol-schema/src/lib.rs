@@ -29,6 +29,28 @@
 //!   [`v1::AgentNotification`], and the matching client-side trio used by SDK
 //!   crates to dispatch incoming JSON-RPC messages.
 //!
+//! ## Parsing aggregate enums
+//!
+//! Do not deserialize an aggregate routing enum directly from a wire payload.
+//! Its untagged `Deserialize` implementation selects by payload shape, not the
+//! JSON-RPC method, and can silently select an unrelated variant.
+//! Use the enum's `from_method_and_params` or `from_method_and_result` method
+//! instead. Individual payload structs can be deserialized directly once the
+//! method is known.
+//!
+//! These helpers only select and deserialize payloads. Use the SDK for
+//! connections, request tracking, and JSON-RPC error handling.
+//!
+//! ```
+//! use agent_client_protocol_schema::v1::ClientRequest;
+//! use serde_json::json;
+//!
+//! let params = json!({"cwd": "/work", "mcpServers": []});
+//! let request = ClientRequest::from_method_and_params("session/new", &params)?;
+//! assert!(matches!(request, ClientRequest::NewSessionRequest(_)));
+//! # Ok::<(), agent_client_protocol_schema::MethodDispatchError>(())
+//! ```
+//!
 //! ## Cargo features
 //!
 //! The `schemars` feature implements `schemars::JsonSchema` for the protocol
@@ -45,6 +67,8 @@
 //! For the complete protocol specification and documentation, visit
 //! <https://agentclientprotocol.com>.
 
+#[macro_use]
+mod dispatch;
 pub mod rpc;
 mod serde_util;
 pub mod v1;
@@ -52,6 +76,7 @@ pub mod v1;
 pub mod v2;
 mod version;
 
+pub use dispatch::MethodDispatchError;
 pub use serde_util::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 pub use version::*;
 
