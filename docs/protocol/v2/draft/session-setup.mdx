@@ -295,24 +295,32 @@ NOT** rely on them to deduplicate replay against previously received history. A
 full replay is authoritative: Clients **SHOULD** rebuild all of the session's entities, such as messages, tool calls, terminals, plans, and compactions, from it rather than merging it into
 existing state by ID.
 
-`user_message`, `agent_message`, and `agent_thought` updates
+`user_message`, `agent_message`, `agent_thought`, and `session_message` updates
 are upserts keyed by `messageId`. Their `content` arrays replace the whole
 message content, while chunk updates with the same `messageId` append content.
 
-When replay reconstructs a message from its beginning using chunks, the Agent
-**MUST** first send the corresponding message update (`user_message`,
-`agent_message`, or `agent_thought`) with the same ID and `content: []`.
+When replay reconstructs an entity from its beginning using chunks, the Agent
+**MUST** first send that entity's update with the same ID and the chunked field emptied:
+
+| Replayed chunks                                                    | Update sent first                                                | Emptied field            |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------- | ------------------------ |
+| `user_message_chunk`, `agent_message_chunk`, `agent_thought_chunk` | The matching `user_message`, `agent_message`, or `agent_thought` | `content: []`            |
+| `session_message_chunk`                                            | `session_message`                                                | `content: []`            |
+| `tool_call_content_chunk`                                          | `tool_call_update`                                               | `content: []`            |
+| `terminal_output_chunk`                                            | `terminal_update`                                                | `output: { "data": "" }` |
+| `compaction_summary_chunk`                                         | `compaction_update`                                              | `summary: []`            |
+
 This initializes or clears content under the ID used for that replay before
-replayed chunks append. It does not reconcile a message previously delivered
-under a different ID. A full-content message update can instead replace content
-under the replayed ID directly.
+replayed chunks append. It does not reconcile an entity previously delivered
+under a different ID. An update that carries the whole content can instead replace it
+under the replayed ID directly. The rule does not apply to an entity that the Agent replays without chunks.
 
 Clients apply replayed message updates and chunks in the order they are
 received. If a message update with `content` arrives after chunks for the same
 `messageId`, it replaces the content accumulated from those chunks. If chunks
 arrive after a message update, they append to that update's current content.
 Message updates that omit `content` can update other optional fields without
-changing the current content.
+changing the current content. Tool calls, terminals, and compactions follow the same order for `content`, `output`, and `summary`.
 
 Replay also applies top-level `_meta` as a
 [metadata patch](/protocol/v2/draft/extensibility#metadata-patches) and does not reset it.
