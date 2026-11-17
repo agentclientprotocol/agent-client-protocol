@@ -399,7 +399,14 @@ The same insertion boundary applies when [closing the session](/protocol/v2/draf
 
 Clients **MAY** send `session/prompt` in any state, including while foreground work is `running` or `requires_action`. The Agent either inserts the prompt right away or holds it and inserts it later. Held prompts are inserted in the order they were received. What inserting during active work means, such as steering the current turn or starting the next one, is up to the Agent. Agents **MUST NOT** reject a prompt only because foreground work is active.
 
-A held prompt's response stays pending until the prompt is inserted. The Client can withdraw it with [`$/cancel_request`](/protocol/v2/draft/cancellation), and [`session/cancel`](#cancellation) and `session/close` answer prompts that haven't been inserted with `-32800`. Future capabilities may let Agents advertise steering or queueing behavior.
+A held prompt's response stays pending until the prompt is inserted. Until then, the Client can drop it in two ways:
+
+- [`session/cancel`](#cancellation) and `session/close` drop every prompt the Agent has not inserted. The Agent answers each of them with `-32800`. Both also stop the foreground work.
+- [`$/cancel_request`](/protocol/v2/draft/cancellation) for the prompt's request is best effort, because request cancellation is optional for the receiver. An Agent that honors it answers with `-32800` and does not insert the message. Otherwise the prompt is inserted as usual, and the response carries its `messageId`.
+
+Once a prompt is inserted, the Client cannot withdraw it. It stops the work the prompt started with `session/cancel`.
+
+A guaranteed way to remove one held prompt is left to future capabilities, which may also let Agents advertise steering or queueing behavior.
 
 #### Prompts that are never inserted
 
@@ -448,7 +455,7 @@ The Agent looks the key up in the session:
 - **The response.** A retry gets the original `messageId` and nothing else. The Agent doesn't start a second round of work for the message. Whether it continues work that stopped before it finished is up to the Agent. The Client learns the session's current activity from live updates or from the [`session/resume` snapshot](/protocol/v2/draft/session-setup#current-state-synchronization).
 - **Errors leave the key unused.** An error response to `session/prompt` means the message was not inserted. The Agent records nothing, and the Client can send the same prompt with the same key again.
 - **A reused key.** The Agent **MUST NOT** insert a second message for a key it has recorded. If a request carries a recorded key with a different prompt, the Agent either answers as for a retry or, if it notices the difference, rejects the request with `-32602`. Agents are not required to compare prompts. After such a `-32602`, the key stays recorded for the first prompt.
-- **Cancelling.** [`$/cancel_request`](/protocol/v2/draft/cancellation) for any pending request with the key withdraws a prompt that is not inserted yet. The Agent then answers every pending request for that key with `-32800`. `session/cancel` and `session/close` answer held prompts as described in [Prompts during active work](#prompts-during-active-work).
+- **Cancelling.** An Agent that honors [`$/cancel_request`](/protocol/v2/draft/cancellation) for any pending request with the key withdraws the prompt if it is not inserted yet. It then answers every pending request for that key with `-32800`. `session/cancel` and `session/close` answer held prompts as described in [Prompts during active work](#prompts-during-active-work).
 - **Keys stay private.** The Agent doesn't echo keys in session updates, `session/list` results, or replayed history. A key is not a credential. It only has meaning in a session the caller can already prompt.
 
 A key is scoped to the session named by `sessionId`. The same key string in another session names an unrelated submission. This includes a session that `session/fork` creates from this one.
