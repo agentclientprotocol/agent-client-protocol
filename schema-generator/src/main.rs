@@ -911,6 +911,39 @@ mod schema_annotation_tests {
     }
 
     #[test]
+    fn generated_prompt_request_idempotency_key_matches_protocol_version() {
+        let schema = root_schema_value();
+        let request = def_schema(&schema, "PromptRequest");
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            assert_eq!(
+                request["required"],
+                serde_json::json!(["sessionId", "prompt"])
+            );
+            let idempotency_key = property_schema(&schema, "PromptRequest", "idempotencyKey");
+            assert!(schema_contains_ref(
+                idempotency_key,
+                "#/$defs/IdempotencyKey"
+            ));
+            // The Agent acts on the key, so a malformed value must fail the
+            // request instead of falling back to no key.
+            assert_no_extension(idempotency_key, DEFAULT_ON_ERROR_EXTENSION);
+
+            let key = def_schema(&schema, "IdempotencyKey");
+            assert_eq!(key["type"], "string");
+            assert_eq!(key["minLength"], 1);
+            assert_eq!(key["maxLength"], 255);
+        }
+
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            assert!(request.pointer("/properties/idempotencyKey").is_none());
+            assert!(schema.pointer("/$defs/IdempotencyKey").is_none());
+        }
+    }
+
+    #[test]
     fn generated_schema_includes_optional_tool_call_names() {
         let schema = root_schema_value();
         let definitions = [

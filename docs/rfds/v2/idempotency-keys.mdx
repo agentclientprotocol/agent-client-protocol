@@ -335,4 +335,5 @@ This RFD doesn't change v1. A v1 `session/prompt` response arrives at the end of
 
 ## Revision history
 
+- 2026-11-17: Steps 1 and 3 landed. `idempotencyKey` and the `IdempotencyKey` type are in the v2 schema, and a malformed key fails deserialization. From step 2, the keyed-prompt rules are on the prompt lifecycle, session setup, and transports pages. The retry classes are not on the method pages yet.
 - 2026-11-13: Initial draft.

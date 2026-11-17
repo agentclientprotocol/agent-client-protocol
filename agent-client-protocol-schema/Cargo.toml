@@ -69,6 +69,15 @@ unstable_end_turn_token_usage = []
 # regardless of whether this feature is enabled.
 tracing = []
 
+# Add `v2::IdempotencyKey::generate`, which creates a key from a random UUID,
+# and `From<uuid::Uuid>` for the key. The key only exists in the `v2` module,
+# so this has no effect without `unstable_protocol_v2`.
+#
+# This is off by default because it needs a source of randomness. `uuid` does
+# not compile for `wasm32-unknown-unknown` unless the depending crate also
+# enables one of its `js`, `rng-getrandom`, or `rng-rand` features.
+uuid = ["dep:uuid"]
+
 [dependencies]
 anyhow = "1"
 derive_more = { version = "2", features = ["from", "display"] }
@@ -80,3 +89,4 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
 serde_with = { version = "3.20.0", features = ["json"] }
 strum = { version = "0.28", features = ["derive"] }
+uuid = { version = "1", optional = true, default-features = false, features = ["v4"] }

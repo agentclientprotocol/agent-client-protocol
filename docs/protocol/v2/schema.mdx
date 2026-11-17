@@ -606,6 +606,25 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 
 </ResponseField>
+<ResponseField name="idempotencyKey" type={<><span><a href="#idempotencykey">IdempotencyKey</a></span><span> | null</span></>} >
+  Identifies this submission, so the Client can send the request again without the
+user message being inserted twice.
+
+Optional. Omitted and `null` are equivalent and mean no key. The Agent then handles
+the prompt without duplicate detection.
+
+The Client generates the key and sends the same key on every attempt for the same
+submission. The Agent inserts at most one user message for a key in a session, and
+answers a retry with the `messageId` of the message it already inserted. Agents that
+advertise `capabilities.session` MUST support the key.
+
+When present, the value is an opaque, case-sensitive string of 1 to 255 characters.
+Agents MUST reject any other value with `-32602` (Invalid params) and MUST NOT treat
+it as omitted.
+
+See protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#retrying-a-prompt)
+
+</ResponseField>
 <ResponseField name="prompt" type={<a href="#contentblock">ContentBlock[]</a>} required>
   The blocks of content that compose the user's message.
 
@@ -4344,6 +4363,22 @@ extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
 </ResponseField>
+
+## <span class="font-mono">IdempotencyKey</span>
+
+A key the Client generates to identify one `session/prompt` submission across attempts.
+
+The key is an opaque, case-sensitive string of 1 to 255 characters. It is scoped to the
+session named by the request's `sessionId`.
+
+See protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#retrying-a-prompt)
+
+**Type:** `string`
+
+| Constraint | Value |
+| ---------- | ----- |
+| Min length | `1`   |
+| Max length | `255` |
 
 ## <span class="font-mono">IdleStateUpdate</span>
 

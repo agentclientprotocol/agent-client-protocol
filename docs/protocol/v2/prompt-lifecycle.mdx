@@ -322,6 +322,12 @@ The Client sends a user message with `session/prompt`:
     </Card>
 
 </ParamField>
+<ParamField path="idempotencyKey" type="IdempotencyKey">
+    A key the Client generates to identify this submission. With a key, the Client can send the request again without the user message being inserted twice.
+
+    Omitted and `null` are equivalent and mean no key. When present, the value is a string of 1 to 255 characters. See [Retrying a prompt](#retrying-a-prompt).
+
+</ParamField>
 
 ### 2. Prompt accepted
 
@@ -374,7 +380,9 @@ The Client uses the JSON-RPC response ID to identify its submission, then associ
 
 Insertion is not a promise of durable storage or model consumption. Every inserted input, including a locally handled command, is reported live, but Agents are not required to persist it or retain it for any minimum period. If the message is retained and replayed, the Agent **MUST** use the same ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
 
-A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. The response has no fixed order relative to other session updates: the `user_message` acknowledgment, Agent output, and even the `idle` `state_update` that ends the resulting work may arrive before or after it. Clients **MUST NOT** infer ordering between them. If the response is lost, the submission's outcome remains uncertain: replay may omit live-only or discarded messages, and a retry can create another submission.
+A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. The response has no fixed order relative to other session updates: the `user_message` acknowledgment, Agent output, and even the `idle` `state_update` that ends the resulting work may arrive before or after it. Clients **MUST NOT** infer ordering between them.
+
+If the response is lost, the Client cannot learn the submission's outcome from the session, because replay may omit live-only or discarded messages. A prompt sent with an `idempotencyKey` can be sent again with the same key. Without a key, a retry can create another submission. See [Retrying a prompt](#retrying-a-prompt).
 
 The same insertion boundary applies when [closing the session](/protocol/v2/session-setup#closing-active-sessions) cancels a pending prompt: if closing prevents insertion, the request receives `-32800` (Request Cancelled). If the message has already been inserted, it receives a successful `messageId` response. Prompt responses need not precede the close response.
 
@@ -393,6 +401,64 @@ A held prompt's response stays pending until the prompt is inserted. The Client 
 If a request is rejected before insertion, including by a hook or early failure, the Agent **MUST** return a JSON-RPC error response and **MUST NOT** emit user-message updates for that submission. [Request cancellation](/protocol/v2/cancellation) before insertion uses `-32800`.
 
 The [foreground lifecycle](#foreground-and-background-work) applies independently of the request outcome: report `idle` when no foreground work remains, not merely because a prompt was rejected. A failed foreground hook can therefore require both a prompt error response and an idle update. If no foreground work started, rejection requires no state transition.
+
+#### Retrying a prompt
+
+A Client that never receives the response to a `session/prompt` request cannot tell whether the message was inserted. To be able to send the request again, the Client includes an `idempotencyKey`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "session/prompt",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "idempotencyKey": "0b6f3c1e-8d2a-4c57-9a41-5e2f7d90c3ab",
+    "prompt": [
+      {
+        "type": "text",
+        "text": "Run the database migration"
+      }
+    ]
+  }
+}
+```
+
+- Agents that advertise `capabilities.session` **MUST** support the key. There is no separate capability.
+- The field is optional. Omitted and `null` are equivalent and mean no key. The Agent then handles the prompt without duplicate detection.
+- When present, the key is an opaque, case-sensitive string of 1 to 255 characters. The Agent **MUST** reject any other value with `-32602` (Invalid params) and **MUST NOT** treat it as omitted.
+- The Client generates the key. Clients **SHOULD** use a UUID ([RFC 9562](https://www.rfc-editor.org/rfc/rfc9562)) or another random value with at least as much entropy. Clients **SHOULD NOT** derive the key from user content or put sensitive data in it.
+- One key identifies one submission. The Client creates the key when the user submits the input and stores it with the pending input. It sends the same key on every attempt, including after it reconnects or restarts. It uses a new key for a new submission, including when the user sends the same text again on purpose.
+- Clients **MUST NOT** send the same key with a different prompt.
+- Each attempt is its own JSON-RPC request with its own `id`.
+
+The Agent looks the key up in the session:
+
+| What the Agent has recorded for the key                                                               | What the Agent does                                                                                      |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Nothing                                                                                               | Handles the prompt as usual. When the user message is inserted, it records the key with it.              |
+| A message that was inserted with this key                                                             | Doesn't insert a message. Responds with that message's `messageId`.                                      |
+| A prompt with this key that is not inserted yet, such as a [held prompt](#prompts-during-active-work) | Doesn't hold a second prompt. Answers this request when it answers the first one, with the same outcome. |
+
+- **The response.** A retry gets the original `messageId` and nothing else. The Agent doesn't start a second round of work for the message. Whether it continues work that stopped before it finished is up to the Agent. The Client learns the session's current activity from live updates or from the [`session/resume` snapshot](/protocol/v2/session-setup#current-state-synchronization).
+- **Errors leave the key unused.** An error response to `session/prompt` means the message was not inserted. The Agent records nothing, and the Client can send the same prompt with the same key again.
+- **A reused key.** The Agent **MUST NOT** insert a second message for a key it has recorded. If a request carries a recorded key with a different prompt, the Agent either answers as for a retry or, if it notices the difference, rejects the request with `-32602`. Agents are not required to compare prompts. After such a `-32602`, the key stays recorded for the first prompt.
+- **Cancelling.** [`$/cancel_request`](/protocol/v2/cancellation) for any pending request with the key withdraws a prompt that is not inserted yet. The Agent then answers every pending request for that key with `-32800`. `session/cancel` and `session/close` answer held prompts as described in [Prompts during active work](#prompts-during-active-work).
+- **Keys stay private.** The Agent doesn't echo keys in session updates, `session/list` results, or replayed history. A key is not a credential. It only has meaning in a session the caller can already prompt.
+
+A key is scoped to the session named by `sessionId`. The same key string in another session names an unrelated submission.
+
+A key lasts as long as the message it belongs to:
+
+- For a prompt whose inserted message the Agent retains, the Agent **MUST** recognize the key for as long as it retains the message. This holds across connections and Agent restarts.
+- For a prompt whose message the Agent doesn't retain, such as a [locally handled command](/protocol/v2/slash-commands#running-commands), the Agent **MUST** recognize the key while the session stays active on a connection. After that it **MAY** forget it.
+- Once the Agent no longer has the message or the session, it **MAY** forget the key. A prompt with a forgotten key is a new submission.
+
+Agents **SHOULD** store the key in the same step as the message, for example as part of the message's ID. If a restart loses a message that was never written to the stored session, the key is lost with it, and the retry inserts the message.
+
+A key is not tied to the connection that first carried it. The Agent recognizes it on any connection where the session is active. After reconnecting, the Client calls `initialize` and `session/resume`, then sends the prompt again. Clients **SHOULD** resend a pending prompt as soon as they have resumed the session. A Client that has held a prompt for a long time, such as since a previous day, **SHOULD** show it to the user instead of resending it. By then the Agent may have discarded the message.
+
+An intermediary that forwards `session/prompt` forwards `idempotencyKey` unchanged.
 
 ### 3. Agent reports output
 
