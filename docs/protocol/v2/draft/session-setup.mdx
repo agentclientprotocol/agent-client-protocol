@@ -185,6 +185,11 @@ returns once the session is active and its current foreground state has been
 synchronized. The required current-state snapshot is live synchronization, not
 history replay. Updates that report in-progress work, such as the content of a message that is still streaming, are live updates, not history replay.
 
+A resume without replay synchronizes the session's state, not its conversation. The Agent sends the current `state_update`. The [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list on that update names terminals, tool calls, and child sessions by ID, and the Agent announces an item before it lists it. So it first sends a current `terminal_update`, `tool_call_update`, or `subagent_update` for each listed item. [Current-state synchronization](#current-state-synchronization) defines both rules. The snapshot names no foreground work, and the Agent is not required to send anything about it: a message that is still streaming, or a foreground tool call that is still running, continues with its next live update.
+
+- A Client that still holds the session's entities and has missed no updates can keep them.
+- A Client that wants them resynchronized, for example after the connection ended, requests replay with `replayFrom`.
+
 To request full history replay, Clients set `replayFrom` to
 `{ "type": "start" }`:
 
@@ -423,7 +428,7 @@ history replay and before the resume response. This is required even when
 state after resuming: `idle`, `running`, or `requires_action`, or the
 `unknown` state when activity is unobservable.
 
-The snapshot carries the [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list like any other. Before it, the Agent **MUST** send a current update for each listed item that the requested replay did not already deliver at its current state: a `terminal_update` for each terminal, a `tool_call_update` for each tool call, and a `subagent_update` for each child. When no replay was requested, this means all of them. A replayed `subagent_update` never delivers a child's current `capabilities` or `state`, so after a replay the Agent sends one for each listed child after the parent's `replay_complete`. See [Resuming](/protocol/v2/draft/subagents#resuming).
+The snapshot carries the [`background`](/protocol/v2/draft/prompt-lifecycle#background-work) list like any other. Before it, the Agent **MUST** send a current update for each listed item that the requested replay did not already deliver at its current state: a `terminal_update` for each terminal, a `tool_call_update` for each tool call, and a `subagent_update` for each child. When no replay was requested, this means all of them. It does not include foreground work in progress, which a resume without replay [does not resynchronize](#resuming-sessions). A replayed `subagent_update` never delivers a child's current `capabilities` or `state`, so after a replay the Agent sends one for each listed child after the parent's `replay_complete`. See [Resuming](/protocol/v2/draft/subagents#resuming).
 
 Agents **MUST NOT** replay historical `state_update` notifications as current
 activity. The snapshot and subsequent live state changes **MUST** be delivered
