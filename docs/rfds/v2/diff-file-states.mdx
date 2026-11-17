@@ -70,7 +70,7 @@ Use `patch` for changes that have useful renderable patch text:
 }
 ```
 
-`changes` is authoritative for affected paths and operations. `patch`, when
+`changes` is authoritative for affected paths and operations. Agents MUST include at least one entry in `changes`. `patch`, when
 present, provides renderable text for some or all of those changes and MUST be
 consistent with `changes`.
 
@@ -212,6 +212,7 @@ indicators.
 
 ## Revision history
 
+- 2026-11-17: Agents MUST include at least one entry in `changes`, and the schema sets `minItems: 1` on it
 - 2026-10-12: Specify that every `git_patch` path, including rename and copy headers, is absolute with no `a/` or `b/` prefix, and otherwise follows Git, including `/dev/null` and path quoting
 - 2026-07-20: Define `git_patch` as Git `--patch` text and rename `patch.diff` to `patch.text`
 - 2026-07-02: Initial draft

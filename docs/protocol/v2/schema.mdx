@@ -3004,7 +3004,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="changes" type={<a href="#diffchange">DiffChange[]</a>} required>
-  Structured file changes described by this diff.
+  Structured file changes described by this diff. Agents MUST include at least one entry.
 
 Clients can use this field without parsing patch text to determine affected paths.
 
@@ -8999,7 +8999,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="changes" type={<a href="#diffchange">DiffChange[]</a>} required>
-  Structured file changes described by this diff.
+  Structured file changes described by this diff. Agents MUST include at least one entry.
 
 Clients can use this field without parsing patch text to determine affected paths.
 

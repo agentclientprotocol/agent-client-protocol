@@ -612,7 +612,7 @@ Input, resize, and other interactive control remain out of scope.
 File modifications shown as diffs. A diff always includes structured file
 changes and can optionally include renderable patch text.
 
-`changes` is authoritative for affected absolute paths and operations. `patch`,
+`changes` is authoritative for affected absolute paths and operations. Agents **MUST** include at least one entry in `changes`. `patch`,
 when present, provides renderable text for some or all of those changes and **MUST**
 be consistent with `changes`: it describes only those paths and operations. Agents
 **SHOULD** provide `patch` whenever feasible. Clients **MUST** handle diffs where
