@@ -35,6 +35,7 @@ unstable = [
     "unstable_prompt_suggestions",
     "unstable_proxy_chains",
     "unstable_session_archive",
+    "unstable_session_cursors",
     "unstable_session_fork",
     "unstable_session_status",
     "unstable_session_options",
@@ -55,6 +56,7 @@ unstable_plan_operations = []
 unstable_prompt_suggestions = []
 unstable_proxy_chains = []
 unstable_session_archive = []
+unstable_session_cursors = []
 unstable_session_fork = []
 unstable_session_status = []
 unstable_session_options = []

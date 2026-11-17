@@ -286,6 +286,23 @@ The Client opts in to other content types with the following fields. They have t
   Learn more about Prompt Suggestions
 </Card>
 
+#### Session cursors (unstable)
+
+<ParamField path="session.cursors" type="SessionCursorsCapabilities Object">
+  The Client handles `cursor_update` session updates. This field is optional and
+  nullable. Omitting `session` or `cursors`, or setting either to `null`, means
+  unsupported. Supplying `{}` means supported. Agents must not send
+  `cursor_update` without this capability.
+</ParamField>
+
+<Card
+  icon="location-dot"
+  horizontal
+  href="/protocol/v1/draft/prompt-turn#session-cursors-unstable"
+>
+  Learn more about Session Cursors
+</Card>
+
 ### Agent capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:

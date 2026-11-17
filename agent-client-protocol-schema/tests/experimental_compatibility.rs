@@ -127,6 +127,22 @@ fn experimental_skill_references_roundtrip_with_or_without_local_support() {
 }
 
 #[test]
+fn experimental_cursor_updates_roundtrip_with_or_without_local_support() {
+    let wire = json!({
+        "sessionUpdate": "cursor_update",
+        "cursorId": "cur_1",
+        "capabilities": {},
+        "anchor": {"type": "user_message", "messageId": "msg_user_2", "position": "before"}
+    });
+    let update = decode_update(&wire);
+    #[cfg(feature = "unstable_session_cursors")]
+    assert!(matches!(update, SessionUpdate::CursorUpdate(_)));
+    #[cfg(not(feature = "unstable_session_cursors"))]
+    assert!(matches!(update, SessionUpdate::Other(_)));
+    assert_eq!(serde_json::to_value(update).unwrap(), wire);
+}
+
+#[test]
 fn unknown_standard_and_custom_updates_preserve_their_payloads() {
     for tag in ["future_display_update", "_acme_display_update"] {
         let wire = json!({
@@ -210,6 +226,7 @@ fn session_update_fallback_schema_excludes_only_locally_recognized_variants() {
             "prompt_suggestions_update",
             cfg!(feature = "unstable_prompt_suggestions"),
         ),
+        ("cursor_update", cfg!(feature = "unstable_session_cursors")),
     ] {
         assert_eq!(
             excluded

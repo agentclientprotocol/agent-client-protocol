@@ -732,6 +732,96 @@ mod schema_annotation_tests {
         }
     }
 
+    #[cfg(feature = "unstable")]
+    #[test]
+    fn generated_unstable_cursor_update_is_lenient_for_capabilities_and_strict_for_the_anchor() {
+        let schema = root_schema_value();
+
+        let update = def_schema(&schema, "CursorUpdate");
+        assert_eq!(update["required"], serde_json::json!(["cursorId"]));
+        assert!(update["description"].as_str().unwrap().contains("UNSTABLE"));
+
+        // A malformed capability is dropped, so the Client never passes a cursor
+        // to a method the Agent did not advertise.
+        let capabilities = property_schema(&schema, "CursorUpdate", "capabilities");
+        assert!(schema_contains_ref(
+            capabilities,
+            "#/$defs/CursorCapabilities"
+        ));
+        assert_bool_extension(capabilities, DEFAULT_ON_ERROR_EXTENSION);
+        assert_bool_extension(
+            property_schema(&schema, "CursorCapabilities", "fork"),
+            DEFAULT_ON_ERROR_EXTENSION,
+        );
+
+        // A malformed anchor fails the update. A default would place the cursor
+        // somewhere else.
+        let anchor = property_schema(&schema, "CursorUpdate", "anchor");
+        assert!(schema_contains_ref(anchor, "#/$defs/CursorAnchor"));
+        assert_no_extension(anchor, DEFAULT_ON_ERROR_EXTENSION);
+
+        // A malformed cursor ID fails `session/fork`. It never forks the whole session.
+        let cursor_id = property_schema(&schema, "ForkSessionRequest", "cursorId");
+        assert!(schema_contains_ref(cursor_id, "#/$defs/CursorId"));
+        assert_no_extension(cursor_id, DEFAULT_ON_ERROR_EXTENSION);
+        assert!(
+            !def_schema(&schema, "ForkSessionRequest")["required"]
+                .as_array()
+                .unwrap()
+                .contains(&Value::from("cursorId"))
+        );
+
+        let updates = def_schema(&schema, "SessionUpdate");
+        let variants = updates
+            .get("oneOf")
+            .or_else(|| updates.get("anyOf"))
+            .and_then(Value::as_array)
+            .unwrap();
+        let variant = variants
+            .iter()
+            .find(|variant| {
+                variant.pointer("/properties/sessionUpdate/const")
+                    == Some(&Value::from("cursor_update"))
+            })
+            .expect("missing cursor_update variant");
+        assert!(schema_contains_ref(variant, "#/$defs/CursorUpdate"));
+        assert!(
+            variant["description"]
+                .as_str()
+                .unwrap()
+                .contains("UNSTABLE")
+        );
+
+        // Only v1 needs a Client capability. The v2 union is open.
+        #[cfg(not(feature = "unstable_protocol_v2"))]
+        {
+            let capability = property_schema(&schema, "ClientSessionCapabilities", "cursors");
+            assert!(schema_contains_ref(
+                capability,
+                "#/$defs/SessionCursorsCapabilities"
+            ));
+            assert_bool_extension(capability, DEFAULT_ON_ERROR_EXTENSION);
+        }
+
+        #[cfg(feature = "unstable_protocol_v2")]
+        {
+            let fallback = variants
+                .iter()
+                .find(|variant| variant["title"] == "other")
+                .unwrap();
+            assert!(
+                fallback["not"]["anyOf"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|variant| {
+                        variant.pointer("/properties/sessionUpdate/const")
+                            == Some(&Value::from("cursor_update"))
+                    })
+            );
+        }
+    }
+
     #[cfg(not(feature = "unstable_protocol_v2"))]
     #[test]
     fn generated_v1_compaction_capability_is_optional_nullable_and_stable() {

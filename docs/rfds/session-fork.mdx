@@ -167,3 +167,4 @@ None. This proposal is inspired by the abilities exposed in Claude Agent SDK. It
 - 2025-12-10: Adjust fork options to align with `session/load`.
 - 2026-10-12: Clarify that a forked session is active once the agent responds, so the client does not need to resume it before prompting.
 - 2026-11-14: Added forking at a [session cursor](./session-cursors.mdx), with an optional `cursorId` on `session/fork` and a `fork` cursor capability.
+- 2026-11-16: `cursorId` on `session/fork` and the `fork` cursor capability are in the v1 and v2 schemas, behind `unstable_session_fork` and `unstable_session_cursors`.

@@ -4904,6 +4904,22 @@
           ]
         },
         {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA session cursor has been announced or its capabilities have changed.\n\nAgents MUST only send this update when the Client advertised\nthe `session.cursors` Client capability.",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "cursor_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorUpdate"
+            }
+          ]
+        },
+        {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nAnnounces a child session created and owned by this session, or updates\nthat ownership association's metadata.",
           "type": "object",
           "properties": {
@@ -5721,6 +5737,375 @@
         }
       },
       "required": ["suggestions"]
+    },
+    "CursorId": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nUnique identifier for a session cursor within a session.\n\nThe Agent generates it, and it is never reused for another position in the\nsession. Clients MUST NOT parse, change, or construct it.\n\nSee the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).",
+      "type": "string"
+    },
+    "CursorCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe methods that currently accept a session cursor.\n\nA malformed value falls back to no capabilities, so the Client never passes a\ncursor to a method the Agent did not advertise.\n\nSee the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).",
+      "type": "object",
+      "properties": {
+        "fork": {
+          "description": "Permits the Client to fork the session at this cursor with `session/fork`.\n\nOmitted and `null` are equivalent and mean unsupported. An object (including `{}`)\nmeans supported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CursorForkCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "CursorForkCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability to fork the session at a cursor with `session/fork`.\n\nSupplying `{}` advertises support. An omitted or `null` `fork` does not.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "CursorAnchor": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nWhere a session cursor is, relative to an entity the Client holds.\n\nThe anchor names the entity by its type and ID, and `position` says on which\nside of that entity the cursor is. A known `type` with a malformed payload is\nan error. It does not fall back to the unknown-type variant.\n\nSee the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).",
+      "anyOf": [
+        {
+          "description": "The cursor is next to a user message.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "user_message"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorMessageAnchor"
+            }
+          ]
+        },
+        {
+          "description": "The cursor is next to an agent message.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agent_message"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorMessageAnchor"
+            }
+          ]
+        },
+        {
+          "description": "The cursor is next to an agent thought.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "agent_thought"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorMessageAnchor"
+            }
+          ]
+        },
+        {
+          "description": "The cursor is next to a session-directed message.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "session_message"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorMessageAnchor"
+            }
+          ]
+        },
+        {
+          "description": "The cursor is next to a tool call.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "tool_call"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorToolCallAnchor"
+            }
+          ]
+        },
+        {
+          "description": "The cursor is next to a compaction.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "compaction"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorCompactionAnchor"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future anchor type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nA Client that does not recognize the type cannot place the cursor and\nMUST NOT guess a place for it.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "Custom or future anchor type.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "user_message"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "agent_message"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "agent_thought"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "session_message"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "tool_call"
+                  }
+                },
+                "required": ["type"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "compaction"
+                  }
+                },
+                "required": ["type"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "CursorAnchorPosition": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nOn which side of the anchored entity a session cursor is.",
+      "anyOf": [
+        {
+          "description": "The cursor is immediately before the entity. The history before the\ncursor does not include the entity.",
+          "type": "string",
+          "const": "before"
+        },
+        {
+          "description": "The cursor is immediately after the entity. The history before the\ncursor includes the entity and nothing that follows it in the timeline.",
+          "type": "string",
+          "const": "after"
+        },
+        {
+          "title": "other",
+          "description": "Custom or future position.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP positions.\nA Client that does not recognize the value cannot place the cursor.",
+          "type": "string"
+        }
+      ]
+    },
+    "CursorMessageAnchor": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA session cursor anchor to a message. The anchor's `type` names the kind of message.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "The ID of the anchored message.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "position": {
+          "description": "On which side of the message the cursor is.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorAnchorPosition"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId", "position"]
+    },
+    "CursorToolCallAnchor": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA session cursor anchor to a tool call.",
+      "type": "object",
+      "properties": {
+        "toolCallId": {
+          "description": "The ID of the anchored tool call.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            }
+          ]
+        },
+        "position": {
+          "description": "On which side of the tool call the cursor is.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorAnchorPosition"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["toolCallId", "position"]
+    },
+    "CursorCompactionAnchor": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA session cursor anchor to a compaction.",
+      "type": "object",
+      "properties": {
+        "compactionId": {
+          "description": "The ID of the anchored compaction.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CompactionId"
+            }
+          ]
+        },
+        "position": {
+          "description": "On which side of the compaction the cursor is.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorAnchorPosition"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["compactionId", "position"]
+    },
+    "CursorUpdate": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA session cursor upsert. A cursor names one position in the session's timeline.\n\nThe first update for a `cursorId` MUST include `anchor`. The anchor is fixed\nafter that, and later updates change only `capabilities`.\n\nAgents MUST only send this update when the Client advertised\nthe `session.cursors` Client capability.\n\n`capabilities` and `_meta` have patch semantics: omission leaves the stored\nvalue unchanged, `null` clears it, and a concrete value replaces it.\n\nSee the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).",
+      "type": "object",
+      "properties": {
+        "cursorId": {
+          "description": "The Agent-owned ID of this cursor, unique within the session.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/CursorId"
+            }
+          ]
+        },
+        "capabilities": {
+          "description": "The methods that currently accept this cursor.\n\nOmission leaves the capabilities unchanged, `null` clears them, and an object replaces\nthe whole previous value. A new cursor starts with none.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CursorCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "anchor": {
+          "description": "Where the cursor is, relative to an entity the Client holds.\n\nRequired on the first update for a cursor. The Agent MUST NOT change it afterwards.\nA later update can omit it or repeat the same anchor. Omitted and `null` are\nequivalent and leave the stored anchor unchanged.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CursorAnchor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "Extensible metadata patch for this cursor.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["cursorId"]
     },
     "SubagentSessionCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability. Support for the method\non ordinary sessions does not grant support on a child.",
@@ -6819,6 +7204,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "cursors": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nSupport for `cursor_update` session updates.\n\nOptional. Omitted or `null` both mean the client does not advertise support.\nSupplying `{}` means the client handles `cursor_update`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionCursorsCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/draft/extensibility)",
           "type": ["object", "null"],
@@ -6954,6 +7351,10 @@
           "additionalProperties": true
         }
       }
+    },
+    "SessionCursorsCapabilities": {
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nClient support for `cursor_update` session updates.\n\nSee the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).",
+      "type": "object"
     },
     "SubagentCapabilities": {
       "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nCapability marker for exposing reusable child sessions as restricted ACP sessions.\n\nSupplying `{}` advertises support for child association and state updates,\nsession-directed messages, and restricted-session semantics. The client\nmust advertise this capability before the agent sends subagent updates or\nsession-directed messages.",
@@ -7698,6 +8099,17 @@
           "allOf": [
             {
               "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "cursorId": {
+          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe session cursor to fork at. The new session's history is the source\nsession's history before the cursor.\n\nOptional. Omitted and `null` are equivalent and fork the whole session.\nClients MUST only send the ID of a cursor that the Agent announced on the\nsource session and that currently advertises `capabilities.fork`. The Agent\nrejects any other ID with `-32602`. It does not fall back to forking the\nwhole session.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CursorId"
+            },
+            {
+              "type": "null"
             }
           ]
         },
