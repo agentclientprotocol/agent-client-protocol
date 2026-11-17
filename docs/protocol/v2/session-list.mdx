@@ -3,7 +3,7 @@ title: "Session List"
 description: "Discovering existing sessions"
 ---
 
-The `session/list` method returns the sessions an Agent knows about. Clients use it to show session history and let users switch between sessions.
+The `session/list` method returns the sessions an Agent knows about. Clients use it to show session history and let users switch between sessions. It does not return [child sessions](/protocol/v2/subagents), which the Agent announces on their parent session.
 
 Agents can also send a `session_info_update` notification when a session's title or metadata changes, so Clients don't have to poll.
 

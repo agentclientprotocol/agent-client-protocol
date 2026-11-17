@@ -46,7 +46,7 @@ The rule applies to the top-level `_meta` of:
 - `user_message`, `agent_message`, and `agent_thought`
 - `session_info_update`
 - `compaction_update`
-- the draft-only `subagent_update` and `session_message`
+- `subagent_update` and `session_message`
 
 It does not apply to `_meta` anywhere else: requests, responses, notification params, chunks, content items, terminal output snapshots, exit status, command permission subjects, and other nested objects keep their current meaning, where the metadata describes only the object that carries it. Data about a single notification rather than the entity belongs in the `session/update` notification's `params._meta`.
 
@@ -106,7 +106,7 @@ The cost is that replay and resynchronization must remove stale keys explicitly,
 > Tell me more about your implementation. What is your detailed implementation plan?
 
 1. Keep the schema shape. These upserts already represent `_meta` as a three-state field, and a `_meta` object can already carry `null` values.
-2. Define the rule, including replay, once in the v2 Extensibility page under [Metadata Patches](/protocol/v2/draft/extensibility#metadata-patches), and reference it from the tool call, terminal, message, session info, compaction, and session replay docs, the schema field descriptions, and the migration guide.
+2. Define the rule, including replay, once in the v2 Extensibility page under [Metadata Patches](/protocol/v2/extensibility#metadata-patches), and reference it from the tool call, terminal, message, session info, compaction, and session replay docs, the schema field descriptions, and the migration guide.
 3. Add `apply_meta_update` to the Rust v2 schema module and use it in `ToolCallUpdate::apply_update` and `TerminalUpdate::apply_update`.
 4. Leave v1 unchanged, including the v1 `session_message`, `subagent_update`, and `compaction_update` updates that replace `_meta` as a whole.
 
@@ -170,4 +170,5 @@ No. Notification-level metadata is not stored with an entity and is not a patch.
 
 ## Revision history
 
+- 2026-11-17: `subagent_update` and `session_message` are in the stable v2 schema and no longer draft-only.
 - 2026-10-13: Initial draft.

@@ -1540,6 +1540,8 @@ impl ReplayComplete {
 /// Completing or cancelling work does not end the association: the parent may
 /// message the same child again. Individual messages and their outcomes do not
 /// change this association.
+///
+/// See protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v2/subagents)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1698,6 +1700,8 @@ impl SubagentUpdate {
 ///
 /// A mutation requires an explicit per-child capability. Support for the method
 /// on ordinary sessions does not grant support on a child.
+///
+/// See protocol docs: [Restricted methods](https://agentclientprotocol.com/protocol/v2/subagents#restricted-methods)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

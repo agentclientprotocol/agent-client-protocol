@@ -191,7 +191,8 @@ Clients provide the interface between users and agents. They are typically code 
   updates and chunks](/protocol/v2/content), [tool calls, updates, and content
   chunks](/protocol/v2/tool-calls), [display-only terminal state and output
   chunks](/protocol/v2/tool-calls#display-only-terminals),
-  [plans](/protocol/v2/agent-plan), [available commands
+  [plans](/protocol/v2/agent-plan), [subagent sessions](/protocol/v2/subagents),
+  [available commands
   updates](/protocol/v2/slash-commands#advertising-commands), [config option
   updates](/protocol/v2/session-config-options#from-the-agent), [context
   compactions](/protocol/v2/prompt-lifecycle#session-compaction), and
@@ -241,5 +242,6 @@ See [Extensibility](/protocol/v2/extensibility) for details.
 - [Initialization](/protocol/v2/initialization) covers version and capability negotiation.
 - [Session Setup](/protocol/v2/session-setup) covers creating, resuming, and closing sessions.
 - [Prompt Lifecycle](/protocol/v2/prompt-lifecycle) covers how prompts run and how Agents report progress.
+- [Subagents](/protocol/v2/subagents) covers the child sessions an Agent delegates work to.
 - [Extensibility](/protocol/v2/extensibility) covers custom data, methods, and capabilities.
 - The [Test Compatibility Kit](/libraries/testing) checks an Agent implementation against the protocol.

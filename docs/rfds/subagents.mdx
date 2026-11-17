@@ -1024,7 +1024,9 @@ even if their runtimes were not restored; an association establishes identity,
 not a live runtime.
 
 **When replay is requested**, the successful response is the freshness boundary
-for child work-state and mutation-capability snapshots:
+for child work-state and mutation-capability snapshots in v1. In v2 the
+boundary is the parent's `replay_complete`. See
+[Subagents in ACP v2](#subagents-in-acp-v2). In v1:
 
 - Before the response, these snapshots are historical. They **MUST NOT**
   authorize Client-initiated mutations or establish confirmed current activity.
@@ -1087,6 +1089,11 @@ Read-only operations retain their normal protocol semantics and capability
 requirements; this RFD does not grant access to additional sessions or define
 a new history-query method. Responses to Agent-to-Client requests are not
 Client-initiated session mutations and **MUST** still be delivered.
+
+An Agent ignores a `session/cancel` for a child that does not advertise
+`cancel`. It **SHOULD** reject any other Client-initiated request that is not
+permitted for a child with `-32602`. This includes `session/close` and
+`session/delete`, which do not report success for a child.
 
 Restricted children are discovered through parent associations rather than
 ordinary standalone `session/list` entries. This avoids offering load, resume,
@@ -1159,6 +1166,9 @@ left to the Agent.
 
 ### Pending permission and elicitation requests
 
+This section describes v1. In v2 the Agent cancels these requests. See
+[Subagents in ACP v2](#subagents-in-acp-v2).
+
 Optimistically updating a tool's display does not resolve its JSON-RPC
 requests. When the Client cancels a session's current work, it **MUST** respond
 to that session's pending `session/request_permission` requests with the
@@ -1226,6 +1236,9 @@ and is not summed across the tree.
 
 ### Subagents in ACP v2
 
+The v2 rules are specified on the v2 [Subagents](/protocol/v2/subagents) page.
+Where this RFD and that page differ for v2, the page applies.
+
 The two versions use the same ownership and directed-message model, with
 these differences:
 
@@ -1246,6 +1259,24 @@ these differences:
   gets its own `replay_complete` update on its own `sessionId`, after its last
   replayed update. Live updates and requests for the child follow it. See the
   [v2 Replay Complete Signal RFD](./v2/session-replay-complete.mdx#subagent-sessions).
+- **Freshness boundary.** In v2, the parent's `replay_complete` is the
+  freshness boundary for a child's work state and capabilities, not the
+  response. A `subagent_update` is an update for the parent session. One
+  that arrives before the parent's `replay_complete` is replayed history, and
+  one that arrives after it is current. The Agent sends a current
+  `subagent_update` for each child in the `background` list before the state
+  snapshot that lists it. The Client still does not send `session/cancel` for
+  a child until the resume succeeds. v1 keeps the response as the boundary,
+  because `session/load` has no signal for the end of the replay.
+- **Pending requests.** v2 moved the cleanup of pending permission requests
+  from the Client to the Agent, following the
+  [v2 Background Work RFD](./v2/background-work.mdx). The Agent stops waiting
+  for the requests of cancelled work and cancels each of them with
+  `$/cancel_request`. The Client may answer a request it knows belongs to the
+  cancelled work, and the requests of a child that keeps running stay open.
+  The Client **MUST** in
+  [Pending permission and elicitation requests](#pending-permission-and-elicitation-requests)
+  is v1 only.
 - **Directories are informational.** v2 removes the Client filesystem and
   terminal methods, so a child's `cwd` and `additionalDirectories` have no
   Client-side root-set check or terminal default to drive. They use the same
@@ -1253,8 +1284,8 @@ these differences:
   root set remains a boundary for the Agent's own tools, as for any v2
   session.
 
-The restricted-session rules, cancellation flow, and connection-loss handling
-defined above also apply to v2. The [v2 prompt lifecycle](/protocol/v2/prompt-lifecycle) resolves
+With those exceptions, the restricted-session rules, cancellation flow, and
+connection-loss handling defined above also apply to v2. The [v2 prompt lifecycle](/protocol/v2/prompt-lifecycle) resolves
 `session/prompt` at acceptance and reports foreground work through
 `state_update`. Neither that response nor the parent's transition to `idle`
 implies that every child has finished.
@@ -1305,7 +1336,9 @@ implementation to use the named SDKs, providers, or integration techniques.
    for publishing current snapshots after replay completes. Non-replaying
    resume does not need such a hook, and other live child traffic need not be
    globally buffered. Any ordering mechanism should provide the required
-   ordering rather than rely on arbitrary delays.
+   ordering rather than rely on arbitrary delays. This step applies to v1.
+   In v2 the parent's `replay_complete` is the boundary, so no
+   after-response hook is needed.
 7. Update example Clients to route child events automatically, retain reusable
    session identities, and render session-directed messages distinctly from
    user-facing responses and tool calls. Enable or restore provider-side child
@@ -1647,6 +1680,13 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-17: Agents **SHOULD** reject a Client-initiated request that is not permitted for a child with `-32602`, in both versions.
+- 2026-11-17: The v1 rules are on the v1 draft [Subagents](/protocol/v1/draft/subagents) page. The v1 draft pages link to it instead of to this RFD.
+- 2026-11-17: Added to the scope of the v2 Preview. The v2 rules are on the
+  v2 [Subagents](/protocol/v2/subagents) page. In v2, the parent's
+  `replay_complete` replaces the response as the freshness boundary for child
+  work state and capabilities, and the Agent, not the Client, cancels the
+  pending permission requests of cancelled work.
 - 2026-11-13: The v2 schema no longer gates subagents behind
   `unstable_subagents`. The v2 protocol guides describe them. v1 keeps the
   feature flag.

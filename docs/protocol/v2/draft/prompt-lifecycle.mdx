@@ -21,7 +21,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `agent_message`             | Creates or updates an Agent message identified by `messageId`.                                                                                                           |
 | `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                                               |
 | `agent_thought`             | Creates or updates an Agent reasoning message identified by `messageId`.                                                                                                 |
-| `subagent_update`           | Announces an owned child session or updates its display metadata, working directories, capabilities, and mirrored work-state snapshot.                                   |
+| `subagent_update`           | Announces a [child session](/protocol/v2/draft/subagents) or updates its labels, working directories, capabilities, and mirrored work state.                             |
 | `session_message`           | Creates or updates a [message addressed to another session](#session-directed-messages).                                                                                 |
 | `session_message_chunk`     | Appends content to a [session-directed message](#session-directed-messages).                                                                                             |
 | `state_update`              | A snapshot of the Agent's [foreground activity](#session-states).                                                                                                        |
@@ -139,12 +139,12 @@ when observed. Clients must not synthesize an incoming entry from an outgoing
 one or forward the content themselves. Neither view acknowledges completed
 recipient processing.
 
-The task a parent gives a subagent, including the first one that starts its
+A message from a parent to a subagent, including the first one that starts its
 work, is a session-directed message. Agents **SHOULD** report it as an
 incoming `session_message` in the child's transcript, with `senderSessionId`
 set to the parent, and **SHOULD NOT** report it as a `user_message`. Clients
 can then render it as a message from the parent session rather than from the
-user. See [Delegated tasks](/rfds/subagents#delegated-tasks).
+user. See [Messages from a parent to a child](/protocol/v2/draft/subagents#messages-from-a-parent-to-a-child).
 
 When the Agent has no evidence of who sent a message the child received, it
 omits `senderSessionId` and **MUST NOT** assume the parent. It links two views
@@ -189,7 +189,7 @@ Background work is session-owned work running independently of foreground work. 
 
 - **Terminals.** A process that keeps running after its tool call returns control to the model, such as a backgrounded shell or dev server, is a [terminal](/protocol/v2/draft/tool-calls#display-only-terminals). It is live until its `terminal_update` reports `exitStatus`. While it is listed, the Agent **SHOULD** keep its output current whenever it can read the process output. Output is not a liveness signal: a Client **MUST NOT** treat a terminal as hung or exited because its output is missing or stale.
 - **Tool calls.** Work without a process of its own, such as a watcher, a workflow, or a scheduled wakeup, keeps reporting [status](/protocol/v2/draft/tool-calls#status) on its tool call. `pending` and `paused` tool calls are still live.
-- **Subagent sessions.** A background child keeps reporting through its [subagent](/rfds/subagents) association and `state`.
+- **Subagent sessions.** A background [child session](/protocol/v2/draft/subagents#work-state) keeps reporting its `state`, on its own `state_update` and on its parent's `subagent_update`.
 
 Work without a process stays on the tool call that started it. When the Agent knows that a tool call's work continues after the call returns control to the model, it **SHOULD** keep that tool call `pending`, `in_progress`, or `paused` and list it, instead of giving it a final status. Some background work has no such tool call. No tool call started it, such as a task that a hook started, or the Agent learned of the work only after its tool call reached a final status. The Agent **MAY** start a tool call of its own for such work, with a title that describes the work, and list it. It sends that tool call like any other, before the first list that names it, even while the session is `idle`. The Agent does not reopen a tool call that has a final status. It starts a new one instead.
 
@@ -1276,7 +1276,7 @@ Clients detect a lost connection or an exited Agent process themselves. No updat
 whether or not a prompt started it. It is not an event for an individual prompt,
 model call, permission request, or elicitation.
 
-For exposed subagents, Agents **SHOULD** also mirror the same snapshot in the
+For exposed [subagents](/protocol/v2/draft/subagents#work-state), Agents **SHOULD** also mirror the same snapshot in the
 immediate parent's `subagent_update.state`. This keeps the parent's roster and
 the child's own stream informed about one logical state. Duplicate snapshots
 do not represent additional work or usage.
@@ -1435,6 +1435,8 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 ```
 
 `session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. The Agent **MUST** answer the covered prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). A `session/prompt` received after `session/cancel` is not cancelled by it. Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list.
+
+For a [child session](/protocol/v2/draft/subagents#cancellation), the Client sends `session/cancel` only while the child advertises `capabilities.cancel`. Cancelling a session also cancels the child work that the cancelled work is waiting on.
 
 The Client **SHOULD** preemptively mark all non-finished tool calls pertaining to the current active work as `cancelled` as soon as it sends the `session/cancel` notification. It **SHOULD** skip tool calls in the latest `background` list and tool calls that reference a listed terminal. This mark is a local display hint: the Agent gives those tool calls their [final status](/protocol/v2/draft/tool-calls#status), and its updates replace the mark.
 

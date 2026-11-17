@@ -337,7 +337,7 @@ When a terminal is embedded in a tool call, the Client displays live output as i
 ### Sessions (unstable)
 
 **Draft only.** A session content item links the tool call to another session
-it operates on, such as a [subagent](/rfds/subagents) it spawned or waits on:
+it operates on, such as a [subagent](/protocol/v1/draft/subagents) it spawned or waits on:
 
 ```json
 {
@@ -355,7 +355,7 @@ Optional nullable `_meta` is scoped to this content item. Omission and `null`
 both mean that no item metadata was provided. A tool call can reference several
 sessions. The reference is display-only. It does not establish ownership,
 enable Client-initiated controls on the referenced session, or report that
-session's work state. Agents send it only when the Client advertises the `subagents` capability. The task a parent
+session's work state. Agents send it only when the Client advertises the `subagents` capability. A message a parent
 sends a child is reported as a [session-directed message](/protocol/v1/draft/prompt-turn#session-directed-messages-unstable),
 not through a tool call.
 

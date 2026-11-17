@@ -16,7 +16,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `user_message_chunk`        | A streamed chunk of a user message.                                                                                                                                       |
 | `agent_message_chunk`       | A streamed chunk of the Agent's response.                                                                                                                                 |
 | `agent_thought_chunk`       | A streamed chunk of the Agent's reasoning.                                                                                                                                |
-| `subagent_update`           | **Draft only.** Announces an owned child session or updates its parent-owned metadata, working directories, and work state. Requires the Client's `subagents` capability. |
+| `subagent_update`           | **Draft only.** Announces a [subagent session](/protocol/v1/draft/subagents) or updates its labels, directories, and state. Requires the Client's `subagents` capability. |
 | `session_message`           | **Draft only.** Creates or updates a [message addressed to another session](#session-directed-messages-unstable). Requires the Client's `subagents` capability.           |
 | `session_message_chunk`     | **Draft only.** Appends content to a [session-directed message](#session-directed-messages-unstable). Requires the Client's `subagents` capability.                       |
 | `tool_call`                 | A new [tool call](/protocol/v1/draft/tool-calls#creating).                                                                                                                |
@@ -102,15 +102,15 @@ follow the participant-ID rules and can arrive in a later `session_message`. Cli
 not link views by equal IDs alone. The Agent reports each side only
 when observed. Clients must not synthesize an incoming entry from an outgoing
 one or forward the content themselves. Neither view acknowledges completed
-recipient processing. See the [Subagent Sessions RFD](/rfds/subagents#session-directed-messages)
-for participant registration, history gaps, and ownership rules.
+recipient processing. See [Subagents](/protocol/v1/draft/subagents)
+for how sessions are announced, replayed history, and ownership.
 
-The task a parent gives a subagent, including the first one that starts its
+A message from a parent to a subagent, including the first one that starts its
 work, is a session-directed message. Agents **SHOULD** report it as an
 incoming `session_message` in the child's transcript, with `senderSessionId`
 set to the parent, and **SHOULD NOT** report it as a `user_message_chunk`.
 Clients can then render it as a message from the parent session rather than
-from the user. See [Delegated tasks](/rfds/subagents#delegated-tasks).
+from the user. See [Messages from a parent to a child](/protocol/v1/draft/subagents#messages-from-a-parent-to-a-child).
 
 When the Agent has no evidence of who sent a message the child received, it
 omits `senderSessionId` and **MUST NOT** assume the parent. It links two views
