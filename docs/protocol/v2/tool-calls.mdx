@@ -323,7 +323,7 @@ The Client responds with the user's decision:
 
 Clients **MAY** automatically allow or reject permission requests according to the user settings.
 
-A permission request cancelled with [`$/cancel_request`](/protocol/v2/cancellation), for example after [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation), is answered with the `"cancelled"` outcome:
+When the Agent cancels a pending permission request with [`$/cancel_request`](/protocol/v2/cancellation), for example after [`session/cancel`](/protocol/v2/prompt-lifecycle#cancellation), the Client **SHOULD** dismiss the prompt and answer with the `"cancelled"` outcome:
 
 ```json
 {

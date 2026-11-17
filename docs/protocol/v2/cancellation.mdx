@@ -28,6 +28,8 @@ If the receiver does cancel the request, it sends one of these responses:
 - A successful response, where the method defines one for cancellation: `session/prompt` after its user message is inserted (with its `messageId`), `session/request_permission` with the `cancelled` outcome, or `elicitation/create` with the `cancel` action
 - An error response with code [`-32800` (Request Cancelled)](/protocol/v2/schema#errorcode)
 
+A Client that receives `$/cancel_request` for a `session/request_permission` or `elicitation/create` request it has not answered **SHOULD** dismiss the prompt and answer with the `cancelled` outcome or the `cancel` action. The Agent has stopped waiting for the user's choice.
+
 A sender that stops waiting for a response, for example after a timeout or because the work that needed it ended, **SHOULD** send `$/cancel_request` for that request so the receiver can stop work or dismiss UI. The calling side **MAY** implement graceful cancellation processing by waiting for the response from the remote side.
 
 Cancellation **MAY** also be done explicitly on a per-feature basis within the protocol to cover specific scenarios, such as cancellation of [active session work](/protocol/v2/prompt-lifecycle#cancellation).
@@ -37,7 +39,7 @@ permission or elicitation request does not automatically cancel the whole
 foreground workflow or determine its state. The Agent applies the aggregate
 [state-transition rules](/protocol/v2/prompt-lifecycle#state-transitions).
 
-On `session/cancel`, the Agent stops waiting for pending permission requests of the cancelled foreground work and **SHOULD** cancel each of them with `$/cancel_request`. Clients **MAY** answer such a request with the `cancelled` outcome without waiting for `$/cancel_request`. After cancellation completes, Agents **SHOULD** ignore late
+On `session/cancel`, the Agent stops waiting for pending permission requests of the cancelled foreground work and **MUST** cancel each of them with `$/cancel_request`. The Agent decides which requests belong to that work. Clients **MAY** answer such a request with the `cancelled` outcome without waiting for `$/cancel_request`. After cancellation completes, Agents **SHOULD** ignore late
 answers rather than use them to resume the cancelled work. After aborting active
 foreground work and sending its final updates, the Agent **MUST** report `idle`
 with `stopReason: "cancelled"`. No additional completion update is required if

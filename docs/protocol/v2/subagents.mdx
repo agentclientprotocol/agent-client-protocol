@@ -414,7 +414,7 @@ A request the Agent sends for a child, such as `session/request_permission` or `
 
 The rules for pending requests in [Cancellation](/protocol/v2/prompt-lifecycle#cancellation) and [Elicitation cancellation](/protocol/v2/elicitation#session-cancellation) apply to each session separately:
 
-- When the Agent stops a session's cancelled work, it stops waiting for that work's pending permission requests and **SHOULD** cancel each of them with [`$/cancel_request`](/protocol/v2/cancellation). This includes the requests of descendants that the cancellation stopped.
+- When the Agent stops a session's cancelled work, it stops waiting for that work's pending permission requests and **MUST** cancel each of them with [`$/cancel_request`](/protocol/v2/cancellation). This includes the requests of descendants that the cancellation stopped.
 - `session/cancel` on a parent does not resolve the requests of a child that keeps running. The user can still answer them.
 - The Client **MAY** answer a child's pending permission request with the `cancelled` outcome once that child reports `idle` with `stopReason: "cancelled"`. Before that, it leaves the request open.
 - A response that arrives after the work was cancelled still resolves its request. The Agent **MUST NOT** use it to restart cancelled or abandoned work, or to permit a new task for the same child. A request **MUST NOT** get more than one response.
