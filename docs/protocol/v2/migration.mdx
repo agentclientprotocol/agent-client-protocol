@@ -350,7 +350,7 @@ In v2, acceptance means insertion of the user message into the ACP conversation.
 
 Insertion adds a logical user message with an ID and a position relative to other messages. See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted) for adapter examples.
 
-Clients may send `session/prompt` while foreground work is active. Unlike many v1 Agents, a v2 Agent **MUST NOT** reject a prompt only because work is active: it inserts it right away or holds it and inserts it later, in the order received. A held prompt's response stays pending until insertion. See [Prompts During Active Work](/protocol/v2/prompt-lifecycle#prompts-during-active-work).
+Clients may send `session/prompt` while foreground work is active. Unlike many v1 Agents, a v2 Agent **MUST NOT** reject a prompt only because work is active: it inserts it right away or holds it and inserts it later, in the order received. A held prompt's response stays pending until insertion. Only `session/cancel` and `session/close` are guaranteed to drop it. See [Prompts During Active Work](/protocol/v2/prompt-lifecycle#prompts-during-active-work).
 
 Everything else happens through `session/update` notifications:
 

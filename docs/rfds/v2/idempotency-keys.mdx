@@ -112,7 +112,7 @@ The Agent looks the key up in the session:
 - **The response.** A retry gets the original `messageId` and nothing else. The Agent doesn't start a second round of work for the message. Whether it continues work that stopped before it finished is up to the Agent, as it is after any restart. The Client learns the session's current activity from live updates or from the `session/resume` snapshot.
 - **Errors leave the key unused.** An error response to `session/prompt` already means the message was not inserted. The Agent records nothing, and the Client can send the same prompt with the same key again.
 - **A reused key.** The Agent **MUST NOT** insert a second message for a key it has recorded. If a request carries a recorded key with a different prompt, the Agent either answers as for a retry or, if it notices the difference, rejects the request with `-32602`. Agents are not required to compare prompts. After such a `-32602`, the key stays recorded for the first prompt.
-- **Cancelling.** `$/cancel_request` for any pending request with the key withdraws a prompt that is not inserted yet. The Agent then answers every pending request for that key with `-32800`. `session/cancel` and `session/close` answer held prompts the same way they do today.
+- **Cancelling.** An Agent that honors `$/cancel_request` for any pending request with the key withdraws the prompt if it is not inserted yet. It then answers every pending request for that key with `-32800`. Honoring `$/cancel_request` is optional. `session/cancel` and `session/close` answer held prompts the same way they do today.
 - **Keys stay private.** The Agent doesn't echo keys in session updates, `session/list` results, or replayed history, so one Client doesn't see another Client's keys. A key is not a credential. It only has meaning in a session the caller can already prompt.
 
 ### How long a key lasts
@@ -209,7 +209,7 @@ This audit covers the stable and unstable v2 methods. "Sending it again" means t
 | `session/update`                             | Upserts replace state by entity ID, but chunks append, so a resent chunk duplicates content. A Client that missed updates calls `session/resume`. | Not retried |
 | `elicitation/complete`, `auth/status_update` | Reports the same state again.                                                                                                                     | Not retried |
 
-The spec doesn't say what an Agent does with held prompts when the connection that sent them ends, and this RFD doesn't settle it. With a key, either choice is safe: if the Agent kept the prompt, the retry gets its outcome, and if the Agent dropped it, the retry is a new submission.
+When the connection that sent held prompts ends, the Agent may insert or discard them. With a key, either choice is safe: if the Agent kept the prompt, the retry gets its outcome, and if the Agent dropped it, the retry is a new submission.
 
 ### Prior art
 
@@ -335,5 +335,6 @@ This RFD doesn't change v1. A v1 `session/prompt` response arrives at the end of
 
 ## Revision history
 
+- 2026-11-17: An Agent may insert or discard held prompts when the connection that sent them ends. Withdrawing a held prompt with `$/cancel_request` is best effort. `session/cancel` and `session/close` are the guaranteed ways to drop one.
 - 2026-11-17: Steps 1 and 3 landed. `idempotencyKey` and the `IdempotencyKey` type are in the v2 schema, and a malformed key fails deserialization. From step 2, the keyed-prompt rules are on the prompt lifecycle, session setup, and transports pages. The retry classes are not on the method pages yet.
 - 2026-11-13: Initial draft.
