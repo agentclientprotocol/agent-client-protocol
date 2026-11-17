@@ -5227,7 +5227,7 @@ pub enum AgentRequest {
     /// to the user and return their decision.
     ///
     /// After `session/cancel`, the agent stops waiting for requests of the cancelled
-    /// foreground work and SHOULD cancel them with `$/cancel_request`. The client
+    /// foreground work and MUST cancel them with `$/cancel_request`. The client
     /// answers a cancelled request with the `cancelled` outcome.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)

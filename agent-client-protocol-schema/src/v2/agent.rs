@@ -8246,7 +8246,7 @@ pub enum ClientNotification {
     /// as possible.
     ///
     /// The Agent MUST stop waiting for pending `session/request_permission` requests of
-    /// the cancelled work and treat them as not approved. It SHOULD cancel each of them
+    /// the cancelled work and treat them as not approved. It MUST cancel each of them
     /// with `$/cancel_request`.
     ///
     /// After all ongoing operations have been successfully aborted and pending
