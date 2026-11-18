@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## [1.19.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.18.0...v1.19.0) - 2026-11-18
+
+### Added
+
+- *(unstable-v2)* remove pattern from elicitation string properties ([#2864](https://github.com/agentclientprotocol/agent-client-protocol/pull/2864))
+- *(unstable-v2)* add idempotencyKey to session/prompt ([#2847](https://github.com/agentclientprotocol/agent-client-protocol/pull/2847))
+- *(schema)* add method-aware payload dispatch ([#2846](https://github.com/agentclientprotocol/agent-client-protocol/pull/2846))
+- *(unstable)* add session cursors and cursorId on session/fork ([#2843](https://github.com/agentclientprotocol/agent-client-protocol/pull/2843))
+
+### Fixed
+
+- *(unstable-v2)* require at least one change in a diff ([#2858](https://github.com/agentclientprotocol/agent-client-protocol/pull/2858))
+
+### Other
+
+- *(unstable-v2)* word the tool call status rules as Agent rules ([#2859](https://github.com/agentclientprotocol/agent-client-protocol/pull/2859))
+- *(unstable-v2)* require Agents to cancel abandoned requests ([#2852](https://github.com/agentclientprotocol/agent-client-protocol/pull/2852))
+- *(unstable)* add subagents pages for v2 and the v1 draft ([#2849](https://github.com/agentclientprotocol/agent-client-protocol/pull/2849))
+
 ## [1.18.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.17.0...v1.18.0) - 2026-11-14
 
 ### Added
