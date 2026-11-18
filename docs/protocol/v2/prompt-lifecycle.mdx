@@ -1216,7 +1216,7 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 }
 ```
 
-`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. The Agent **MUST** answer the covered prompts with `-32800`, as described in [request cancellation](/protocol/v2/cancellation). A `session/prompt` received after `session/cancel` is not cancelled by it. Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list.
+`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. The Agent **MUST** answer the covered prompts with `-32800`, as described in [request cancellation](/protocol/v2/cancellation). A `session/prompt` received after `session/cancel` is not cancelled by it. Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list. To stop a listed tool call or terminal, the Client sends [`tool_call/cancel`](/protocol/v2/tool-calls#cancelling-tool-calls) or [`terminal/cancel`](/protocol/v2/tool-calls#cancelling-terminals) while that item advertises `capabilities.cancel`.
 
 For a [child session](/protocol/v2/subagents#cancellation), the Client sends `session/cancel` only while the child advertises `capabilities.cancel`. Cancelling a session also cancels the child work that the cancelled work is waiting on.
 
