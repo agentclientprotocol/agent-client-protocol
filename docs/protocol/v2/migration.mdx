@@ -57,6 +57,8 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 | `fs/read_text_file`, `fs/write_text_file`                                                           | **Removed**                                                                                                                                                                                                                                                                |
 | `terminal/create`, `terminal/output`, `terminal/release`, `terminal/wait_for_exit`, `terminal/kill` | **Removed**                                                                                                                                                                                                                                                                |
 | `$/cancel_request`                                                                                  | Unchanged, except for an inserted `session/prompt` (see Cancellation)                                                                                                                                                                                                      |
+| -                                                                                                   | **New:** `tool_call/cancel`. Stops one tool call that advertises `capabilities.cancel` (see [Background work and cancel controls](#background-work-and-cancel-controls))                                                                                                   |
+| -                                                                                                   | **New:** `terminal/cancel`. Stops the process of one terminal that advertises `capabilities.cancel`                                                                                                                                                                        |
 
 ### `session/update` variant changes
 
@@ -66,11 +68,11 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 | `agent_message_chunk`                           | Kept. `messageId` now required                                                                                                                    |
 | `agent_thought_chunk`                           | Kept. `messageId` now required                                                                                                                    |
 | -                                               | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts                                                                   |
-| -                                               | **New:** foreground `state_update` (`running`, `idle`, `requires_action`, `unknown`) with stop reasons                                            |
+| -                                               | **New:** foreground `state_update` (`running`, `idle`, `requires_action`, `unknown`) with stop reasons and an optional `background` list          |
 | -                                               | **New:** `subagent_update` announces a [child session](/protocol/v2/subagents). Every Client **MUST** handle it                                   |
 | -                                               | **New:** `session_message`, `session_message_chunk` for [messages between sessions](#subagents)                                                   |
 | `tool_call`                                     | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call                                                                |
-| `tool_call_update`                              | Kept. Now an explicit upsert with omit/`null`/value patch semantics                                                                               |
+| `tool_call_update`                              | Kept. Now an explicit upsert with omit/`null`/value patch semantics. Gains the `paused` status and an optional `capabilities` field               |
 | -                                               | **New:** `tool_call_content_chunk` for streaming individual content items                                                                         |
 | -                                               | **New:** `terminal_update` for Agent-owned display terminal state and replay                                                                      |
 | -                                               | **New:** `terminal_output_chunk` for appending display terminal bytes                                                                             |
@@ -504,8 +506,9 @@ clear cannot be represented by a v1 update because v1 treats `null` like
 omission. A strict adapter must reject that conversion, while an intentionally
 lossy adapter may omit the clear. The remaining fields (`title`, `kind`,
 `status`, `content`, `locations`, `rawInput`, `rawOutput`) and `kind` values are
-unchanged from v1. The `status` enum adds `cancelled`, and both enums are now
-extensible.
+unchanged from v1. The `status` enum adds `cancelled` and `paused`, and both enums are now
+extensible. `tool_call_update` also gains an optional `capabilities` field. See
+[Background work and cancel controls](#background-work-and-cancel-controls).
 
 Top-level `_meta` is now stored tool-call state, too. v1 gave no rule for
 keeping a `tool_call_update`'s `_meta`, so Agents could use it for data about
@@ -569,7 +572,7 @@ The reference contains no mutable state. The Agent reports that separately with 
 }
 ```
 
-Only `terminalId` is required. `command`, `cwd`, `size`, `output`, `exitStatus`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it, except that a `_meta` object patches stored metadata by top-level key. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` must be absolute. `size` is the terminal size in character cells, with required `cols` and `rows`. When present, Clients can use it to render output as the program wrote it.
+Only `terminalId` is required. `command`, `cwd`, `size`, `output`, `exitStatus`, `capabilities`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it, except that a `_meta` object patches stored metadata by top-level key. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` must be absolute. `size` is the terminal size in character cells, with required `cols` and `rows`. When present, Clients can use it to render output as the program wrote it.
 
 `output` is an authoritative replacement snapshot for replay, correction, or resynchronization. Its required `data` field is RFC 4648 base64-encoded bytes and is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. A concrete snapshot replaces all previously stored bytes. Clients must not merge or splice bytes from the previous snapshot into it. Optional nullable `output._meta` is snapshot-scoped. Omission and `null` both mean no snapshot metadata was provided.
 
@@ -588,6 +591,15 @@ For efficient live output, the Agent sends append updates:
 Each chunk's `data` is independently base64-encoded. Decode each chunk separately, then append the resulting bytes in received order for that terminal. Do not concatenate encoded strings before decoding. Chunk boundaries may split UTF-8 code points and ANSI escape sequences, so text and terminal parsers retain state between chunks. A later `terminal_update.output` snapshot replaces all bytes accumulated so far, and subsequent chunks append to that replacement.
 
 A Client may use an isolated terminal emulator, but it only needs to provide a safe sanitized transcript fallback. The terminal is display-only: it has no input, resize, interrupt, wait, release, or execution semantics. The one control is opt-in cancellation, where an Agent lets the Client stop the process with [`terminal/cancel`](/protocol/v2/tool-calls#cancelling-terminals).
+
+### Background work and cancel controls
+
+v1 had no way to say that work goes on after the turn that started it. v2 reports such work on entities the Client already tracks. See [Background work](/protocol/v2/prompt-lifecycle#background-work).
+
+- **`background` list.** `state_update` carries an optional `background` list of the terminals, tool calls, and child sessions that run independently of foreground work. An Agent that reports background work **MUST** include the list on every `state_update`. Omitted or `null` means not reported, not that nothing is running.
+- **`paused` status.** A tool call that has started, is not running now, and will not continue until something resumes it reports `paused`. `pending` also covers work that is scheduled to run later. See [Status](/protocol/v2/tool-calls#status).
+- **`capabilities.cancel`.** `tool_call_update` and `terminal_update` carry an optional `capabilities` field. While it advertises `cancel`, the Client can stop that one tool call with [`tool_call/cancel`](/protocol/v2/tool-calls#cancelling-tool-calls) or that one terminal with [`terminal/cancel`](/protocol/v2/tool-calls#cancelling-terminals), without cancelling the rest of the session's work. The Client **MUST NOT** send either request for an item that does not currently advertise `cancel`.
+- **`session/cancel` and `session/close`.** `session/cancel` does not cover work in the latest `background` list, which keeps running. `session/close` stops it.
 
 ## Diff content
 
@@ -950,7 +962,7 @@ See [Errors](/protocol/v2/error).
 4. **Prompt lifecycle.** Respond to an accepted `session/prompt` with `{ "messageId": "…" }`, carrying the agent-generated ID of the inserted user message. Emit a `user_message` (or streamed `user_message_chunk`) acknowledgment with the same `messageId`, a `running` state update when foreground work starts (or `requires_action` if it starts blocked, then `running` when progress resumes), and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Don't reject a prompt only because work is active: insert or hold it, and answer prompts not yet inserted with `-32800` on `session/cancel` or `session/close`. Report a failure after insertion as an idle `state_update` with `stopReason: "error"` and the JSON-RPC error in `error`, never as an error response to the prompt. Background updates may continue while idle. Support `idempotencyKey` on `session/prompt`: reject a malformed key with `-32602`, insert at most one user message for a key in a session, and answer a retry with the original `messageId`.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics, including key-level `_meta` patches.
-7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, size, snapshots, and exit state. Send independently base64-encoded `terminal_output_chunk` values for live bytes. Do not expect Client control methods or capability negotiation.
+7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, size, snapshots, and exit state. Send independently base64-encoded `terminal_output_chunk` values for live bytes. The Client's only control is `terminal/cancel`, which you opt into for each terminal with `capabilities.cancel`.
 8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible. If a tool's input describes an edit only as a snippet, read the file somewhere the tool waits on, before it can run, or send no diff until the change is done (see [Edits known only as a snippet](#edits-known-only-as-a-snippet)).
 9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations. Treat a `cancelled` outcome as "don't proceed with this operation", not as the turn ending.
 10. **Plans.** Send `plan_update` with `{ "sessionUpdate": "plan_update", "plan": { "type": "items", "planId": ..., "entries": [...] } }`.
@@ -963,6 +975,7 @@ See [Errors](/protocol/v2/error).
 17. **Errors.** Return the now-required [error codes](#errors): `-32601`, `-32002` with `data.sessionId`, and `-32600` before initialization or for a late `initialize`.
 18. **Subagents.** Exposing subagents is optional. If you do, announce each child with `subagent_update` on its parent before any update or request that carries the child's `sessionId`. Report the child's work on its own `sessionId`, mirror its `state_update` in the parent's `subagent_update.state`, and report messages from a parent to a child as `session_message`. Advertise `capabilities.cancel` only for a child whose work you can cancel on its own. Report `unknown` when you can no longer observe a session's foreground work.
 19. **Elicitation.** Stop sending `pattern` on string properties, and validate the submitted value yourself.
+20. **Background work.** If work outlives the foreground work that started it, list it in `background` on every `state_update`. Report suspended tool calls as `paused`. Advertise `capabilities.cancel` only on tool calls and terminals you can stop, and handle `tool_call/cancel` and `terminal/cancel` for them.
 
 ## Migration checklist: Clients
 
@@ -971,7 +984,7 @@ See [Errors](/protocol/v2/error).
 3. **Prompt lifecycle.** Don't treat the `session/prompt` response as turn completion. Drive UI from `state_update` (`running` / `idle` / `requires_action` / `unknown`), take the stop reason from the idle update, and render the user's message from the `user_message` acknowledgment (which carries its canonical `messageId`). Treat `stopReason: "error"` as a failed outcome and read its details from the idle update's `error`. An error response to `session/prompt` means the message was not inserted. Keep accepting background updates while idle. To be able to retry a prompt whose response was lost, send it with an `idempotencyKey` and send it again with the same key.
 4. **Messages.** Track messages by required `messageId`. Implement upsert semantics: whole-message updates replace content (or clear it with `null`/`[]`), chunks append.
 5. **Tool calls.** Create tool calls on first-seen `toolCallId` in `tool_call_update`. Apply omit/`null`/value patches, and patch top-level `_meta` by key. Append `tool_call_content_chunk` items. Replace accumulated content when an update carries `content`.
-6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics, and use the reported `size` for rendering when present. Independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input or process controls.
+6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics, and use the reported `size` for rendering when present. Independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input. The only process control is `terminal/cancel`, for a terminal that advertises `capabilities.cancel`.
 7. **Diffs.** Render `patch.text` when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
 8. **Permissions.** Render `title`/`description`. Apply `tool_call` subjects like ordinary tool-call updates, and render `command` subjects from their command, required absolute cwd, and optional associations. Show a generic prompt for absent or unknown subjects. Answer `cancelled` when the user dismisses the prompt or policy declines it. When the Agent cancels a request with `$/cancel_request`, dismiss the prompt and answer `cancelled`.
 9. **Plans.** Handle `plan_update` keyed by `planId`. Each update replaces that plan's entries.
@@ -979,10 +992,11 @@ See [Errors](/protocol/v2/error).
 11. **Modes and config options.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`. Read `configId` and `groupId`, render `boolean` options, and send `session/set_config_option` with a `type` of `"id"` or `"boolean"`.
 12. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and use `session/resume` without `replayFrom` to reattach when you still hold the session's entities and missed no updates. Request replay when you want them resynchronized, for example after a lost connection. Use `replay_complete` to find the end of the replayed history, and treat a replay that ends without it and without a successful response as truncated.
 13. **Client file and terminal methods.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`, using only transports the Agent advertises under `session.mcp`. Do not treat display terminals as Client resources.
-14. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation.
+14. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation. Don't answer every pending permission request when you send it. Dismiss and answer a request when the Agent cancels it with `$/cancel_request`.
 15. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, and read commands and their `input` as tagged unions. Replace the `configOptions` and `availableCommands` lists you hold with the lists in each setup response, including lists from updates that arrived before the response. An omitted list means none. Replace the command list on each `available_commands_update`, including `[]` to clear it.
 16. **Subagents.** Handle `subagent_update`, which needs no capability and cannot be ignored as an unknown update. Register each child session, attribute its updates and requests to it, and show `session_message` entries as messages between sessions. Send nothing for a child except responses to its requests, `session/cancel` while the child advertises `capabilities.cancel`, and `tool_call/cancel` or `terminal/cancel` for an item that advertises its own. Discard child state and capabilities when you resume the parent.
 17. **Elicitation.** Stop evaluating `pattern` on string properties. v2 forms don't carry it.
+18. **Background work.** Read the `background` list on `state_update`, and treat an omitted list as not reported. Show `paused` tool calls as paused. Offer to stop a tool call or terminal only while it advertises `capabilities.cancel`, with `tool_call/cancel` or `terminal/cancel`.
 
 ## Migration checklist: SDKs
 
