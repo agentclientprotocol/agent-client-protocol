@@ -145,7 +145,7 @@ When the Agent crashes during a resume, the Client knows that the replay was cut
 Status on 2026-11-18:
 
 - **Steps 1 and 2 are done.** They landed on 2026-11-13.
-- **Step 3 is done for the TypeScript and Rust SDKs.** Both expose the variant, and their example Agents send it. The Kotlin SDK delivers a resuming session's updates before the response since [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146). It has no v2 types yet.
+- **Step 3 is done for the TypeScript and Rust SDKs.** Both expose the variant, and their example Agents send it. The Kotlin SDK delivers a resuming session's updates before the response since [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146). Its v2 model does not have the `replay_complete` variant yet.
 - **Step 4 is done.** `claude-agent-acp` and `codex-acp` send `replay_complete` on v2 connections.
 
 ## Frequently asked questions

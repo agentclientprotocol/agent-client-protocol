@@ -269,7 +269,8 @@ Both runtimes store an ID that the adapter chooses with each user message, and b
 Status on 2026-11-18:
 
 - **Steps 1 to 3 are done.** The field and its tests are in the v2 schema crate. The rules are on the v2 pages, with the retry classes in one table on the [overview page](/protocol/v2/overview#retrying-requests).
-- **Steps 4 to 6 are open.** The SDKs do not send or record keys yet, and neither adapter implements the lookup.
+- **Steps 4 and 5 are partly done.** Since 2026-11-18, the TypeScript and Rust SDKs let a Client send a key with a prompt. Their example Agents record keys, and their tests cover a retry on the same connection and a retry of a held prompt. Neither SDK generates a key by default or gives Agents a helper that records keys.
+- **Step 6 is open.** Neither adapter implements the lookup.
 
 ## Frequently asked questions
 
