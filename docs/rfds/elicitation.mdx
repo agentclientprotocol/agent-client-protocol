@@ -273,6 +273,8 @@ MUST use a regex engine or execution limits that bound evaluation time and
 resource use. A malicious or pathological pattern MUST NOT be allowed to block
 Client UI or unboundedly consume resources.
 
+ACP v2 removes `pattern`. MCP's string schema does not have it. See the [v2 migration guide](/protocol/v2/migration#elicitation).
+
 Known formats include `email`, `uri`, `date`, and `date-time`. Other string
 format values are annotations. Implementations MUST preserve unknown formats
 when storing, replaying, proxying, or forwarding schemas and MUST NOT reject a
@@ -931,6 +933,7 @@ For v1, we recommend starting with JSON Schema validation only. If more complex 
 
 ## Revision history
 
+- 2026-11-17: Noted that ACP v2 removes `pattern` from string properties, to match MCP's string schema.
 - 2026-10-29: Agents translate, rather than pass through, elicitation capabilities for MCP servers, since `{}` means no modes in ACP but form support in MCP.
 - 2026-07-22: Moved to Completed and stabilized elicitation in the protocol artifacts. Audited the data model and safety guidance against the locked MCP 2026-07-28 release candidate and documented ACP's direct-request, capability, scope, and URL-completion differences.
 - 2026-07-09: Moved to Preview.

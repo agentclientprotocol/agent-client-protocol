@@ -59,6 +59,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Remove the dedicated session modes API from v2. This includes the `modes` session response fields, `session/set_mode`, `current_mode_update`, and the `SessionMode*` types.
 - Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
 - Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and the Client-owned semantics of v1 terminal tool-call content. Terminal authentication remains separate under `capabilities.auth.terminal`.
+- Remove `pattern` from elicitation string properties. MCP's string schema, which the form schema is based on, does not have it.
 - Add [Agent-owned, display-only terminal output](./terminal-output.mdx). Tool calls reference terminals by `terminalId`; terminal upserts carry `command`, absolute `cwd`, replay snapshots, and exit status; terminal output chunks append independently base64-encoded bytes. The display surface is baseline v2 and does not add Client execution or control methods.
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
 - Replace the v1 split between `tool_call` and `tool_call_update` with a single [tool-call update](./tool-call-updates.mdx) upsert shape keyed by `toolCallId`.
@@ -137,6 +138,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-17: Removed `pattern` from elicitation string properties in v2, to match MCP's string schema.
 - 2026-11-17: Added Subagent Sessions to the v2 Preview scope and to the change list, together with the `unknown` state. The v2 rules are on the v2 [Subagents](/protocol/v2/subagents) page.
 - 2026-11-17: Added `idempotencyKey` on `session/prompt` to the change list now that it is in the v2 schema.
 - 2026-11-13: Added the v2 Idempotency Keys RFD for retry classes on every method and an optional `idempotencyKey` on `session/prompt`.
