@@ -951,6 +951,7 @@ Several error rules that were SHOULD in v1 are MUST in v2, and v2 adds one. Agen
 - respond with `-32601` to a method they don't implement, or to a capability-gated method they didn't advertise
 - respond with `-32002`, with `data.sessionId`, to a session-scoped request for a session that doesn't exist or isn't active on the connection
 - reject a request other than `initialize` that arrives before initialization completes with `-32600`, and also an `initialize` repeated after another request
+- reject a `systemPrompt` with an unadvertised mode, an unsupported content block type, or content that exceeds the Agent's limits with `-32602`
 
 See [Errors](/protocol/v2/error).
 
