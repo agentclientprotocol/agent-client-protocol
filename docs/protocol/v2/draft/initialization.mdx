@@ -103,7 +103,7 @@ See [Capabilities](#capabilities) to learn how non-breaking features are introdu
 
 ### Version negotiation
 
-The `initialize` request **MUST** include the latest protocol version the Client supports.
+The `initialize` request **MUST** include the latest protocol version the Client supports. After the Agent selects a lower version, the Client **MAY** send that version instead when it [repeats `initialize`](#repeating-initialization) or opens a new connection.
 
 The Agent **MUST** read `protocolVersion` before validating any other parameter. Missing, non-integer, or out-of-range values are malformed parameters and **MUST** receive `-32602` (`Invalid params`).
 
