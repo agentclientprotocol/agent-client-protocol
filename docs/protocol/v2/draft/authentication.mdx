@@ -86,7 +86,7 @@ Because this response has a non-empty `authMethods` list, the Agent **MUST** sup
 
 The standard authentication method type is `agent`, where the Agent handles
 authentication through `auth/login`. Every authentication method **MUST** include a
-`type` discriminator:
+`type` discriminator, a `methodId`, and a `name`:
 
 ```json
 {
