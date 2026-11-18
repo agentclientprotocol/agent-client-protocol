@@ -637,7 +637,8 @@ When the Agent supports `session.mcp.stdio`, Clients can specify MCP servers con
 </ParamField>
 
 <ParamField path="command" type="string" required>
-  The absolute path to the MCP server executable
+  The path to the MCP server executable. It **MUST** be an absolute path. Agents
+  reject a request with a relative `command` with `-32602`.
 </ParamField>
 
 <ParamField path="args" type="array">

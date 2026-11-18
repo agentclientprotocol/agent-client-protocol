@@ -4783,7 +4783,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={<a href="#absolutepath">AbsolutePath</a>} required>
-  Absolute path to the MCP server executable.
+  Path to the MCP server executable. Must be an absolute path.
+
+Agents reject a request with a relative `command` with `-32602`.
+
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Environment variables to set when launching the MCP server. Names SHOULD be unique.
@@ -4875,7 +4878,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Command-line arguments to pass to the MCP server.
 </ResponseField>
 <ResponseField name="command" type={<a href="#absolutepath">AbsolutePath</a>} required>
-  Absolute path to the MCP server executable.
+  Path to the MCP server executable. Must be an absolute path.
+
+Agents reject a request with a relative `command` with `-32602`.
+
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Environment variables to set when launching the MCP server. Names SHOULD be unique.

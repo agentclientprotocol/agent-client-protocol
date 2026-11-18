@@ -7256,7 +7256,7 @@
           "type": "string"
         },
         "command": {
-          "description": "Absolute path to the MCP server executable.",
+          "description": "Path to the MCP server executable. Must be an absolute path.\n\nAgents reject a request with a relative `command` with `-32602`.",
           "allOf": [
             {
               "$ref": "#/$defs/AbsolutePath"
