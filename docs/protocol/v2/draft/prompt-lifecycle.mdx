@@ -374,12 +374,22 @@ The Agent **MUST** also report the inserted user message through a `user_message
         {
           "type": "text",
           "text": "Can you analyze this code for potential issues?"
+        },
+        {
+          "type": "resource",
+          "resource": {
+            "uri": "file:///home/user/project/main.py",
+            "mimeType": "text/x-python",
+            "text": "def process_data(items):\n    for item in items:\n        print(item)"
+          }
         }
       ]
     }
   }
 }
 ```
+
+The Agent owns the inserted message. Its reported `content` usually repeats the submitted `prompt`, as it does here, but it can differ, for example when an adapter reports the message as its runtime recorded it. A Client **MAY** keep showing the prompt as it sent it, although a [replay](/protocol/v2/draft/session-setup#replay-contents) carries the Agent's content.
 
 The Client uses the JSON-RPC response ID to identify its submission, then associates it with `(sessionId, messageId)`. If the message update arrived first, the Client reconciles with that existing message rather than creating a duplicate. Agents **MUST** assign distinct message IDs to distinct inserted submissions, even if their content is identical. Clients must not infer the association from content or arrival order.
 
