@@ -1425,6 +1425,9 @@ impl NewSessionRequest {
 /// Updates may arrive before or after this response. Clients MUST NOT overwrite
 /// an already-reported state when the response arrives.
 ///
+/// An Agent whose new session is not `idle` MUST send the session's
+/// `state_update` after this response.
+///
 /// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v2/session-setup#creating-a-session)
 #[serde_as]
 #[skip_serializing_none]

@@ -4210,7 +4210,7 @@
       "required": ["label"]
     },
     "NewSessionResponse": {
-      "description": "Response from creating a new session.\n\nNew sessions default to `idle` until a state update reports otherwise.\nUpdates may arrive before or after this response. Clients MUST NOT overwrite\nan already-reported state when the response arrives.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v2/draft/session-setup#creating-a-session)",
+      "description": "Response from creating a new session.\n\nNew sessions default to `idle` until a state update reports otherwise.\nUpdates may arrive before or after this response. Clients MUST NOT overwrite\nan already-reported state when the response arrives.\n\nAn Agent whose new session is not `idle` MUST send the session's\n`state_update` after this response.\n\nSee protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v2/draft/session-setup#creating-a-session)",
       "type": "object",
       "properties": {
         "sessionId": {

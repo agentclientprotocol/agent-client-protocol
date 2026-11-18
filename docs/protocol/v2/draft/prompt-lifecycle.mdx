@@ -1324,6 +1324,7 @@ New sessions default to `idle` until a state update reports otherwise. State
 updates may arrive before or after the `session/new` response. Clients
 **MUST NOT** overwrite an already-reported state when the response arrives.
 A separate initial idle notification is optional and does not represent completion.
+An Agent whose new session is not `idle` sends that state after the response. See [Initial session state](/protocol/v2/draft/session-setup#initial-session-state).
 
 `session/resume` does not imply `idle`. The Agent **MUST** send a snapshot of
 foreground state after resuming, following any requested history replay and
