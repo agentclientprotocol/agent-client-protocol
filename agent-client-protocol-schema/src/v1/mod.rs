@@ -8,13 +8,14 @@ mod error;
 mod ext;
 #[cfg(feature = "unstable_mcp_over_acp")]
 mod mcp;
-#[cfg(feature = "unstable_nes")]
-mod nes;
 mod plan;
 mod protocol_level;
+#[cfg(feature = "unstable_proxy_chains")]
+mod proxy;
+mod rpc;
 mod tool_call;
 
-pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification, Request, RequestId};
+pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification};
 pub use agent::*;
 pub use client::*;
 pub use content::*;
@@ -24,25 +25,23 @@ pub use error::*;
 pub use ext::*;
 #[cfg(feature = "unstable_mcp_over_acp")]
 pub use mcp::*;
-#[cfg(feature = "unstable_nes")]
-pub use nes::*;
 pub use plan::*;
 pub use protocol_level::*;
+#[cfg(feature = "unstable_proxy_chains")]
+pub use proxy::*;
+pub use rpc::*;
 pub use serde_json::value::RawValue;
 pub use tool_call::*;
-
-/// JSON-RPC response envelope using this protocol version's error type.
-pub type Response<Result> = crate::rpc::Response<Result, Error>;
 
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// A unique identifier for a conversation session between a client and agent.
 ///
-/// Sessions maintain their own context, conversation history, and state,
-/// allowing multiple independent interactions with the same agent.
+/// Each session has its own context, conversation history, and state, so one
+/// agent can run several independent sessions.
 ///
-/// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
+/// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v1/session-setup#session-id)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]

@@ -63,6 +63,9 @@ features:
 - `session.fork` remains an unstable optional capability while the Session Fork
   RFD is in progress.
 
+Agents must support `session/set_config_option` for any session where they
+advertise config options.
+
 ## Shiny future
 
 > How will things play out once this feature exists?
@@ -72,8 +75,8 @@ the baseline session surface. This makes session history, reconnection, replay,
 and cleanup flows simpler to implement and less surprising for users.
 
 Agents that do not support sessions can still omit `capabilities.session`
-entirely, preserving the option for non-session surfaces such as next edit
-suggestions.
+entirely. This preserves support for Agents that only expose non-session method
+surfaces.
 
 ## Implementation details and plan
 

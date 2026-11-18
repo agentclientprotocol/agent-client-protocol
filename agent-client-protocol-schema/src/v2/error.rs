@@ -8,7 +8,7 @@
 //! - Errors include an `error` object with `code` and `message`
 //! - Notifications never receive responses (success or error)
 //!
-//! See: [Error Handling](https://agentclientprotocol.com/protocol/overview#error-handling)
+//! See: [Error Handling](https://agentclientprotocol.com/protocol/v2/overview#error-handling)
 
 use std::{fmt::Display, str};
 
@@ -17,7 +17,8 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
-use crate::IntoOption;
+use super::{Meta, SessionId};
+use crate::{IntoOption, ProtocolVersion};
 
 /// Convenience result type using this protocol version's error type.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -42,10 +43,114 @@ pub struct Error {
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.
+    ///
+    /// Omitted and `null` are equivalent and mean no additional data is provided. Some codes
+    /// define a shape: [`UnsupportedProtocolVersionErrorData`] for `-32022`, and
+    /// [`SessionNotFoundErrorData`] for `-32002` when a session is not found.
     #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<ErrorData>", extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub data: Option<serde_json::Value>,
+}
+
+/// Schema for [`Error::data`]: the shapes ACP defines, or any other value.
+#[cfg(feature = "schemars")]
+#[derive(schemars::JsonSchema)]
+#[serde(untagged)]
+#[expect(
+    dead_code,
+    reason = "Only used to describe the schema of `Error::data`"
+)]
+enum ErrorData {
+    UnsupportedProtocolVersion(UnsupportedProtocolVersionErrorData),
+    SessionNotFound(SessionNotFoundErrorData),
+    Other(serde_json::Value),
+}
+
+/// Data for the `-32022` (Unsupported protocol version) error.
+///
+/// See protocol docs: [Version Negotiation](https://agentclientprotocol.com/protocol/v2/initialization#version-negotiation)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnsupportedProtocolVersionErrorData {
+    /// The protocol version the Client requested.
+    pub requested: ProtocolVersion,
+    /// The protocol versions the Agent supports.
+    pub supported: Vec<ProtocolVersion>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl UnsupportedProtocolVersionErrorData {
+    /// Builds the data with the requested and supported versions.
+    #[must_use]
+    pub fn new(requested: ProtocolVersion, supported: Vec<ProtocolVersion>) -> Self {
+        Self {
+            requested,
+            supported,
+            meta: None,
+        }
+    }
+
+    /// Sets optional metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// Data for the `-32002` (Resource not found) error when a session-scoped request names a
+/// session that does not exist or is not active.
+///
+/// See protocol docs: [Unknown Sessions](https://agentclientprotocol.com/protocol/v2/error#unknown-sessions)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionNotFoundErrorData {
+    /// The session ID from the request.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl SessionNotFoundErrorData {
+    /// Builds the data for the given session ID.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// Sets optional metadata.
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
 }
 
 impl Error {
@@ -116,15 +221,33 @@ impl Error {
         ErrorCode::AuthRequired.into()
     }
 
-    /// A given resource, such as a file, was not found.
+    /// A referenced resource was not found.
     #[must_use]
-    pub fn resource_not_found(uri: Option<String>) -> Self {
-        let err: Self = ErrorCode::ResourceNotFound.into();
-        if let Some(uri) = uri {
-            err.data(serde_json::json!({ "uri": uri }))
-        } else {
-            err
-        }
+    pub fn resource_not_found() -> Self {
+        ErrorCode::ResourceNotFound.into()
+    }
+
+    /// The session named by a session-scoped request does not exist or is not active.
+    #[must_use]
+    pub fn session_not_found(session_id: impl Into<super::SessionId>) -> Self {
+        Error::from(ErrorCode::ResourceNotFound)
+            .data(serde_json::to_value(SessionNotFoundErrorData::new(session_id)).ok())
+    }
+
+    /// No supported protocol version is at or below the requested version.
+    #[must_use]
+    pub fn unsupported_protocol_version(
+        requested: ProtocolVersion,
+        supported: &[ProtocolVersion],
+    ) -> Self {
+        let error: Self = ErrorCode::UnsupportedProtocolVersion.into();
+        error.data(
+            serde_json::to_value(UnsupportedProtocolVersionErrorData::new(
+                requested,
+                supported.to_vec(),
+            ))
+            .ok(),
+        )
     }
 
     /// Converts a standard error into an internal JSON-RPC error.
@@ -138,8 +261,9 @@ impl Error {
 
 /// Predefined error codes for common JSON-RPC and ACP-specific errors.
 ///
-/// These codes follow the JSON-RPC 2.0 specification for standard errors
-/// and use the reserved range (-32000 to -32099) for protocol-specific errors.
+/// Standard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC
+/// server-error range (-32000 to -32099), and request cancellation uses -32800 from the
+/// range LSP reserves (-32899 to -32800).
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize, strum::Display)]
 #[cfg_attr(test, derive(strum::EnumIter))]
@@ -147,7 +271,7 @@ impl Error {
 #[cfg_attr(feature = "schemars", schemars(!from, !into))]
 #[non_exhaustive]
 pub enum ErrorCode {
-    // Standard errors
+    // JSON-RPC errors
     /// Invalid JSON was received by the server.
     /// An error occurred on the server while parsing the JSON text.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
@@ -166,10 +290,10 @@ pub enum ErrorCode {
     #[strum(to_string = "Invalid params")]
     InvalidParams, // -32602
     /// Internal JSON-RPC error.
-    /// Reserved for implementation-defined server errors.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Internal error")]
     InternalError, // -32603
+    // Request cancellation (from LSP)
     /// Execution of the method was aborted either due to a cancellation request from the caller or
     /// because of resource constraints or shutdown.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
@@ -181,10 +305,15 @@ pub enum ErrorCode {
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Authentication required")]
     AuthRequired, // -32000
-    /// A given resource, such as a file, was not found.
+    /// A given resource, such as a session, was not found.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Resource not found")]
     ResourceNotFound, // -32002
+    /// No protocol version supported by the Agent is at or below the requested version.
+    /// The error data is an [`UnsupportedProtocolVersionErrorData`].
+    #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
+    #[strum(to_string = "Unsupported protocol version")]
+    UnsupportedProtocolVersion, // -32022
     /// Other undefined error code.
     #[cfg_attr(feature = "schemars", schemars(untagged))]
     #[strum(to_string = "Unknown error")]
@@ -202,6 +331,7 @@ impl From<i32> for ErrorCode {
             -32800 => ErrorCode::RequestCancelled,
             -32000 => ErrorCode::AuthRequired,
             -32002 => ErrorCode::ResourceNotFound,
+            -32022 => ErrorCode::UnsupportedProtocolVersion,
             _ => ErrorCode::Other(value),
         }
     }
@@ -218,6 +348,7 @@ impl From<ErrorCode> for i32 {
             ErrorCode::RequestCancelled => -32800,
             ErrorCode::AuthRequired => -32000,
             ErrorCode::ResourceNotFound => -32002,
+            ErrorCode::UnsupportedProtocolVersion => -32022,
             ErrorCode::Other(value) => value,
         }
     }
@@ -245,6 +376,7 @@ fn error_code_transform(schema: &mut Schema) {
         "RequestCancelled" => ErrorCode::RequestCancelled,
         "AuthRequired" => ErrorCode::AuthRequired,
         "ResourceNotFound" => ErrorCode::ResourceNotFound,
+        "UnsupportedProtocolVersion" => ErrorCode::UnsupportedProtocolVersion,
         _ => panic!("Unexpected error code name {name}"),
     };
     let mut description = schema
@@ -305,7 +437,46 @@ impl From<serde_json::Error> for Error {
 mod tests {
     use strum::IntoEnumIterator;
 
+    #[test]
+    fn helper_data_parses_as_typed_error_data() {
+        let error = Error::session_not_found("sess_1");
+        let data: SessionNotFoundErrorData = serde_json::from_value(error.data.unwrap()).unwrap();
+        assert_eq!(data, SessionNotFoundErrorData::new("sess_1"));
+
+        let error =
+            Error::unsupported_protocol_version(ProtocolVersion::V2, &[ProtocolVersion::V1]);
+        let data: UnsupportedProtocolVersionErrorData =
+            serde_json::from_value(error.data.unwrap()).unwrap();
+        assert_eq!(
+            data,
+            UnsupportedProtocolVersionErrorData::new(
+                ProtocolVersion::V2,
+                vec![ProtocolVersion::V1]
+            )
+        );
+    }
+
     use super::*;
+
+    #[test]
+    fn unsupported_protocol_version_includes_requested_and_supported() {
+        let error = Error::unsupported_protocol_version(
+            ProtocolVersion::V1,
+            &[ProtocolVersion::from(2_u16)],
+        );
+        assert_eq!(
+            serde_json::to_value(error).unwrap(),
+            serde_json::json!({
+                "code": -32022,
+                "message": "Unsupported protocol version",
+                "data": { "requested": 1, "supported": [2] },
+            })
+        );
+        assert_eq!(
+            Error::unsupported_protocol_version(ProtocolVersion::V1, &[]).data,
+            Some(serde_json::json!({ "requested": 1, "supported": [] }))
+        );
+    }
 
     #[test]
     fn serialize_error_code() {

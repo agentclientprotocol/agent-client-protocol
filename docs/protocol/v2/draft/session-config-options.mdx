@@ -3,9 +3,9 @@ title: "Session Config Options"
 description: "Flexible configuration selectors for agent sessions"
 ---
 
-Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like modes, models, model parameters, reasoning levels, and more.
+Agents can provide an arbitrary list of configuration options for a session, which Clients show to users as selectors. Options can cover modes, models, model parameters, reasoning levels, and more.
 
-## Initial State
+## Initial state
 
 During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** return a list of configuration options and their current values:
 
@@ -84,13 +84,13 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 }
 ```
 
-<ResponseField name="configOptions" type="ConfigOption[]">
+<ResponseField name="configOptions" type="SessionConfigOption[]">
   The list of configuration options available for this session. The order of
   this array represents the Agent's preferred priority. Clients **SHOULD**
   respect this ordering when displaying options.
 </ResponseField>
 
-### ConfigOption
+### SessionConfigOption
 
 <ResponseField name="configId" type="string" required>
   Unique identifier for this configuration option. Used when setting values.
@@ -104,12 +104,12 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
   Optional description providing more details about what this option controls
 </ResponseField>
 
-<ResponseField name="category" type="ConfigOptionCategory">
+<ResponseField name="category" type="SessionConfigOptionCategory">
   Optional [semantic category](#option-categories) to help Clients provide
   consistent UX.
 </ResponseField>
 
-<ResponseField name="type" type="ConfigOptionType" required>
+<ResponseField name="type" type="string" required>
   The type of input control. `select` and `boolean` are supported.
 </ResponseField>
 
@@ -118,12 +118,21 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
   ID. For `boolean` options this is a boolean.
 </ResponseField>
 
-<ResponseField name="options" type="ConfigOptionValue[]">
+<ResponseField
+  name="options"
+  type="SessionConfigSelectOption[] | SessionConfigSelectGroup[]"
+>
   The available values for a `select` option. Required when `type` is `"select"`
-  and omitted when `type` is `"boolean"`.
+  and omitted when `type` is `"boolean"`. This is either a flat array of values
+  or an array of groups. Values and groups are not mixed in the same array. For
+  a `select` option, Agents **MUST** offer at least one value, **MUST** keep
+  each `value` unique within the option, including across groups, and
+  `currentValue` **MUST** be one of them. Each group **MUST** contain at least
+  one value. Clients **SHOULD** hide a group that ends up empty, for example
+  after skipping values they couldn\'t parse.
 </ResponseField>
 
-### ConfigOptionValue
+### SessionConfigSelectOption
 
 <ResponseField name="value" type="string" required>
   The value identifier used when setting this option
@@ -137,7 +146,32 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
   Optional description of what this value does
 </ResponseField>
 
-### Boolean Config Options
+### Grouped select options
+
+Select options may be grouped under labeled headers. Each
+`SessionConfigSelectGroup` requires `groupId`, `name`, and an `options` array containing
+the same `SessionConfigSelectOption` objects used by flat selects. A group's `_meta` is
+optional. Value descriptions and `_meta` remain optional as described above.
+
+```json
+{
+  "options": [
+    {
+      "groupId": "recommended",
+      "name": "Recommended",
+      "options": [
+        {
+          "value": "model-1",
+          "name": "Model 1",
+          "description": "Fast for everyday tasks"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Boolean config options
 
 Boolean config options use `type: "boolean"` for simple on/off toggles:
 
@@ -151,7 +185,7 @@ Boolean config options use `type: "boolean"` for simple on/off toggles:
 }
 ```
 
-## Option Categories
+## Option categories
 
 Each config option **MAY** include a `category` field. Categories are semantic metadata intended to help Clients provide consistent UX, such as attaching keyboard shortcuts, choosing icons, or deciding placement.
 
@@ -160,20 +194,35 @@ Each config option **MAY** include a `category` field. Categories are semantic m
   correctness. Clients **MUST** handle missing or unknown categories gracefully.
 </Warning>
 
-Category names beginning with `_` are free for custom use (e.g., `_my_custom_category`). Category names that do not begin with `_` are reserved for the ACP spec.
+Category names beginning with `_` are free for custom use (e.g., `_com.example/category`). Category names that do not begin with `_` are reserved for the ACP spec.
 
-| Category        | Description                                                              |
-| --------------- | ------------------------------------------------------------------------ |
-| `mode`          | Session mode selector                                                    |
-| `model`         | Model selector                                                           |
-| `model_config`  | Model-related parameter, such as context size or speed/quality trade-off |
-| `thought_level` | Thought/reasoning level selector                                         |
+| Category        | Description                                                    |
+| --------------- | -------------------------------------------------------------- |
+| `mode`          | Session mode selector                                          |
+| `model`         | Model selector                                                 |
+| `model_config`  | Model-related parameter, such as context size                  |
+| `speed`         | Response speed selector, such as a fast mode toggle (unstable) |
+| `thought_level` | Thought/reasoning level selector                               |
 
 Clients **SHOULD** render `model_config` options near the `model` selector, such as in the same popover or panel. No capability negotiation is required for category values.
 
+Agents **SHOULD** list the values of a `select` `thought_level` option from lowest to highest.
+
 When multiple options share the same category, Clients **SHOULD** use the array ordering to resolve ties, preferring earlier options in the list for prominent placement or keyboard shortcuts.
 
-## Option Ordering
+### Speed options (unstable)
+
+Agents use the `speed` category for an option that changes how fast the model responds, such as a fast mode toggle or a speed selector. In a `boolean` `speed` option, `true` is the faster setting. See the [RFD](/rfds/speed-config-category).
+
+Agents **SHOULD** list the values of a `select` `speed` option from slowest to fastest.
+
+Agents **SHOULD NOT** use `speed` for an option that mainly selects a model, reasoning level, or session mode, even when its values differ in speed. Use `model`, `thought_level`, or `mode` for those.
+
+A `speed` option can depend on other options. For example, an Agent can offer it only for some models. The Agent reports such changes in the complete `configOptions` list, as for any other option.
+
+Clients **SHOULD** render `speed` options near the `model` selector, as with `model_config`. Clients **MAY** also show the current speed outside the option list, such as an icon while a `boolean` `speed` option is `true`.
+
+## Option ordering
 
 The order of the `configOptions` array is significant. Agents **SHOULD** place higher-priority options first in the list.
 
@@ -183,19 +232,23 @@ Clients **SHOULD**:
 - Use ordering to resolve ties when multiple options share the same category
 - If displaying a limited number of options, prefer those at the beginning of the list
 
-## Default Values and Graceful Degradation
+## Default values and graceful degradation
 
-Agents **MUST** always provide a default value for every configuration option. This ensures the Agent can operate correctly even if:
+Every configuration option's `currentValue` is the value the Agent is using. It changes only through a `session/set_config_option` response or a `config_option_update` notification. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-Option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`; unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent will continue using its default value.
+Option `type` values can be custom or future variants. Custom option types **MUST** begin with `_`. Unknown non-underscore option types are reserved for future ACP variants. If a Client receives an option with an unrecognized `type`, it **SHOULD** preserve the raw option when storing, replaying, proxying, or forwarding session state, and otherwise ignore that option. The Agent keeps using its `currentValue`.
 
-## Setting a Config Option
+## Setting a config option
 
 The current value of a config option can be changed at any point during a session.
+
+Agents that advertise config options for a session **MUST** support `session/set_config_option` for it. Clients **MUST NOT** call it otherwise and **MUST** only send an advertised `configId`. Agents **MUST** reject an unknown `configId` or invalid value, including an unsupported value `type` or a `type` that doesn't match the option, with `-32602` and leave the configuration unchanged.
+
+Whether a change made while foreground work is active applies to that work or only to later work is up to the Agent. The response's `configOptions` is the complete list as of the response, and Clients replace their list with it. It may report a `currentValue` different from the one requested, for example when the Agent adjusted the value or another change applied concurrently. Clients apply responses and `config_option_update` notifications in the order received, each replacing the whole list.
 
 ### From the Client
 
@@ -229,9 +282,9 @@ Clients can change a config option value by calling the `session/set_config_opti
 </ParamField>
 
 <ParamField path="value" type="string | boolean" required>
-  The new value to set. For `select` options, this must be one of the values
-  listed in the option's `options` array. For `boolean` options, this must be a
-  boolean.
+  The new value to set. For `select` options, this **MUST** be one of the values
+  listed in the option's `options` array. For `boolean` options, this **MUST**
+  be a boolean.
 </ParamField>
 
 For boolean options, Clients send `type: "boolean"` with a boolean `value`:
@@ -261,34 +314,65 @@ The Agent **MUST** respond with the complete list of all configuration options a
       {
         "configId": "mode",
         "name": "Session Mode",
+        "description": "Controls how the agent requests permission",
+        "category": "mode",
         "type": "select",
         "currentValue": "code",
         "options": [
           {
             "value": "ask",
-            "name": "Ask"
+            "name": "Ask",
+            "description": "Request permission before making any changes"
           },
           {
             "value": "code",
-            "name": "Code"
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
           }
         ]
       },
       {
         "configId": "model",
         "name": "Model",
+        "category": "model",
         "type": "select",
         "currentValue": "model-1",
         "options": [
           {
             "value": "model-1",
-            "name": "Model 1"
+            "name": "Model 1",
+            "description": "The fastest model"
           },
           {
             "value": "model-2",
-            "name": "Model 2"
+            "name": "Model 2",
+            "description": "The most powerful model"
           }
         ]
+      },
+      {
+        "configId": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
+          }
+        ]
+      },
+      {
+        "configId": "brave_mode",
+        "name": "Brave Mode",
+        "description": "Skip confirmation prompts and act autonomously",
+        "type": "boolean",
+        "currentValue": false
       }
     ]
   }
@@ -296,15 +380,18 @@ The Agent **MUST** respond with the complete list of all configuration options a
 ```
 
 <Note>
-  The response always contains the **complete** configuration state. This allows
-  Agents to reflect dependent changes. For example, if changing the model
-  affects available reasoning options, or if an option's available values change
-  based on another selection.
+  The response always contains the **complete** configuration state, so Agents
+  can report dependent changes. For example, changing the model may change the
+  available reasoning options.
 </Note>
 
 ### From the Agent
 
-The Agent can also change configuration options and notify the Client by sending a `config_option_update` session notification:
+Agents **SHOULD** send a `config_option_update` session notification on each connection where the session is [active](/protocol/v2/draft/session-setup#session-lifecycle) whenever configuration state changes, including changes requested through `session/set_config_option`.
+
+The response remains the source of truth for the requesting Client, which may
+also receive a duplicate notification. Agents **SHOULD** send that duplicate before
+the response and notifications for subsequent changes after it.
 
 ```json
 {
@@ -318,34 +405,65 @@ The Agent can also change configuration options and notify the Client by sending
         {
           "configId": "mode",
           "name": "Session Mode",
+          "description": "Controls how the agent requests permission",
+          "category": "mode",
           "type": "select",
           "currentValue": "code",
           "options": [
             {
               "value": "ask",
-              "name": "Ask"
+              "name": "Ask",
+              "description": "Request permission before making any changes"
             },
             {
               "value": "code",
-              "name": "Code"
+              "name": "Code",
+              "description": "Write and modify code with full tool access"
             }
           ]
         },
         {
           "configId": "model",
           "name": "Model",
+          "category": "model",
           "type": "select",
           "currentValue": "model-2",
           "options": [
             {
               "value": "model-1",
-              "name": "Model 1"
+              "name": "Model 1",
+              "description": "The fastest model"
             },
             {
               "value": "model-2",
-              "name": "Model 2"
+              "name": "Model 2",
+              "description": "The most powerful model"
             }
           ]
+        },
+        {
+          "configId": "context_size",
+          "name": "Context Size",
+          "category": "model_config",
+          "type": "select",
+          "currentValue": "200k",
+          "options": [
+            {
+              "value": "200k",
+              "name": "200K"
+            },
+            {
+              "value": "1m",
+              "name": "1M"
+            }
+          ]
+        },
+        {
+          "configId": "brave_mode",
+          "name": "Brave Mode",
+          "description": "Skip confirmation prompts and act autonomously",
+          "type": "boolean",
+          "currentValue": false
         }
       ]
     }
@@ -355,6 +473,113 @@ The Agent can also change configuration options and notify the Client by sending
 
 This notification also contains the complete configuration state. Common reasons an Agent might update configuration options include:
 
-- Switching modes after completing a planning phase
+- Switching modes after the user approves a completed plan, or as the user's policy allows
 - Falling back to a different model due to rate limits or errors
 - Adjusting available options based on context discovered during execution
+
+## Options before a session exists (unstable)
+
+Agents that advertise `session.options` support `session/options`, which returns the config options a session would start with without creating or resuming it. They also accept initial values in `configOptions` on `session/new` and `session/resume`. Clients **MUST NOT** call `session/options` or send `configOptions` on session setup requests unless the Agent advertises the capability. See the [RFD](/rfds/session-options).
+
+### Querying options
+
+Clients call `session/options` with the same workspace parameters as `session/new`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/options",
+  "params": {
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib"]
+  }
+}
+```
+
+<ParamField path="cwd" type="string" required>
+  The working directory to resolve options for. Must be an absolute path.
+</ParamField>
+
+<ParamField path="additionalDirectories" type="string[]">
+  Additional workspace roots to resolve options for. Omitted and `null` are
+  equivalent to an empty list.
+</ParamField>
+
+<ParamField path="sessionId" type="SessionId">
+  An existing session to resolve options for. Omitted and `null` are equivalent
+  and mean a new session.
+</ParamField>
+
+When `sessionId` is present, the Agent returns what `session/resume` with the same `cwd` and `additionalDirectories` would return. The same `cwd` rules as those methods apply. A session the Agent does not know gets `-32002`.
+
+The request has no `mcpServers` parameter. Agents **SHOULD NOT** connect to MCP servers to answer it.
+
+The response contains the options the session would start with:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "configOptions": [
+      {
+        "configId": "model",
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "currentValue": "model-1",
+        "options": [
+          { "value": "model-1", "name": "Model 1" },
+          { "value": "model-2", "name": "Model 2" }
+        ]
+      }
+    ],
+    "availableCommands": [
+      {
+        "type": "command",
+        "name": "review",
+        "description": "Review the current changes"
+      }
+    ]
+  }
+}
+```
+
+`configOptions` uses the same type and rules as on `NewSessionResponse`. `availableCommands` uses the same type as on `NewSessionResponse` and is advisory. Commands can depend on state the Agent only has once the session exists, such as MCP prompts. Agents **MAY** return a partial list or omit it. Clients **MUST** use the commands from the setup response and later `available_commands_update` notifications for the session itself.
+
+`session/options` **MUST NOT** create or resume a session, send `session/update` notifications, add an entry to `session/list`, or change an existing session. Agents **MAY** start their runtime to resolve the options. These rules still hold for it: it stores no session, writes nothing to the history of `sessionId`, and adds no entry to `session/list`. Clients **SHOULD NOT** call `session/options` on a timer, because an Agent may start its runtime for each call. The response is a snapshot. The options a session actually starts with are the ones in the setup response.
+
+### Initial values
+
+Clients send the values the user picked in `configOptions` on `session/new`, `session/resume`, and, when the Agent supports it, `session/fork`. Each entry has the same shape as `session/set_config_option` without `sessionId`. Entries **MUST** include `type`, as on `session/set_config_option`.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "configOptions": [
+      { "configId": "model", "type": "id", "value": "model-2" },
+      { "configId": "reasoning", "type": "id", "value": "high" }
+    ]
+  }
+}
+```
+
+The Agent applies the entries in list order, as if the Client had called `session/set_config_option` for each entry after the session was set up. Each entry is checked against the option set as it stands at that point, so an earlier entry (such as the model) can change which values a later entry (such as the reasoning level) allows. Clients **SHOULD** send entries in the order the Agent listed the options in the `session/options` response. For restored sessions, the entries apply on top of the session's restored configuration. On `session/fork`, the entries apply on top of the configuration the fork would start with without them. To show the options before a fork, Clients call `session/options` with the `sessionId` of the source session.
+
+For `session/resume`, the Agent applies the entries before it replays history for `replayFrom` and before it responds.
+
+Initial values are handled differently from `session/set_config_option`, because options can change between `session/options` and session setup:
+
+- An entry that does not match the schema, such as a missing `configId` or a `value` that does not match its `type`, **MUST** fail the request with `-32602`.
+- An entry with a value `type` the Agent does not support **MUST** fail the request with `-32602`.
+- Two entries with the same `configId` **MUST** fail the request with `-32602`.
+- An entry whose `configId` is unknown, whose `type` does not match the option's type, or whose value is not allowed when it is applied **MUST** be ignored. This includes a value the Agent's runtime refuses. The option keeps its default value, or the value the Agent resolved from earlier entries.
+- The `configOptions` in the setup response **MUST** contain the values the session actually has. Clients compare them with what they sent to find entries the Agent ignored.
+- The Agent **SHOULD NOT** send `config_option_update` notifications for these entries on the requesting connection. The setup response contains the resulting values.
+- Until the `session/new` or `session/fork` response, the Client does not know the session. The Agent **SHOULD NOT** send other `session/update` notifications caused by applying the entries before that response, such as a notice that a value fell back (see [Creating a session](/protocol/v2/draft/session-setup#initial-session-state)). It sends them after the response.
+- A `session/resume` can reach a session that is active on other connections. The entries change its configuration, so the Agent **SHOULD** send `config_option_update` on those connections, as for any other change. See [From the Agent](#from-the-agent).
