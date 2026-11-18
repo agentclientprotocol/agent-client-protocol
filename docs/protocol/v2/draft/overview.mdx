@@ -142,6 +142,23 @@ Some baseline methods are optional as a group. An Agent that returns a non-empty
   `session.delete` capability).
 </ResponseField>
 
+<ResponseField
+  name="tool_call/cancel"
+  post={[<a href="/protocol/v2/draft/schema#tool_call%2Fcancel">Schema</a>]}
+>
+  [Cancel one tool call](/protocol/v2/draft/tool-calls#cancelling-tool-calls)
+  (required when the Agent advertises `capabilities.cancel` on a tool call).
+</ResponseField>
+
+<ResponseField
+  name="terminal/cancel"
+  post={[<a href="/protocol/v2/draft/schema#terminal%2Fcancel">Schema</a>]}
+>
+  [Stop one terminal's
+  process](/protocol/v2/draft/tool-calls#cancelling-terminals) (required when
+  the Agent advertises `capabilities.cancel` on a terminal).
+</ResponseField>
+
 ### Notifications
 
 <ResponseField
