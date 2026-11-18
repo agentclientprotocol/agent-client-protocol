@@ -365,14 +365,13 @@ The v2 schema and guides define the insertion-receipt response. The implementati
 6. Add serialization and schema coverage for the idle update with an `error`, without one, and with `error: null`, and verify that an `error` beside another stop reason is treated as an unknown field. Exercise a failure after insertion but before the response is sent: the response still succeeds and the idle update reports the failure.
 7. Update examples and generated artifacts, then run `npm run generate` and `npm run check`.
 
-The schema and serialization tests establish the wire shape. Adapters still need to implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. The [foreground state contract](#foreground-state-contract) defines current-state synchronization on resume and gives guidance for cancellation races. Adapters and conformance suites should exercise the guide's traces, including concurrent requests and late answers. Those rules are separate from the insertion receipt's identity and do not require another prompt ID. Explicit queueing and steering capabilities, sender identity, safe retries, and submission idempotency guarantees remain outside this change.
+The schema and serialization tests establish the wire shape. Adapters implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. The [foreground state contract](#foreground-state-contract) defines current-state synchronization on resume and gives guidance for cancellation races. Adapters and conformance suites should exercise the guide's traces, including concurrent requests and late answers. Those rules are separate from the insertion receipt's identity and do not require another prompt ID. Explicit queueing and steering capabilities, sender identity, safe retries, and submission idempotency guarantees remain outside this change.
 
-Depending on how the rest of v2 testing goes, we can either:
+Status on 2026-11-18:
 
-1. Make this an opt-in "future-flag" capability on v1 so people can experiment, but it would be an unstable feature regardless.
-2. We establish a preview/beta flow for v2
-
-We definitely need 2 regardless, and can likely handle this in a similar "unstable" manner as we do for current unstabilized features. It's likely timing will work out that we can just do it that way. If for some reason the timing doesn't work out, we can start experimenting with an unstable capability or some `_meta` flag.
+- **The schema, tests, and docs are done.** That is steps 1 to 3 and 5 to 7.
+- **Step 4 belongs to the adapters and conformance suites.** `claude-agent-acp` and `codex-acp` both implement this lifecycle on v2 connections.
+- **No v1 opt-in was needed.** An earlier version of this plan considered an opt-in capability on v1 for experiments. v2 is developed as its own protocol version behind the `unstable_protocol_v2` feature, so that option was dropped.
 
 ## Frequently asked questions
 
@@ -453,6 +452,8 @@ Reusing the JSON-RPC error object keeps failures before and after insertion in o
 Codex's app-server makes the same split. A failed turn ends with `turn/completed` whose status is `failed` and whose details are in `turn.error`, while a separate `error` notification with `willRetry` reports transient errors that don't end the turn, which `notice` covers here.
 
 ## Revision history
+
+2026-11-18: Recorded the status of the implementation plan.
 
 2026-10-29: Message IDs are unique per message type, not across the session. Prompts sent during active work are inserted or held in order rather than rejected, and held prompts get `-32800` on cancel.
 

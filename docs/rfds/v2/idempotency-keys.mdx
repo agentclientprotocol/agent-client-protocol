@@ -266,6 +266,11 @@ Both runtimes store an ID that the adapter chooses with each user message, and b
 5. Have Client SDKs generate keys by default, and give Agent SDKs a helper that records keys for a session.
 6. Implement the derived ID and the lookup in claude-agent-acp and codex-acp.
 
+Status on 2026-11-18:
+
+- **Steps 1 to 3 are done.** The field and its tests are in the v2 schema crate. The rules are on the v2 pages, with the retry classes in one table on the [overview page](/protocol/v2/overview#retrying-requests).
+- **Steps 4 to 6 are open.** The SDKs do not send or record keys yet, and neither adapter implements the lookup.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -335,6 +340,7 @@ This RFD doesn't change v1. A v1 `session/prompt` response arrives at the end of
 
 ## Revision history
 
+- 2026-11-18: Recorded the status of the implementation plan.
 - 2026-11-17: The retry classes and the class of each method are documented in one table on the overview page, not on each method's page.
 - 2026-11-17: An Agent may insert or discard held prompts when the connection that sent them ends. Withdrawing a held prompt with `$/cancel_request` is best effort. `session/cancel` and `session/close` are the guaranteed ways to drop one.
 - 2026-11-17: Steps 1 and 3 landed. `idempotencyKey` and the `IdempotencyKey` type are in the v2 schema, and a malformed key fails deserialization. From step 2, the keyed-prompt rules are on the prompt lifecycle, session setup, and transports pages. The retry classes are not on the method pages yet.

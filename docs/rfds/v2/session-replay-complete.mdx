@@ -142,6 +142,12 @@ When the Agent crashes during a resume, the Client knows that the replay was cut
 3. **SDKs.** Expose the variant in the SDKs. An Agent SDK helper can buffer live updates while a replay runs. A Client SDK must deliver the updates of a resuming session before the response. The Client knows the session ID before the request, so the SDK can register the session handler first. [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146) does this for the Kotlin SDK.
 4. **Adapters.** claude-agent-acp already sends one end event after the replay, as a vendor extension in `_meta` that the Client opts in to. See [#1361](https://github.com/agentclientprotocol/claude-agent-acp/pull/1361). Move it to `replay_complete` on v2 connections, and add the marker to the other v2 adapters.
 
+Status on 2026-11-18:
+
+- **Steps 1 and 2 are done.** They landed on 2026-11-13.
+- **Step 3 is done for the TypeScript and Rust SDKs.** Both expose the variant, and their example Agents send it. The Kotlin SDK delivers a resuming session's updates before the response since [kotlin-sdk#146](https://github.com/agentclientprotocol/kotlin-sdk/pull/146). It has no v2 types yet.
+- **Step 4 is done.** `claude-agent-acp` and `codex-acp` send `replay_complete` on v2 connections.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -225,6 +231,7 @@ These were open while the RFD was a draft. They are closed for the v2 Preview.
 
 ## Revision history
 
+- 2026-11-18: Recorded the status of the implementation plan.
 - 2026-11-17: Closed the open questions for the v2 Preview. The update keeps the name `replay_complete` and stays required with no capability. The marker carries no request identifier, cursor, or known-gaps flag. Each can be added later as an optional field. The rule against two pending replaying resumes for one session is on the [Session Setup](/protocol/v2/session-setup#replay-complete) page.
 - 2026-11-17: In v2, the parent's marker is the freshness boundary for a child's work state and capabilities. Before, it was the response. `subagent_update` is in the stable v2 schema, so the child session rules are on the stable [Session Setup](/protocol/v2/session-setup#child-sessions) and [Subagents](/protocol/v2/subagents#resuming) pages.
 - 2026-11-13: Steps 1 and 2 landed. `replay_complete` is in the v2 schema as `SessionUpdate::ReplayComplete`, without a separate feature flag, like the other v2 RFDs. The rules are in the v2 [Session Setup](/protocol/v2/session-setup#replay-complete) page. The child session rules are in its draft copy, because `subagent_update` is still unstable.

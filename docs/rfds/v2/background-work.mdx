@@ -288,6 +288,12 @@ claude-agent-acp also has to declare the SDK's `perTaskStopAffordance` whenever 
 2. Implement in `claude-agent-acp` and `codex-acp`, and in at least one Client.
 3. Adjust from that experience before v2 is stabilized.
 
+Status on 2026-11-18:
+
+- **Phase 1 is done.** The schema changes landed on 2026-10-30. The rules are on the v2 [Tool Calls](/protocol/v2/tool-calls#cancelling-tool-calls) and [Prompt Lifecycle](/protocol/v2/prompt-lifecycle#background-work) pages.
+- **Phase 2 is partly done.** `claude-agent-acp` reports the `background` list and the `paused` status, and handles `tool_call/cancel` and `terminal/cancel`, on v2 connections. Zed reads the list and sends both requests for items that advertise `cancel`. `codex-acp` does not report the list or handle the two requests yet.
+- **Phase 3 is ongoing.** The changes of 2026-11-02 and 2026-11-09 in the revision history came from the `claude-agent-acp` implementation.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document or during subsequent discussions?
@@ -380,6 +386,7 @@ Not in this RFD. The `background` list belongs on the session-level `state_updat
 
 ## Revision history
 
+- 2026-11-18: Recorded the status of the implementation plan.
 - 2026-11-17: Worded the status rules as rules for the Agent. An Agent does not move a tool call back to `pending`, including with `status: null`, and does not change a final status. A Client applies each `tool_call_update` as an upsert, so it shows the latest status it received.
 - 2026-11-17: On `session/cancel`, the Agent **MUST** send `$/cancel_request` for each pending permission request it stops waiting for. This was a SHOULD. The Agent still decides which requests belong to the cancelled work, and requests for listed work stay open. A Client that receives `$/cancel_request` for a pending permission request or elicitation **SHOULD** dismiss the prompt and answer with the cancellation result. Clients **SHOULD** dismiss permission prompts for a closed session.
 - 2026-11-09: An Agent that knows a tool call's work continues in the background keeps that tool call open and lists it. Background work without a tool call to report it on, or whose tool call already has a final status, is reported on a tool call the Agent starts itself. Final statuses stay final. This replaces vendor-specific list items such as the earlier `_claude/task` in `claude-agent-acp`. The tool call and prompt lifecycle pages say that an Agent may report tool calls the model did not request, and that work continuing after a final status gets a new tool call.
