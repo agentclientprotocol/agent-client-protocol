@@ -164,12 +164,6 @@ pub struct StringPropertySchema {
     /// Optional. Omitted and `null` are equivalent and mean there is no maximum length constraint.
     #[serde(default)]
     pub max_length: Option<u32>,
-    /// Pattern the string must match, in ECMA-262 regular expression syntax.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean there is no pattern constraint.
-    #[cfg_attr(feature = "schemars", schemars(extend("format" = "regex")))]
-    #[serde(default)]
-    pub pattern: Option<String>,
     /// String format.
     ///
     /// Optional. Omitted and `null` are equivalent and mean there is no format constraint.
@@ -278,13 +272,6 @@ impl StringPropertySchema {
     #[must_use]
     pub fn max_length(mut self, max_length: impl IntoOption<u32>) -> Self {
         self.max_length = max_length.into_option();
-        self
-    }
-
-    /// Pattern the string must match, in ECMA-262 regular expression syntax.
-    #[must_use]
-    pub fn pattern(mut self, pattern: impl IntoOption<String>) -> Self {
-        self.pattern = pattern.into_option();
         self
     }
 
@@ -2897,29 +2884,29 @@ mod tests {
     }
 
     #[test]
-    fn schema_string_pattern_serialization() {
-        let schema = ElicitationSchema::new().property(
-            "name",
-            StringPropertySchema::new()
-                .min_length(1)
-                .max_length(64)
-                .pattern("^[a-zA-Z_][a-zA-Z0-9_]*$"),
-            true,
-        );
+    fn schema_string_ignores_pattern() {
+        let schema: ElicitationSchema = serde_json::from_value(json!({
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                }
+            },
+            "required": ["name"]
+        }))
+        .unwrap();
+
+        let ElicitationPropertySchema::String(name) = schema.properties.get("name").unwrap() else {
+            panic!("expected String variant");
+        };
+        assert_eq!(name.min_length, Some(1));
+        assert_eq!(name.max_length, Some(64));
 
         let json = serde_json::to_value(&schema).unwrap();
-        assert_eq!(json["properties"]["name"]["type"], "string");
-        assert_eq!(
-            json["properties"]["name"]["pattern"],
-            "^[a-zA-Z_][a-zA-Z0-9_]*$"
-        );
-
-        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
-        if let ElicitationPropertySchema::String(s) = roundtripped.properties.get("name").unwrap() {
-            assert_eq!(s.pattern.as_deref(), Some("^[a-zA-Z_][a-zA-Z0-9_]*$"));
-        } else {
-            panic!("expected String variant");
-        }
+        assert_eq!(json["properties"]["name"].get("pattern"), None);
     }
 
     #[test]

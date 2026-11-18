@@ -129,16 +129,15 @@ progress actually resumes. `elicitation/complete` is not itself a state update.
 `requestedSchema` is a flat object with `type: "object"`, `properties`, and
 optional `required`, `title`, and `description`. Each property is one of:
 
-| Property      | Schema                                                                                                                      | Optional keywords                                                                              |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Text          | `type: "string"`                                                                                                            | `minLength`, `maxLength`, `pattern`, `format` (`email`, `uri`, `date`, `date-time`), `default` |
-| Single select | `type: "string"` with `enum` (values) or `oneOf` (`const` and `title` options)                                              | `default`                                                                                      |
-| Number        | `type: "number"` or `type: "integer"`                                                                                       | `minimum`, `maximum`, `default`                                                                |
-| Boolean       | `type: "boolean"`                                                                                                           | `default`                                                                                      |
-| Multi select  | `type: "array"` with `items` of `{ "type": "string", "enum": [...] }` or `{ "anyOf": [...] }` (`const` and `title` options) | `minItems`, `maxItems`, `default`                                                              |
+| Property      | Schema                                                                                                                      | Optional keywords                                                                   |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Text          | `type: "string"`                                                                                                            | `minLength`, `maxLength`, `format` (`email`, `uri`, `date`, `date-time`), `default` |
+| Single select | `type: "string"` with `enum` (values) or `oneOf` (`const` and `title` options)                                              | `default`                                                                           |
+| Number        | `type: "number"` or `type: "integer"`                                                                                       | `minimum`, `maximum`, `default`                                                     |
+| Boolean       | `type: "boolean"`                                                                                                           | `default`                                                                           |
+| Multi select  | `type: "array"` with `items` of `{ "type": "string", "enum": [...] }` or `{ "anyOf": [...] }` (`const` and `title` options) | `minItems`, `maxItems`, `default`                                                   |
 
-Every property may also have `title` and `description`. `pattern` uses
-ECMA-262 regular expression syntax, as in JSON Schema. Clients treat an unknown
+Every property may also have `title` and `description`. Clients treat an unknown
 `format` as plain text. Accepted `content` maps each answered property name to its value: a string for text and single-select properties, a number for `number` and `integer`, a boolean for `boolean`, and an array of strings for multi-select. Unanswered properties are omitted, not set to `null`. Custom or future property types may use other JSON values.
 
 Clients **SHOULD** validate submitted values before responding, and Agents
