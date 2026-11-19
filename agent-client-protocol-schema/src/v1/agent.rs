@@ -125,7 +125,7 @@ pub struct InitializeResponse {
     /// The protocol version the client specified if supported by the agent,
     /// or the latest protocol version supported by the agent.
     ///
-    /// The client should disconnect, if it doesn't support this version.
+    /// The client SHOULD disconnect, if it doesn't support this version.
     pub protocol_version: ProtocolVersion,
     /// Capabilities supported by the agent.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -218,7 +218,7 @@ pub struct Implementation {
     /// Intended for UI and end-user contexts and optimized to be human-readable
     /// and easily understood.
     ///
-    /// If not provided, the name should be used for display.
+    /// If not provided, the name SHOULD be used for display.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -253,7 +253,7 @@ impl Implementation {
     /// Intended for UI and end-user contexts and optimized to be human-readable
     /// and easily understood.
     ///
-    /// If not provided, the name should be used for display.
+    /// If not provided, the name SHOULD be used for display.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
@@ -1249,7 +1249,7 @@ impl AuthMethodTerminal {
 pub struct NewSessionRequest {
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
-    /// Additional workspace roots for this session. Each path must be absolute.
+    /// Additional workspace roots for this session. Each path MUST be absolute.
     ///
     /// These expand the session's filesystem scope without changing `cwd`, which
     /// remains the base for relative paths. When omitted or empty, no
@@ -1318,7 +1318,7 @@ impl NewSessionRequest {
         }
     }
 
-    /// Additional workspace roots for this session. Each path must be absolute.
+    /// Additional workspace roots for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -1478,11 +1478,11 @@ pub struct LoadSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the loaded
-    /// session. It may differ from any previously used or reported list as long as
+    /// session. It MAY differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
@@ -1492,7 +1492,7 @@ pub struct LoadSessionRequest {
     pub session_id: SessionId,
     /// System-level instructions for the loaded session.
     ///
-    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent MAY then keep a
     /// system prompt it stored with the session or use its default instructions.
     /// Clients MUST only send this when the Agent advertises
     /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -1547,7 +1547,7 @@ impl LoadSessionRequest {
         }
     }
 
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -1715,7 +1715,7 @@ pub struct ForkSessionRequest {
     pub cursor_id: Option<CursorId>,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the forked
@@ -1731,7 +1731,7 @@ pub struct ForkSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// System-level instructions for the forked session.
     ///
-    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent MAY then keep a
     /// system prompt it stored with the source session or use its default
     /// instructions. Clients MUST only send this when the Agent advertises
     /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -1807,7 +1807,7 @@ impl ForkSessionRequest {
         self
     }
 
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -1969,11 +1969,11 @@ pub struct ResumeSessionRequest {
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the resumed
-    /// session. It may differ from any previously used or reported list as long as
+    /// session. It MAY differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
@@ -1986,7 +1986,7 @@ pub struct ResumeSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// System-level instructions for the resumed session.
     ///
-    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent MAY then keep a
     /// system prompt it stored with the session or use its default instructions.
     /// Clients MUST only send this when the Agent advertises
     /// `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -2041,7 +2041,7 @@ impl ResumeSessionRequest {
         }
     }
 
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -2432,7 +2432,7 @@ pub enum SessionStatus {
 pub struct SessionOptionsRequest {
     /// The working directory to resolve options for. Must be an absolute path.
     pub cwd: PathBuf,
-    /// Additional workspace roots to resolve options for. Each path must be absolute.
+    /// Additional workspace roots to resolve options for. Each path MUST be absolute.
     ///
     /// Optional. Omitted and `null` are equivalent to an empty list.
     #[serde_as(deserialize_as = "DefaultOnNull")]
@@ -2474,7 +2474,7 @@ impl SessionOptionsRequest {
         }
     }
 
-    /// Additional workspace roots to resolve options for. Each path must be absolute.
+    /// Additional workspace roots to resolve options for. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -3156,7 +3156,7 @@ pub struct SessionInfo {
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: PathBuf,
-    /// Additional workspace roots reported for this session. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path MUST be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
     /// by the Agent. Omitted and empty values are equivalent: the response
@@ -3217,7 +3217,7 @@ impl SessionInfo {
         }
     }
 
-    /// Additional workspace roots reported for this session. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories(mut self, additional_directories: Vec<PathBuf>) -> Self {
         self.additional_directories = additional_directories;
@@ -4863,7 +4863,7 @@ pub enum StopReason {
     ///
     /// This stop reason MUST be returned when the client sends a `session/cancel`
     /// notification, even if the cancellation causes exceptions in underlying operations.
-    /// Agents should catch these exceptions and return this semantically meaningful
+    /// Agents SHOULD catch these exceptions and return this semantically meaningful
     /// response to confirm successful cancellation.
     Cancelled,
 }
@@ -5093,7 +5093,7 @@ pub struct ProviderInfo {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
-    /// If true, clients must not call `providers/disable` for this provider ID.
+    /// If true, clients MUST NOT call `providers/disable` for this provider ID.
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null or omitted means provider is disabled.
@@ -7081,7 +7081,7 @@ pub enum ClientRequest {
     ///
     /// This method is only available if the agent advertises the `sessionCapabilities.close` capability.
     ///
-    /// The agent must cancel any ongoing work (as if `session/cancel` was called)
+    /// The agent MUST cancel any ongoing work (as if `session/cancel` was called)
     /// and then free up any resources associated with the session.
     CloseSessionRequest(CloseSessionRequest),
     /// Sets the current mode for a session.
@@ -7089,7 +7089,7 @@ pub enum ClientRequest {
     /// Allows switching between different agent modes (e.g., "ask", "architect", "code")
     /// that affect system prompts, tool availability, and permission behaviors.
     ///
-    /// The mode must be one of the modes advertised in `availableModes` during session
+    /// The mode MUST be one of the modes advertised in `availableModes` during session
     /// creation or loading. Agents may also change modes autonomously and notify the
     /// client via `current_mode_update` notifications.
     ///

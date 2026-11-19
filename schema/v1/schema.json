@@ -576,7 +576,7 @@
           ]
         },
         {
-          "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)",
+          "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal MUST be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)",
           "type": "object",
           "properties": {
             "type": {
@@ -1045,7 +1045,7 @@
       "type": "string"
     },
     "Terminal": {
-      "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal must be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)",
+      "description": "Embed a terminal created with `terminal/create` by its id.\n\nThe terminal MUST be added before calling `terminal/release`.\n\nSee protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)",
       "type": "object",
       "properties": {
         "terminalId": {
@@ -1399,7 +1399,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future elicitation mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this mode should preserve the raw payload\nwhen storing, replaying, proxying, or forwarding elicitation requests.\nThey MUST NOT render it as a known elicitation mode.",
+          "description": "Custom or future elicitation mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this mode SHOULD preserve the raw payload\nwhen storing, replaying, proxying, or forwarding elicitation requests.\nThey MUST NOT render it as a known elicitation mode.",
           "type": "object",
           "properties": {
             "mode": {
@@ -1521,7 +1521,7 @@
           "x-deserialize-default-on-error": true
         },
         "properties": {
-          "description": "Property definitions (must be primitive types).",
+          "description": "Property definitions (MUST be primitive types).",
           "type": "object",
           "default": {},
           "additionalProperties": {
@@ -1643,7 +1643,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future elicitation property schema.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this property schema type should preserve\nthe raw schema when storing, replaying, proxying, or forwarding\nelicitation requests. They MUST NOT render it as a known input control.",
+          "description": "Custom or future elicitation property schema.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this property schema type SHOULD preserve\nthe raw schema when storing, replaying, proxying, or forwarding\nelicitation requests. They MUST NOT render it as a known input control.",
           "type": "object",
           "properties": {
             "type": {
@@ -2336,7 +2336,7 @@
       "type": "object",
       "properties": {
         "protocolVersion": {
-          "description": "The protocol version the client specified if supported by the agent,\nor the latest protocol version supported by the agent.\n\nThe client should disconnect, if it doesn't support this version.",
+          "description": "The protocol version the client specified if supported by the agent,\nor the latest protocol version supported by the agent.\n\nThe client SHOULD disconnect, if it doesn't support this version.",
           "allOf": [
             {
               "$ref": "#/$defs/ProtocolVersion"
@@ -2884,7 +2884,7 @@
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts and optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.",
+          "description": "Intended for UI and end-user contexts and optimized to be human-readable\nand easily understood.\n\nIf not provided, the name SHOULD be used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3358,7 +3358,7 @@
           "type": "string"
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
+          "description": "Additional workspace roots reported for this session. Each path MUST be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
           "type": "array",
           "items": {
             "type": "string"
@@ -3533,7 +3533,7 @@
           "const": "refusal"
         },
         {
-          "description": "The turn was cancelled by the client via `session/cancel`.\n\nThis stop reason MUST be returned when the client sends a `session/cancel`\nnotification, even if the cancellation causes exceptions in underlying operations.\nAgents should catch these exceptions and return this semantically meaningful\nresponse to confirm successful cancellation.",
+          "description": "The turn was cancelled by the client via `session/cancel`.\n\nThis stop reason MUST be returned when the client sends a `session/cancel`\nnotification, even if the cancellation causes exceptions in underlying operations.\nAgents SHOULD catch these exceptions and return this semantically meaningful\nresponse to confirm successful cancellation.",
           "type": "string",
           "const": "cancelled"
         }
@@ -3547,7 +3547,7 @@
       "type": "object",
       "properties": {
         "code": {
-          "description": "A number indicating the error type that occurred.\nThis must be an integer as defined in the JSON-RPC specification.",
+          "description": "A number indicating the error type that occurred.\nThis MUST be an integer as defined in the JSON-RPC specification.",
           "allOf": [
             {
               "$ref": "#/$defs/ErrorCode"
@@ -3555,7 +3555,7 @@
           ]
         },
         "message": {
-          "description": "A string providing a short description of the error.\nThe message should be limited to a concise single sentence.",
+          "description": "A string providing a short description of the error.\nThe message SHOULD be limited to a concise single sentence.",
           "type": "string"
         },
         "data": {
@@ -4136,7 +4136,7 @@
       "type": "object",
       "properties": {
         "entries": {
-          "description": "The list of tasks to be accomplished.\n\nWhen updating a plan, the agent must send a complete list of all entries\nwith their current status. The client replaces the entire plan with each update.",
+          "description": "The list of tasks to be accomplished.\n\nWhen updating a plan, the agent MUST send a complete list of all entries\nwith their current status. The client replaces the entire plan with each update.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/PlanEntry"
@@ -4647,7 +4647,7 @@
                 },
                 {
                   "title": "CloseSessionRequest",
-                  "description": "Closes an active session and frees up any resources associated with it.\n\nThis method is only available if the agent advertises the `sessionCapabilities.close` capability.\n\nThe agent must cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
+                  "description": "Closes an active session and frees up any resources associated with it.\n\nThis method is only available if the agent advertises the `sessionCapabilities.close` capability.\n\nThe agent MUST cancel any ongoing work (as if `session/cancel` was called)\nand then free up any resources associated with the session.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CloseSessionRequest"
@@ -4656,7 +4656,7 @@
                 },
                 {
                   "title": "SetSessionModeRequest",
-                  "description": "Sets the current mode for a session.\n\nAllows switching between different agent modes (e.g., \"ask\", \"architect\", \"code\")\nthat affect system prompts, tool availability, and permission behaviors.\n\nThe mode must be one of the modes advertised in `availableModes` during session\ncreation or loading. Agents may also change modes autonomously and notify the\nclient via `current_mode_update` notifications.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/session-modes)",
+                  "description": "Sets the current mode for a session.\n\nAllows switching between different agent modes (e.g., \"ask\", \"architect\", \"code\")\nthat affect system prompts, tool availability, and permission behaviors.\n\nThe mode MUST be one of the modes advertised in `availableModes` during session\ncreation or loading. Agents may also change modes autonomously and notify the\nclient via `current_mode_update` notifications.\n\nThis method can be called at any time during a session, whether the Agent is\nidle or actively generating a response.\n\nSee protocol docs: [Session Modes](https://agentclientprotocol.com/protocol/v1/session-modes)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/SetSessionModeRequest"
@@ -4943,7 +4943,7 @@
       "type": "object",
       "properties": {
         "terminal": {
-          "description": "Whether the client supports `terminal` authentication methods.\n\nThe client should set this to `true` only when it can reproduce the\nconfigured agent invocation in an interactive terminal. When `true`, the\nagent may include `terminal` entries in its authentication methods.",
+          "description": "Whether the client supports `terminal` authentication methods.\n\nThe client SHOULD set this to `true` only when it can reproduce the\nconfigured agent invocation in an interactive terminal. When `true`, the\nagent MAY include `terminal` entries in its authentication methods.",
           "type": "boolean",
           "default": false,
           "x-deserialize-default-on-error": true
@@ -5062,7 +5062,7 @@
           "type": "string"
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's filesystem scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
+          "description": "Additional workspace roots for this session. Each path MUST be absolute.\n\nThese expand the session's filesystem scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
           "type": "array",
           "items": {
             "type": "string"
@@ -5326,7 +5326,7 @@
           "type": "string"
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the loaded\nsession. It may differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
+          "description": "Additional workspace roots to activate for this session. Each path MUST be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the loaded\nsession. It MAY differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
           "type": "array",
           "items": {
             "type": "string"
@@ -5342,7 +5342,7 @@
           ]
         },
         "systemPrompt": {
-          "description": "System-level instructions for the loaded session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
+          "description": "System-level instructions for the loaded session.\n\nOptional. Omitted and `null` are equivalent. The Agent MAY then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -5425,7 +5425,7 @@
           "type": "string"
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the resumed\nsession. It may differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
+          "description": "Additional workspace roots to activate for this session. Each path MUST be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the resumed\nsession. It MAY differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
           "type": "array",
           "items": {
             "type": "string"
@@ -5441,7 +5441,7 @@
           "x-deserialize-default-on-null": true
         },
         "systemPrompt": {
-          "description": "System-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
+          "description": "System-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent MAY then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`sessionCapabilities.systemPrompt`, and SHOULD send the same value they used\nwhen the session was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -6051,7 +6051,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this action should preserve the raw\npayload when storing, replaying, proxying, or forwarding elicitation\nresponses. They MUST NOT treat it as a known elicitation action.",
+          "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this action SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding elicitation\nresponses. They MUST NOT treat it as a known elicitation action.",
           "type": "object",
           "properties": {
             "action": {

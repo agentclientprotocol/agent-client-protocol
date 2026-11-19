@@ -281,7 +281,7 @@ Each entry in `authMethods` now uses `methodId` instead of `id`, and carries a r
 }
 ```
 
-Because this entry makes `authMethods` non-empty, the Agent must support both `auth/login` and `auth/logout`. `type: "agent"` is the method type that uses `auth/login`'s protocol-driven flow.
+Because this entry makes `authMethods` non-empty, the Agent **MUST** support both `auth/login` and `auth/logout`. `type: "agent"` is the method type that uses `auth/login`'s protocol-driven flow.
 
 Stable v2 defines two types: `agent` and `terminal`. Custom types **MUST** begin with `_`. Unknown values without a leading `_` are reserved for future ACP versions.
 
@@ -394,11 +394,11 @@ Everything else happens through `session/update` notifications:
    }
    ```
 
-Clients reconcile their submitted input with the response's `(sessionId, messageId)`, including when the message update arrived first. They must not match by content or assume that a successful response means the session is idle. SDKs must keep the session's processing and notification handling alive after the prompt RPC completes.
+Clients reconcile their submitted input with the response's `(sessionId, messageId)`, including when the message update arrived first. They **MUST NOT** match by content or assume that a successful response means the session is idle. SDKs must keep the session's processing and notification handling alive after the prompt RPC completes.
 
 An Agent may know it is idle without knowing why the work stopped. Clients **MUST** recognize idle even when the stop reason is omitted, `null`, or unknown. They cannot infer success or failure without a recognized stop reason.
 
-User messages, including [locally handled commands](/protocol/v2/slash-commands#running-commands), must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response is ambiguous. Neither replay omission nor an identical message proves which submission was inserted. v2 adds an optional `idempotencyKey` to `session/prompt` for this case. A Client that sent one can send the request again with the same key, and the Agent answers with the original `messageId` without inserting a second message. Without a key, a retry can create another submission. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).
+User messages, including [locally handled commands](/protocol/v2/slash-commands#running-commands), **MUST** be reported live but need not be retained. If an Agent retains and replays an inserted user message, it **MUST** reuse the response's ID. A lost prompt response is ambiguous. Neither replay omission nor an identical message proves which submission was inserted. v2 adds an optional `idempotencyKey` to `session/prompt` for this case. A Client that sent one can send the request again with the same key, and the Agent answers with the original `messageId` without inserting a second message. Without a key, a retry can create another submission. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).
 
 Pre-insertion rejection receives a JSON-RPC error response with no user-message updates for that submission. State updates still describe actual foreground work, independently of the request outcome. See [Prompts that are never inserted](/protocol/v2/prompt-lifecycle#prompts-that-are-never-inserted).
 
@@ -572,9 +572,9 @@ The reference contains no mutable state. The Agent reports that separately with 
 }
 ```
 
-Only `terminalId` is required. `command`, `cwd`, `size`, `output`, `exitStatus`, `capabilities`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it, except that a `_meta` object patches stored metadata by top-level key. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` must be absolute. `size` is the terminal size in character cells, with required `cols` and `rows`. When present, Clients can use it to render output as the program wrote it.
+Only `terminalId` is required. `command`, `cwd`, `size`, `output`, `exitStatus`, `capabilities`, and `_meta` are patch fields: omission leaves the stored value unchanged, `null` clears it, and a concrete value replaces it, except that a `_meta` object patches stored metadata by top-level key. On a first-seen terminal, omitted fields start unknown or empty. Every supplied `cwd` **MUST** be absolute. `size` is the terminal size in character cells, with required `cols` and `rows`. When present, Clients can use it to render output as the program wrote it.
 
-`output` is an authoritative replacement snapshot for replay, correction, or resynchronization. Its required `data` field is RFC 4648 base64-encoded bytes and is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. A concrete snapshot replaces all previously stored bytes. Clients must not merge or splice bytes from the previous snapshot into it. Optional nullable `output._meta` is snapshot-scoped. Omission and `null` both mean no snapshot metadata was provided.
+`output` is an authoritative replacement snapshot for replay, correction, or resynchronization. Its required `data` field is RFC 4648 base64-encoded bytes and is the complete byte sequence the Agent wants the Client to retain for the terminal at that point. A concrete snapshot replaces all previously stored bytes. Clients **MUST NOT** merge or splice bytes from the previous snapshot into it. Optional nullable `output._meta` is snapshot-scoped. Omission and `null` both mean no snapshot metadata was provided.
 
 A concrete `exitStatus` marks the terminal as exited. Its optional nullable `exitCode` and `signal` fields use omission or `null` when unavailable. Optional nullable `exitStatus._meta` is scoped to that exit information and likewise treats omission and `null` as equivalent. Conventional POSIX signal names include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use platform-specific names. For example: `"exitStatus": { "signal": "SIGTERM" }`.
 
@@ -686,7 +686,7 @@ Read the file somewhere the tool waits on, so it still holds its contents from b
 
 - `title` is **required**: human-readable text for the permission prompt itself. It does not update any tool call's displayed title.
 - `description` is optional supporting copy.
-- `subject` is an optional tagged union describing _what_ needs permission. Stable v2 defines `type: "tool_call"`, whose `toolCall` payload is the same `ToolCallUpdate` upsert shape used in session updates, and `type: "command"`, which describes an Agent-executed command. Requests may omit `subject` entirely for approvals without structured context, and unknown subject types should be preserved when proxying and either rendered generically or declined by policy.
+- `subject` is an optional tagged union describing _what_ needs permission. Stable v2 defines `type: "tool_call"`, whose `toolCall` payload is the same `ToolCallUpdate` upsert shape used in session updates, and `type: "command"`, which describes an Agent-executed command. Requests may omit `subject` entirely for approvals without structured context, and unknown subject types **SHOULD** be preserved when proxying and either rendered generically or declined by policy.
 
 In v1, agents routinely stuffed permission prompt text into the tool call's `title`, mutating displayed tool state as a side effect. In v2, put prompt copy in `title`/`description` and let `subject.toolCall` carry only genuine tool-call state.
 
@@ -702,7 +702,7 @@ A command permission subject is self-contained rather than a patch:
 }
 ```
 
-`command` and `cwd` are required, and `cwd` must be absolute. `toolCallId`, `terminalId`, and `_meta` are optional and nullable. Omission and `null` are equivalent and mean the value was not provided. The IDs only associate the permission with displayed state and may be absent when permission is requested before execution. Approval authorizes the Agent to execute the command. It never asks the Client to execute it.
+`command` and `cwd` are required, and `cwd` **MUST** be absolute. `toolCallId`, `terminalId`, and `_meta` are optional and nullable. Omission and `null` are equivalent and mean the value was not provided. The IDs only associate the permission with displayed state and may be absent when permission is requested before execution. Approval authorizes the Agent to execute the command. It never asks the Client to execute it.
 
 `options` and the response shape are unchanged: options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`. Both unions are extensible in v2, with one safety rule: an Agent that receives an outcome it does not understand **MUST NOT** treat it as approval.
 
@@ -791,7 +791,7 @@ Retained user messages **MUST** preserve the ID returned by `session/prompt`. Ag
 
 `session/new` and `session/resume` take the same shape of environment parameters: a required `cwd` (absolute path), plus optional `additionalDirectories` and `mcpServers`. Note that `mcpServers` was required (even if empty) on `session/new` in v1 and is now optional. Omitting it and sending `[]` are equivalent. Both responses carry the session's `configOptions` and `availableCommands`. An Agent whose session has configuration options or commands **MUST** include them, because a setup response replaces the lists the Client holds. Neither carries `modes` anymore.
 
-`additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` must send the full intended additional-root list. Omitting the field or sending `[]` activates no additional roots rather than restoring previous ones. The same applies to `mcpServers` on resume.
+`additionalDirectories` still requires the `session.additionalDirectories` capability and absolute paths, and each `session/resume` **MUST** send the full intended additional-root list. Omitting the field or sending `[]` activates no additional roots rather than restoring previous ones. The same applies to `mcpServers` on resume.
 
 ### Baseline methods
 
@@ -831,7 +831,7 @@ The dedicated modes API is removed: the `modes` field on session responses, `ses
 ```
 
 - The option's identifier field is renamed from `id` to `configId`, matching the parameter name used by `session/set_config_option`.
-- The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and must tolerate unknown categories.
+- The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and **MUST** tolerate unknown categories.
 - Agents **SHOULD** list the values of a `select` `thought_level` option from lowest to highest. v1 has no ordering rule for these values.
 - Clients change values with `session/set_config_option` (`sessionId`, `configId`, `type`, `value`). The required `type` discriminator is `"id"` with a string option ID or `"boolean"` with a boolean value. The response returns the full updated `configOptions` array, since one change can affect other options. Agent-initiated changes arrive as `config_option_update` session updates, which replace the v1 `current_mode_update`.
 
@@ -917,7 +917,7 @@ A command still carries `name` and `description`, but each command and its optio
 
 </CodeGroup>
 
-As with other extensible unions, unknown command and input types should be preserved when proxying. Each command type defines how its entries are invoked, so a client that doesn't understand a command type ignores it and must not display it as a slash command. A client that can't render an input type can fall back to plain text input or hide the command's input hint.
+As with other extensible unions, unknown command and input types **SHOULD** be preserved when proxying. Each command type defines how its entries are invoked, so a client that doesn't understand a command type ignores it and **MUST NOT** display it as a slash command. A client that can't render an input type can fall back to plain text input or hide the command's input hint.
 
 ## Consistent ID naming
 
@@ -1061,7 +1061,7 @@ These routers select a version-specific implementation and normalize initializat
 
 ### Version mismatch is an initialization failure
 
-A v2-only endpoint rejects a v1 request with `-32022` and `data: { "requested": 1, "supported": [2] }`. It does not need to invoke the v2 initialization handler or require v2's Client identity just to report this mismatch. The connection is not initialized, and the Client should close it. A v2-aware Client can display the supported versions, while an existing v1 Client can report the initialization error generically.
+A v2-only endpoint rejects a v1 request with `-32022` and `data: { "requested": 1, "supported": [2] }`. It does not need to invoke the v2 initialization handler or require v2's Client identity just to report this mismatch. The connection is not initialized, and the Client **SHOULD** close it. A v2-aware Client can display the supported versions, while an existing v1 Client can report the initialization error generically.
 
 A request for a newer version can still select v2. A v1-only endpoint can select v1 for a v2 request. In either case, the Client must check whether it supports the selected version before proceeding. The latest-version integer does not advertise a complete set of supported versions.
 

@@ -1588,7 +1588,7 @@ pub struct SubagentUpdate {
     /// root set and as the default terminal working directory.
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub cwd: MaybeUndefined<PathBuf>,
-    /// Additional workspace roots for the child. Each path must be absolute.
+    /// Additional workspace roots for the child. Each path MUST be absolute.
     ///
     /// Optional and nullable. Omitted means unchanged. `null` clears the
     /// reported value. While unset, the child inherits its immediate parent's
@@ -4811,9 +4811,9 @@ impl BooleanConfigOptionCapabilities {
 pub struct AuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// The client should set this to `true` only when it can reproduce the
+    /// The client SHOULD set this to `true` only when it can reproduce the
     /// configured agent invocation in an interactive terminal. When `true`, the
-    /// agent may include `terminal` entries in its authentication methods.
+    /// agent MAY include `terminal` entries in its authentication methods.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4839,9 +4839,9 @@ impl AuthCapabilities {
 
     /// Whether the client supports `terminal` authentication methods.
     ///
-    /// The client should set this to `true` only when it can reproduce the
+    /// The client SHOULD set this to `true` only when it can reproduce the
     /// configured agent invocation in an interactive terminal. When `true`, the
-    /// agent may include `AuthMethod::Terminal` entries in its authentication
+    /// agent MAY include `AuthMethod::Terminal` entries in its authentication
     /// methods.
     #[must_use]
     pub fn terminal(mut self, terminal: bool) -> Self {

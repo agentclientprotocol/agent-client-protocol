@@ -5,7 +5,7 @@ description: "How Agents communicate their execution plans"
 
 A plan is the Agent's list of steps for a multi-step task. Each entry has a description, a priority, and a status.
 
-Agents may send plans to Clients through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications and update them as work progresses.
+Agents **MAY** send plans to Clients through [`session/update`](/protocol/v1/prompt-turn#3-agent-reports-output) notifications and update them as work progresses.
 
 ## Creating plans
 

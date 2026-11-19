@@ -293,9 +293,9 @@ Clients can change a config option value by calling the `session/set_config_opti
 </ParamField>
 
 <ParamField path="value" type="string | boolean" required>
-  The new value to set. For `select` options, this must be one of the values
-  listed in the option's `options` array. For `boolean` options, this must be a
-  boolean.
+  The new value to set. For `select` options, this **MUST** be one of the values
+  listed in the option's `options` array. For `boolean` options, this **MUST**
+  be a boolean.
 </ParamField>
 
 For boolean options, Clients send `type: "boolean"` with a boolean `value`:

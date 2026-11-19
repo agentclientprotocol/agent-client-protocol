@@ -35,10 +35,10 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[non_exhaustive]
 pub struct Error {
     /// A number indicating the error type that occurred.
-    /// This must be an integer as defined in the JSON-RPC specification.
+    /// This MUST be an integer as defined in the JSON-RPC specification.
     pub code: ErrorCode,
     /// A string providing a short description of the error.
-    /// The message should be limited to a concise single sentence.
+    /// The message SHOULD be limited to a concise single sentence.
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.

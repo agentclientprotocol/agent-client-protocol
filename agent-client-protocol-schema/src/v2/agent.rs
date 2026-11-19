@@ -115,7 +115,7 @@ pub struct InitializeResponse {
     /// the version requested by the client. If no such version exists,
     /// initialization fails with error code -32022.
     ///
-    /// The client must check that it supports this version and should disconnect
+    /// The client MUST check that it supports this version and SHOULD disconnect
     /// if it does not.
     pub protocol_version: ProtocolVersion,
     /// Information about the implementation sending this initialize response.
@@ -204,7 +204,7 @@ pub struct Implementation {
     /// Intended for UI and end-user contexts and optimized to be human-readable
     /// and easily understood.
     ///
-    /// If not provided, the name should be used for display.
+    /// If not provided, the name SHOULD be used for display.
     ///
     /// Omitted and `null` are equivalent and mean the `name` is used for display.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -241,7 +241,7 @@ impl Implementation {
     /// Intended for UI and end-user contexts and optimized to be human-readable
     /// and easily understood.
     ///
-    /// If not provided, the name should be used for display.
+    /// If not provided, the name SHOULD be used for display.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
@@ -963,7 +963,7 @@ pub enum AuthMethod {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this method type should preserve the raw
+    /// Clients that do not understand this method type SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding initialization
     /// data, and otherwise ignore the method or display it generically.
     #[serde(untagged)]
@@ -1286,7 +1286,7 @@ impl AuthMethodTerminal {
 pub struct NewSessionRequest {
     /// The working directory for this session. Must be an absolute path.
     pub cwd: AbsolutePath,
-    /// Additional workspace roots for this session. Each path must be absolute.
+    /// Additional workspace roots for this session. Each path MUST be absolute.
     ///
     /// These expand the session's workspace scope without changing `cwd`, which
     /// remains the base for relative paths. When omitted or empty, no
@@ -1356,7 +1356,7 @@ impl NewSessionRequest {
         }
     }
 
-    /// Additional workspace roots for this session. Each path must be absolute.
+    /// Additional workspace roots for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
     where
@@ -1551,7 +1551,7 @@ pub struct ForkSessionRequest {
     pub cursor_id: Option<CursorId>,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: AbsolutePath,
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the forked
@@ -1567,7 +1567,7 @@ pub struct ForkSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// System-level instructions for the forked session.
     ///
-    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent MAY then keep a
     /// system prompt it stored with the source session or use its default
     /// instructions. Clients MUST only send this when the Agent advertises
     /// `session.systemPrompt`, and SHOULD send the same value they used for the
@@ -1643,7 +1643,7 @@ impl ForkSessionRequest {
         self
     }
 
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
     where
@@ -1815,11 +1815,11 @@ pub struct ResumeSessionRequest {
     /// Clients MUST send the session's working directory. Agents MAY reject a different directory
     /// with `-32602`, and MAY normalize paths when comparing.
     pub cwd: AbsolutePath,
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     ///
     /// When omitted or empty, no additional roots are activated. When non-empty,
     /// this is the complete resulting additional-root list for the resumed
-    /// session. It may differ from any previously used or reported list as long as
+    /// session. It MAY differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
@@ -1848,7 +1848,7 @@ pub struct ResumeSessionRequest {
     pub replay_from: Option<ReplayFrom>,
     /// System-level instructions for the resumed session.
     ///
-    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent MAY then keep a
     /// system prompt it stored with the session or use its default instructions.
     /// Clients MUST only send this when the Agent advertises
     /// `session.systemPrompt`, and SHOULD send the same value they used when the
@@ -1909,7 +1909,7 @@ impl ResumeSessionRequest {
         }
     }
 
-    /// Additional workspace roots to activate for this session. Each path must be absolute.
+    /// Additional workspace roots to activate for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
     where
@@ -2502,7 +2502,7 @@ pub enum SessionStatus {
 pub struct SessionOptionsRequest {
     /// The working directory to resolve options for. Must be an absolute path.
     pub cwd: AbsolutePath,
-    /// Additional workspace roots to resolve options for. Each path must be absolute.
+    /// Additional workspace roots to resolve options for. Each path MUST be absolute.
     ///
     /// Optional. Omitted and `null` are equivalent to an empty list.
     #[serde_as(deserialize_as = "DefaultOnNull")]
@@ -2542,7 +2542,7 @@ impl SessionOptionsRequest {
         }
     }
 
-    /// Additional workspace roots to resolve options for. Each path must be absolute.
+    /// Additional workspace roots to resolve options for. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
     where
@@ -2679,7 +2679,7 @@ pub struct InitialSessionConfigOption {
     pub config_id: SessionConfigId,
     /// The value to set, including a `type` discriminator and the raw `value`.
     ///
-    /// Payloads must send `type: "id"` for id-based options. A value `type` the Agent
+    /// Payloads MUST send `type: "id"` for id-based options. A value `type` the Agent
     /// does not support fails the request with `-32602`.
     #[serde(flatten)]
     pub value: SessionConfigOptionValue,
@@ -3483,7 +3483,7 @@ pub struct SessionInfo {
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: AbsolutePath,
-    /// Additional workspace roots reported for this session. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path MUST be absolute.
     ///
     /// When present, this is the complete ordered additional-root list reported
     /// by the Agent. Omitted and empty values are equivalent: the response
@@ -3548,7 +3548,7 @@ impl SessionInfo {
         }
     }
 
-    /// Additional workspace roots reported for this session. Each path must be absolute.
+    /// Additional workspace roots reported for this session. Each path MUST be absolute.
     #[must_use]
     pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
     where
@@ -4017,7 +4017,7 @@ pub enum SessionConfigKind {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this option type should preserve the raw
+    /// Clients that do not understand this option type SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding configuration
     /// data, and otherwise ignore the option. The Agent keeps using its `currentValue`.
     #[serde(untagged)]
@@ -4436,7 +4436,7 @@ pub struct SetSessionConfigOptionRequest {
     pub config_id: SessionConfigId,
     /// The value to set, including a `type` discriminator and the raw `value`.
     ///
-    /// Payloads must send `type: "id"` for id-based options.
+    /// Payloads MUST send `type: "id"` for id-based options.
     #[serde(flatten)]
     pub value: SessionConfigOptionValue,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -4563,7 +4563,7 @@ pub enum McpServer {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this transport should preserve the raw
+    /// Receivers that do not understand this transport SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding session setup
     /// data. Agents MUST reject a request with a transport they do not support
     /// with `-32602`.
@@ -5331,7 +5331,7 @@ pub struct PromptResponse {
     /// Required and non-null. Omission and explicit `null` are both invalid.
     ///
     /// The corresponding user-message session update carries this same identifier and may arrive
-    /// before or after this response. Agents must echo the message during the live session, but are
+    /// before or after this response. Agents MUST echo the message during the live session, but are
     /// not required to retain it. If retained and replayed, the message keeps this identifier.
     pub message_id: MessageId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -5773,7 +5773,7 @@ pub struct ProviderInfo {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub supported: Vec<LlmProtocol>,
     /// Whether this provider is mandatory and cannot be disabled via `providers/disable`.
-    /// If true, clients must not call `providers/disable` for this provider ID.
+    /// If true, clients MUST NOT call `providers/disable` for this provider ID.
     pub required: bool,
     /// Current effective non-secret routing config.
     /// Null or omitted means provider is disabled.
@@ -6354,7 +6354,7 @@ pub struct SessionCapabilities {
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
-    /// Agents may return `SessionInfo.additionalDirectories` to report the
+    /// Agents MAY return `SessionInfo.additionalDirectories` to report the
     /// complete ordered additional-root list associated with a listed session.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -6494,7 +6494,7 @@ impl SessionCapabilities {
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
-    /// Agents may return `SessionInfo.additionalDirectories` to report the
+    /// Agents MAY return `SessionInfo.additionalDirectories` to report the
     /// complete ordered additional-root list associated with a listed session.
     #[must_use]
     pub fn additional_directories(
@@ -7923,7 +7923,7 @@ pub enum ClientRequest {
     /// - Exchange capability information between client and agent
     /// - Determine available authentication methods
     ///
-    /// The Client may repeat it before its first other request. The latest successful
+    /// The Client MAY repeat it before its first other request. The latest successful
     /// `initialize` is authoritative.
     ///
     /// The agent should respond with its supported protocol version and capabilities.

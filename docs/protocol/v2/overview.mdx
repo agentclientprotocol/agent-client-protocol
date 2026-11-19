@@ -5,6 +5,8 @@ description: "How the Agent Client Protocol works"
 
 The Agent Client Protocol allows [Agents](#agent) and [Clients](#client) to communicate by exposing methods that each side can call and sending notifications to inform each other of events.
 
+The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**, **MAY**, and **OPTIONAL** in the protocol pages and schema descriptions are to be interpreted as described in [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174) when, and only when, they appear in all capitals, as shown here.
+
 ## Communication Model
 
 The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification with two types of messages:
@@ -224,12 +226,12 @@ Either side can send [`$/cancel_request`](/protocol/v2/cancellation) to cancel a
 
 When a response is lost, for example because the connection ended, the sender cannot tell whether the request took effect. Each method has one of four retry classes:
 
-| Class       | Meaning                                                                                                                          | Retry rule                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender may send it again as is. The response reports current state.                                 |
-| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client may send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
-| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client may send it again. If the first request also took effect, what it created is left unused.    |
-| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.             |
+| Class       | Meaning                                                                                                                          | Retry rule                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender **MAY** send it again as is. The response reports current state.                                 |
+| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client **MAY** send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
+| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client **MAY** send it again. If the first request also took effect, what it created is left unused.    |
+| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.                 |
 
 Requests the Client sends:
 

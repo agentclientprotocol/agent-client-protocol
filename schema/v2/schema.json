@@ -287,7 +287,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future permission subject.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this subject type should preserve the raw\npayload when storing, replaying, proxying, or forwarding permission\nrequests, and otherwise display a generic permission prompt or decline it\naccording to policy.",
+          "description": "Custom or future permission subject.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this subject type SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding permission\nrequests, and otherwise display a generic permission prompt or decline it\naccording to policy.",
           "type": "object",
           "properties": {
             "type": {
@@ -590,7 +590,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future tool call content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding tool call\noutput, and otherwise ignore it or display it generically.",
+          "description": "Custom or future tool call content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type SHOULD preserve the\nraw payload when storing, replaying, proxying, or forwarding tool call\noutput, and otherwise ignore it or display it generically.",
           "type": "object",
           "properties": {
             "type": {
@@ -732,7 +732,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future content block.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content block type should preserve\nthe raw payload when storing, replaying, proxying, or forwarding content,\nand otherwise ignore it or display it generically. Agents MUST reject a\n`session/prompt` request with a content block type they do not support\nwith `-32602`.",
+          "description": "Custom or future content block.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content block type SHOULD preserve\nthe raw payload when storing, replaying, proxying, or forwarding content,\nand otherwise ignore it or display it generically. Agents MUST reject a\n`session/prompt` request with a content block type they do not support\nwith `-32602`.",
           "type": "object",
           "properties": {
             "type": {
@@ -990,7 +990,7 @@
           "x-deserialize-default-on-error": true
         },
         "sizes": {
-          "description": "Optional array of strings that specify sizes at which the icon can be used.\nEach string should be in `WxH` format (e.g., `\"48x48\"`, `\"96x96\"`) or\n`\"any\"` for scalable formats like SVG.\n\nIf not provided, the client should assume that the icon can be used at any size.\n\nOmitted and `null` are equivalent and mean no sizes are specified.",
+          "description": "Optional array of strings that specify sizes at which the icon can be used.\nEach string SHOULD be in `WxH` format (e.g., `\"48x48\"`, `\"96x96\"`) or\n`\"any\"` for scalable formats like SVG.\n\nIf not provided, the client SHOULD assume that the icon can be used at any size.\n\nOmitted and `null` are equivalent and mean no sizes are specified.",
           "type": ["array", "null"],
           "items": {
             "type": "string"
@@ -1885,7 +1885,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future elicitation mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this mode should preserve the raw payload\nwhen storing, replaying, proxying, or forwarding elicitation requests.\nThey MUST NOT render it as a known elicitation mode.",
+          "description": "Custom or future elicitation mode.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this mode SHOULD preserve the raw payload\nwhen storing, replaying, proxying, or forwarding elicitation requests.\nThey MUST NOT render it as a known elicitation mode.",
           "type": "object",
           "properties": {
             "mode": {
@@ -2005,7 +2005,7 @@
           "x-deserialize-default-on-error": true
         },
         "properties": {
-          "description": "Property definitions (must be primitive types).",
+          "description": "Property definitions (MUST be primitive types).",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/ElicitationPropertySchema"
@@ -2127,7 +2127,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future elicitation property schema.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this property schema type should preserve\nthe raw schema when storing, replaying, proxying, or forwarding\nelicitation requests. They MUST NOT render it as a known input control.",
+          "description": "Custom or future elicitation property schema.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this property schema type SHOULD preserve\nthe raw schema when storing, replaying, proxying, or forwarding\nelicitation requests. They MUST NOT render it as a known input control.",
           "type": "object",
           "properties": {
             "type": {
@@ -2219,7 +2219,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future string format.\n\nUnknown formats are preserved. Implementations that do not understand a\nformat should treat it as an annotation rather than rejecting the schema.",
+          "description": "Custom or future string format.\n\nUnknown formats are preserved. Implementations that do not understand a\nformat SHOULD treat it as an annotation rather than rejecting the schema.",
           "type": "string"
         }
       ]
@@ -2836,7 +2836,7 @@
       "type": "object",
       "properties": {
         "protocolVersion": {
-          "description": "The highest protocol version supported by the agent that is at or below\nthe version requested by the client. If no such version exists,\ninitialization fails with error code -32022.\n\nThe client must check that it supports this version and should disconnect\nif it does not.",
+          "description": "The highest protocol version supported by the agent that is at or below\nthe version requested by the client. If no such version exists,\ninitialization fails with error code -32022.\n\nThe client MUST check that it supports this version and SHOULD disconnect\nif it does not.",
           "allOf": [
             {
               "$ref": "#/$defs/ProtocolVersion"
@@ -2897,7 +2897,7 @@
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts and optimized to be human-readable\nand easily understood.\n\nIf not provided, the name should be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
+          "description": "Intended for UI and end-user contexts and optimized to be human-readable\nand easily understood.\n\nIf not provided, the name SHOULD be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2991,7 +2991,7 @@
           "x-deserialize-default-on-error": true
         },
         "additionalDirectories": {
-          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports `additionalDirectories` on\nsupported session lifecycle requests.\n\nAgents may return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
+          "description": "Whether the agent supports `additionalDirectories` on supported session lifecycle requests.\n\nOptional. Omitted and `null` are equivalent and mean the agent does not advertise support.\nSupplying `{}` means the agent supports `additionalDirectories` on\nsupported session lifecycle requests.\n\nAgents MAY return `SessionInfo.additionalDirectories` to report the\ncomplete ordered additional-root list associated with a listed session.",
           "anyOf": [
             {
               "$ref": "#/$defs/SessionAdditionalDirectoriesCapabilities"
@@ -3299,7 +3299,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future authentication method.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this method type should preserve the raw\npayload when storing, replaying, proxying, or forwarding initialization\ndata, and otherwise ignore the method or display it generically.",
+          "description": "Custom or future authentication method.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this method type SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding initialization\ndata, and otherwise ignore the method or display it generically.",
           "type": "object",
           "properties": {
             "type": {
@@ -3594,7 +3594,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future session configuration option payload.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this option type should preserve the raw\npayload when storing, replaying, proxying, or forwarding configuration\ndata, and otherwise ignore the option. The Agent keeps using its `currentValue`.",
+          "description": "Custom or future session configuration option payload.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this option type SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding configuration\ndata, and otherwise ignore the option. The Agent keeps using its `currentValue`.",
           "type": "object",
           "properties": {
             "type": {
@@ -3816,7 +3816,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future command kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this command type should preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the command. They MUST NOT display it as a\nslash command.",
+          "description": "Custom or future command kind.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this command type SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the command. They MUST NOT display it as a\nslash command.",
           "type": "object",
           "properties": {
             "type": {
@@ -3872,7 +3872,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future command input specification.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this input type should preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the input specification or display the\ncommand without structured input.",
+          "description": "Custom or future command input specification.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nClients that do not understand this input type SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding command\nmetadata, and otherwise ignore the input specification or display the\ncommand without structured input.",
           "type": "object",
           "properties": {
             "type": {
@@ -4005,7 +4005,7 @@
           ]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots reported for this session. Each path must be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
+          "description": "Additional workspace roots reported for this session. Each path MUST be absolute.\n\nWhen present, this is the complete ordered additional-root list reported\nby the Agent. Omitted and empty values are equivalent: the response\nreports no additional roots.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
@@ -4152,7 +4152,7 @@
       "type": "object",
       "properties": {
         "messageId": {
-          "description": "Identifies the user message inserted into the ACP conversation.\n\nRequired and non-null. Omission and explicit `null` are both invalid.\n\nThe corresponding user-message session update carries this same identifier and may arrive\nbefore or after this response. Agents must echo the message during the live session, but are\nnot required to retain it. If retained and replayed, the message keeps this identifier.",
+          "description": "Identifies the user message inserted into the ACP conversation.\n\nRequired and non-null. Omission and explicit `null` are both invalid.\n\nThe corresponding user-message session update carries this same identifier and may arrive\nbefore or after this response. Agents MUST echo the message during the live session, but are\nnot required to retain it. If retained and replayed, the message keeps this identifier.",
           "allOf": [
             {
               "$ref": "#/$defs/MessageId"
@@ -4182,7 +4182,7 @@
       "type": "object",
       "properties": {
         "code": {
-          "description": "A number indicating the error type that occurred.\nThis must be an integer as defined in the JSON-RPC specification.",
+          "description": "A number indicating the error type that occurred.\nThis MUST be an integer as defined in the JSON-RPC specification.",
           "allOf": [
             {
               "$ref": "#/$defs/ErrorCode"
@@ -4190,7 +4190,7 @@
           ]
         },
         "message": {
-          "description": "A string providing a short description of the error.\nThe message should be limited to a concise single sentence.",
+          "description": "A string providing a short description of the error.\nThe message SHOULD be limited to a concise single sentence.",
           "type": "string"
         },
         "data": {
@@ -4811,7 +4811,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future session update.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this update type should preserve the\nraw payload when storing, replaying, proxying, or forwarding session\nhistory, and otherwise ignore it or display it generically.",
+          "description": "Custom or future session update.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this update type SHOULD preserve the\nraw payload when storing, replaying, proxying, or forwarding session\nhistory, and otherwise ignore it or display it generically.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5787,7 +5787,7 @@
           "x-deserialize-default-on-error": true
         },
         "signal": {
-          "description": "Signal that terminated the process, when known.\n\nAgents should use the conventional platform signal name. POSIX examples\ninclude `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use a\nplatform-specific name. Omitted and `null` are equivalent.",
+          "description": "Signal that terminated the process, when known.\n\nAgents SHOULD use the conventional platform signal name. POSIX examples\ninclude `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use a\nplatform-specific name. Omitted and `null` are equivalent.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -5995,7 +5995,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future plan update content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type should preserve the\nraw payload when storing, replaying, proxying, or forwarding plans, and\notherwise ignore it or display it generically. It still replaces any earlier\ncontent for the same `planId`.",
+          "description": "Custom or future plan update content.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this content type SHOULD preserve the\nraw payload when storing, replaying, proxying, or forwarding plans, and\notherwise ignore it or display it generically. It still replaces any earlier\ncontent for the same `planId`.",
           "type": "object",
           "properties": {
             "type": {
@@ -6135,7 +6135,7 @@
           ]
         },
         "entries": {
-          "description": "The list of tasks to be accomplished.\n\nWhen updating an item-based plan, the agent must send a complete list of all entries\nwith their current status. The client replaces that plan with each update.",
+          "description": "The list of tasks to be accomplished.\n\nWhen updating an item-based plan, the agent MUST send a complete list of all entries\nwith their current status. The client replaces that plan with each update.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/PlanEntry"
@@ -6564,7 +6564,7 @@
           ]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots for the child. Each path must be absolute.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list. `[]` reports no additional directories.",
+          "description": "Additional workspace roots for the child. Each path MUST be absolute.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list. `[]` reports no additional directories.",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/AbsolutePath"
@@ -6736,7 +6736,7 @@
               "anyOf": [
                 {
                   "title": "InitializeRequest",
-                  "description": "Establishes the connection with a client and negotiates protocol capabilities.\n\nThis method is called at the beginning of the connection, before any other request, to:\n- Negotiate the protocol version to use\n- Exchange capability information between client and agent\n- Determine available authentication methods\n\nThe Client may repeat it before its first other request. The latest successful\n`initialize` is authoritative.\n\nThe agent should respond with its supported protocol version and capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)",
+                  "description": "Establishes the connection with a client and negotiates protocol capabilities.\n\nThis method is called at the beginning of the connection, before any other request, to:\n- Negotiate the protocol version to use\n- Exchange capability information between client and agent\n- Determine available authentication methods\n\nThe Client MAY repeat it before its first other request. The latest successful\n`initialize` is authoritative.\n\nThe agent should respond with its supported protocol version and capabilities.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/InitializeRequest"
@@ -6944,7 +6944,7 @@
       "type": "object",
       "properties": {
         "terminal": {
-          "description": "Whether the client supports `terminal` authentication methods.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support.\nThe client should supply `{}` only when it can reproduce the configured\nagent invocation in an interactive terminal. Supplying `{}` means the\nagent may include `terminal` entries in its authentication methods.",
+          "description": "Whether the client supports `terminal` authentication methods.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support.\nThe client SHOULD supply `{}` only when it can reproduce the configured\nagent invocation in an interactive terminal. Supplying `{}` means the\nagent MAY include `terminal` entries in its authentication methods.",
           "anyOf": [
             {
               "$ref": "#/$defs/TerminalAuthCapabilities"
@@ -7085,7 +7085,7 @@
           ]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots for this session. Each path must be absolute.\n\nThese expand the session's workspace scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
+          "description": "Additional workspace roots for this session. Each path MUST be absolute.\n\nThese expand the session's workspace scope without changing `cwd`, which\nremains the base for relative paths. When omitted or empty, no\nadditional roots are activated for the new session.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
@@ -7159,7 +7159,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future MCP server transport configuration.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this transport should preserve the raw\npayload when storing, replaying, proxying, or forwarding session setup\ndata. Agents MUST reject a request with a transport they do not support\nwith `-32602`.",
+          "description": "Custom or future MCP server transport configuration.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nReceivers that do not understand this transport SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding session setup\ndata. Agents MUST reject a request with a transport they do not support\nwith `-32602`.",
           "type": "object",
           "properties": {
             "type": {
@@ -7416,7 +7416,7 @@
           ]
         },
         "additionalDirectories": {
-          "description": "Additional workspace roots to activate for this session. Each path must be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the resumed\nsession. It may differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
+          "description": "Additional workspace roots to activate for this session. Each path MUST be absolute.\n\nWhen omitted or empty, no additional roots are activated. When non-empty,\nthis is the complete resulting additional-root list for the resumed\nsession. It MAY differ from any previously used or reported list as long as\nthe request `cwd` matches the session's `cwd`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AbsolutePath"
@@ -7443,7 +7443,7 @@
           ]
         },
         "systemPrompt": {
-          "description": "System-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent may then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
+          "description": "System-level instructions for the resumed session.\n\nOptional. Omitted and `null` are equivalent. The Agent MAY then keep a\nsystem prompt it stored with the session or use its default instructions.\nClients MUST only send this when the Agent advertises\n`session.systemPrompt`, and SHOULD send the same value they used when the\nsession was created.",
           "anyOf": [
             {
               "$ref": "#/$defs/SystemPrompt"
@@ -7913,7 +7913,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future permission outcome.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this outcome MUST NOT treat it as approval.\nThey should preserve the raw payload when storing, replaying, proxying, or\nforwarding permission responses, and otherwise fail or decline the\npermission request according to policy.",
+          "description": "Custom or future permission outcome.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this outcome MUST NOT treat it as approval.\nThey SHOULD preserve the raw payload when storing, replaying, proxying, or\nforwarding permission responses, and otherwise fail or decline the\npermission request according to policy.",
           "type": "object",
           "properties": {
             "outcome": {
@@ -8035,7 +8035,7 @@
         },
         {
           "title": "other",
-          "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this action should preserve the raw\npayload when storing, replaying, proxying, or forwarding elicitation\nresponses, and otherwise MUST handle it as `cancel`.",
+          "description": "Custom or future elicitation action.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Unknown values that do not begin with `_` are reserved for\nfuture ACP variants.\n\nAgents that do not understand this action SHOULD preserve the raw\npayload when storing, replaying, proxying, or forwarding elicitation\nresponses, and otherwise MUST handle it as `cancel`.",
           "type": "object",
           "properties": {
             "action": {

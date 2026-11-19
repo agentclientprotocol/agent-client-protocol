@@ -217,7 +217,7 @@ by supplying `clientCapabilities.session.notices: {}` in its `initialize`
 request. Omitting `session` or `notices`, or setting either field to `null`,
 means the Client does not advertise support.
 
-When the capability is absent, the Agent may use an ordinary agent message
+When the capability is absent, the Agent **MAY** use an ordinary agent message
 instead if the information should still be surfaced to the user. That fallback
 is conversation content and follows normal message-history semantics.
 
@@ -255,8 +255,8 @@ metadata. Unlike compaction patch fields, these fields do not update or clear
 an earlier notice.
 
 Advertising support does not acknowledge delivery or guarantee display of an
-individual notice. Agents must still behave as though a notice may not have
-been received, displayed, or seen. A notice must not carry information required
+individual notice. Agents **MUST** still behave as though a notice may not have
+been received, displayed, or seen. A notice **MUST NOT** carry information required
 for protocol correctness, authorization, user action, task completion, or
 fatal-error reporting.
 
@@ -270,7 +270,7 @@ removal event.
 Notices have no ID or Agent-managed lifecycle. Each occurrence is an
 independent live event, not conversation history, and **SHOULD NOT** be included
 in session replay. If a condition remains relevant after reconnecting, the
-Agent may emit a new notice.
+Agent **MAY** emit a new notice.
 
 #### Session compaction
 
@@ -281,7 +281,7 @@ Omitting `session` or `compaction`, or setting either field to `null`, means the
 Client does not support these updates. This requirement applies to both live
 updates and history replay.
 
-When the capability is absent, the Agent may describe compaction through an
+When the capability is absent, the Agent **MAY** describe compaction through an
 ordinary agent message instead. That fallback is conversation content, not an
 ID-addressed compaction entity, and follows normal message-history semantics.
 
@@ -334,7 +334,7 @@ implementation-specific extensions. Other unknown values are reserved for
 future ACP statuses. Clients preserve unknown strings and present a generic
 state without inferring lifecycle or control behavior.
 
-If the retained summary is available incrementally, the Agent may append one
+If the retained summary is available incrementally, the Agent **MAY** append one
 [content block](/protocol/v1/content) at a time:
 
 ```json
@@ -404,9 +404,9 @@ accumulated content, and any subsequent chunks append to that replacement.
 output before failure or cancellation.
 
 The summary is not the Agent's complete replacement history or generic status
-text such as "Compaction completed". It should faithfully represent the
+text such as "Compaction completed". It **SHOULD** faithfully represent the
 retained, user-displayable summary without internal prompt framing or hidden
-instructions. Text blocks may contain Markdown. Agents should omit it when no
+instructions. Text blocks may contain Markdown. Agents **SHOULD** omit it when no
 unencrypted summary is available or when disclosure would reveal context that
 was not otherwise user-visible.
 
@@ -526,7 +526,7 @@ The cycle returns to [step 2](#2-agent-processing), continuing until the languag
 
 ## Stop reasons
 
-When an Agent stops a turn, it must specify the corresponding `StopReason`:
+When an Agent stops a turn, it **MUST** specify the corresponding `StopReason`:
 
 <ResponseField name="end_turn">
   The language model finishes responding without requesting more tools

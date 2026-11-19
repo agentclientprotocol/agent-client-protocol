@@ -5,6 +5,8 @@ description: "How the Agent Client Protocol works"
 
 The Agent Client Protocol allows [Agents](#agent) and [Clients](#client) to communicate by exposing methods that each side can call and sending notifications to inform each other of events.
 
+The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**, **MAY**, and **OPTIONAL** in the protocol pages and schema descriptions are to be interpreted as described in [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174) when, and only when, they appear in all capitals, as shown here.
+
 ## Communication Model
 
 The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification with two types of messages:
@@ -239,12 +241,12 @@ Either side can send [`$/cancel_request`](/protocol/v2/draft/cancellation) to ca
 
 When a response is lost, for example because the connection ended, the sender cannot tell whether the request took effect. Each method has one of four retry classes:
 
-| Class       | Meaning                                                                                                                          | Retry rule                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender may send it again as is. The response reports current state.                                 |
-| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client may send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
-| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client may send it again. If the first request also took effect, what it created is left unused.    |
-| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.             |
+| Class       | Meaning                                                                                                                          | Retry rule                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender **MAY** send it again as is. The response reports current state.                                 |
+| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client **MAY** send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
+| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client **MAY** send it again. If the first request also took effect, what it created is left unused.    |
+| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.                 |
 
 Requests the Client sends:
 
@@ -323,19 +325,19 @@ See [Extensibility](/protocol/v2/draft/extensibility) for details.
 
 The draft schema also defines experimental features that may change or be removed before they stabilize. Each is negotiated separately, as described in [Experimental Features and Negotiation](/protocol/v2/draft/extensibility#experimental-features-and-negotiation). Where the draft pages don't describe a feature yet, its RFD is the reference.
 
-| Feature         | Methods and updates                                                      | Negotiation                    | Details                                                                                                                                             |
-| --------------- | ------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| LLM providers   | `providers/list`, `providers/set`, `providers/disable`                   | Agent `providers` capability   | [Initialization](/protocol/v2/draft/initialization#agent-capabilities), [RFD](/rfds/custom-llm-endpoint)                                            |
-| Session fork    | `session/fork`                                                           | Agent `session.fork`           | [RFD](/rfds/session-fork)                                                                                                                           |
-| Session archive | `session/archive`, `session/unarchive`, `archived` on `session/list`     | Agent `session.archive`        | [Archived Sessions](/protocol/v2/draft/session-list#archived-sessions-unstable), [RFD](/rfds/session-archive)                                       |
-| Session status  | `session/status`                                                         | Agent `session.status`         | [RFD](/rfds/session-status)                                                                                                                         |
-| Session options | `session/options`, `configOptions` on `session/new` and `session/resume` | Agent `session.options`        | [Options before a session exists](/protocol/v2/draft/session-config-options#options-before-a-session-exists-unstable), [RFD](/rfds/session-options) |
-| Session titles  | `session/set_title`                                                      | Agent `session.title`          | [RFD](/rfds/session-set-title)                                                                                                                      |
-| Auth status     | `auth/status`, `auth/status_update`                                      | Agent `auth.status`            | [RFD](/rfds/get-auth-state)                                                                                                                         |
-| MCP over ACP    | `mcp/message` in both directions, `acp` MCP server transport             | Agent `session.mcp.acp`        | [RFD](/rfds/mcp-over-acp)                                                                                                                           |
-| Plan operations | `markdown` plans, `plan_removed`                                         | None. Clients must handle them | [Unstable Plan Operations](/protocol/v2/draft/agent-plan#unstable-plan-operations), [RFD](/rfds/plan-operations)                                    |
-| End-turn usage  | `usage` on the idle `state_update`                                       | None                           | [End-Turn Token Usage](/protocol/v2/draft/prompt-lifecycle#end-turn-token-usage-unstable)                                                           |
-| Proxy chains    | `proxy/initialize`, `proxy/successor`                                    | Conductors and proxies only    | [RFD](/rfds/proxy-chains)                                                                                                                           |
+| Feature         | Methods and updates                                                      | Negotiation                        | Details                                                                                                                                             |
+| --------------- | ------------------------------------------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LLM providers   | `providers/list`, `providers/set`, `providers/disable`                   | Agent `providers` capability       | [Initialization](/protocol/v2/draft/initialization#agent-capabilities), [RFD](/rfds/custom-llm-endpoint)                                            |
+| Session fork    | `session/fork`                                                           | Agent `session.fork`               | [RFD](/rfds/session-fork)                                                                                                                           |
+| Session archive | `session/archive`, `session/unarchive`, `archived` on `session/list`     | Agent `session.archive`            | [Archived Sessions](/protocol/v2/draft/session-list#archived-sessions-unstable), [RFD](/rfds/session-archive)                                       |
+| Session status  | `session/status`                                                         | Agent `session.status`             | [RFD](/rfds/session-status)                                                                                                                         |
+| Session options | `session/options`, `configOptions` on `session/new` and `session/resume` | Agent `session.options`            | [Options before a session exists](/protocol/v2/draft/session-config-options#options-before-a-session-exists-unstable), [RFD](/rfds/session-options) |
+| Session titles  | `session/set_title`                                                      | Agent `session.title`              | [RFD](/rfds/session-set-title)                                                                                                                      |
+| Auth status     | `auth/status`, `auth/status_update`                                      | Agent `auth.status`                | [RFD](/rfds/get-auth-state)                                                                                                                         |
+| MCP over ACP    | `mcp/message` in both directions, `acp` MCP server transport             | Agent `session.mcp.acp`            | [RFD](/rfds/mcp-over-acp)                                                                                                                           |
+| Plan operations | `markdown` plans, `plan_removed`                                         | None. Clients **MUST** handle them | [Unstable Plan Operations](/protocol/v2/draft/agent-plan#unstable-plan-operations), [RFD](/rfds/plan-operations)                                    |
+| End-turn usage  | `usage` on the idle `state_update`                                       | None                               | [End-Turn Token Usage](/protocol/v2/draft/prompt-lifecycle#end-turn-token-usage-unstable)                                                           |
+| Proxy chains    | `proxy/initialize`, `proxy/successor`                                    | Conductors and proxies only        | [RFD](/rfds/proxy-chains)                                                                                                                           |
 
 ## Next steps
 

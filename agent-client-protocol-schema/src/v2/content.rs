@@ -121,7 +121,7 @@ pub enum ContentBlock {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this content block type should preserve
+    /// Receivers that do not understand this content block type SHOULD preserve
     /// the raw payload when storing, replaying, proxying, or forwarding content,
     /// and otherwise ignore it or display it generically. Agents MUST reject a
     /// `session/prompt` request with a content block type they do not support
@@ -836,10 +836,10 @@ pub struct Icon {
     #[serde(default)]
     pub mime_type: Option<MediaType>,
     /// Optional array of strings that specify sizes at which the icon can be used.
-    /// Each string should be in `WxH` format (e.g., `"48x48"`, `"96x96"`) or
+    /// Each string SHOULD be in `WxH` format (e.g., `"48x48"`, `"96x96"`) or
     /// `"any"` for scalable formats like SVG.
     ///
-    /// If not provided, the client should assume that the icon can be used at any size.
+    /// If not provided, the client SHOULD assume that the icon can be used at any size.
     ///
     /// Omitted and `null` are equivalent and mean no sizes are specified.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]

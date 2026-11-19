@@ -48,6 +48,7 @@ These apply to the `docs/protocol` pages and to Rust doc comments, which become 
 - Prefer plain words: "use", not "leverage" or "utilize"; "to", not "in order to".
 - Use sentence case for headings. Keep Agent, Client, and acronyms capitalized.
 - Don't say what a receiver does with a malformed value ("is treated as omitted", "is skipped", "falls back to"). Say what a conforming sender sends. Rules that reject a value, such as `-32602` for malformed params, are protocol behavior and stay.
+- Write a requirement with a capitalized keyword: MUST, MUST NOT, SHOULD, SHOULD NOT, or MAY. Use bold on the `docs/protocol` pages (`**MUST**`) and plain capitals in doc comments. A lowercase "must", "should", or "may" is not a requirement ([RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174)). Use it only for advice, a possibility, or a description of data. Where a rule is stated in more than one place, use the same keyword in each.
 - v1 is stable: rewording must not add, remove, or change a requirement. Keep every **MUST**/**SHOULD**/**MAY** and its scope as it was, and don't state behavior the v1 spec doesn't already define. Draft v2 pages can change freely.
 
 Never write readme files related to the conversation unless explicitly asked to.

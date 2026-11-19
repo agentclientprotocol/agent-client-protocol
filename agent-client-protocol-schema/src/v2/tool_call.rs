@@ -531,7 +531,7 @@ pub enum ToolCallContent {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this content type should preserve the
+    /// Receivers that do not understand this content type SHOULD preserve the
     /// raw payload when storing, replaying, proxying, or forwarding tool call
     /// output, and otherwise ignore it or display it generically.
     #[serde(untagged)]

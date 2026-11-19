@@ -142,7 +142,7 @@ live delivery.
 
 Live-only [notices](/protocol/v1/prompt-turn#session-notices) are not
 conversation history and **SHOULD NOT** be replayed. If the underlying
-condition is still relevant after loading finishes, the Agent may emit a new
+condition is still relevant after loading finishes, the Agent **MAY** emit a new
 notice as a new live event, subject to the Client's `session.notices`
 capability.
 
@@ -357,7 +357,7 @@ When present, `additionalDirectories` has the following behavior:
 - `cwd` remains the primary working directory and the base for relative paths
 - each `additionalDirectories` entry **MUST** be an absolute path
 - omitting the field or providing an empty array activates no additional roots for the resulting session
-- on `session/load` and `session/resume`, Clients must send the full intended additional-root list again. That list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
+- on `session/load` and `session/resume`, Clients **MUST** send the full intended additional-root list again. That list **MAY** differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `sessionCapabilities.additionalDirectories`.
 
@@ -397,7 +397,7 @@ system-level instructions on `session/new`, `session/load`, and
 - only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them
 - Clients **MUST NOT** send an empty `content` array. Agents **MAY** reject one with `-32602` without creating, loading, or resuming the session
 - omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
-- on `session/load` and `session/resume`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
+- on `session/load` and `session/resume`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent **MAY** keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
 - if the Agent cannot apply a supplied `systemPrompt`, for example because of an unadvertised mode, an unsupported content block type, or content that exceeds its limits, it **MUST** return an error and **MUST NOT** create, load, or resume the session. JSON-RPC `-32602` (Invalid params) is the **RECOMMENDED** error for malformed or unsupported values
 
 Clients **MUST** only send `systemPrompt` when the Agent advertises `sessionCapabilities.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `sessionCapabilities.systemPrompt.mode.override`:

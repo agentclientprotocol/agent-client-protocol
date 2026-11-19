@@ -23,16 +23,16 @@ their own schema selection, generated types, or local feature flags.
 Each feature defines its negotiation requirements, whether stable or experimental:
 
 - **Optional operations requiring peer participation** need an advertised capability or another explicitly documented negotiation mechanism. Callers **MUST** follow that feature's requirements. An omitted or `null` support marker means unsupported.
-- **Informational additions with a safe fallback** may be sent without a capability when the feature explicitly permits it. A receiver may ignore or generically display them. Senders **MUST NOT** depend on feature-specific presentation, acknowledgement, or action.
+- **Informational additions with a safe fallback** **MAY** be sent without a capability when the feature explicitly permits it. A receiver **MAY** ignore or generically display them. Senders **MUST NOT** depend on feature-specific presentation, acknowledgement, or action.
 - **Local feature flags** control implementation and rollout. They neither advertise peer support nor replace a required capability.
 
 For example:
 
-| Feature                                                                                                                     | Negotiation and receiver behavior                                                                                                           |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Session deletion](/protocol/v2/session-delete)                                                                             | The Agent advertises `session.delete`. Clients must not call `session/delete` without it.                                                   |
-| [Elicitation](/protocol/v2/elicitation#checking-support)                                                                    | The Client advertises each supported mode under `elicitation`. Agents must not request other modes.                                         |
-| [Notices](/protocol/v2/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/prompt-lifecycle#session-compaction) | No Client capability is required in v2. Clients without feature-specific handling may preserve, ignore, or generically display the updates. |
+| Feature                                                                                                                     | Negotiation and receiver behavior                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Session deletion](/protocol/v2/session-delete)                                                                             | The Agent advertises `session.delete`. Clients **MUST NOT** call `session/delete` without it.                                                   |
+| [Elicitation](/protocol/v2/elicitation#checking-support)                                                                    | The Client advertises each supported mode under `elicitation`. Agents **MUST NOT** request other modes.                                         |
+| [Notices](/protocol/v2/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/prompt-lifecycle#session-compaction) | No Client capability is required in v2. Clients without feature-specific handling **MAY** preserve, ignore, or generically display the updates. |
 
 These rules are specific to v2. Features with capability gates in v1 retain
 those gates on v1 connections.
@@ -91,7 +91,7 @@ Protocol object types that define a `_meta` field can use it to attach custom in
 }
 ```
 
-Clients may propagate fields to the agent for correlation purposes, using a namespaced key such as `com.example/requestId`. The following root-level keys in `_meta` are reserved, as in MCP, for interop with MCP implementations and OpenTelemetry tooling. When present, their values **MUST** use the corresponding W3C format:
+Clients **MAY** propagate fields to the agent for correlation purposes, using a namespaced key such as `com.example/requestId`. The following root-level keys in `_meta` are reserved, as in MCP, for interop with MCP implementations and OpenTelemetry tooling. When present, their values **MUST** use the corresponding W3C format:
 
 - `traceparent` and `tracestate`: [W3C Trace Context](https://www.w3.org/TR/trace-context/)
 - `baggage`: [W3C Baggage](https://www.w3.org/TR/baggage/)

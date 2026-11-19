@@ -182,7 +182,7 @@ For a `terminal` method, the Client:
 The descriptor cannot provide a command. The Client derives the command from its
 own Agent configuration. Agents **SHOULD** provide arguments that enter a
 login-only flow and exit when it completes. ACP does not define an output
-pattern or other in-band success signal. Clients may recognize
+pattern or other in-band success signal. Clients **MAY** recognize
 implementation-specific signals only as an extension. The terminal process is
 not the ACP connection, so the Client **MUST NOT** send an `authenticate`
 request for a terminal method.
@@ -196,7 +196,7 @@ request for a terminal method.
 ## Logging out
 
 The `logout` method allows Clients to end the current authenticated state.
-Clients should only call it after verifying the Agent advertised
+Clients **SHOULD** only call it after verifying the Agent advertised
 `agentCapabilities.auth.logout` during initialization.
 
 ```json
@@ -224,9 +224,9 @@ require the user to complete one of the advertised authentication flows again.
 ## Active sessions
 
 The protocol does not guarantee what happens to already-running sessions after
-`logout`. Agents may terminate them, keep them running, or return
+`logout`. Agents **MAY** terminate them, keep them running, or return
 `auth_required` errors for future session activity.
 
 Clients **SHOULD** be prepared for active session operations to fail with
-authentication-related errors after logout and should prompt the user to
+authentication-related errors after logout and **SHOULD** prompt the user to
 authenticate again when appropriate.
