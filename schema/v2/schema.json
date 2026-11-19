@@ -95,7 +95,7 @@
           "description": "Method-specific notification parameters.",
           "anyOf": [
             {
-              "description": "General protocol-level notifications that all sides are expected to\nimplement.\n\nNotifications whose methods start with '$/' are messages which\nare protocol implementation dependent and might not be implementable in all\nclients or agents. For example if the implementation uses a single threaded\nsynchronous programming language then there is little it can do to react to\na `$/cancel_request` notification. If an agent or client receives\nnotifications starting with '$/' it is free to ignore the notification.\n\nNotifications do not expect a response.",
+              "description": "Protocol-level notifications, which either side can send.\n\nTheir methods start with `$/`. Acting on one is optional, because it might not\nbe implementable in every Client or Agent. For example, a single-threaded\nsynchronous implementation can do little to react to a `$/cancel_request`\nnotification. An Agent or Client may ignore a `$/` notification it cannot act on.\n\nNotifications do not expect a response.",
               "anyOf": [
                 {
                   "title": "CancelRequestNotification",

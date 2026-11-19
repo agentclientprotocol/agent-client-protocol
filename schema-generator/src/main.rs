@@ -1693,6 +1693,7 @@ Ordinary clients and agents never send or receive these messages. A conductor se
             {
                 writeln!(&mut self.output, "## Protocol Level").unwrap();
                 writeln!(&mut self.output).unwrap();
+                #[cfg(not(feature = "unstable_protocol_v2"))]
                 writeln!(
             &mut self.output,
             "Defines the interface that ACP-compliant agents and clients must both implement.
@@ -1704,6 +1705,17 @@ programming language then there is little it can do to react to a
 `$/cancel_request` notification. If an agent or client receives notifications
 starting with '$/' it is free to ignore the notification."
         )
+                .unwrap();
+                #[cfg(feature = "unstable_protocol_v2")]
+                writeln!(
+                    &mut self.output,
+                    "Defines the notifications that both Agents and Clients can send.
+
+Their methods start with `$/`. Acting on one is optional, because it might not be
+implementable in every Client or Agent. For example, a single-threaded synchronous
+implementation can do little to react to a `$/cancel_request` notification. An Agent
+or Client may ignore a `$/` notification it cannot act on."
+                )
                 .unwrap();
 
                 for (method, types) in protocol_types {

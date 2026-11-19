@@ -54,7 +54,7 @@ impl CancelRequestNotification {
 
 // Method schema
 
-/// Names of all methods that agents handle.
+/// Names of the protocol-level methods, which both Agents and Clients handle.
 ///
 /// Provides a centralized definition of method names used in the protocol.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -64,7 +64,7 @@ pub struct GeneralMethodNames {
     pub cancel_request: &'static str,
 }
 
-/// Constant containing all agent method names.
+/// Constant containing all protocol-level method names.
 pub const PROTOCOL_LEVEL_METHOD_NAMES: GeneralMethodNames = GeneralMethodNames {
     cancel_request: CANCEL_REQUEST_METHOD_NAME,
 };
@@ -72,15 +72,12 @@ pub const PROTOCOL_LEVEL_METHOD_NAMES: GeneralMethodNames = GeneralMethodNames {
 /// Method name for general cancel notification
 pub(crate) const CANCEL_REQUEST_METHOD_NAME: &str = "$/cancel_request";
 
-/// General protocol-level notifications that all sides are expected to
-/// implement.
+/// Protocol-level notifications, which either side can send.
 ///
-/// Notifications whose methods start with '$/' are messages which
-/// are protocol implementation dependent and might not be implementable in all
-/// clients or agents. For example if the implementation uses a single threaded
-/// synchronous programming language then there is little it can do to react to
-/// a `$/cancel_request` notification. If an agent or client receives
-/// notifications starting with '$/' it is free to ignore the notification.
+/// Their methods start with `$/`. Acting on one is optional, because it might not
+/// be implementable in every Client or Agent. For example, a single-threaded
+/// synchronous implementation can do little to react to a `$/cancel_request`
+/// notification. An Agent or Client may ignore a `$/` notification it cannot act on.
 ///
 /// Notifications do not expect a response.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

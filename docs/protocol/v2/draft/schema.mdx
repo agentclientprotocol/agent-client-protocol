@@ -2720,14 +2720,12 @@ Result of a `proxy/successor` request: the wrapped request's result, forwarded u
 
 ## Protocol Level
 
-Defines the interface that ACP-compliant agents and clients must both implement.
+Defines the notifications that both Agents and Clients can send.
 
-Notifications whose methods start with '$/' are messages which are protocol
-implementation dependent and might not be implementable in all clients or
-agents. For example if the implementation uses a single threaded synchronous
-programming language then there is little it can do to react to a
-`$/cancel_request` notification. If an agent or client receives notifications
-starting with '$/' it is free to ignore the notification.
+Their methods start with `$/`. Acting on one is optional, because it might not be
+implementable in every Client or Agent. For example, a single-threaded synchronous
+implementation can do little to react to a `$/cancel_request` notification. An Agent
+or Client may ignore a `$/` notification it cannot act on.
 
 <a id="$-cancel_request"></a>
 ### <span class="font-mono">$/cancel_request</span>
