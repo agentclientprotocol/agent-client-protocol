@@ -1,0 +1,176 @@
+---
+title: "Dynamic MCP Server Updates in Live Sessions"
+---
+
+Author(s): [OmChillure](https://github.com/OmChillure)
+
+> This RFD is based on a feature request originally raised by [@dlqqq](https://github.com/dlqqq) in [discussion #556](https://github.com/orgs/agentclientprotocol/discussions/556).
+
+## Elevator pitch
+
+We propose adding a new `session/update_servers` request that allows ACP Clients to send a replacement list of MCP servers to an Agent during an active session — without requiring a session restart. This unblocks a class of client UX where users can add, remove, or reconfigure MCP servers mid-conversation and have the change take effect immediately.
+
+## Status quo
+
+Currently, ACP Agents are only informed of available MCP servers during session setup — in the `session/new`, `session/load`, and `session/resume` requests. Once a session is established, the MCP server list is fixed for its entire lifetime. There is no mechanism to update it afterwards.
+
+This creates several problems:
+
+* **Session restarts required**: Adding, removing, or reconfiguring an MCP server mid-session requires the user to end their current session and start a new one — losing all conversation context and state.
+* **Client UIs are hobbled**: Clients with live MCP server management panels (toggle a server on/off, install an extension) cannot make those changes take effect in the current session. The user must restart to see any effect.
+* **Workflow interruption**: A user who realizes mid-task that they need an additional tool (e.g. a GitHub MCP server when they need to open a PR) must abandon the conversation.
+* **Inconsistency**: Other session properties — modes, models, config options — can already be updated dynamically in a live session. MCP server availability is the only major session property that cannot.
+
+## What we propose to do about it
+
+We propose adding a new `session/update_servers` request type, sent by the ACP Client to the Agent during an active session. The request carries the full updated list of MCP servers, which replaces the prior list entirely. The Agent connects to any newly added servers and disconnects from any that are no longer present.
+
+**Request:**
+```json
+{
+  "method": "session/update_servers",
+  "params": {
+    "sessionId": "sess_abc123",
+    "mcpServers": [
+      {
+        "name": "github",
+        "command": "/usr/bin/npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": [{ "name": "GITHUB_TOKEN", "value": "ghp_..." }]
+      },
+      {
+        "type": "http",
+        "name": "filesystem",
+        "url": "http://localhost:3001",
+        "headers": []
+      }
+    ]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "result": {
+    "active_servers": ["github", "filesystem"],
+    "warnings": []
+  }
+}
+```
+
+The Agent handles the update gracefully: it validates the new configurations, keeps connections to servers still present in the list (matched by name), connects to newly added servers, and disconnects from removed ones. Any issues are surfaced as warnings in the response.
+
+## Future
+
+Once this feature exists:
+
+**For users:**
+* Changes to MCP server configuration take effect immediately in their running session — no restart needed.
+* They can disable a misbehaving server mid-conversation without losing context.
+* Installing a new MCP server makes its tools available without interrupting ongoing work.
+
+**For ACP Client developers:**
+* Clients can subscribe to local MCP server configuration changes and call `session/update_servers` automatically, making existing server management UIs feel live and seamless.
+* Clients can build richer "discover and connect" workflows that don't require session restarts.
+* Error handling improves: if a server becomes unreachable, clients can remove it and substitute an alternative without ending the session.
+
+**Example workflow:**
+1. A user is mid-conversation with an agent, debugging a production issue.
+2. They open their client's MCP server settings and enable a GitHub MCP server.
+3. The client sends `session/update_servers` with the updated list.
+4. The agent connects to the GitHub MCP server immediately.
+5. The user can now ask the agent to open a pull request — without restarting the session.
+
+## Implementation details and plan
+
+### Protocol schema changes
+
+Add `session/update_servers` as a new request method. Its params type reuses the existing `McpServer` discriminated union (already defined in the schema and used by `session/new`, `session/load`, and `session/resume`), so no new server config types are needed.
+
+```json
+{
+  "UpdateServersRequest": {
+    "description": "Request to update the list of MCP servers available in an active session.",
+    "properties": {
+      "sessionId": {
+        "description": "The active session to update.",
+        "$ref": "#/$defs/SessionId"
+      },
+      "mcpServers": {
+        "description": "The full updated list of MCP servers. Replaces the prior list entirely.",
+        "items": { "$ref": "#/$defs/McpServer" },
+        "type": "array"
+      }
+    },
+    "required": ["sessionId", "mcpServers"],
+    "type": "object",
+    "x-method": "session/update_servers",
+    "x-side": "agent"
+  }
+}
+```
+
+The existing `McpServer` variants (from `schema.json`) are:
+- **stdio** — no `type` field (untagged); required: `name`, `command` (path to executable), `args` (string array), `env` (array of `{"name", "value"}` objects). All agents MUST support this transport.
+- **http** — `"type": "http"`; required: `name`, `url`, `headers` (array of `{"name", "value"}` objects). Only available if `mcp_capabilities.http` is `true`.
+- **sse** — `"type": "sse"`; required: `name`, `url`, `headers`. Only available if `mcp_capabilities.sse` is `true`.
+
+### Agent behavior
+
+Upon receiving `session/update_servers`, the Agent SHOULD:
+1. Validate all server configurations in the new list.
+2. Identify servers to disconnect (present in old list but not in new, matched by name).
+3. Identify servers to connect (present in new list but not in old).
+4. Keep existing connections for servers that remain in the list unchanged.
+5. Complete any in-flight tool calls on removed servers before disconnecting (see FAQ).
+6. Respond with the final active server list and any warnings.
+
+### Client-side integration guidance
+
+Clients that already collect an MCP server list at session start (for `session/new`) can reuse the same source for updates. The recommended integration pattern is:
+
+1. Subscribe to any change in the user's local MCP server configuration.
+2. On change, send `session/update_servers` with the new full server list.
+
+This requires no new settings UI — changes to an existing server management panel propagate to active sessions automatically.
+
+### Edge cases to resolve
+
+* What happens if a tool call is in progress when its server is removed?
+* Should there be limits on how frequently clients can send updates?
+* How should authentication state be handled if a server config changes in-place (same name, different credentials)?
+
+## Frequently asked questions
+
+### What happens to active tool calls when their server is removed?
+
+**Option 1 (recommended):** The Agent allows ongoing tool calls to be completed before disconnecting from the removed server and add newer ones later.
+
+**Option 2 (not recommended):** The Agent stops the response, disconnects from the removed server and blocks any new tool calls on it.
+
+### Should the Agent be able to reject server updates?
+
+Yes. The Agent MAY reject updates and return an error if server configurations are invalid, security policies prevent certain servers, or resource limits would be exceeded. The response should carry a clear error message.
+
+### Will granular add/remove operations be supported in the future?
+
+Delta updates (`add` / `remove` modes) are a natural follow-up once this foundation is in place. They'd allow clients to be more efficient for small changes, but full list replacement already covers all use cases and is simpler to implement and specify for now.
+
+### Should this support updating server configurations in-place?
+
+Not yet — modifying a server's configuration (same name, new settings) should be treated as remove + add. This avoids complex state management and merge semantics.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**Alternative: Automatic server discovery** — The Agent could periodically poll its environment for available MCP servers. This removes client control, is fragile over time, and doesn't accommodate servers that require explicit user authorization.
+
+We settled on `session/update_servers` as an explicit client-initiated request because:
+- It gives clients full control over timing and server list state.
+- It provides a clear success/failure signal and warnings to the client.
+- It follows the existing ACP pattern for client-initiated session mutations (e.g. `session/set_mode`, `session/set_model`).
+- It is the simplest change that directly solves the UX problem.
+
+## Revision history
+
+- 2026-02-25: Initial draft, based on [discussion #556](https://github.com/orgs/agentclientprotocol/discussions/556)
