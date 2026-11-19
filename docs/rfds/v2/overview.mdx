@@ -88,6 +88,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Reject `initialize` with `-32022` (Unsupported protocol version) when no supported version is at or below the requested one, with the requested and supported versions in the error data.
 - Require a `type` discriminator on `session/set_config_option` values, and rename the config option `group` field to `groupId`.
 - Make `usage_update.cost` a patch field: omitted leaves it unchanged and `null` clears it.
+- Make `status` on `compaction_update` a patch field: omitted leaves it unchanged and `null` resets it to `in_progress`. v1 requires it on every update.
 - Make `mcpServers` optional on session setup requests.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
@@ -138,6 +139,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-19: Made `status` on `compaction_update` a patch field, so every upsert requires only its ID.
 - 2026-11-19: Removed the MCP revamp from this RFD. That work will be additive and does not need a breaking change.
 - 2026-11-19: Added the changes that the list missed: non-null request IDs, the error rules that became requirements, the removed Client capabilities, the terminal authentication `env` shape, the unknown elicitation `action` rule, and schema validation. Corrected the entry on setup responses, where only `availableCommands` is new.
 - 2026-11-17: Removed `pattern` from elicitation string properties in v2, to match MCP's string schema.

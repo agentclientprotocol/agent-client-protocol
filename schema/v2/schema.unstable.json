@@ -7598,7 +7598,7 @@
       ]
     },
     "CompactionUpdate": {
-      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\n\n`summary`, `error`, and `_meta` have patch semantics: omission leaves the\nstored value unchanged, `null` clears it, and a concrete value replaces it.\n`summary: []` also clears the summary. A concrete `_meta` object patches the\nstored metadata by top-level key instead of replacing it.",
+      "description": "A context compaction upsert. The first notification fixes the compaction's\ntimeline position. Later updates with the same ID patch that entity in place.\n\nOnly `compactionId` is required. `status`, `summary`, `error`, and `_meta` have\npatch semantics: omission leaves the stored value unchanged, `null` clears it\nor resets it to its default, and a concrete value replaces it.\n`summary: []` also clears the summary. A concrete `_meta` object patches the\nstored metadata by top-level key instead of replacing it.",
       "type": "object",
       "properties": {
         "compactionId": {
@@ -7610,12 +7610,16 @@
           ]
         },
         "status": {
-          "description": "Current lifecycle status.",
-          "allOf": [
+          "description": "Current lifecycle status.\n\nOmission leaves the status unchanged, `null` resets it to `in_progress`, and a value\nreplaces it. A new compaction starts as `in_progress`.",
+          "anyOf": [
             {
               "$ref": "#/$defs/CompactionStatus"
+            },
+            {
+              "type": "null"
             }
-          ]
+          ],
+          "x-deserialize-default-on-error": true
         },
         "summary": {
           "description": "Complete replacement user-displayable summary content for the compaction.",
@@ -7638,7 +7642,7 @@
           "additionalProperties": true
         }
       },
-      "required": ["compactionId", "status"]
+      "required": ["compactionId"]
     },
     "CompactionSummaryChunk": {
       "description": "A content block appended to a compaction's summary. A first-seen ID creates\nan in-progress compaction. Chunks append in receive order.",
