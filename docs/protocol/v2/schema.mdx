@@ -32,7 +32,7 @@ Called when the agent requires authentication before allowing session creation.
 The client provides the authentication method ID that was advertised during initialization.
 
 After successful authentication, the client can proceed to create sessions with
-`session/new` without receiving an `auth_required` (`-32000`) error.
+`session/new` without receiving a `-32000` (Authentication required) error.
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 
@@ -477,7 +477,7 @@ The agent should:
 - Connect to any specified MCP servers
 - Return a unique session ID for future requests
 
-May return an `auth_required` (`-32000`) error if the agent requires authentication.
+May return a `-32000` (Authentication required) error if the agent requires authentication.
 
 See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/session-setup)
 
