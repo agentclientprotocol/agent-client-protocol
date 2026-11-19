@@ -5002,6 +5002,7 @@ pub struct SystemPrompt {
     ///
     /// Clients MUST NOT send an empty array. Agents MAY reject one with
     /// `-32602` without creating or resuming the session.
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
     pub content: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
