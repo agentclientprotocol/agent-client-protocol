@@ -6,6 +6,8 @@
 use std::{path::PathBuf, sync::Arc};
 
 use derive_more::{Display, From};
+#[cfg(any(feature = "unstable_subagents", feature = "unstable_session_cursors"))]
+use indexmap::IndexMap;
 #[cfg(all(
     feature = "schemars",
     any(feature = "unstable_subagents", feature = "unstable_session_cursors")
@@ -13,8 +15,6 @@ use derive_more::{Display, From};
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, DefaultOnNull, VecSkipError, serde_as, skip_serializing_none};
-#[cfg(any(feature = "unstable_subagents", feature = "unstable_session_cursors"))]
-use std::collections::BTreeMap;
 
 #[cfg(feature = "unstable_auth_status")]
 use super::AuthStatusUpdateNotification;
@@ -1442,15 +1442,15 @@ pub struct OtherCursorAnchor {
     /// The remaining fields of the unknown anchor payload, preserved verbatim,
     /// including `_meta`.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 #[cfg(feature = "unstable_session_cursors")]
 impl OtherCursorAnchor {
     /// Builds [`OtherCursorAnchor`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -1464,9 +1464,9 @@ impl<'de> Deserialize<'de> for OtherCursorAnchor {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -2071,7 +2071,7 @@ pub struct OtherStopReason {
     pub stop_reason: String,
     /// Remaining fields of the unknown stop reason.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 #[cfg(feature = "unstable_subagents")]
@@ -2080,7 +2080,7 @@ impl OtherStopReason {
     #[must_use]
     pub fn new(
         stop_reason: impl Into<String>,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
         remove_idle_state_update_fields(&mut fields);
         Self {
@@ -2096,9 +2096,9 @@ impl<'de> Deserialize<'de> for OtherStopReason {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let stop_reason = fields
-            .remove("stopReason")
+            .shift_remove("stopReason")
             .ok_or_else(|| serde::de::Error::missing_field("stopReason"))?;
         let serde_json::Value::String(stop_reason) = stop_reason else {
             return Err(serde::de::Error::custom("`stopReason` must be a string"));
@@ -2128,10 +2128,10 @@ const KNOWN_STOP_REASONS: &[&str] = &[
 
 /// Keeps the idle snapshot's own fields out of an unknown stop reason's payload.
 #[cfg(feature = "unstable_subagents")]
-fn remove_idle_state_update_fields(fields: &mut BTreeMap<String, serde_json::Value>) {
-    fields.remove("stopReason");
-    fields.remove("usage");
-    fields.remove("_meta");
+fn remove_idle_state_update_fields(fields: &mut IndexMap<String, serde_json::Value>) {
+    fields.shift_remove("stopReason");
+    fields.shift_remove("usage");
+    fields.shift_remove("_meta");
 }
 
 #[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
@@ -2245,15 +2245,15 @@ pub struct OtherStateUpdate {
     pub state: String,
     /// Remaining fields in the state object.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 #[cfg(feature = "unstable_subagents")]
 impl OtherStateUpdate {
     /// Builds a custom state, preserving its extension fields.
     #[must_use]
-    pub fn new(state: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("state");
+    pub fn new(state: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("state");
         Self {
             state: state.into(),
             fields,
@@ -2267,9 +2267,9 @@ impl<'de> Deserialize<'de> for OtherStateUpdate {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let state = fields
-            .remove("state")
+            .shift_remove("state")
             .ok_or_else(|| serde::de::Error::missing_field("state"))?;
         let serde_json::Value::String(state) = state else {
             return Err(serde::de::Error::custom("`state` must be a string"));

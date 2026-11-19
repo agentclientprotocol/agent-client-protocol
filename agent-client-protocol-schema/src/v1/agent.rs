@@ -8,6 +8,8 @@ use std::{path::PathBuf, sync::Arc};
 use std::collections::HashMap;
 
 use derive_more::{Display, From};
+#[cfg(feature = "unstable_llm_providers")]
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, DefaultOnNull, VecSkipError, serde_as, skip_serializing_none};
 
@@ -1170,6 +1172,7 @@ pub struct AuthMethodTerminal {
     #[serde_as(deserialize_as = "DefaultOnNull")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    // TODO(next major): use `IndexMap` to keep the key order.
     pub env: HashMap<String, String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -5262,8 +5265,8 @@ pub struct SetProviderRequest {
     pub base_url: String,
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub headers: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub headers: IndexMap<String, String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
@@ -5289,7 +5292,7 @@ impl SetProviderRequest {
             provider_id: provider_id.into(),
             api_type,
             base_url: base_url.into(),
-            headers: HashMap::new(),
+            headers: IndexMap::new(),
             meta: None,
         }
     }
@@ -5297,7 +5300,7 @@ impl SetProviderRequest {
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.
     #[must_use]
-    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+    pub fn headers(mut self, headers: IndexMap<String, String>) -> Self {
         self.headers = headers;
         self
     }
@@ -8880,9 +8883,7 @@ mod test_serialization {
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
     fn test_set_provider_request_serialization() {
-        use std::collections::HashMap;
-
-        let mut headers = HashMap::new();
+        let mut headers = IndexMap::new();
         headers.insert("Authorization".to_string(), "Bearer sk-test".to_string());
 
         let request =

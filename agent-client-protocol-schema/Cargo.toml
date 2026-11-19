@@ -81,7 +81,9 @@ uuid = ["dep:uuid"]
 [dependencies]
 anyhow = "1"
 derive_more = { version = "2", features = ["from", "display"] }
-schemars = { version = "1", optional = true }
+# Maps on the wire keep the key order they were sent or built with.
+indexmap = { version = "2", features = ["serde"] }
+schemars = { version = "1", optional = true, features = ["indexmap2"] }
 # `rc` is required for Arc-based protocol strings and RawValue payloads.
 serde = { version = "1", features = ["derive", "rc"] }
 # `raw_value` powers extension passthrough payloads; `preserve_order` keeps

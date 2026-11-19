@@ -3,9 +3,10 @@
 //! This module defines the Client trait and all associated types for implementing
 //! a client that interacts with AI coding agents via the Agent Client Protocol (ACP).
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 use derive_more::{Display, From};
+use indexmap::IndexMap;
 #[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
@@ -1400,15 +1401,15 @@ pub struct OtherCursorAnchor {
     /// The remaining fields of the unknown anchor payload, preserved verbatim,
     /// including `_meta`.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 #[cfg(feature = "unstable_session_cursors")]
 impl OtherCursorAnchor {
     /// Builds [`OtherCursorAnchor`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -1422,9 +1423,9 @@ impl<'de> Deserialize<'de> for OtherCursorAnchor {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -1810,7 +1811,7 @@ pub struct OtherSessionUpdate {
     pub session_update: String,
     /// Additional fields from the unknown update payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherSessionUpdate {
@@ -1818,9 +1819,9 @@ impl OtherSessionUpdate {
     #[must_use]
     pub fn new(
         session_update: impl Into<String>,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
-        fields.remove("sessionUpdate");
+        fields.shift_remove("sessionUpdate");
         Self {
             session_update: session_update.into(),
             fields,
@@ -1833,9 +1834,9 @@ impl<'de> Deserialize<'de> for OtherSessionUpdate {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let session_update = fields
-            .remove("sessionUpdate")
+            .shift_remove("sessionUpdate")
             .ok_or_else(|| serde::de::Error::missing_field("sessionUpdate"))?;
         let serde_json::Value::String(session_update) = session_update else {
             return Err(serde::de::Error::custom("`sessionUpdate` must be a string"));
@@ -2564,14 +2565,14 @@ pub struct OtherStateUpdate {
     pub state: String,
     /// Additional fields from the unknown state payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherStateUpdate {
     /// Builds [`OtherStateUpdate`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(state: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("state");
+    pub fn new(state: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("state");
         Self {
             state: state.into(),
             fields,
@@ -2584,9 +2585,9 @@ impl<'de> Deserialize<'de> for OtherStateUpdate {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let state = fields
-            .remove("state")
+            .shift_remove("state")
             .ok_or_else(|| serde::de::Error::missing_field("state"))?;
         let serde_json::Value::String(state) = state else {
             return Err(serde::de::Error::custom("`state` must be a string"));
@@ -2804,14 +2805,14 @@ pub struct OtherBackgroundWork {
     pub kind: String,
     /// Additional fields from the unknown item.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherBackgroundWork {
     /// Builds [`OtherBackgroundWork`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(kind: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(kind: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             kind: kind.into(),
             fields,
@@ -2824,9 +2825,9 @@ impl<'de> Deserialize<'de> for OtherBackgroundWork {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let kind = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(kind) = kind else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -3463,7 +3464,7 @@ pub struct OtherAvailableCommand {
     /// The remaining fields of the unknown command payload, preserved verbatim, including
     /// `_meta`.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherAvailableCommand {
@@ -3473,11 +3474,11 @@ impl OtherAvailableCommand {
         type_: impl Into<String>,
         name: impl Into<String>,
         description: impl Into<String>,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
-        fields.remove("type");
-        fields.remove("name");
-        fields.remove("description");
+        fields.shift_remove("type");
+        fields.shift_remove("name");
+        fields.shift_remove("description");
         Self {
             type_: type_.into(),
             name: name.into(),
@@ -3499,7 +3500,7 @@ impl<'de> Deserialize<'de> for OtherAvailableCommand {
             name: String,
             description: String,
             #[serde(flatten)]
-            fields: BTreeMap<String, serde_json::Value>,
+            fields: IndexMap<String, serde_json::Value>,
         }
 
         let raw = RawOtherAvailableCommand::deserialize(deserializer)?;
@@ -3729,14 +3730,14 @@ pub struct OtherAvailableCommandInput {
     pub type_: String,
     /// Additional fields from the unknown command input payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherAvailableCommandInput {
     /// Builds [`OtherAvailableCommandInput`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -3749,9 +3750,9 @@ impl<'de> Deserialize<'de> for OtherAvailableCommandInput {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -4098,14 +4099,14 @@ pub struct OtherRequestPermissionSubject {
     pub type_: String,
     /// Additional fields from the unknown permission subject payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherRequestPermissionSubject {
     /// Builds [`OtherRequestPermissionSubject`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -4118,9 +4119,9 @@ impl<'de> Deserialize<'de> for OtherRequestPermissionSubject {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -4346,7 +4347,7 @@ pub struct OtherRequestPermissionOutcome {
     pub outcome: String,
     /// Additional fields from the unknown permission outcome payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherRequestPermissionOutcome {
@@ -4354,9 +4355,9 @@ impl OtherRequestPermissionOutcome {
     #[must_use]
     pub fn new(
         outcome: impl Into<String>,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
-        fields.remove("outcome");
+        fields.shift_remove("outcome");
         Self {
             outcome: outcome.into(),
             fields,
@@ -4369,9 +4370,9 @@ impl<'de> Deserialize<'de> for OtherRequestPermissionOutcome {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let outcome = fields
-            .remove("outcome")
+            .shift_remove("outcome")
             .ok_or_else(|| serde::de::Error::missing_field("outcome"))?;
         let serde_json::Value::String(outcome) = outcome else {
             return Err(serde::de::Error::custom("`outcome` must be a string"));

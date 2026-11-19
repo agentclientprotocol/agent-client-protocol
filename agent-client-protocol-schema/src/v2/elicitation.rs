@@ -3,9 +3,10 @@
 //! This module defines the types used for agent-initiated elicitation,
 //! where the agent requests structured input from the user via forms or URLs.
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 use derive_more::{Display, From};
+use indexmap::IndexMap;
 #[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
@@ -726,14 +727,14 @@ pub struct OtherMultiSelectItems {
     pub type_: String,
     /// Additional fields from the unknown item schema payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherMultiSelectItems {
     /// Builds [`OtherMultiSelectItems`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -746,9 +747,9 @@ impl<'de> Deserialize<'de> for OtherMultiSelectItems {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -985,14 +986,14 @@ pub struct OtherElicitationPropertySchema {
     pub type_: String,
     /// Additional fields from the unknown property schema payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherElicitationPropertySchema {
     /// Builds [`OtherElicitationPropertySchema`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -1005,9 +1006,9 @@ impl<'de> Deserialize<'de> for OtherElicitationPropertySchema {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -1095,7 +1096,7 @@ pub struct ElicitationSchema {
     #[serde(default)]
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
-    pub properties: BTreeMap<String, ElicitationPropertySchema>,
+    pub properties: IndexMap<String, ElicitationPropertySchema>,
     /// List of required property names.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no property names are required.
@@ -1125,7 +1126,7 @@ impl Default for ElicitationSchema {
         Self {
             type_: default_object_type(),
             title: None,
-            properties: BTreeMap::new(),
+            properties: IndexMap::new(),
             required: None,
             description: None,
             meta: None,
@@ -1450,11 +1451,14 @@ impl<'de> Deserialize<'de> for ElicitationScope {
         D: serde::Deserializer<'de>,
     {
         let mut fields = serde_json::Map::deserialize(deserializer)?;
-        let scope = match (fields.remove("sessionId"), fields.remove("requestId")) {
+        let scope = match (
+            fields.shift_remove("sessionId"),
+            fields.shift_remove("requestId"),
+        ) {
             (Some(session_id), None) => {
                 let mut scope = serde_json::Map::new();
                 scope.insert("sessionId".into(), session_id);
-                if let Some(tool_call_id) = fields.remove("toolCallId") {
+                if let Some(tool_call_id) = fields.shift_remove("toolCallId") {
                     scope.insert("toolCallId".into(), tool_call_id);
                 }
                 serde_json::from_value(scope.into()).map(Self::Session)
@@ -1674,7 +1678,7 @@ pub struct OtherElicitationMode {
     pub scope: ElicitationScope,
     /// Additional fields from the unknown elicitation mode payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherElicitationMode {
@@ -1683,9 +1687,9 @@ impl OtherElicitationMode {
     pub fn new(
         mode: impl Into<String>,
         scope: impl Into<ElicitationScope>,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
-        fields.remove("mode");
+        fields.shift_remove("mode");
         remove_elicitation_scope_fields(&mut fields);
         Self {
             mode: mode.into(),
@@ -1700,9 +1704,9 @@ impl<'de> Deserialize<'de> for OtherElicitationMode {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let mode = fields
-            .remove("mode")
+            .shift_remove("mode")
             .ok_or_else(|| serde::de::Error::missing_field("mode"))?;
         let serde_json::Value::String(mode) = mode else {
             return Err(serde::de::Error::custom("`mode` must be a string"));
@@ -1734,10 +1738,10 @@ fn is_known_elicitation_mode(mode: &str) -> bool {
     KNOWN_ELICITATION_MODES.contains(&mode)
 }
 
-fn remove_elicitation_scope_fields(fields: &mut BTreeMap<String, serde_json::Value>) {
-    fields.remove("sessionId");
-    fields.remove("toolCallId");
-    fields.remove("requestId");
+fn remove_elicitation_scope_fields(fields: &mut IndexMap<String, serde_json::Value>) {
+    fields.shift_remove("sessionId");
+    fields.shift_remove("toolCallId");
+    fields.shift_remove("requestId");
 }
 
 #[cfg(feature = "schemars")]
@@ -1924,14 +1928,14 @@ pub struct OtherElicitationAction {
     pub action: String,
     /// Additional fields from the unknown elicitation action payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherElicitationAction {
     /// Builds [`OtherElicitationAction`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(action: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("action");
+    pub fn new(action: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("action");
         Self {
             action: action.into(),
             fields,
@@ -1944,9 +1948,9 @@ impl<'de> Deserialize<'de> for OtherElicitationAction {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let action = fields
-            .remove("action")
+            .shift_remove("action")
             .ok_or_else(|| serde::de::Error::missing_field("action"))?;
         let serde_json::Value::String(action) = action else {
             return Err(serde::de::Error::custom("`action` must be a string"));
@@ -2001,7 +2005,7 @@ pub struct ElicitationAcceptAction {
     ///
     /// Omitted and `null` are equivalent and mean no content is provided.
     #[serde(default)]
-    pub content: Option<BTreeMap<String, ElicitationContentValue>>,
+    pub content: Option<IndexMap<String, ElicitationContentValue>>,
 }
 
 impl ElicitationAcceptAction {
@@ -2015,7 +2019,7 @@ impl ElicitationAcceptAction {
     #[must_use]
     pub fn content(
         mut self,
-        content: impl IntoOption<BTreeMap<String, ElicitationContentValue>>,
+        content: impl IntoOption<IndexMap<String, ElicitationContentValue>>,
     ) -> Self {
         self.content = content.into_option();
         self
@@ -2164,7 +2168,7 @@ mod tests {
             "_custom": { "lat": 1.0, "lng": 2.0 },
             "mixed": ["a", 1]
         });
-        let content: BTreeMap<String, ElicitationContentValue> =
+        let content: IndexMap<String, ElicitationContentValue> =
             serde_json::from_value(wire.clone()).unwrap();
         assert_eq!(
             content["name"],
@@ -2247,7 +2251,7 @@ mod tests {
     #[test]
     fn response_accept_serialization() {
         let resp = CreateElicitationResponse::new(ElicitationAction::Accept(
-            ElicitationAcceptAction::new().content(BTreeMap::from([(
+            ElicitationAcceptAction::new().content(IndexMap::from([(
                 "name".to_string(),
                 ElicitationContentValue::from("Alice"),
             )])),
@@ -2450,7 +2454,7 @@ mod tests {
 
         let resp =
             ClientResponse::CreateElicitationResponse(Box::new(CreateElicitationResponse::new(
-                ElicitationAction::Accept(ElicitationAcceptAction::new().content(BTreeMap::from(
+                ElicitationAction::Accept(ElicitationAcceptAction::new().content(IndexMap::from(
                     [("name".to_string(), ElicitationContentValue::from("Alice"))],
                 ))),
             )));
@@ -2489,6 +2493,34 @@ mod tests {
 
         let roundtripped: CreateElicitationResponse = serde_json::from_value(json).unwrap();
         assert!(matches!(roundtripped.action, ElicitationAction::Cancel));
+    }
+
+    #[test]
+    fn requested_schema_properties_keep_their_order() {
+        // Parsing and writing a schema keeps the order the sender chose.
+        let wire = r#"{"type":"object","properties":{"zeta":{"type":"string"},"alpha":{"type":"boolean"},"mid":{"type":"integer"}}}"#;
+        let schema: ElicitationSchema = serde_json::from_str(wire).unwrap();
+        assert_eq!(
+            schema.properties.keys().collect::<Vec<_>>(),
+            ["zeta", "alpha", "mid"]
+        );
+        assert_eq!(serde_json::to_string(&schema).unwrap(), wire);
+
+        // The builder keeps the order the properties were added in.
+        let built = ElicitationSchema::new()
+            .string("zeta", false)
+            .boolean("alpha", false);
+        assert_eq!(
+            built.properties.keys().collect::<Vec<_>>(),
+            ["zeta", "alpha"]
+        );
+    }
+
+    #[test]
+    fn accepted_content_keeps_its_order() {
+        let wire = r#"{"action":"accept","content":{"zeta":"z","alpha":true}}"#;
+        let response: CreateElicitationResponse = serde_json::from_str(wire).unwrap();
+        assert_eq!(serde_json::to_string(&response).unwrap(), wire);
     }
 
     /// Guard against serde regressions with the `flatten` + internally-tagged combination.
@@ -2980,7 +3012,7 @@ mod tests {
     #[test]
     fn response_accept_allows_primitive_and_string_array_content() {
         let response = CreateElicitationResponse::new(ElicitationAction::Accept(
-            ElicitationAcceptAction::new().content(BTreeMap::from([
+            ElicitationAcceptAction::new().content(IndexMap::from([
                 ("name".to_string(), ElicitationContentValue::from("Alice")),
                 ("age".to_string(), ElicitationContentValue::from(30_i32)),
                 ("score".to_string(), ElicitationContentValue::from(9.5_f64)),

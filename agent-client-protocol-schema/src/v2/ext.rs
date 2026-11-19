@@ -43,7 +43,7 @@ pub fn apply_meta_update(stored: &mut MaybeUndefined<Meta>, update: MaybeUndefin
             };
             for (key, value) in patch {
                 if value.is_null() {
-                    meta.remove(&key);
+                    meta.shift_remove(&key);
                 } else {
                     meta.insert(key, value);
                 }
@@ -177,6 +177,16 @@ mod tests {
                 "acme.dev/added": []
             }))
         );
+    }
+
+    #[test]
+    fn meta_update_keeps_the_order_of_the_remaining_keys() {
+        let mut stored = meta(json!({ "zeta": 1, "alpha": 2, "mid": 3, "last": 4 }));
+        apply_meta_update(&mut stored, meta(json!({ "alpha": null })));
+        let MaybeUndefined::Value(stored) = stored else {
+            panic!("expected stored metadata");
+        };
+        assert_eq!(stored.keys().collect::<Vec<_>>(), ["zeta", "mid", "last"]);
     }
 
     #[test]
