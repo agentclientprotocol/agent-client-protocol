@@ -34,6 +34,7 @@ pub enum RequestId {
 }
 
 /// A JSON-RPC request object.
+#[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[allow(
@@ -41,7 +42,6 @@ pub enum RequestId {
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[cfg_attr(feature = "schemars", schemars(rename = "{Params}", extend("x-docs-ignore" = true)))]
-#[skip_serializing_none]
 pub struct Request<Params> {
     /// The request id used to correlate the matching response.
     pub id: RequestId,
@@ -124,6 +124,30 @@ mod tests {
     use super::*;
 
     use serde_json::{Value, json};
+
+    #[test]
+    fn request_without_params_omits_the_key() {
+        let request = Request::<Value> {
+            id: RequestId::Number(1),
+            method: "session/list".into(),
+            params: None,
+        };
+        assert_eq!(
+            serde_json::to_value(&request).unwrap(),
+            json!({ "id": 1, "method": "session/list" })
+        );
+
+        // An omitted key and `null` both read as no params.
+        for wire in [
+            json!({ "id": 1, "method": "session/list" }),
+            json!({ "id": 1, "method": "session/list", "params": null }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<Request<Value>>(wire).unwrap(),
+                request
+            );
+        }
+    }
 
     #[test]
     fn request_id_rejects_null() {
