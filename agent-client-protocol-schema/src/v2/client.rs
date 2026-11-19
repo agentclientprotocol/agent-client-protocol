@@ -5230,6 +5230,9 @@ pub enum AgentRequest {
     /// foreground work and MUST cancel them with `$/cancel_request`. The client
     /// answers a cancelled request with the `cancelled` outcome.
     ///
+    /// An error response is not approval, and neither is a connection that ends
+    /// before the client answers. The agent MUST NOT treat either as approval.
+    ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
     RequestPermissionRequest(Box<RequestPermissionRequest>),
     /// Requests structured user input via a form or URL.

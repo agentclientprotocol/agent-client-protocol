@@ -339,6 +339,8 @@ When the Agent cancels a pending permission request with [`$/cancel_request`](/p
 
 Clients also send `cancelled` when the user dismisses the prompt or the Client declines it by policy, including when no `reject_*` option is offered. After a `cancelled` outcome, the Agent **MUST NOT** proceed with the operation.
 
+The Agent **MUST NOT** treat an error response as approval. The same holds when the connection ends before the Client answers. The Agent can then [reestablish the request](/protocol/v2/session-setup#current-state-synchronization) once the Client resumes the session.
+
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
   The user's decision. Known outcomes are `cancelled` when the [active work was
   cancelled](/protocol/v2/prompt-lifecycle#cancellation), the user dismissed the
