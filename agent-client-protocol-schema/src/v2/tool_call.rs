@@ -259,9 +259,6 @@ impl ToolCallUpdate {
 
 /// Client-initiated controls a tool call currently supports.
 ///
-/// A malformed value falls back to no controls, so the Client never sends a request the
-/// Agent did not advertise.
-///
 /// See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)
 #[serde_as]
 #[skip_serializing_none]

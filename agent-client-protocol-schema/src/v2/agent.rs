@@ -2396,8 +2396,8 @@ pub struct SessionStatusResponse {
     /// The session's current foreground state, as the same snapshot the Agent sends in
     /// `state_update` notifications.
     ///
-    /// Optional. Agents SHOULD include it when `status` is `open`. Omitted, `null`, and
-    /// malformed values mean the Agent is not reporting foreground state, and Clients
+    /// Optional. Agents SHOULD include it when `status` is `open`. Omitted and `null`
+    /// mean the Agent is not reporting foreground state, and Clients
     /// MUST NOT read that as `idle`. This is a snapshot, not a new transition. Clients
     /// MUST NOT count an `idle` snapshot as a new completion.
     #[serde_as(deserialize_as = "DefaultOnError")]

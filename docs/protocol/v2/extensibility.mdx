@@ -68,7 +68,7 @@ is not necessarily supported or permitted on the connection.
 
 Protocol object types that define a `_meta` field can use it to attach custom information. This includes requests, responses, notifications, and nested object types such as content blocks, tool calls, plan entries, and capability objects. Primitive types and object types that do not define `_meta` cannot carry it.
 
-`_meta` is an object with string keys (`{ [key: string]: unknown }`). Receivers treat any other value as omitted. Except for [metadata patches](#metadata-patches), omitted and `null` are equivalent and mean no metadata. Metadata on a chunk is scoped to that chunk and does not patch stored metadata.
+`_meta` is an object with string keys (`{ [key: string]: unknown }`). Except for [metadata patches](#metadata-patches), omitted and `null` are equivalent and mean no metadata. Metadata on a chunk is scoped to that chunk and does not patch stored metadata.
 
 ```json
 {
@@ -153,7 +153,7 @@ Other `_meta` fields are not patches, including the `_meta` of `plan_update`. Me
 
 Receivers **MUST** ignore unrecognized properties of protocol-defined objects, including properties nested within capability objects. An otherwise valid message **MUST NOT** be rejected solely because it contains unrecognized properties. Ignoring a property means not assigning protocol behavior to it. It does not imply support for the feature it describes.
 
-This rule does not relax validation of known properties or change their documented handling of malformed values. Unknown enum values, discriminator values, and method names follow their own rules. They are not unknown object fields. A malformed value for a known discriminator **MUST NOT** be treated as an unknown variant.
+This rule does not relax validation of known properties. Unknown enum values, discriminator values, and method names follow their own rules. They are not unknown object fields. A malformed value for a known discriminator **MUST NOT** be treated as an unknown variant.
 
 Ignoring an unknown property means not interpreting it. Implementations are not required to remove it from the message.
 

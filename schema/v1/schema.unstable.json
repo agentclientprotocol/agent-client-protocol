@@ -5722,7 +5722,7 @@
       "type": "object",
       "properties": {
         "suggestions": {
-          "description": "The suggestions the Client can offer, ordered most likely first.\n\nRequired and non-null. An empty list withdraws the suggestions the\nClient is offering. A Client skips an entry it cannot parse and keeps\nthe rest.",
+          "description": "The suggestions the Client can offer, ordered most likely first.\n\nRequired and non-null. An empty list withdraws the suggestions the\nClient is offering.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/PromptSuggestion"
@@ -5743,7 +5743,7 @@
       "type": "string"
     },
     "CursorCapabilities": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe methods that currently accept a session cursor.\n\nA malformed value falls back to no capabilities, so the Client never passes a\ncursor to a method the Agent did not advertise.\n\nSee the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nThe methods that currently accept a session cursor.\n\nSee the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).",
       "type": "object",
       "properties": {
         "fork": {
@@ -6300,7 +6300,7 @@
       }
     },
     "IdleStateUpdate": {
-      "description": "The child is ready to process another prompt.\n\nAn omitted, `null`, or malformed `stopReason` means not reported.",
+      "description": "The child is ready to process another prompt.\n\nAn omitted or `null` `stopReason` means not reported.",
       "type": "object",
       "properties": {
         "usage": {
@@ -6322,7 +6322,7 @@
           "additionalProperties": true
         },
         "stopReason": {
-          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Work state](https://agentclientprotocol.com/protocol/v1/draft/subagents#work-state)",
+          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\n\nSee protocol docs: [Work state](https://agentclientprotocol.com/protocol/v1/draft/subagents#work-state)",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         }
@@ -9055,7 +9055,7 @@
       }
     },
     "MessageMcpResponse": {
-      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nUnknown outer fields are ignored. Inner result and error fields are preserved.\nCarrier `_meta` is optional. Null or invalid values are treated as absent.\nSenders must include exactly one outcome. Receivers prefer `result` if both are present.",
+      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error must be a non-null object.\nUnknown outer fields are ignored. Inner result and error fields are preserved.\nCarrier `_meta` is optional. Omitted and `null` are equivalent.\nSenders must include exactly one outcome. Receivers prefer `result` if both are present.",
       "anyOf": [
         {
           "title": "Result",

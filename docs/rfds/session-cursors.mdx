@@ -282,7 +282,7 @@ Not determined: whether Claude Code accepts a fork that ends on a tool use witho
 1. **Schema.** Add the following to v1 and v2, behind an `unstable_session_cursors` feature:
    - A `CursorId` string type, like `MessageId`.
    - `CursorUpdate` with `cursorId`, `capabilities`, `anchor`, and `_meta`, and a `cursor_update` variant in `SessionUpdate`. `capabilities` is a three-state patch field. `anchor` is optional in the schema, because later updates can omit it, and omitted and `null` are equivalent.
-   - `CursorCapabilities` with `_meta`, mirroring `ToolCallCapabilities`. It starts with no capabilities, and each RFD that adopts cursors adds its own. A malformed value falls back to unsupported, so the Client never passes a cursor to a method the Agent did not advertise.
+   - `CursorCapabilities` with `_meta`, mirroring `ToolCallCapabilities`. It starts with no capabilities, and each RFD that adopts cursors adds its own.
    - `CursorAnchor`, a union tagged by `type` with the message, tool call, and compaction variants and a fallback that preserves unknown types. A known `type` with a malformed payload still fails. In v1, the `session_message` variant is behind `unstable_subagents`.
    - `ClientSessionCapabilities.cursors` in v1.
 2. **Docs.** Describe cursors in the draft prompt lifecycle and session setup pages for both versions: the `cursor_update` update, the rules for passing a `cursorId`, and cursors in replay contents. Add `cursor_update` to the session update tables. Next to the v2 entity ID table, say that a cursor is updated by ID but takes its place from its anchor, not from receive order.
@@ -360,6 +360,7 @@ A fork-specific `forkPoint` update was considered in [PR #629](https://github.co
 
 ## Revision history
 
+- 2026-11-19: Removed the statement about a malformed `capabilities` value. How an SDK handles a malformed value is not part of the protocol.
 - 2026-11-16: Steps 1 and 2 of the plan landed. The v1 and v2 schemas have `cursor_update`, `CursorId`, `CursorCapabilities`, `CursorAnchor`, and the v1 `session.cursors` Client capability, behind `unstable_session_cursors`. Each anchor variant also accepts `_meta`. The draft protocol pages describe cursors under [v1 Prompt Turn](/protocol/v1/draft/prompt-turn#session-cursors-unstable) and [v2 Prompt Lifecycle](/protocol/v2/draft/prompt-lifecycle#session-cursors-unstable).
 - 2026-11-16: Left the use of cursors for partial replay as an open question. Defined when a Client can't place a cursor.
 - 2026-11-14: Cursors are now identified by `cursorId` and announced with `cursor_update`, an upsert that carries per-cursor `capabilities` in place of `validFor`. Replaced `beforeMessageId` and `afterMessageId` with a typed `anchor` that also covers tool calls and compactions. Every cursor has an anchor, so a v1 Agent that announces cursors also sends message IDs. Defined lifetime, invalidation, replay, the `-32602` rule, the v1 Client capability, and the differences in v1. Added an adapter validation for claude-agent-acp and codex-acp. Moved the method changes out of this RFD. Each method's RFD adopts cursors, starting with session fork.

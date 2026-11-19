@@ -1737,8 +1737,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The session's current foreground state, as the same snapshot the Agent sends in
 `state_update` notifications.
 
-Optional. Agents SHOULD include it when `status` is `open`. Omitted, `null`, and
-malformed values mean the Agent is not reporting foreground state, and Clients
+Optional. Agents SHOULD include it when `status` is `open`. Omitted and `null`
+mean the Agent is not reporting foreground state, and Clients
 MUST NOT read that as `idle`. This is a snapshot, not a new transition. Clients
 MUST NOT count an `idle` snapshot as a new completion.
 
@@ -2387,7 +2387,7 @@ Outer ACP errors are reserved for binding and runtime failures.
 
 Both branches require their carrier key. An error must be a non-null object.
 Unknown outer fields are ignored. Inner result and error fields are preserved.
-Carrier `_meta` is optional. Null or invalid values are treated as absent.
+Carrier `_meta` is optional. Omitted and `null` are equivalent.
 Senders must include exactly one outcome. Receivers prefer `result` if both are present.
 
 **Type:** Union
@@ -4747,9 +4747,6 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 The methods that currently accept a session cursor.
 
-A malformed value falls back to no capabilities, so the Client never passes a
-cursor to a method the Agent did not advertise.
-
 See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
 
 **Type:** Object
@@ -6341,8 +6338,7 @@ No foreground work is active. Background activity may continue.
 
 Agents SHOULD include a `stopReason` when the idle transition ends foreground
 work. An idle update that does not end foreground work need not include one.
-Receivers treat an omitted, `null`, or malformed `stopReason` as the agent not
-reporting one.
+Receivers treat an omitted or `null` `stopReason` as the agent not reporting one.
 Repeated or resume snapshots may carry the last stop reason for context.
 They MUST NOT be counted as new completions, cancellations, or additional usage.
 
@@ -6364,7 +6360,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -6372,7 +6368,7 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
@@ -8174,8 +8170,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The suggestions the Client can offer, ordered most likely first.
 
 Required and non-null. An empty list withdraws the suggestions the
-Client is offering. A Client skips an entry it cannot parse and keeps
-the rest.
+Client is offering.
 
 </ResponseField>
 
@@ -8617,7 +8612,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -8732,7 +8727,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -9957,7 +9952,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -9988,7 +9983,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -9999,7 +9994,7 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
@@ -10166,7 +10161,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -10198,7 +10193,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -10743,8 +10738,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   The suggestions the Client can offer, ordered most likely first.
 
 Required and non-null. An empty list withdraws the suggestions the
-Client is offering. A Client skips an entry it cannot parse and keeps
-the rest.
+Client is offering.
 
 </ResponseField>
 
@@ -11138,7 +11132,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -11169,7 +11163,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -11180,7 +11174,7 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#stop-reasons)
 
@@ -11347,7 +11341,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -11379,7 +11373,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
@@ -11818,9 +11812,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 Client-initiated controls a terminal currently supports.
 
-A malformed value falls back to no controls, so the Client never sends a request the
-Agent did not advertise.
-
 See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-terminals)
 
 **Type:** Object
@@ -12141,9 +12132,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 ## <span class="font-mono">ToolCallCapabilities</span>
 
 Client-initiated controls a tool call currently supports.
-
-A malformed value falls back to no controls, so the Client never sends a request the
-Agent did not advertise.
 
 See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#cancelling-tool-calls)
 
@@ -12627,7 +12615,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
 background work, not that nothing is running. `[]` means no background work is
 running. An Agent that reports background work MUST include it on every state
-update for the session. A malformed list is treated as not reported.
+update for the session.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#background-work)
 
