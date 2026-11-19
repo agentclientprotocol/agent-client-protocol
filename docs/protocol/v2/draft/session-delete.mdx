@@ -90,6 +90,6 @@ On success, the Agent returns an empty result:
 - Deleted sessions no longer appear in future `session/list` results.
 - Deleting an already-deleted session, or a session that never existed, **SHOULD** succeed silently.
 - Clients **SHOULD** treat a `-32002` response to `session/delete` as a successful delete.
-- Agents **MAY** implement soft delete or hard delete. ACP only specifies the user-facing session-list behavior.
+- Agents **MAY** implement soft delete or hard delete.
 - Later requests for a deleted session, including `session/resume`, fail with `-32002`. See [Unknown Sessions](/protocol/v2/draft/error#unknown-sessions).
 - If the session is active on any connection, the Agent **MUST** cancel its ongoing work and free its resources as if [`session/close`](/protocol/v2/draft/session-setup#closing-active-sessions) had been called, then delete it.

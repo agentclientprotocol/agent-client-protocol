@@ -1102,8 +1102,8 @@ tool call content, including references to the forked root. Each copied child st
 identity. Participants outside the copied tree do not become part of the copy;
 unavailable participants follow the historical replay rules above. Copying
 history does not itself create live child runtimes. Parent deletion keeps its
-ordinary history-management semantics; it is not a substitute for closing
-active sessions.
+ordinary history-management semantics. Deleting an active session closes it
+first.
 
 ### Cancellation and resource ownership
 
@@ -1690,6 +1690,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-19: Deleting an active session closes it first, as the session delete page says. The RFD no longer says that deletion is not a substitute for closing.
 - 2026-11-19: In v2, `session` tool call content is part of the baseline. It is no longer described as unknown content that receivers preserve.
 - 2026-11-19: The v1 draft page says that a parent can work outside a prompt turn when a child reports back, and that `session/cancel` for the parent cancels that work. It also says that a child's `config_option_update` that arrives before the `session/load` response is historical.
 - 2026-11-19: Removed the statement about SDKs buffering traffic for an unannounced child. How an SDK handles a non-conforming Agent is not part of the protocol.
