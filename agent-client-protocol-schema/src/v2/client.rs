@@ -1468,8 +1468,8 @@ fn other_cursor_anchor_schema(schema: &mut Schema) {
 /// Every update after it is not.
 ///
 /// The Agent does not send it when `replayFrom` is omitted or `null`, or when
-/// it cannot finish the replay. A resume that ends without it delivered a
-/// truncated replay.
+/// it cannot finish the replay. A replay that ends without it and without a
+/// successful response is truncated.
 ///
 /// See protocol docs: [Replay Complete](https://agentclientprotocol.com/protocol/v2/session-setup#replay-complete)
 #[serde_as]
