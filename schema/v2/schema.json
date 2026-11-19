@@ -4283,7 +4283,7 @@
       ]
     },
     "ErrorData": {
-      "description": "Schema for [`Error::data`]: the shapes ACP defines, or any other value.",
+      "description": "Schema for the `data` field of an error: the shapes ACP defines, or any other value.",
       "anyOf": [
         {
           "title": "UnsupportedProtocolVersion",
