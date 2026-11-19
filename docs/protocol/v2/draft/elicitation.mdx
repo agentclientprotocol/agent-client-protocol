@@ -64,14 +64,33 @@ The Agent sends an `elicitation/create` request directly over the ACP
 connection. This adapts the MCP 2026-07-28 data model. ACP also requires `mode` explicitly. It does
 not apply MCP's omitted-mode form default.
 
+Every request has these fields. Each mode adds its own.
+
+<ParamField path="mode" type="string" required>
+  The elicitation mode: `form` or `url`.
+</ParamField>
+
+<ParamField path="message" type="string" required>
+  Text shown to the user that explains what is requested and why.
+</ParamField>
+
 Scope is represented with flattened fields. Exactly one of `sessionId` or
 `requestId` **MUST** be present:
 
-- `sessionId` for a session-scoped request. It can also include `toolCallId` to
-  associate the request with a tool call in that session.
-- `requestId` for a request-scoped interaction outside a session. It **MUST** be
-  the ID of a Client-to-Agent request on the same connection that the
-  Agent has not yet responded to.
+<ParamField path="sessionId" type="SessionId">
+  The session, for a session-scoped request.
+</ParamField>
+
+<ParamField path="toolCallId" type="ToolCallId">
+  Optional, with `sessionId` only. Associates the request with a tool call in
+  that session.
+</ParamField>
+
+<ParamField path="requestId" type="RequestId">
+  For a request-scoped interaction outside a session. It **MUST** be the ID of a
+  Client-to-Agent request on the same connection that the Agent has not yet
+  responded to.
+</ParamField>
 
 The Agent **MUST** cancel any pending request-scoped elicitations before it
 responds to their request.
@@ -126,6 +145,10 @@ progress actually resumes. `elicitation/complete` is not itself a state update.
 }
 ```
 
+<ParamField path="requestedSchema" type="ElicitationSchema" required>
+  The form to present, as a restricted JSON Schema object.
+</ParamField>
+
 `requestedSchema` is a flat object with `type: "object"`, `properties`, and
 optional `required`, `title`, and `description`. Each property is one of:
 
@@ -137,7 +160,7 @@ optional `required`, `title`, and `description`. Each property is one of:
 | Boolean       | `type: "boolean"`                                                                                                           | `default`                                                                           |
 | Multi select  | `type: "array"` with `items` of `{ "type": "string", "enum": [...] }` or `{ "anyOf": [...] }` (`const` and `title` options) | `minItems`, `maxItems`, `default`                                                   |
 
-Every property may also have `title` and `description`. Clients treat an unknown
+Every property may also have `title` and `description`. Each `oneOf` or `anyOf` option has a `const` value and a `title`, and may also have a `description`. Clients treat an unknown
 `format` as plain text. Accepted `content` maps each answered property name to its value: a string for text and single-select properties, a number for `number` and `integer`, a boolean for `boolean`, and an array of strings for multi-select. Unanswered properties are omitted, not set to `null`. Custom or future property types may use other JSON values.
 
 Clients **SHOULD** validate submitted values before responding, and Agents
@@ -177,6 +200,15 @@ fall back to form mode. It **MUST** use another safe flow or fail the operation.
   }
 }
 ```
+
+<ParamField path="elicitationId" type="ElicitationId" required>
+  Identifier for this elicitation. [`elicitation/complete`](#url-completion)
+  refers to it.
+</ParamField>
+
+<ParamField path="url" type="string" required>
+  The URL to open for the user.
+</ParamField>
 
 An `accept` response means the user consented to open the URL. It does not mean
 the external interaction completed.
