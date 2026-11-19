@@ -201,8 +201,9 @@ a `toolCallId` the Client hasn't seen creates the tool call with its
 
 An Agent can stream a tool's text output the way it streams message text, by
 sending each piece as a text content item in its own
-`tool_call_content_chunk`. Clients can present adjacent text items as one
-continuous text.
+`tool_call_content_chunk`. As in a message,
+[adjacent text items](/protocol/v2/content#text-content) form one continuous
+text.
 
 ## Requesting permission
 
