@@ -237,10 +237,7 @@ requested and why.
 Aligning with the locked [MCP 2026-07-28 release-candidate elicitation specification](https://modelcontextprotocol.io/specification/draft/client/elicitation), form mode elicitation uses a restricted subset of JSON Schema. Schemas are limited to flat objects with primitive properties only—the client decides how to render appropriate input UI based on the schema.
 
 Senders MUST include both `type: "object"` and `properties` in every
-`requestedSchema`. For compatibility, ACP readers tolerate an omitted, `null`,
-or malformed `type` by treating it as `"object"`, and tolerate omitted
-`properties` by treating it as an empty map; `null` is not valid for
-`properties`. This reader tolerance does not relax the sender requirements.
+`requestedSchema`.
 ACP does not include MCP's optional `$schema` field because the ACP protocol
 defines the exact restricted subset and does not support sender-selected schema
 dialects.
@@ -590,6 +587,8 @@ clients normally omit `content` because the interaction happens out of band.
 
 Unknown elicitation `action` values are reserved for future ACP variants or implementation-specific extensions. Implementation-specific actions MUST begin with `_`. Agents that do not understand an action should preserve the raw payload when storing, replaying, proxying, or forwarding elicitation responses, but MUST NOT treat it as `accept`, `decline`, or `cancel`.
 
+ACP v2 changes this rule: an Agent MUST handle an action it does not understand as `cancel`. See the [v2 migration guide](/protocol/v2/migration#elicitation).
+
 For URL mode elicitation, the response with `action: "accept"` indicates that the user consented to the interaction. It does not mean the interaction is complete—the interaction occurs out-of-band and the client is not aware of the outcome until the agent sends a completion notification.
 
 Agents MUST NOT assume an elicitation succeeds. They MUST handle every response
@@ -933,6 +932,7 @@ For v1, we recommend starting with JSON Schema validation only. If more complex 
 
 ## Revision history
 
+- 2026-11-19: Noted that in ACP v2 an Agent handles an unknown `action` as `cancel`. Removed the statement about readers that tolerate a missing or malformed `type` and `properties` in `requestedSchema`. How an SDK handles a malformed value is not part of the protocol.
 - 2026-11-17: Noted that ACP v2 removes `pattern` from string properties, to match MCP's string schema.
 - 2026-10-29: Agents translate, rather than pass through, elicitation capabilities for MCP servers, since `{}` means no modes in ACP but form support in MCP.
 - 2026-07-22: Moved to Completed and stabilized elicitation in the protocol artifacts. Audited the data model and safety guidance against the locked MCP 2026-07-28 release candidate and documented ACP's direct-request, capability, scope, and URL-completion differences.

@@ -721,12 +721,14 @@ While foreground work as a whole is blocked on a permission response, the Agent 
 
 ## Elicitation
 
-`elicitation/create` and `elicitation/complete` keep their shape, with one removal. A string property in a form's `requestedSchema` no longer takes `pattern`.
+`elicitation/create` and `elicitation/complete` keep their shape, with one removal and one changed rule. A string property in a form's `requestedSchema` no longer takes `pattern`.
 
 v1 added `pattern` on top of MCP's string schema. v2 has the same string keywords as MCP: `minLength`, `maxLength`, `format`, and `default`.
 
 - Agents stop sending `pattern` and check the submitted value themselves.
 - Clients stop evaluating `pattern`.
+
+One rule also changes. An Agent **MUST** handle a response `action` it does not understand as `cancel`. In v1 it could not treat it as a known action.
 
 ## Plans
 

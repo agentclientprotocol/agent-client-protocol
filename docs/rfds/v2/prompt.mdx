@@ -12,7 +12,7 @@ For v2 of the protocol wire format, I am proposing a change in the lifecycle of 
 
 Once a session is created, the agent will be able to send session updates at any point in time, and prompt requests will last until the user message is inserted into the conversation, not until the end of the turn. As I'll go into later, this not only removes some current awkwardness around the prompt request lifecycle, but also provides a more flexible foundation to add features like queued messages and multi-client replay. This can even allow the agent to initiate an interaction in a session rather than requiring it to wait for a user prompt, which is becoming increasingly important for background tasks and agents which may send updates before or after a "turn" is over since its runtime might be different than the main conversation.
 
-This sketch explores returning an agent-generated `messageId` in the prompt response. For `session/prompt`, acceptance means insertion of the user message into the ACP conversation. The same ID identifies that message in live updates and, if retained, later replay, so clients that receive the response can correlate their submissions without introducing a second identifier. Insertion is distinct from processing completion and does not require persistent history.
+This RFD returns an agent-generated `messageId` in the prompt response. For `session/prompt`, acceptance means insertion of the user message into the ACP conversation. The same ID identifies that message in live updates and, if retained, later replay, so clients that receive the response can correlate their submissions without introducing a second identifier. Insertion is distinct from processing completion and does not require persistent history.
 
 Because the response no longer spans the turn, it can no longer report failures that happen during it. A failure after insertion instead ends foreground work with an `error` stop reason on the idle `state_update`, carrying the same JSON-RPC error object a v1 prompt error response carries.
 
@@ -250,8 +250,6 @@ This would be a notification from the agent to indicate that it's current status
 }
 ```
 
-We could explore adding which permission or elicitation it is waiting on if we wanted to make it clearer if we wanted.
-
 #### Foreground state contract
 
 The v2 [Session States](/protocol/v2/prompt-lifecycle#session-states) guide
@@ -272,10 +270,11 @@ snapshots of aggregate foreground activity, not events for individual requests:
   prompt or command while other foreground activity continues needs no boundary.
   Local commands handled from idle still report
   an active state and `idle`, even without model work.
-- Session cancellation resolves pending session-scoped permissions and ends
-  active foreground work with `idle(cancelled)`. Agents should cancel individual
-  elicitations that the affected work no longer needs, not every elicitation
-  scoped to the session.
+- Session cancellation ends active foreground work with `idle(cancelled)`. The
+  agent stops waiting for that work's pending permission requests and cancels
+  each of them with `$/cancel_request`. Permission requests for listed background
+  work stay open. Agents should cancel individual elicitations that the affected
+  work no longer needs, not every elicitation scoped to the session.
   Prompts the agent has not inserted, including held prompts, are answered with
   `-32800`. After cancellation completes, agents should ignore late answers rather than
   resume cancelled work. Repeated or resume snapshots do not cause new
@@ -361,7 +360,7 @@ The v2 schema and guides define the insertion-receipt response. The implementati
 2. Update the prompt lifecycle and session replay guides with insertion as the acknowledgment point, distinct from processing completion; response/update ordering; optional retention; stable IDs when retained messages are replayed; and the content reset when replaying chunks from the beginning.
 3. Add serialization and schema coverage for valid response IDs and rejection of missing, `null`, or non-string IDs.
 4. Exercise an ID assigned before insertion without an early successful response, notifications before and after the response, identical prompts with distinct IDs, submissions from multiple clients, retained associations across replay, imported messages without prompt responses, and both full-content and streamed updates. Include a locally handled command reported live but omitted from later replay, and a retained command replayed with the same ID without re-executing it. Cover the lost-response limitation rather than promising recovery, and verify that streamed replay does not duplicate retained content.
-5. Make `StopReason` a union tagged by `stopReason` and flattened into the idle `state_update`, keeping the existing values' wire format and the tolerance for omitted, `null`, malformed, and unknown stop reasons. Add an `error` variant with an optional, nullable `error` field, reusing the existing `Error` type. Document the failure rules in the prompt lifecycle guide's stop reasons and cancellation sections.
+5. Make `StopReason` a union tagged by `stopReason` and flattened into the idle `state_update`, keeping the existing values' wire format and accepting omitted, `null`, and unknown stop reasons. Add an `error` variant with an optional, nullable `error` field, reusing the existing `Error` type. Document the failure rules in the prompt lifecycle guide's stop reasons and cancellation sections.
 6. Add serialization and schema coverage for the idle update with an `error`, without one, and with `error: null`, and verify that an `error` beside another stop reason is treated as an unknown field. Exercise a failure after insertion but before the response is sent: the response still succeeds and the idle update reports the failure.
 7. Update examples and generated artifacts, then run `npm run generate` and `npm run check`.
 
@@ -389,7 +388,7 @@ No. It identifies the accepted user message. A prompt may contribute to work alr
 
 ### Does returning `messageId` make retrying safe?
 
-No. The ID is an acknowledgment, not a client-supplied idempotency key. A retry can be accepted as a distinct submission with a different ID, including after a lost response. This proposal does not promise automatic deduplication or exactly-once processing.
+No. The ID is an acknowledgment, not a client-supplied idempotency key. A retry can be accepted as a distinct submission with a different ID, including after a lost response. This RFD does not promise automatic deduplication or exactly-once processing. The [Idempotency Keys RFD](./idempotency-keys.mdx) adds an optional `idempotencyKey` to `session/prompt` for that.
 
 ### Do locally handled commands need persistent history?
 
@@ -453,10 +452,11 @@ Codex's app-server makes the same split. A failed turn ends with `turn/completed
 
 ## Revision history
 
-2026-11-18: Recorded the status of the implementation plan.
-
-2026-10-29: Message IDs are unique per message type, not across the session. Prompts sent during active work are inserted or held in order rather than rejected, and held prompts get `-32800` on cancel.
-
-2026-04-13: Initial draft
-2026-04-22: Move from bidirectional notification approach to a change in the prompt request lifecycle
-2026-10-01: Report failures after insertion with an `error` stop reason that carries an optional JSON-RPC error
+- 2026-11-19: Matched the cancellation rule for permission requests to the spec page, pointed the retry question at the Idempotency Keys RFD, removed wording left from the proposal stage, and completed and sorted this history.
+- 2026-11-18: Recorded the status of the implementation plan.
+- 2026-10-29: Message IDs are unique per message type, not across the session. Prompts sent during active work are inserted or held in order rather than rejected, and held prompts get `-32800` on cancel.
+- 2026-10-16: Defined the foreground state transitions.
+- 2026-10-01: Report failures after insertion with an `error` stop reason that carries an optional JSON-RPC error.
+- 2026-09-18: Return the inserted user message's `messageId` from `session/prompt`.
+- 2026-04-22: Move from bidirectional notification approach to a change in the prompt request lifecycle.
+- 2026-04-13: Initial draft.

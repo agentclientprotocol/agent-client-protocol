@@ -64,7 +64,7 @@ The v2 Rust schema types should encode this convention directly where fallback b
 - Untagged shape unions can add raw fallbacks only when there is a reliable discriminator field to distinguish a future/custom variant from a malformed known shape.
 - Core control-flow discriminators may remain closed when there is no safe fallback behavior.
 - SDKs should expose fallback variants that carry unknown values rather than silently discarding them.
-- Conversion from v2 to v1 should fail when an unknown v2 value cannot be represented in v1 without data loss.
+- The schema crate does not convert between versions. Code that maps a v2 value to v1 should fail when an unknown v2 value cannot be represented in v1 without data loss.
 - v1 schemas remain unchanged.
 
 The fallback variant's Rust doc comment should document the `_` extension rule and the future-ACP reservation rule, so generated docs and schemas follow the type source of truth.
@@ -93,4 +93,7 @@ No. Implementations should preserve unknown values when practical and degrade gr
 
 ## Revision history
 
-2026-05-27: Initial draft
+- 2026-11-19: The schema crate no longer converts between versions, so the conversion rule now addresses code that does. Added the missing entries below.
+- 2026-10-26: Elicitation actions and schema-shape discriminators can be opened. A receiver that cannot fulfill a request without understanding a variant rejects it with `-32602`.
+- 2026-07-01: Permission outcomes can be opened when unknown outcomes are handled conservatively and never treated as approval.
+- 2026-05-27: Initial draft.
