@@ -425,7 +425,7 @@ Foreground work is the Agent's active response or workflow in the session, inclu
 Background activity can continue and emit other `session/update` notifications while the Agent reports `idle`. A detached task's progress, completion, or permission request does not by itself change the foreground state. If the Agent starts a response or workflow to act on a background result, it **MUST** report an active state and report `idle` when that work ends, and **SHOULD** include a stop reason on the idle update. See [Foreground and Background Work](/protocol/v2/prompt-lifecycle#foreground-and-background-work) for contrasting examples. State updates may also carry a [`background`](/protocol/v2/prompt-lifecycle#background-work) list of the work still running, so Clients can tell an idle session with running work from a quiet one. `session/cancel` leaves that work running and no longer cancels permission requests for it.
 
 States are aggregate snapshots, not per-request events. Clients **MUST** apply
-repeats idempotently, without counting additional work, completions, or usage.
+repeats idempotently, without counting additional work or completions.
 With concurrent user-action requests, resolving one does not emit `running`
 unless foreground progress actually resumes. If other foreground work can
 progress, the state remains `running` while requests are pending.
