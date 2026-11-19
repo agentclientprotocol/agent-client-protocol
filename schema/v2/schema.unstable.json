@@ -4255,7 +4255,7 @@
       "type": "object",
       "properties": {
         "configId": {
-          "description": "Unique identifier for the configuration option.",
+          "description": "Identifier for the configuration option. MUST be unique within `configOptions`.",
           "allOf": [
             {
               "$ref": "#/$defs/SessionConfigId"
@@ -4464,7 +4464,7 @@
       "type": "object",
       "properties": {
         "groupId": {
-          "description": "Unique identifier for this group.",
+          "description": "Identifier for this group. MUST be unique within the option.",
           "allOf": [
             {
               "$ref": "#/$defs/SessionConfigGroupId"

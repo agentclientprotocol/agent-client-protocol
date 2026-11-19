@@ -6191,7 +6191,7 @@ Omitted and `null` are equivalent and mean no category is provided.
 
 </ResponseField>
 <ResponseField name="configId" type={<a href="#sessionconfigid">SessionConfigId</a>} required>
-  Unique identifier for the configuration option.
+  Identifier for the configuration option. MUST be unique within `configOptions`.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description for the Client to display to the user.
@@ -6352,7 +6352,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="groupId" type={<a href="#sessionconfiggroupid">SessionConfigGroupId</a>} required>
-  Unique identifier for this group.
+  Identifier for this group. MUST be unique within the option.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable label for this group.

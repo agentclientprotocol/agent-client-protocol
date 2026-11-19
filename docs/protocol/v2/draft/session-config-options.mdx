@@ -93,7 +93,8 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 ### SessionConfigOption
 
 <ResponseField name="configId" type="string" required>
-  Unique identifier for this configuration option. Used when setting values.
+  Identifier for this configuration option. **MUST** be unique within
+  `configOptions`. Used when setting values.
 </ResponseField>
 
 <ResponseField name="name" type="string" required>
@@ -151,7 +152,7 @@ During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** retur
 Select options may be grouped under labeled headers. Each
 `SessionConfigSelectGroup` requires `groupId`, `name`, and an `options` array containing
 the same `SessionConfigSelectOption` objects used by flat selects. A group's `_meta` is
-optional. Value descriptions and `_meta` remain optional as described above.
+optional. Value descriptions and `_meta` remain optional as described above. Each `groupId` **MUST** be unique within the option.
 
 ```json
 {
