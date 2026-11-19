@@ -28,7 +28,9 @@ use schemars::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    env, fs,
+    env,
+    ffi::OsStr,
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -128,6 +130,53 @@ fn repo_root() -> PathBuf {
         .parent()
         .expect("schema-generator manifest directory should have a repository root parent")
         .to_path_buf()
+}
+
+/// The directory cargo writes this workspace's build output to, honoring `CARGO_TARGET_DIR`.
+///
+/// The rustdoc invocation below runs cargo from the repository root, so cargo resolves a
+/// relative `CARGO_TARGET_DIR` against that root. Reading the JSON it produces has to resolve
+/// the same directory, or a shared build cache leaves the generator looking in `target/` for a
+/// file cargo wrote somewhere else.
+///
+/// A `build.target-dir` set in `.cargo/config.toml` is not consulted; this repository has none.
+fn cargo_target_dir(root: &Path, configured: Option<&OsStr>) -> PathBuf {
+    match configured {
+        Some(dir) if !dir.is_empty() => root.join(dir),
+        _ => root.join("target"),
+    }
+}
+
+#[cfg(test)]
+mod cargo_target_dir_tests {
+    use super::cargo_target_dir;
+    use std::ffi::OsStr;
+    use std::path::{Path, PathBuf};
+
+    const ROOT: &str = "/workspace/protocol";
+
+    fn resolve(configured: Option<&str>) -> PathBuf {
+        cargo_target_dir(Path::new(ROOT), configured.map(OsStr::new))
+    }
+
+    #[test]
+    fn unset_and_empty_configured_dir_fall_back_to_the_repository_target() {
+        assert_eq!(resolve(None), Path::new(ROOT).join("target"));
+        assert_eq!(resolve(Some("")), Path::new(ROOT).join("target"));
+    }
+
+    #[test]
+    fn absolute_configured_dir_is_used_as_written() {
+        assert_eq!(
+            resolve(Some("/var/cache/cargo")),
+            Path::new("/var/cache/cargo")
+        );
+    }
+
+    #[test]
+    fn relative_configured_dir_is_resolved_against_the_repository_root() {
+        assert_eq!(resolve(Some("build")), Path::new(ROOT).join("build"));
+    }
 }
 
 #[cfg(test)]
@@ -2784,10 +2833,23 @@ starting with '$/' it is free to ignore the notification."
             String::from_utf8_lossy(&output.stderr)
         );
 
-        // Parse the JSON output
-        let json_path = root.join("target/doc/agent_client_protocol_schema.json");
-        let json_content = fs::read_to_string(json_path).unwrap();
-        let doc: Value = serde_json::from_str(&json_content).unwrap();
+        // Parse the JSON output. Cargo honors `CARGO_TARGET_DIR`, so resolve the directory it
+        // actually wrote to instead of assuming the repository's `target/`.
+        let configured_target_dir = super::env::var_os("CARGO_TARGET_DIR");
+        let json_path = super::cargo_target_dir(&root, configured_target_dir.as_deref())
+            .join("doc/agent_client_protocol_schema.json");
+        let json_content = fs::read_to_string(&json_path).unwrap_or_else(|error| {
+            panic!(
+                "rustdoc reported success but left no JSON at {}: {error}",
+                json_path.display()
+            )
+        });
+        let doc: Value = serde_json::from_str(&json_content).unwrap_or_else(|error| {
+            panic!(
+                "rustdoc JSON at {} is not valid JSON: {error}",
+                json_path.display()
+            )
+        });
 
         let mut side_docs = SideDocs::default();
 
