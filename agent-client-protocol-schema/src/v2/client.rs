@@ -2159,7 +2159,7 @@ impl UsageUpdate {
 /// Resume MUST send a current-state snapshot after any replay and before its
 /// response. The snapshot reports foreground state after resuming.
 /// The response alone does not imply idle.
-/// Repeated snapshots are idempotent, not additional work, completions, or usage.
+/// Repeated snapshots are idempotent, not additional work or completions.
 /// A repeated state may carry updated information without another state transition.
 /// The agent MUST report `idle` when no foreground activity remains. Completing
 /// an individual activity while other foreground work continues does not require
@@ -2279,7 +2279,7 @@ impl RunningStateUpdate {
 /// work. An idle update that does not end foreground work need not include one.
 /// Receivers treat an omitted or `null` `stopReason` as the agent not reporting one.
 /// Repeated or resume snapshots may carry the last stop reason for context.
-/// They MUST NOT be counted as new completions, cancellations, or additional usage.
+/// They MUST NOT be counted as new completions or cancellations.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2298,7 +2298,8 @@ pub struct IdleStateUpdate {
     /// Token usage for completed foreground work.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the agent is not reporting token
-    /// usage for this state update.
+    /// usage for this state update. A repeated or resume snapshot that carries it MUST NOT
+    /// be counted as additional usage.
     #[cfg(feature = "unstable_end_turn_token_usage")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]

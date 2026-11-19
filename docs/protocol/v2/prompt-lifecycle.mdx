@@ -1071,7 +1071,7 @@ model call, permission request, or elicitation.
 For exposed [subagents](/protocol/v2/subagents#work-state), Agents **SHOULD** also mirror the same snapshot in the
 immediate parent's `subagent_update.state`. This keeps the parent's roster and
 the child's own stream informed about one logical state. Duplicate snapshots
-do not represent additional work or usage.
+do not represent additional work.
 
 <ResponseField name="running">Foreground work is in progress.</ResponseField>
 
@@ -1139,7 +1139,7 @@ alone does not justify it, but foreground work that starts blocked **MAY** repor
 it directly without an artificial `running` first.
 
 Agents **MAY** repeat current-state snapshots. Clients **MUST** apply them
-idempotently: repeats do not start new work, end additional work, or add usage
+idempotently: repeats do not start new work or end additional work
 again. Repeated or resume idle snapshots may carry the last stop reason for
 context, without creating a new completion or cancellation.
 
