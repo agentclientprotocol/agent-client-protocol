@@ -2,7 +2,7 @@ All paths in the protocol should be absolute
 
 ## Adding new methods
 
-- Create empty params and output structs in src/client.rs or src/agent.rs under the corresponding section. I'll add the fields myself.
+- Create the params and output structs in `agent-client-protocol-schema/src/{v1,v2}/{agent,client}.rs` under the corresponding section, with the fields the RFD or request defines. Follow the schema rules below for each field.
 - If the protocol method name is `noun/verb`, use `verb_noun` for the user facing methods and structs.
 
   Example 1 (`noun/noun`):
@@ -19,7 +19,7 @@ All paths in the protocol should be absolute
 
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
-- Add the method to src/bin/generate.rs SideDocs functions
+- Add the method to the SideDocs functions in `schema-generator/src/main.rs`
 - Run `npm run generate` and fix any issues that appear
 - Run `npm run check`
 - Update the example agents and clients in tests and examples in both libraries
@@ -33,7 +33,20 @@ All paths in the protocol should be absolute
 ## Updating existing methods, their params, or output
 
 - Update the mintlify docs and guides in the `docs` directory
+- Make the same change in both the stable page and its `draft/` copy, unless the change is draft-only
 - Run `npm run check` to make sure the json and zod schemas gets generated properly
+
+## Writing spec prose and schema descriptions
+
+These apply to the `docs/protocol` pages and to Rust doc comments, which become the descriptions in the generated schema.
+
+- Say what the protocol does: name the method, field, or behavior. Skip sentences that only describe benefits ("enables rich interactions", "provides a flexible way", "seamless integration").
+- Don't tack on `-ing` clauses ("…, allowing Clients to…", "…, providing visibility into…"). Write "Clients use it to…" or start a new sentence.
+- Name concrete methods and capabilities instead of abstract nouns. Write "Agents that advertise `capabilities.session`" or "`auth/login` and `auth/logout`", not "the session method surface" or "the authentication surface".
+- Use periods instead of semicolons or em dashes to join clauses. Use straight quotes.
+- Prefer plain words: "use", not "leverage" or "utilize"; "to", not "in order to".
+- Use sentence case for headings. Keep Agent, Client, and acronyms capitalized.
+- v1 is stable: rewording must not add, remove, or change a requirement. Keep every **MUST**/**SHOULD**/**MAY** and its scope as it was, and don't state behavior the v1 spec doesn't already define. Draft v2 pages can change freely.
 
 Never write readme files related to the conversation unless explicitly asked to.
 

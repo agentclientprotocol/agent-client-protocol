@@ -9,10 +9,11 @@ use crate::MaybeUndefined;
 /// Value attached to a given ACP type on the `_meta` field.
 ///
 /// The _meta property is reserved by ACP to allow clients and agents to attach
-/// additional metadata to their interactions. Implementations MUST NOT make assumptions about
-/// values at these keys.
+/// additional metadata to their interactions. It is an object with string keys. Receivers treat
+/// any other value as omitted. Implementations MUST NOT assign meaning to keys they do not
+/// recognize.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 pub type Meta = serde_json::Map<String, serde_json::Value>;
 
 /// Applies the top-level `_meta` patch of an upsert update to stored metadata.
@@ -31,7 +32,7 @@ pub type Meta = serde_json::Map<String, serde_json::Value>;
 /// [`CompactionUpdate`](super::CompactionUpdate). Other `_meta` fields are not
 /// patches.
 ///
-/// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/extensibility#metadata-patches)
+/// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
 pub fn apply_meta_update(stored: &mut MaybeUndefined<Meta>, update: MaybeUndefined<Meta>) {
     match update {
         MaybeUndefined::Undefined => {}
@@ -57,7 +58,7 @@ pub fn apply_meta_update(stored: &mut MaybeUndefined<Meta>, update: MaybeUndefin
 /// Extension methods provide a way to add custom functionality while maintaining
 /// protocol compatibility.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -74,7 +75,7 @@ pub struct ExtRequest {
 }
 
 impl ExtRequest {
-    /// Builds [`ExtRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ExtRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {
@@ -84,11 +85,11 @@ impl ExtRequest {
     }
 }
 
-/// Allows for sending an arbitrary response to an [`ExtRequest`] that is not part of the ACP spec.
+/// Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
 /// Extension methods provide a way to add custom functionality while maintaining
 /// protocol compatibility.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, From)]
 #[serde(transparent)]
@@ -98,18 +99,18 @@ pub struct ExtResponse(
 );
 
 impl ExtResponse {
-    /// Builds [`ExtResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ExtResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(params: Arc<RawValue>) -> Self {
         Self(params)
     }
 }
 
-/// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
+/// Allows either side to send an arbitrary notification that is not part of the ACP spec.
 /// Extension notifications provide a way to send one-way messages for custom functionality
 /// while maintaining protocol compatibility.
 ///
-/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+/// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -126,7 +127,7 @@ pub struct ExtNotification {
 }
 
 impl ExtNotification {
-    /// Builds [`ExtNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`ExtNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method: impl Into<Arc<str>>, params: Arc<RawValue>) -> Self {
         Self {

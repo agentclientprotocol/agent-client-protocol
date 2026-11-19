@@ -1,7 +1,7 @@
 [package]
 name = "agent-client-protocol-schema"
 authors = ["Zed <hi@zed.dev>"]
-version = "1.12.0"
+version = "1.19.0"
 edition = "2024"
 license = "Apache-2.0"
 description = "A protocol for standardizing communication between code editors and AI coding agents"
@@ -11,7 +11,7 @@ readme = "../README.md"
 keywords = ["agent", "client", "protocol", "ai", "editor"]
 categories = ["development-tools", "api-bindings"]
 include = ["/src/**/*.rs", "/Cargo.toml"]
-rust-version = "1.88.0"
+rust-version.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
@@ -27,11 +27,20 @@ default = ["schemars"]
 # omit the dependency and those impls with `default-features = false`.
 schemars = ["dep:schemars", "serde_with/schemars_1"]
 unstable = [
+    "unstable_agent_skills",
+    "unstable_auth_status",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
     "unstable_plan_operations",
+    "unstable_prompt_suggestions",
+    "unstable_proxy_chains",
+    "unstable_session_archive",
+    "unstable_session_cursors",
     "unstable_session_fork",
-    "unstable_session_system_prompt",
+    "unstable_session_status",
+    "unstable_session_options",
+    "unstable_session_set_title",
+    "unstable_speed_config_category",
     "unstable_subagents",
     "unstable_end_turn_token_usage",
 ]
@@ -39,17 +48,35 @@ unstable = [
 # It introduces a parallel `v2` module with a different wire version, so it
 # must be opted into explicitly.
 unstable_protocol_v2 = []
+unstable_agent_skills = []
+unstable_auth_status = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
 unstable_plan_operations = []
+unstable_prompt_suggestions = []
+unstable_proxy_chains = []
+unstable_session_archive = []
+unstable_session_cursors = []
 unstable_session_fork = []
-unstable_session_system_prompt = []
+unstable_session_status = []
+unstable_session_options = []
+unstable_session_set_title = []
+unstable_speed_config_category = []
 unstable_subagents = []
 unstable_end_turn_token_usage = []
 
 # Backwards-compatible no-op: malformed list entries are silently skipped
 # regardless of whether this feature is enabled.
 tracing = []
+
+# Add `v2::IdempotencyKey::generate`, which creates a key from a random UUID,
+# and `From<uuid::Uuid>` for the key. The key only exists in the `v2` module,
+# so this has no effect without `unstable_protocol_v2`.
+#
+# This is off by default because it needs a source of randomness. `uuid` does
+# not compile for `wasm32-unknown-unknown` unless the depending crate also
+# enables one of its `js`, `rng-getrandom`, or `rng-rand` features.
+uuid = ["dep:uuid"]
 
 [dependencies]
 anyhow = "1"
@@ -62,3 +89,4 @@ serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
 serde_with = { version = "3.20.0", features = ["json"] }
 strum = { version = "0.28", features = ["derive"] }
+uuid = { version = "1", optional = true, default-features = false, features = ["v4"] }

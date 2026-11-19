@@ -1,0 +1,287 @@
+---
+title: "Session options"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `session/options` method that returns the config options a session would start with, without creating or resuming a session. Clients call it to fill a "new session" screen (model picker, other config options) before the user sends a first prompt. With a `sessionId`, Clients can also show what an existing session would have before resuming it.
+
+Agents that support `session/options` also accept initial config option values on session setup requests. Clients send back the values the user picked, and the session starts with them.
+
+Both parts are advertised with a single capability.
+
+This RFD covers v1 and v2. v2 also returns available commands. See [Version differences](#version-differences).
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+[Session config options](./session-config-options.mdx) are only available after a session exists. The Agent returns them in the session setup response (`session/new`, `session/load`, or `session/resume` in v1, `session/new` or `session/resume` in v2), and the Client changes them with `session/set_config_option`. v1 modes and v2 available commands work the same way.
+
+The config options RFD left configuration needed before a session exists out of scope.
+
+This leaves Clients with two options for a "new session" screen:
+
+- Create a session as soon as the screen opens, to read its config options. Creating a session can start MCP servers, set up provider state, and add an entry to `session/list`. If the user never sends a prompt, the Client has created a session it did not need.
+- Show no config options until the session exists. The user picks a model after the session has started, and the Client sends one `session/set_config_option` request per change.
+
+Neither option lets the user pick settings first and start a session with them.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Capability
+
+Agents advertise support with an `options` capability in their session capabilities. In v1:
+
+```json
+{
+  "agentCapabilities": {
+    "sessionCapabilities": {
+      "options": {}
+    }
+  }
+}
+```
+
+In v2:
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "options": {}
+    }
+  }
+}
+```
+
+An Agent that advertises the capability **MUST** implement `session/options` and **MUST** accept the `configOptions` field on every session setup request it supports. Clients **MUST NOT** call `session/options` or send `configOptions` on session setup requests unless the capability is present.
+
+### `session/options`
+
+The request takes the same workspace parameters as `session/new`, plus an optional `sessionId`, so the Agent can resolve options for that context:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session/options",
+  "params": {
+    "cwd": "/home/user/project",
+    "additionalDirectories": ["/home/user/shared-lib"]
+  }
+}
+```
+
+- `cwd` is required and **MUST** be an absolute path.
+- `additionalDirectories` is optional. Omitted and `null` are equivalent to an empty list.
+- `sessionId` is optional. Omitted and `null` are equivalent and mean a new session.
+- There is no `mcpServers` parameter. See [Why doesn't `session/options` take MCP servers?](#why-doesnt-sessionoptions-take-mcp-servers)
+
+When `sessionId` is present, the Agent returns what restoring that session with the same `cwd` and `additionalDirectories` would return (`session/load` or `session/resume` in v1, `session/resume` in v2). The same `cwd` rules as those methods apply. If the session does not exist, the Agent **MUST** return `-32002` (Resource not found).
+
+The response contains the config options the session would start with:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "configOptions": [
+      {
+        "id": "model",
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "currentValue": "model-1",
+        "options": [
+          { "value": "model-1", "name": "Model 1" },
+          { "value": "model-2", "name": "Model 2" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`configOptions` uses the same type and rules as on `NewSessionResponse` for that protocol version. The response also carries the other initial session state for that version (v1 `modes`, v2 `availableCommands`), described in [Version differences](#version-differences).
+
+`session/options` **MUST NOT** create or resume a session. The Agent **MUST NOT** send `session/update` notifications for it, and the call **MUST NOT** add an entry to `session/list` or change an existing session. The Agent **MAY** read workspace files and its own configuration to resolve options. It **SHOULD NOT** connect to MCP servers to answer `session/options`.
+
+Some Agents only know their options from a running runtime, such as a subprocess that reports its models. Such an Agent **MAY** start that runtime to answer `session/options`. The rules above still hold for it: it stores no session, writes nothing to the history of the session named by `sessionId`, and adds no entry to `session/list`. Clients **SHOULD NOT** call `session/options` on a timer, because such an Agent may start its runtime for each call. See [What if the Agent has to start its runtime to know its options?](#what-if-the-agent-has-to-start-its-runtime-to-know-its-options)
+
+The response is a snapshot. The options a session actually starts with are the ones in the session setup response.
+
+### Initial values on session setup
+
+Session setup requests gain an optional `configOptions` field. Omitted and `null` are equivalent to an empty list. Each entry uses the same value shape as `session/set_config_option`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "session/new",
+  "params": {
+    "cwd": "/home/user/project",
+    "mcpServers": [],
+    "configOptions": [
+      { "configId": "model", "type": "id", "value": "model-2" },
+      { "configId": "reasoning", "type": "id", "value": "high" }
+    ]
+  }
+}
+```
+
+The Agent applies the entries in list order, as if the Client had called `session/set_config_option` for each entry after the session was set up. Each entry is checked against the option set as it stands at that point, so an earlier entry (such as the model) can change which values a later entry (such as the reasoning level) allows.
+
+Clients **SHOULD** send entries in the order the Agent listed the options in the `session/options` response.
+
+For resumed or loaded sessions, the entries apply on top of the session's restored configuration.
+
+On `session/fork`, the entries apply on top of the configuration the fork would start with without them. To show the options before a fork, Clients call `session/options` with the `sessionId` of the source session.
+
+Notifications:
+
+- The Agent **SHOULD NOT** send `config_option_update` notifications for these entries. The setup response contains the resulting values.
+- Until the `session/new` or `session/fork` response, the Client does not know the session. The Agent **SHOULD NOT** send other `session/update` notifications caused by applying the entries before that response, such as a mode change or a notice that a value fell back. It sends them after the response.
+- In v2, a `session/resume` can reach a session that is active on other connections. See [Version differences](#version-differences).
+
+Error handling:
+
+- An entry that does not match the schema (for example, a missing `configId` or a `value` that does not match its `type`) **MUST** fail the request with `-32602` (Invalid params).
+- Two entries with the same `configId` **MUST** fail the request with `-32602`.
+- A well-formed entry whose `configId` is unknown, whose `type` does not match the option's type (for example, a `boolean` entry for a `select` option), or whose value is not allowed at the point it is applied, **MUST** be ignored. Options can change type between `session/options` and session setup, so this is stale state, not a Client bug. The option keeps its default value, or the value the Agent resolved from earlier entries. A value the option lists but the Agent's runtime refuses when it is applied, such as a model the provider no longer serves, is not allowed either. The Agent ignores it and does not fail the request, since the session already exists.
+- The `configOptions` in the response **MUST** contain the values the session actually has after all entries are applied. Clients compare them with what they sent to find entries the Agent ignored.
+
+### Version differences
+
+#### v1
+
+- The capability is `sessionCapabilities.options`, behind an unstable feature.
+- `session/options` returns `configOptions` and `modes`, with the same types and optionality as on `NewSessionResponse`.
+- `configOptions` is accepted on `session/new`, `session/load`, `session/resume`, and, when the Agent supports it, `session/fork`. As on v1 `session/set_config_option`, `type` is optional and defaults to `id`.
+- The existing rules for boolean options still apply. Agents only return `type: "boolean"` options from `session/options`, and Clients only send `type: "boolean"` entries in `configOptions`, when the Client advertises `sessionCapabilities.configOptions.boolean`.
+- Clients **MUST NOT** send `sessionId` on `session/options` unless the Agent supports `session/load` (`loadSession`), `session/resume` (`sessionCapabilities.resume`), or `session/fork` (`sessionCapabilities.fork`).
+- Modes do not get an initial value field. Agents that expose modes as a config option (category `mode`) can receive the mode through `configOptions`.
+- There is no `availableCommands` in the response. v1 session setup responses do not include `availableCommands`. Agents send them in a `session/update` notification after the session exists.
+
+#### v2
+
+- The capability is `capabilities.session.options`. Supplying `{}` means supported. Omission or `null` means unsupported.
+- `configOptions` is accepted on `session/new`, `session/resume`, and, when the Agent supports it, `session/fork`. Entries **MUST** include the `type` discriminator, as on v2 `session/set_config_option`.
+- An entry with a value `type` the Agent does not support **MUST** fail the request with `-32602`, as on v2 `session/set_config_option`.
+- For `session/resume`, the Agent applies the entries before it replays history for `replayFrom` and before it responds.
+- A `session/resume` can reach a session that is active on other connections. The entries change its configuration, so the Agent **SHOULD** send `config_option_update` on those connections, as for any other configuration change. The requesting connection gets the values in the response.
+
+The response includes optional `availableCommands`, with the same type and rules as on `NewSessionResponse`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "availableCommands": [
+      {
+        "type": "command",
+        "name": "review",
+        "description": "Review the current changes"
+      }
+    ]
+  }
+}
+```
+
+`availableCommands` is advisory. Commands can depend on state the Agent only has once the session exists (MCP prompts, project files, skills). Agents **MAY** return a partial list or omit it. Clients **MUST** use the commands from the `session/new` or `session/resume` response and later `available_commands_update` notifications for the session itself.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A Client opens a "new session" screen and calls `session/options` with the workspace the user picked. It shows the model picker and other config options right away, and in v2 the slash commands it knows about. The user picks a model and a reasoning level, types a prompt, and sends it. The Client calls `session/new` with those values and then `session/prompt`. The first turn runs with the settings the user picked, and no session exists until the user commits to one.
+
+A Client can also call `session/options` with a `sessionId` from its session list to show which model a past session uses. The user can change it before resuming, and the Client passes the new value on `session/resume` (or `session/load` in v1).
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Add `SessionOptionsRequest` and `SessionOptionsResponse`, the `session/options` method constant, and the `options` session capability to the v1 and v2 schemas behind an `unstable_session_options` feature.
+2. Add the optional `configOptions` field to the session setup requests for each version behind the same feature, including `session/fork`.
+3. Document the method and the initial values on the `session-setup` and `session-config-options` pages in `docs/protocol/v1` and `docs/protocol/v2`, following the version differences above.
+4. Update the example Agents and Clients.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not return config options from `initialize`?
+
+Config options can depend on the workspace (project settings) and on authentication (which models an account can use). `initialize` runs before either is known, and it has no `cwd`.
+
+### Why not create a session and close it if the user never prompts?
+
+Creating a session has side effects: it can start MCP servers, set up provider state, and add an entry to `session/list`. Clients would need to create and close sessions every time the user opens a "new session" screen or switches workspace.
+
+### Why one capability for both parts?
+
+Clients that query options want to send the user's choices back. A separate capability would let an Agent advertise one part without the other, and Clients would need to handle both combinations.
+
+### Why ignore unavailable values instead of rejecting the request?
+
+A rejected `session/new` request means the Client has to retry without the values, and the user waits for two round trips. Options can change between `session/options` and `session/new` (for example, a model is removed), so a stale value is an expected case. The response tells the Client what the session actually uses.
+
+Malformed values still fail with `-32602`, and so do unsupported value types in v2. Those are Client bugs, not stale state.
+
+### Why doesn't `session/options` take MCP servers?
+
+Config options rarely depend on which MCP servers are connected, and starting servers to find out would make `session/options` slow. Servers can take seconds to start, and some need the user to authenticate. The main thing MCP servers contribute before a session exists is prompts that appear as commands, and v2 already treats `availableCommands` from `session/options` as advisory.
+
+Clients still pass `mcpServers` on session setup requests. If a later use case needs them, an optional `mcpServers` parameter can be added to `session/options` without breaking existing Clients.
+
+### What if the Agent has to start its runtime to know its options?
+
+That is allowed. An Agent that wraps another program may only learn the models, modes, and other options from a running process. It can start one for `session/options` and stop it once it has the answer. The process must not store a session, write to the history of the session named by `sessionId`, or leave anything behind that `session/list` shows.
+
+Such an Agent pays the start cost on every call, and anything the runtime does at startup, such as user-configured startup hooks, runs for each call too. This is why Clients should not poll. The rules constrain what the call leaves behind, not the process. An Agent can keep the started runtime and use it for the next `session/new` with the same parameters, as long as no session exists until then.
+
+### Why no notifications for initial values?
+
+The setup response carries the resulting values, so a `config_option_update` for them repeats it.
+
+For `session/new` and `session/fork`, the Client also learns the session ID from the response. A `session/update` sent before it names a session the Client cannot place, and v2 lets Clients drop such notifications. Anything else the Agent wants to report can follow the response.
+
+A v2 session can be active on several connections. The other connections do not see the response, so they get `config_option_update` like for any other change.
+
+### Why a list instead of a map from `configId` to value?
+
+The order of entries matters because options can depend on each other. JSON object key order is not reliable across implementations.
+
+### Why does v2 return more than v1?
+
+v2 also returns `availableCommands`. v1 session setup responses do not return commands, so `session/options` would be the only place v1 sends commands outside a `session/update` notification. v2 session setup responses already return initial `availableCommands`, so `session/options` can use the same field.
+
+### Why are available commands advisory?
+
+Some Agents only know their commands after the session loads: MCP prompts need connected servers, and skills or project commands can change on disk. Requiring a complete list would force Agents to do most of the session setup work in `session/options`.
+
+### Why no initial values for commands?
+
+Commands are not settings. The Client runs a command by sending it in a prompt after the session exists.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Return options from `initialize`.** See above.
+- **Create sessions eagerly.** See above.
+- **Separate methods for new and resumed sessions.** The parameters and response are the same apart from `sessionId`, so one method with an optional `sessionId` is enough.
+- **Accept initial values without a query method.** Clients would not know which option IDs and values exist, so they could only send values they had seen in an earlier session.
+
+## Revision history
+
+- 2026-11-03: Initial draft
+- 2026-11-10: Accept `configOptions` on `session/fork`. Hold back other `session/update` notifications for initial values until the `session/new` or `session/fork` response. In v2, send `config_option_update` on other connections where a resumed session is active. A value the runtime refuses is ignored. An Agent may start its runtime to answer `session/options`, and Clients should not poll it.

@@ -3,7 +3,7 @@ title: "Session Config Options"
 description: "Flexible configuration selectors for agent sessions"
 ---
 
-Agents can provide an arbitrary list of configuration options for a session, allowing Clients to offer users customizable selectors for things like models, modes, reasoning levels, and more.
+Agents can provide an arbitrary list of configuration options for a session, which Clients show to users as selectors. Options can cover models, model parameters, modes, reasoning levels, and more.
 
 <Info>
   Session Config Options are the preferred way to expose session-level
@@ -12,7 +12,7 @@ Agents can provide an arbitrary list of configuration options for a session, all
   removed in a future version of the protocol.
 </Info>
 
-## Initial State
+## Initial state
 
 During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a list of configuration options and their current values:
 
@@ -61,19 +61,36 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
             "description": "The most powerful model"
           }
         ]
+      },
+      {
+        "id": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-<ResponseField name="configOptions" type="ConfigOption[]">
+<ResponseField name="configOptions" type="SessionConfigOption[]">
   The list of configuration options available for this session. The order of
   this array represents the Agent's preferred priority. Clients **SHOULD**
   respect this ordering when displaying options.
 </ResponseField>
 
-### ConfigOption
+### SessionConfigOption
 
 <ResponseField name="id" type="string" required>
   Unique identifier for this configuration option. Used when setting values.
@@ -87,12 +104,12 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
   Optional description providing more details about what this option controls
 </ResponseField>
 
-<ResponseField name="category" type="ConfigOptionCategory">
+<ResponseField name="category" type="SessionConfigOptionCategory">
   Optional [semantic category](#option-categories) to help Clients provide
   consistent UX.
 </ResponseField>
 
-<ResponseField name="type" type="ConfigOptionType" required>
+<ResponseField name="type" type="string" required>
   The type of input control. `select` is supported by default. `boolean` is only
   supported when the Client advertises `session.configOptions.boolean: {}` in
   `clientCapabilities`.
@@ -103,13 +120,16 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
   ID. For `boolean` options this is a boolean.
 </ResponseField>
 
-<ResponseField name="options" type="ConfigOptionValue[] | ConfigOptionGroup[]">
+<ResponseField
+  name="options"
+  type="SessionConfigSelectOption[] | SessionConfigSelectGroup[]"
+>
   The available values for a `select` option. Required when `type` is `"select"`
   and omitted when `type` is `"boolean"`. This is either a flat array of values
-  or an array of groups; values and groups are not mixed in the same array.
+  or an array of groups. Values and groups are not mixed in the same array.
 </ResponseField>
 
-### ConfigOptionValue
+### SessionConfigSelectOption
 
 <ResponseField name="value" type="string" required>
   The value identifier used when setting this option
@@ -123,7 +143,7 @@ During [Session Setup](/protocol/v1/session-setup) the Agent **MAY** return a li
   Optional description of what this value does
 </ResponseField>
 
-### Grouped Select Options
+### Grouped select options
 
 Select values may be organized into groups:
 
@@ -145,13 +165,13 @@ Select values may be organized into groups:
 }
 ```
 
-Each `ConfigOptionGroup` requires `group` (its unique string identifier),
+Each `SessionConfigSelectGroup` requires `group` (its unique string identifier),
 `name` (its human-readable label), and `options` (an array of
-`ConfigOptionValue` objects). A group may also include `_meta`. Each
-option still requires `value` and `name`; its `description` and `_meta` fields
+`SessionConfigSelectOption` objects). A group may also include `_meta`. Each
+option still requires `value` and `name`. Its `description` and `_meta` fields
 are optional.
 
-### Boolean Config Options
+### Boolean config options
 
 Agents **MAY** include boolean config options only after the Client advertises
 support during initialization:
@@ -188,7 +208,7 @@ Agents **MUST NOT** include `type: "boolean"` options in `configOptions`
 payloads unless the Client advertised support. Agents that need to support
 older Clients should omit the boolean option or provide a `select` fallback.
 
-## Option Categories
+## Option categories
 
 Each config option **MAY** include a `category` field. Categories are semantic metadata intended to help Clients provide consistent UX, such as attaching keyboard shortcuts, choosing icons, or deciding placement.
 
@@ -210,7 +230,7 @@ Clients **SHOULD** render `model_config` options near the `model` selector, such
 
 When multiple options share the same category, Clients **SHOULD** use the array ordering to resolve ties, preferring earlier options in the list for prominent placement or keyboard shortcuts.
 
-## Option Ordering
+## Option ordering
 
 The order of the `configOptions` array is significant. Agents **SHOULD** place higher-priority options first in the list.
 
@@ -220,17 +240,17 @@ Clients **SHOULD**:
 - Use ordering to resolve ties when multiple options share the same category
 - If displaying a limited number of options, prefer those at the beginning of the list
 
-## Default Values and Graceful Degradation
+## Default values and graceful degradation
 
-Agents **MUST** always provide a default value for every configuration option. This ensures the Agent can operate correctly even if:
+Every configuration option's `currentValue` is the value the Agent uses until the Client changes it. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options
 - The Client receives an option type it doesn't recognize
 
-If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent will continue using its default value.
+If a Client receives an option with an unrecognized `type`, it **SHOULD** ignore that option. The Agent keeps using its `currentValue`.
 
-## Setting a Config Option
+## Setting a config option
 
 The current value of a config option can be changed at any point during a session, whether the Agent is idle or generating a response.
 
@@ -292,16 +312,58 @@ The Agent **MUST** respond with the complete list of all configuration options a
       {
         "id": "mode",
         "name": "Session Mode",
+        "description": "Controls how the agent requests permission",
+        "category": "mode",
         "type": "select",
         "currentValue": "code",
-        "options": [...]
+        "options": [
+          {
+            "value": "ask",
+            "name": "Ask",
+            "description": "Request permission before making any changes"
+          },
+          {
+            "value": "code",
+            "name": "Code",
+            "description": "Write and modify code with full tool access"
+          }
+        ]
       },
       {
         "id": "model",
         "name": "Model",
+        "category": "model",
         "type": "select",
         "currentValue": "model-1",
-        "options": [...]
+        "options": [
+          {
+            "value": "model-1",
+            "name": "Model 1",
+            "description": "The fastest model"
+          },
+          {
+            "value": "model-2",
+            "name": "Model 2",
+            "description": "The most powerful model"
+          }
+        ]
+      },
+      {
+        "id": "context_size",
+        "name": "Context Size",
+        "category": "model_config",
+        "type": "select",
+        "currentValue": "200k",
+        "options": [
+          {
+            "value": "200k",
+            "name": "200K"
+          },
+          {
+            "value": "1m",
+            "name": "1M"
+          }
+        ]
       }
     ]
   }
@@ -309,10 +371,9 @@ The Agent **MUST** respond with the complete list of all configuration options a
 ```
 
 <Note>
-  The response always contains the **complete** configuration state. This allows
-  Agents to reflect dependent changes. For example, if changing the model
-  affects available reasoning options, or if an option's available values change
-  based on another selection.
+  The response always contains the **complete** configuration state, so Agents
+  can report dependent changes. For example, changing the model may change the
+  available reasoning options.
 </Note>
 
 ### From the Agent
@@ -331,16 +392,58 @@ The Agent can also change configuration options and notify the Client by sending
         {
           "id": "mode",
           "name": "Session Mode",
+          "description": "Controls how the agent requests permission",
+          "category": "mode",
           "type": "select",
           "currentValue": "code",
-          "options": [...]
+          "options": [
+            {
+              "value": "ask",
+              "name": "Ask",
+              "description": "Request permission before making any changes"
+            },
+            {
+              "value": "code",
+              "name": "Code",
+              "description": "Write and modify code with full tool access"
+            }
+          ]
         },
         {
           "id": "model",
           "name": "Model",
+          "category": "model",
           "type": "select",
           "currentValue": "model-2",
-          "options": [...]
+          "options": [
+            {
+              "value": "model-1",
+              "name": "Model 1",
+              "description": "The fastest model"
+            },
+            {
+              "value": "model-2",
+              "name": "Model 2",
+              "description": "The most powerful model"
+            }
+          ]
+        },
+        {
+          "id": "context_size",
+          "name": "Context Size",
+          "category": "model_config",
+          "type": "select",
+          "currentValue": "200k",
+          "options": [
+            {
+              "value": "200k",
+              "name": "200K"
+            },
+            {
+              "value": "1m",
+              "name": "1M"
+            }
+          ]
         }
       ]
     }
@@ -354,7 +457,7 @@ This notification also contains the complete configuration state. Common reasons
 - Falling back to a different model due to rate limits or errors
 - Adjusting available options based on context discovered during execution
 
-## Relationship to Session Modes
+## Relationship to session modes
 
 Session Config Options supersede the older [Session Modes](/protocol/v1/session-modes) API. However, during the transition period, Agents that provide mode-like configuration **SHOULD** send both:
 

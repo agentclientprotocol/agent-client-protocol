@@ -1,0 +1,151 @@
+---
+title: "Speed config option category"
+---
+
+Author(s): [@benbrandt](https://github.com/benbrandt)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `speed` category to session configuration options. Agents tag their fast mode toggle or speed selector with `"category": "speed"`. Clients use the category to render that option the same way for every Agent. For example, a Client can put it next to the model selector, bind a keyboard shortcut to it, or show an icon while fast mode is on.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Several harnesses offer a faster way to run the same model, usually at a higher price:
+
+| Harness                                                                                                                    | How it is exposed                                                                                        | Shape                                      |
+| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [Claude Code](https://code.claude.com/docs/en/fast-mode)                                                                   | `/fast` toggles fast mode. A `↯` icon shows next to the prompt while it is on.                           | boolean                                    |
+| [Claude API](https://platform.claude.com/docs/en/build-with-claude/fast-mode)                                              | A `speed` request field set to `"fast"`. The response reports `"fast"` or `"standard"` in `usage.speed`. | enum                                       |
+| [Codex](https://learn.chatgpt.com/docs/agent-configuration/speed)                                                          | `/fast` toggles Fast mode. The docs list it under "Speed", next to an Ultrafast mode for some models.    | boolean, with a third speed on some models |
+| [Factory Droid](https://docs.factory.com/changelog/release-notes)                                                          | A single toggle that enables fast-mode model variants (CLI v0.109.1)                                     | boolean                                    |
+| [GitHub Copilot](https://github.blog/changelog/2026-06-29-claude-opus-4-8-fast-mode-is-now-in-preview-for-github-copilot/) | A separate fast mode entry in the model picker                                                           | a `model` value, not a separate option     |
+
+Two ACP adapters already expose fast mode as a session config option. [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) and [`codex-acp`](https://github.com/agentclientprotocol/codex-acp) both send a `boolean` option named "Fast mode" with `"category": "model_config"`. For v1 Clients that don't advertise `session.configOptions.boolean`, both fall back to an on/off `select`.
+
+This works, but a Client can't tell that the two options are the same setting:
+
+- `model_config` tells a Client where to put an option, not what the option does. A fast mode toggle and a context size selector look the same.
+- The option ids differ (`fast` in `claude-agent-acp`, `fast-mode` in `codex-acp`), and ids are Agent-defined, so a Client can't match on them.
+
+A Client that wants a fast mode shortcut or a status icon has to special-case each Agent.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a `speed` variant to `SessionConfigOptionCategory`.
+
+- Agents use `speed` for an option that changes how fast the model responds, such as a fast mode toggle or a speed selector.
+- In a `boolean` `speed` option, `true` is the faster setting.
+- Agents with more than two speeds use a `select`. For example, Codex could list Standard, Fast, and Ultrafast.
+- Agents **SHOULD** list the values of a `select` `speed` option from slowest to fastest.
+- Agents **SHOULD NOT** use `speed` for an option that mainly selects a model, reasoning level, or session mode, even when its values differ in speed. Those use `model`, `thought_level`, or `mode`.
+- Clients **SHOULD** render `speed` options near the `model` selector, as with `model_config`. Clients **MAY** also show the current speed outside the option list, such as an icon while a `boolean` `speed` option is `true`.
+
+A `speed` option can depend on other options, like any config option. For example, `claude-agent-acp` only offers fast mode for models that support it. The Agent reports such changes in the complete `configOptions` list it returns from `session/set_config_option` and sends in `config_option_update`.
+
+### Relationship to `model_config`
+
+`speed` is a more specific kind of `model_config`, in the same way that `thought_level` is. An option has one category, so an Agent that adopts `speed` changes its fast mode option from `model_config` to `speed`. Clients render both categories near the model selector, so the option stays in the same place. Clients that don't recognize `speed` already have to handle unknown categories.
+
+The `model_config` row in the category table currently lists "speed/quality trade-off" as an example. The draft pages drop that example. The stable pages change when `speed` is stabilized.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Users get the same fast mode control, shortcut, and icon for every Agent. An Agent that adds more speeds switches from a `boolean` to a `select` and keeps the category.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### JSON format
+
+A fast mode toggle:
+
+```json
+{
+  "id": "fast",
+  "name": "Fast mode",
+  "description": "Faster responses at a higher price",
+  "category": "speed",
+  "type": "boolean",
+  "currentValue": false
+}
+```
+
+A speed selector:
+
+```json
+{
+  "id": "speed",
+  "name": "Speed",
+  "category": "speed",
+  "type": "select",
+  "currentValue": "standard",
+  "options": [
+    { "value": "standard", "name": "Standard" },
+    { "value": "fast", "name": "Fast" },
+    { "value": "ultrafast", "name": "Ultrafast" }
+  ]
+}
+```
+
+### Schema
+
+- Add `Speed` to `SessionConfigOptionCategory` in v1 and v2 behind the `unstable_speed_config_category` feature. Without the feature, `"speed"` deserializes to `Other("speed")`.
+- Document the category in the draft session config options pages for v1 and v2.
+- No capability negotiation is needed, as with other category values.
+
+### Plan
+
+1. Land the unstable variant and draft docs.
+2. Switch the fast mode option in `claude-agent-acp` and `codex-acp` from `model_config` to `speed`, with the `select` fallback listing off before on. Use the category in at least one Client.
+3. Stabilize after Agents and Clients confirm it works for them.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not keep using `model_config`?
+
+`model_config` covers any model-related parameter, so a Client can't tell what a given option does. Fast mode is common enough across harnesses that Clients want to treat it the same way everywhere. That needs its own category.
+
+### Why `speed` instead of `fast_mode`?
+
+`fast_mode` reads as a boolean and doesn't fit a selector with more than two speeds. `speed` covers both. It is also the name the Claude API uses for the request field and the name Codex uses for the setting.
+
+### Why not `service_tier`?
+
+`service_tier` is the OpenAI API field that Codex's Fast mode sets. It describes billing and capacity, not what the user sees, and it has values that aren't about response speed.
+
+### Why order select values from slowest to fastest?
+
+Clients show the values in the Agent's order, so one order gives users the same list for every Agent. It also tells a Client which end of the list is faster. A Client needs that to draw the values as a scale or to show a fast mode icon for a `select`.
+
+The rule is a **SHOULD**, and categories are for UX only. A Client still has to work when an Agent uses another order.
+
+### Does this change `thought_level`?
+
+No. `thought_level` has the same shape (a few values on a scale) and no ordering rule. It is stable in v1, so a rule for it would be a separate, v2-only change.
+
+### What about v1 Clients without boolean support?
+
+Agents can keep sending an on/off `select` fallback, as `claude-agent-acp` and `codex-acp` do today. With the ordering rule, off comes before on. `codex-acp` already lists them that way, and `claude-agent-acp` lists on first. A Client that knows the `speed` category is new enough to advertise `session.configOptions.boolean`, so it gets the `boolean` form. In v2, `boolean` options need no capability.
+
+### What if turning on fast mode also changes the model?
+
+The option is still a `speed` option, because its purpose is speed. In Claude Code, `/fast` switches to a supported model when the current one doesn't support fast mode. An Agent can do the same and report the new model in the complete `configOptions` list. Or it can only offer the option for models that support it, as `claude-agent-acp` does.
+
+### What about controls that change model and effort together?
+
+Some Agents offer one control that changes the model, the reasoning effort, and more at once. Amp's low/medium/high/ultra setting is an example. Those aren't `speed` options. They use `mode`, `model`, or `thought_level`. Otherwise a Client would show a speed icon for a setting that mainly changes the model.
+
+## Revision history
+
+- 2026-11-13: Initial draft

@@ -44,7 +44,7 @@ The agent can also provide an optional `git_patch` for rendering the changes. Th
 
 ### More flexible permission requests
 
-Permission prompts carry their own required `title` and optional `description`, with an extensible `subject` instead of a hard-wired tool call. This also allows us to provide special permission requests for terminal commands or other objects in the future. And decoupling the `title` and `description` from the tool call's title and content makes it possible to provide more context to the user making the decision without accidentally overriding the tool call itself.
+Permission prompts carry their own required `title` and optional `description`, with an extensible `subject` instead of a hard-wired tool call. This already allows a dedicated `command` subject for terminal commands, and leaves room for other subjects in the future. And decoupling the `title` and `description` from the tool call's title and content makes it possible to provide more context to the user making the decision without accidentally overriding the tool call itself.
 
 ### Forward compatibility by default
 
@@ -67,7 +67,7 @@ A majority of the types haven't changed between versions, but if you maintain an
 ## Where to start
 
 - Read the [v2 protocol docs](/protocol/v2/overview) and the [migration guide](/protocol/v2/migration).
-- SDK authors can generate against the v2 JSON schemas, published in the repository releases as `v2.0.0-alphaX` alongside v1.
+- SDK authors can generate against the v2 JSON schemas, published in the repository releases tagged `schema-v2.0.0-alpha.N` alongside v1.
 - The [v2 RFD collection](/rfds/v2/overview) records the key decisions behind the larger changes.
 
 ## We want your feedback

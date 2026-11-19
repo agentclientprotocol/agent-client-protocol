@@ -8,7 +8,7 @@
 //! - Errors include an `error` object with `code` and `message`
 //! - Notifications never receive responses (success or error)
 //!
-//! See: [Error Handling](https://agentclientprotocol.com/protocol/overview#error-handling)
+//! See: [Error Handling](https://agentclientprotocol.com/protocol/v1/overview#error-handling)
 
 use std::{fmt::Display, str};
 
@@ -127,6 +127,13 @@ impl Error {
         }
     }
 
+    /// The session named by a session-scoped request does not exist or is not active.
+    #[must_use]
+    pub fn session_not_found(session_id: impl Into<super::SessionId>) -> Self {
+        Error::from(ErrorCode::ResourceNotFound)
+            .data(serde_json::json!({ "sessionId": session_id.into() }))
+    }
+
     /// Converts a standard error into an internal JSON-RPC error.
     ///
     /// The error's string representation is included as additional data.
@@ -138,8 +145,9 @@ impl Error {
 
 /// Predefined error codes for common JSON-RPC and ACP-specific errors.
 ///
-/// These codes follow the JSON-RPC 2.0 specification for standard errors
-/// and use the reserved range (-32000 to -32099) for protocol-specific errors.
+/// Standard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC
+/// server-error range (-32000 to -32099), and request cancellation uses -32800 from the
+/// range LSP reserves (-32899 to -32800).
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize, strum::Display)]
 #[cfg_attr(test, derive(strum::EnumIter))]
@@ -147,7 +155,7 @@ impl Error {
 #[cfg_attr(feature = "schemars", schemars(!from, !into))]
 #[non_exhaustive]
 pub enum ErrorCode {
-    // Standard errors
+    // JSON-RPC errors
     /// Invalid JSON was received by the server.
     /// An error occurred on the server while parsing the JSON text.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
@@ -166,10 +174,10 @@ pub enum ErrorCode {
     #[strum(to_string = "Invalid params")]
     InvalidParams, // -32602
     /// Internal JSON-RPC error.
-    /// Reserved for implementation-defined server errors.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Internal error")]
     InternalError, // -32603
+    // Request cancellation (from LSP)
     /// Execution of the method was aborted either due to a cancellation request from the caller or
     /// because of resource constraints or shutdown.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
@@ -181,7 +189,7 @@ pub enum ErrorCode {
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Authentication required")]
     AuthRequired, // -32000
-    /// A given resource, such as a file, was not found.
+    /// A given resource, such as a session or file, was not found.
     #[cfg_attr(feature = "schemars", schemars(transform = error_code_transform))]
     #[strum(to_string = "Resource not found")]
     ResourceNotFound, // -32002

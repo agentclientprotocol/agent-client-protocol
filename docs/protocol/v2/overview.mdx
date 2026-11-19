@@ -9,14 +9,19 @@ The Agent Client Protocol allows [Agents](#agent) and [Clients](#client) to comm
 
 The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification with two types of messages:
 
-- **Methods**: Request-response pairs that expect a result or error
-- **Notifications**: One-way messages that don't expect a response
+- Methods are request-response pairs that expect a result or error.
+- Notifications are one-way messages that don't expect a response.
 
-ACP follows JSON-RPC 2.0 batch behavior. See
-[Transports](/protocol/v2/transports#json-rpc-batch-messages) for batch
-handling requirements.
+Unlike base JSON-RPC, request IDs **MUST** be a string or an integer, never
+`null`. An error response has `id: null` only when the request ID could not be
+determined.
+A receiver rejects a message that has a `method` and an `id` of `null` with `-32600` (Invalid request) and `id: null`. It does not treat the message as a notification.
 
-## Message Flow
+Both sides send requests, and each side chooses IDs for its own requests independently, so the same ID can be in use in both directions. A sender **MUST NOT** reuse an ID while a request with that ID is still awaiting a response.
+
+Unlike base JSON-RPC, ACP does not use batches. See [Transports](/protocol/v2/transports#no-batches).
+
+## Message flow
 
 A typical flow follows this pattern:
 
@@ -24,7 +29,9 @@ A typical flow follows this pattern:
 <Step title="Initialization Phase">
 
 - Client → Agent: `initialize` to establish connection
-- Client → Agent: `auth/login` if required by the Agent
+- Client: completes an advertised authentication flow if required. For example,
+  `auth/login` for an Agent-handled method or launch and reconnect for a
+  terminal method
 
 </Step>
 
@@ -38,9 +45,9 @@ A typical flow follows this pattern:
 <Step title="Prompt Lifecycle">
    - Client → Agent: `session/prompt` to send user message
    - Agent → Client: `session/prompt` response once the prompt is accepted
-   - Agent → Client: `session/update` notifications for accepted messages, state updates, and progress updates
+   - Agent → Client: `session/update` notifications for accepted messages, state updates, progress updates, and user-facing notices
    - Agent → Client: Permission requests as needed
-   - Client → Agent: `session/cancel` to interrupt processing if needed
+   - Client → Agent: `session/cancel` to cancel foreground work if needed
    - Agent → Client: An idle `state_update` with a stop reason when foreground work ends, even if background activity continues
 </Step>
 </Steps>
@@ -49,9 +56,9 @@ A typical flow follows this pattern:
 
 Agents are programs that use generative AI to autonomously modify code. They typically run as subprocesses of the Client.
 
-### Baseline Methods
+### Baseline methods
 
-Some baseline methods belong to optional surfaces. An Agent that returns one or more valid entries in `authMethods` **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method.
+Some baseline methods are optional as a group. An Agent that returns a non-empty `authMethods` list **MUST** implement both `auth/login` and `auth/logout`. If `authMethods` is omitted or empty, Clients **MUST NOT** call either method. The `session/*` methods require `capabilities.session`.
 
 <ResponseField
   name="initialize"
@@ -113,21 +120,56 @@ Some baseline methods belong to optional surfaces. An Agent that returns one or 
   [Close an active session](/protocol/v2/session-setup#closing-active-sessions).
 </ResponseField>
 
+### Optional methods
+
+<ResponseField
+  name="session/set_config_option"
+  post={[<a href="/protocol/v2/schema#session%2Fset_config_option">Schema</a>]}
+>
+  [Change a session configuration
+  option](/protocol/v2/session-config-options#from-the-client) (required when
+  the Agent advertises config options).
+</ResponseField>
+
+<ResponseField
+  name="session/delete"
+  post={[<a href="/protocol/v2/schema#session%2Fdelete">Schema</a>]}
+>
+  [Delete a session](/protocol/v2/session-delete) (requires the `session.delete`
+  capability).
+</ResponseField>
+
+<ResponseField
+  name="tool_call/cancel"
+  post={[<a href="/protocol/v2/schema#tool_call%2Fcancel">Schema</a>]}
+>
+  [Cancel one tool call](/protocol/v2/tool-calls#cancelling-tool-calls)
+  (required when the Agent advertises `capabilities.cancel` on a tool call).
+</ResponseField>
+
+<ResponseField
+  name="terminal/cancel"
+  post={[<a href="/protocol/v2/schema#terminal%2Fcancel">Schema</a>]}
+>
+  [Stop one terminal's process](/protocol/v2/tool-calls#cancelling-terminals)
+  (required when the Agent advertises `capabilities.cancel` on a terminal).
+</ResponseField>
+
 ### Notifications
 
 <ResponseField
   name="session/cancel"
   post={[<a href="/protocol/v2/schema#session%2Fcancel">Schema</a>]}
 >
-  [Cancel ongoing operations](/protocol/v2/prompt-lifecycle#cancellation) (no
-  response expected).
+  [Cancel the session's foreground
+  work](/protocol/v2/prompt-lifecycle#cancellation) (no response expected).
 </ResponseField>
 
 ## Client
 
 Clients provide the interface between users and agents. They are typically code editors (IDEs, text editors) but can also be other UIs for interacting with agents. Clients manage the environment, handle user interactions, and control access to resources.
 
-### Baseline Methods
+### Baseline methods
 
 <ResponseField
   name="session/request_permission"
@@ -137,7 +179,7 @@ Clients provide the interface between users and agents. They are typically code 
   for operations such as tool calls and commands.
 </ResponseField>
 
-### Optional Methods
+### Optional methods
 
 <ResponseField
   name="elicitation/create"
@@ -166,19 +208,67 @@ Clients provide the interface between users and agents. They are typically code 
   updates and chunks](/protocol/v2/content), [tool calls, updates, and content
   chunks](/protocol/v2/tool-calls), [display-only terminal state and output
   chunks](/protocol/v2/tool-calls#display-only-terminals),
-  [plans](/protocol/v2/agent-plan), [available commands
+  [plans](/protocol/v2/agent-plan), [subagent sessions](/protocol/v2/subagents),
+  [available commands
   updates](/protocol/v2/slash-commands#advertising-commands), [config option
   updates](/protocol/v2/session-config-options#from-the-agent), [context
   compactions](/protocol/v2/prompt-lifecycle#session-compaction), and
   [user-facing notices](/protocol/v2/prompt-lifecycle#session-notices).
 </ResponseField>
 
+## Request cancellation
+
+Either side can send [`$/cancel_request`](/protocol/v2/cancellation) to cancel a request it sent (no response expected).
+
+## Retrying requests
+
+When a response is lost, for example because the connection ended, the sender cannot tell whether the request took effect. Each method has one of four retry classes:
+
+| Class       | Meaning                                                                                                                          | Retry rule                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender may send it again as is. The response reports current state.                                 |
+| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client may send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
+| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client may send it again. If the first request also took effect, what it created is left unused.    |
+| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.             |
+
+Requests the Client sends:
+
+| Method                                | Class       | Sending it again with the same parameters                                                                                                                                                                      |
+| ------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize`                          | Not retried | The Client can repeat it before its first other request, and the latest successful one applies. It is not sent again after that. See [Version negotiation](/protocol/v2/initialization#version-negotiation).   |
+| `auth/login`                          | Idempotent  | Leads to the same authenticated state. The Agent may show the user a second login flow.                                                                                                                        |
+| `auth/logout`                         | Idempotent  | Succeeds when the authenticated state has already ended.                                                                                                                                                       |
+| `session/new`                         | Duplicating | Creates a second session. If the first response was lost, the Client never learned that session's ID. The Agent [may discard](/protocol/v2/session-setup#session-lifecycle) a session that was never prompted. |
+| `session/resume`                      | Idempotent  | Synchronizes the session again. The request's MCP servers and workspace roots replace the previous ones, which are the same on a retry.                                                                        |
+| `session/prompt`                      | Keyed       | Without a key, inserts a second user message and may start the work twice. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).                                                           |
+| `session/set_config_option`           | Idempotent  | Sets the same value and returns the complete current options. A retry sent after a later change to the same option overwrites that change, so Clients retry before sending further changes.                    |
+| `session/list`                        | Idempotent  | Read-only.                                                                                                                                                                                                     |
+| `session/close`                       | Idempotent  | Succeeds.                                                                                                                                                                                                      |
+| `session/delete`                      | Idempotent  | Succeeds. A Client treats `-32002` as a successful delete.                                                                                                                                                     |
+| `tool_call/cancel`, `terminal/cancel` | Idempotent  | Has no second effect. Once the tool call is final or the terminal has exited, the retry gets `-32602`, and the `tool_call_update` or `terminal_update` reports what happened.                                  |
+
+Requests the Agent sends:
+
+| Method                       | Class      | Sending it again with the same parameters                                                                                                                                                                                                                               |
+| ---------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session/request_permission` | Idempotent | The Client shows the request again. The response is the user's decision, and the action it allows stays with the Agent. After the connection is lost, the Agent [reestablishes or resolves](/protocol/v2/session-setup#current-state-synchronization) pending requests. |
+| `elicitation/create`         | Idempotent | The same as `session/request_permission`. A URL-mode request carries an `elicitationId` that links the completion notification.                                                                                                                                         |
+
+Notifications:
+
+| Method                 | Class       | Sending it again with the same parameters                                                                                                                                                                        |
+| ---------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session/cancel`       | Not retried | Does nothing on an idle session. A copy that arrives after new work has started cancels that work, so the Client does not send it again later.                                                                   |
+| `$/cancel_request`     | Not retried | Receivers ignore a request ID that is unknown or already answered.                                                                                                                                               |
+| `session/update`       | Not retried | Upserts replace state by entity ID, but chunks append, so a resent chunk duplicates content. A Client that missed updates requests replay with [`session/resume`](/protocol/v2/session-setup#resuming-sessions). |
+| `elicitation/complete` | Not retried | Reports the same state again.                                                                                                                                                                                    |
+
 ## Argument requirements
 
-- All file paths in the protocol **MUST** be absolute.
+- All file paths in the protocol **MUST** be absolute, in the native syntax of the machine the Agent runs on (for example `/home/user/project`, `C:\Users\user\project`, or `\\server\share\project`), and are not URIs.
 - Line numbers are 1-based
 
-## Error Handling
+## Error handling
 
 All methods follow standard JSON-RPC 2.0 [error handling](https://www.jsonrpc.org/specification#error_object):
 
@@ -186,26 +276,32 @@ All methods follow standard JSON-RPC 2.0 [error handling](https://www.jsonrpc.or
 - Errors include an `error` object with `code` and `message`
 - Notifications never receive responses (success or error)
 
+See [Errors](/protocol/v2/error) for the error codes ACP uses and when to use them.
+
 ## Conventions
 
 Unless explicitly defined otherwise in the schema, ACP-defined JSON object property keys use `camelCase`. String values carried by discriminator fields use `snake_case`. The JSON-RPC envelope fields (`jsonrpc`, `id`, `method`, `params`, `result`, and `error`) follow the JSON-RPC 2.0 specification.
+
+For an optional field whose schema allows `null`, omitting it and setting it to `null` are equivalent, unless the field says otherwise. Optional fields whose schema does not allow `null`, such as most arrays and objects, are omitted rather than sent as `null`. Upsert updates are the exception: there an omitted field leaves the stored value unchanged and `null` clears it.
 
 Selected enum-like fields and tagged unions can define custom or future fallbacks. For those fields, `_`-prefixed values are reserved for implementation-specific extensions, while unknown non-underscore values are reserved for future ACP variants.
 
 ## Extensibility
 
-The protocol provides built-in mechanisms for adding custom functionality while maintaining compatibility:
+Implementations can extend the protocol without breaking compatibility:
 
 - Add custom data using `_meta` fields
 - Create custom methods by prefixing their name with underscore (`_`)
 - Advertise custom capabilities during initialization
 
-Learn about [protocol extensibility](/protocol/v2/extensibility) to understand how to use these mechanisms.
+See [Extensibility](/protocol/v2/extensibility) for details.
 
-## Next Steps
+## Next steps
 
-- Learn about [Initialization](/protocol/v2/initialization) to understand version and capability negotiation
-- Understand [Session Setup](/protocol/v2/session-setup) for creating and loading sessions
-- Review the [Prompt Lifecycle](/protocol/v2/prompt-lifecycle)
-- Explore [Extensibility](/protocol/v2/extensibility) to add custom features
-- Check your agent implementation with the [Test Compatibility Kit](/libraries/testing)
+- [Security Considerations](/protocol/v2/security) covers the trust model. Read it before shipping an Agent or Client.
+- [Initialization](/protocol/v2/initialization) covers version and capability negotiation.
+- [Session Setup](/protocol/v2/session-setup) covers creating, resuming, and closing sessions.
+- [Prompt Lifecycle](/protocol/v2/prompt-lifecycle) covers how prompts run and how Agents report progress.
+- [Subagents](/protocol/v2/subagents) covers the child sessions an Agent delegates work to.
+- [Extensibility](/protocol/v2/extensibility) covers custom data, methods, and capabilities.
+- The [Test Compatibility Kit](/libraries/testing) checks an Agent implementation against the protocol.

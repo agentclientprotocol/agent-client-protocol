@@ -19,12 +19,15 @@ mod ext;
 mod mcp;
 mod plan;
 mod protocol_level;
+#[cfg(feature = "unstable_proxy_chains")]
+mod proxy;
+mod rpc;
 #[cfg(feature = "schemars")]
 pub(crate) mod schema_util;
 mod terminal;
 mod tool_call;
 
-pub use crate::rpc::{JsonRpcBatch, JsonRpcMessage, Notification, Request, RequestId};
+pub use crate::rpc::{JsonRpcMessage, Notification};
 pub use agent::*;
 pub use client::*;
 pub use content::*;
@@ -36,12 +39,12 @@ pub use ext::*;
 pub use mcp::*;
 pub use plan::*;
 pub use protocol_level::*;
+#[cfg(feature = "unstable_proxy_chains")]
+pub use proxy::*;
+pub use rpc::*;
 pub use serde_json::value::RawValue;
 pub use terminal::*;
 pub use tool_call::*;
-
-/// JSON-RPC response envelope using this protocol version's error type.
-pub type Response<Result> = crate::rpc::Response<Result, Error>;
 
 use serde::{Deserialize, Serialize};
 use std::{
@@ -52,6 +55,9 @@ use std::{
 };
 
 /// An absolute filesystem path used by the protocol.
+///
+/// Uses the native syntax of the machine the Agent runs on, such as `/home/user/project`,
+/// `C:\Users\user\project`, or `\\server\share\project`. It is not a URI.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, From)]
 #[serde(transparent)]
@@ -129,10 +135,10 @@ impl<T: ?Sized + AsRef<OsStr>> crate::IntoMaybeUndefined<AbsolutePath> for &T {
 }
 /// A unique identifier for a conversation session between a client and agent.
 ///
-/// Sessions maintain their own context, conversation history, and state,
-/// allowing multiple independent interactions with the same agent.
+/// Each session has its own context, conversation history, and state, so one
+/// agent can run several independent sessions.
 ///
-/// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/session-setup#session-id)
+/// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/session-setup#session-id)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]

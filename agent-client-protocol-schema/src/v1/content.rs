@@ -1,13 +1,10 @@
-//! Content blocks for representing various types of information in the Agent Client Protocol.
+//! Content blocks: the text, images, audio, and resources that appear in prompts,
+//! session updates, and tool call results.
 //!
-//! This module defines the core content types used throughout the protocol for communication
-//! between agents and clients. Content blocks provide a flexible, extensible way to represent
-//! text, images, audio, and other resources in prompts, responses, and tool call results.
+//! The content block structure is compatible with the Model Context Protocol (MCP), so agents
+//! can forward MCP tool output without converting it.
 //!
-//! The content block structure is designed to be compatible with the Model Context Protocol (MCP),
-//! allowing seamless integration between ACP and MCP-based tools.
-//!
-//! See: [Content](https://agentclientprotocol.com/protocol/content)
+//! See: [Content](https://agentclientprotocol.com/protocol/v1/content)
 
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
@@ -18,18 +15,15 @@ use super::Meta;
 
 /// Content blocks represent displayable information in the Agent Client Protocol.
 ///
-/// They provide a structured way to handle various types of user-facing content—whether
-/// it's text from language models, images for analysis, or embedded resources for context.
-///
 /// Content blocks appear in:
 /// - User prompts sent via `session/prompt`
 /// - Language model output streamed through `session/update` notifications
 /// - Progress updates and results from tool calls
 ///
-/// This structure is compatible with the Model Context Protocol (MCP), enabling
-/// agents to seamlessly forward content from MCP tool outputs without transformation.
+/// This structure is compatible with the Model Context Protocol (MCP), so agents can
+/// forward content from MCP tool outputs without transformation.
 ///
-/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/content)
+/// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v1/content)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -79,7 +73,7 @@ pub struct TextContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -88,7 +82,7 @@ pub struct TextContent {
 }
 
 impl TextContent {
-    /// Builds [`TextContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`TextContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         Self {
@@ -109,7 +103,7 @@ impl TextContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -149,7 +143,7 @@ pub struct ImageContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -158,7 +152,7 @@ pub struct ImageContent {
 }
 
 impl ImageContent {
-    /// Builds [`ImageContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`ImageContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
         Self {
@@ -188,7 +182,7 @@ impl ImageContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -217,7 +211,7 @@ pub struct AudioContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -226,7 +220,7 @@ pub struct AudioContent {
 }
 
 impl AudioContent {
-    /// Builds [`AudioContent`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`AudioContent`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(data: impl Into<String>, mime_type: impl Into<String>) -> Self {
         Self {
@@ -248,7 +242,7 @@ impl AudioContent {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -274,7 +268,7 @@ pub struct EmbeddedResource {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -283,7 +277,7 @@ pub struct EmbeddedResource {
 }
 
 impl EmbeddedResource {
-    /// Builds [`EmbeddedResource`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`EmbeddedResource`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(resource: EmbeddedResourceResource) -> Self {
         Self {
@@ -304,7 +298,7 @@ impl EmbeddedResource {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -345,7 +339,7 @@ pub struct TextResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -354,7 +348,7 @@ pub struct TextResourceContents {
 }
 
 impl TextResourceContents {
-    /// Builds [`TextResourceContents`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`TextResourceContents`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(text: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -376,7 +370,7 @@ impl TextResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -405,7 +399,7 @@ pub struct BlobResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -414,7 +408,7 @@ pub struct BlobResourceContents {
 }
 
 impl BlobResourceContents {
-    /// Builds [`BlobResourceContents`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`BlobResourceContents`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(blob: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -436,7 +430,7 @@ impl BlobResourceContents {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -485,7 +479,7 @@ pub struct ResourceLink {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -494,7 +488,7 @@ pub struct ResourceLink {
 }
 
 impl ResourceLink {
-    /// Builds [`ResourceLink`] with its required content payload; optional annotations and metadata start unset.
+    /// Builds [`ResourceLink`] with its required content payload. Optional annotations and metadata start unset.
     #[must_use]
     pub fn new(name: impl Into<String>, uri: impl Into<String>) -> Self {
         Self {
@@ -548,7 +542,7 @@ impl ResourceLink {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -583,7 +577,7 @@ pub struct Annotations {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -652,7 +646,7 @@ impl Annotations {
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
     /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();

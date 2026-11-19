@@ -29,12 +29,37 @@
 //!   [`v1::AgentNotification`], and the matching client-side trio used by SDK
 //!   crates to dispatch incoming JSON-RPC messages.
 //!
+//! ## Parsing aggregate enums
+//!
+//! Do not deserialize an aggregate routing enum directly from a wire payload.
+//! Its untagged `Deserialize` implementation selects by payload shape, not the
+//! JSON-RPC method, and can silently select an unrelated variant.
+//! Use the enum's `from_method_and_params` or `from_method_and_result` method
+//! instead. Individual payload structs can be deserialized directly once the
+//! method is known.
+//!
+//! These helpers only select and deserialize payloads. Use the SDK for
+//! connections, request tracking, and JSON-RPC error handling.
+//!
+//! ```
+//! use agent_client_protocol_schema::v1::ClientRequest;
+//! use serde_json::json;
+//!
+//! let params = json!({"cwd": "/work", "mcpServers": []});
+//! let request = ClientRequest::from_method_and_params("session/new", &params)?;
+//! assert!(matches!(request, ClientRequest::NewSessionRequest(_)));
+//! # Ok::<(), agent_client_protocol_schema::MethodDispatchError>(())
+//! ```
+//!
 //! ## Cargo features
 //!
 //! The `schemars` feature implements `schemars::JsonSchema` for the protocol
 //! types. It is enabled by default to preserve the existing default API.
 //! Consumers that only need serialization can disable default features to omit
 //! the dependency and those trait implementations.
+//!
+//! The `uuid` feature adds `IdempotencyKey::generate` to the `v2` module, which
+//! creates a key from a random UUID. It is off by default.
 //!
 //! ## Versioning
 //!
@@ -45,6 +70,8 @@
 //! For the complete protocol specification and documentation, visit
 //! <https://agentclientprotocol.com>.
 
+#[macro_use]
+mod dispatch;
 pub mod rpc;
 mod serde_util;
 pub mod v1;
@@ -52,6 +79,14 @@ pub mod v1;
 pub mod v2;
 mod version;
 
+// The `uuid` feature only adds API to the `v2` module. With `uuid` on and
+// `unstable_protocol_v2` off, the dependency is enabled and nothing uses it.
+// That combination is valid, so reference the crate to say so. Remove this
+// once the `v2` module is no longer behind `unstable_protocol_v2`.
+#[cfg(all(feature = "uuid", not(feature = "unstable_protocol_v2")))]
+use uuid as _;
+
+pub use dispatch::MethodDispatchError;
 pub use serde_util::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 pub use version::*;
 

@@ -60,10 +60,11 @@ This does not require the Agent to retain every inserted user message.
 Live-only or discarded messages may be absent; retained user messages must
 preserve the ID returned on insertion, as defined by the [Prompt Lifecycle RFD](./prompt.mdx#correlation-and-replay).
 
-Agents **SHOULD** preserve agent and thought message IDs across replay when
-possible, but Clients cannot assume stability across reconnects or Agent
-restarts. Full replay should rebuild those message histories rather than merge
-them into existing history solely by ID. The empty-content primer for chunked
+Replay uses the same updates as live delivery. The Agent can send each entity's updates or only its current state, such as a terminal `output` snapshot instead of every chunk.
+
+When the Agent rebuilds an entity from chunks, it **MUST** first send that entity's update with the chunked field emptied, so the chunks do not append to content the Client already holds. This covers message, session-directed message, tool-call content, terminal output, and compaction summary chunks.
+
+Agents **SHOULD** preserve agent and thought message IDs, `toolCallId`, `terminalId`, and `planId` across replay when possible, but Clients cannot assume stability across reconnects or Agent restarts. Full replay should rebuild messages, tool calls, terminals, and plans rather than merge them into existing state solely by ID. The empty-content primer for chunked
 replay initializes or clears content only under the ID used in that replay;
 it does not reconcile messages previously delivered under different IDs.
 
@@ -73,7 +74,7 @@ continuing with later history.
 
 ## Shiny future
 
-> How will things will play out once this feature exists?
+> How will things play out once this feature exists?
 
 Clients always reconnect to existing sessions through `session/resume`. They
 choose replay behavior by setting or omitting `replayFrom`, rather than choosing
@@ -112,5 +113,8 @@ An object leaves room for future cursor forms that need fields. The initial
 
 ## Revision history
 
+- 2026-11-17: Said what a resume without replay leaves out. It reports the current state and background items and does not resynchronize other entities, so a Client that wants them resynchronized requests replay. A requirement to resend work in progress is left until Agents on remote transports need it.
+- 2026-11-17: The rule to clear an entity before replaying its chunks covers every chunked entity. It named only user, agent, and thought messages before. Session-directed messages, tool-call content, terminal output, and compaction summaries are added.
+- 2026-10-28: Replay may send current state instead of every update, and covers tool calls, terminals, and plans, not only messages.
 - 2026-10-13: Replay applies top-level `_meta` as a key-level patch, per [Metadata Patches](./meta-patches.mdx).
 - 2026-07-02: Initial draft.

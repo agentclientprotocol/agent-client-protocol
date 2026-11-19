@@ -85,12 +85,10 @@ pub struct EnumOption {
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -118,12 +116,12 @@ impl EnumOption {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -166,12 +164,6 @@ pub struct StringPropertySchema {
     /// Optional. Omitted and `null` are equivalent and mean there is no maximum length constraint.
     #[serde(default)]
     pub max_length: Option<u32>,
-    /// Pattern the string must match.
-    ///
-    /// Optional. Omitted and `null` are equivalent and mean there is no pattern constraint.
-    #[cfg_attr(feature = "schemars", schemars(extend("format" = "regex")))]
-    #[serde(default)]
-    pub pattern: Option<String>,
     /// String format.
     ///
     /// Optional. Omitted and `null` are equivalent and mean there is no format constraint.
@@ -201,12 +193,10 @@ pub struct StringPropertySchema {
     #[serde(rename = "oneOf")]
     pub one_of: Option<Vec<EnumOption>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -285,13 +275,6 @@ impl StringPropertySchema {
         self
     }
 
-    /// Pattern the string must match.
-    #[must_use]
-    pub fn pattern(mut self, pattern: impl IntoOption<String>) -> Self {
-        self.pattern = pattern.into_option();
-        self
-    }
-
     /// String format.
     #[must_use]
     pub fn format(mut self, format: impl IntoOption<StringFormat>) -> Self {
@@ -321,12 +304,12 @@ impl StringPropertySchema {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -374,12 +357,10 @@ pub struct NumberPropertySchema {
     #[serde(default)]
     pub default: Option<f64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -430,12 +411,12 @@ impl NumberPropertySchema {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -483,12 +464,10 @@ pub struct IntegerPropertySchema {
     #[serde(default)]
     pub default: Option<i64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -539,12 +518,12 @@ impl IntegerPropertySchema {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -582,12 +561,10 @@ pub struct BooleanPropertySchema {
     #[serde(default)]
     pub default: Option<bool>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -624,12 +601,12 @@ impl BooleanPropertySchema {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -649,12 +626,10 @@ pub struct StringMultiSelectItems {
     #[serde(rename = "enum")]
     pub values: Vec<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -670,12 +645,12 @@ impl StringMultiSelectItems {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -695,12 +670,10 @@ pub struct TitledMultiSelectItems {
     #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -719,12 +692,12 @@ impl TitledMultiSelectItems {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -818,6 +791,8 @@ pub enum MultiSelectItems {
     #[serde(untagged)]
     Other(OtherMultiSelectItems),
     /// Titled multi-select items with human-readable labels.
+    ///
+    /// As in MCP, titled items omit `type` and are identified by `anyOf`.
     #[serde(untagged)]
     Titled(TitledMultiSelectItems),
 }
@@ -864,12 +839,10 @@ pub struct MultiSelectPropertySchema {
     #[serde(default)]
     pub default: Option<Vec<String>>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -945,12 +918,12 @@ impl MultiSelectPropertySchema {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -961,8 +934,8 @@ impl MultiSelectPropertySchema {
 /// Property schema for elicitation form fields.
 ///
 /// Each variant corresponds to a JSON Schema `"type"` value.
-/// Single-select enums use the `String` variant with `enum` or `oneOf` set.
-/// Multi-select enums use the `Array` variant.
+/// Single-select enums use `type: "string"` with `enum` or `oneOf` set.
+/// Multi-select enums use `type: "array"`.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -1111,10 +1084,8 @@ fn default_object_type() -> ElicitationSchemaType {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationSchema {
-    /// Type discriminator. Always `"object"`.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(rename = "type", default = "default_object_type")]
+    /// Type discriminator. Always `"object"`. Any other value is rejected.
+    #[serde(rename = "type")]
     pub type_: ElicitationSchemaType,
     /// Optional title for the schema.
     ///
@@ -1124,7 +1095,6 @@ pub struct ElicitationSchema {
     #[serde(default)]
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
-    #[serde(default)]
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
     /// List of required property names.
     ///
@@ -1139,12 +1109,10 @@ pub struct ElicitationSchema {
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1187,12 +1155,12 @@ impl ElicitationSchema {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1299,19 +1267,17 @@ pub struct ElicitationCapabilities {
     pub form: Option<ElicitationFormCapabilities>,
     /// Whether the client supports URL-based elicitation.
     ///
-    /// Optional. Omitted or `null` both mean the client does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
     /// Supplying `{}` means the client supports URL-based elicitation.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub url: Option<ElicitationUrlCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1354,7 +1320,7 @@ impl ElicitationCapabilities {
 
     /// Whether the client supports URL-based elicitation.
     ///
-    /// Omitted or `null` both mean the client does not advertise support.
+    /// Omitted and `null` are equivalent and mean the client does not advertise support.
     /// Supplying `{}` means the client supports URL-based elicitation.
     #[must_use]
     pub fn url(mut self, url: impl IntoOption<ElicitationUrlCapabilities>) -> Self {
@@ -1363,12 +1329,12 @@ impl ElicitationCapabilities {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1387,12 +1353,10 @@ impl ElicitationCapabilities {
 #[non_exhaustive]
 pub struct ElicitationFormCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1401,19 +1365,19 @@ pub struct ElicitationFormCapabilities {
 }
 
 impl ElicitationFormCapabilities {
-    /// Builds an empty [`ElicitationFormCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ElicitationFormCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1432,12 +1396,10 @@ impl ElicitationFormCapabilities {
 #[non_exhaustive]
 pub struct ElicitationUrlCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1446,19 +1408,19 @@ pub struct ElicitationUrlCapabilities {
 }
 
 impl ElicitationUrlCapabilities {
-    /// Builds an empty [`ElicitationUrlCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ElicitationUrlCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1467,8 +1429,11 @@ impl ElicitationUrlCapabilities {
 }
 
 /// The scope of an elicitation request, determining what context it's tied to.
+///
+/// Exactly one of `sessionId` or `requestId` MUST be present.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(transform = elicitation_scope_schema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum ElicitationScope {
@@ -1479,9 +1444,45 @@ pub enum ElicitationScope {
     Request(ElicitationRequestScope),
 }
 
+impl<'de> Deserialize<'de> for ElicitationScope {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let mut fields = serde_json::Map::deserialize(deserializer)?;
+        let scope = match (fields.remove("sessionId"), fields.remove("requestId")) {
+            (Some(session_id), None) => {
+                let mut scope = serde_json::Map::new();
+                scope.insert("sessionId".into(), session_id);
+                if let Some(tool_call_id) = fields.remove("toolCallId") {
+                    scope.insert("toolCallId".into(), tool_call_id);
+                }
+                serde_json::from_value(scope.into()).map(Self::Session)
+            }
+            (None, Some(request_id)) => {
+                serde_json::from_value(serde_json::json!({ "requestId": request_id }))
+                    .map(Self::Request)
+            }
+            _ => {
+                return Err(serde::de::Error::custom(
+                    "elicitation scope must include exactly one of `sessionId` or `requestId`",
+                ));
+            }
+        };
+        scope.map_err(serde::de::Error::custom)
+    }
+}
+
+#[cfg(feature = "schemars")]
+fn elicitation_scope_schema(schema: &mut Schema) {
+    if let Some(variants) = schema.remove("anyOf") {
+        schema.insert("oneOf".into(), variants);
+    }
+}
+
 /// Session-scoped elicitation, optionally tied to a specific tool call.
 ///
-/// When `tool_call_id` is set, the elicitation is tied to a specific tool call.
+/// When `toolCallId` is set, the elicitation is tied to a specific tool call.
 /// This is useful when an agent receives an elicitation from an MCP server
 /// during a tool call and needs to redirect it to the user.
 #[serde_as]
@@ -1504,7 +1505,7 @@ pub struct ElicitationSessionScope {
 }
 
 impl ElicitationSessionScope {
-    /// Builds [`ElicitationSessionScope`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationSessionScope`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1528,12 +1529,12 @@ impl ElicitationSessionScope {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ElicitationRequestScope {
-    /// The request this elicitation is tied to.
+    /// The pending Client-to-Agent request this elicitation is tied to.
     pub request_id: RequestId,
 }
 
 impl ElicitationRequestScope {
-    /// Builds [`ElicitationRequestScope`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationRequestScope`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(request_id: impl Into<RequestId>) -> Self {
         Self {
@@ -1570,7 +1571,7 @@ impl From<ElicitationRequestScope> for ElicitationScope {
 /// Agents SHOULD cancel pending elicitations no longer needed by cancelled work.
 /// The request's scope alone does not establish that dependency.
 ///
-/// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/elicitation)
+/// See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/elicitation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1585,12 +1586,10 @@ pub struct CreateElicitationRequest {
     /// A human-readable message describing what input is needed.
     pub message: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1599,7 +1598,7 @@ pub struct CreateElicitationRequest {
 }
 
 impl CreateElicitationRequest {
-    /// Builds [`CreateElicitationRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`CreateElicitationRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(mode: impl Into<ElicitationMode>, message: impl Into<String>) -> Self {
         Self {
@@ -1616,12 +1615,12 @@ impl CreateElicitationRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1790,7 +1789,7 @@ pub struct ElicitationFormMode {
 }
 
 impl ElicitationFormMode {
-    /// Builds [`ElicitationFormMode`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationFormMode`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(scope: impl Into<ElicitationScope>, requested_schema: ElicitationSchema) -> Self {
         Self {
@@ -1817,7 +1816,7 @@ pub struct ElicitationUrlMode {
 }
 
 impl ElicitationUrlMode {
-    /// Builds [`ElicitationUrlMode`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationUrlMode`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         scope: impl Into<ElicitationScope>,
@@ -1845,12 +1844,10 @@ pub struct CreateElicitationResponse {
     #[serde(flatten)]
     pub action: ElicitationAction,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1859,7 +1856,7 @@ pub struct CreateElicitationResponse {
 }
 
 impl CreateElicitationResponse {
-    /// Builds [`CreateElicitationResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`CreateElicitationResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(action: impl Into<ElicitationAction>) -> Self {
         Self {
@@ -1869,12 +1866,12 @@ impl CreateElicitationResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1902,7 +1899,7 @@ pub enum ElicitationAction {
     ///
     /// Agents that do not understand this action should preserve the raw
     /// payload when storing, replaying, proxying, or forwarding elicitation
-    /// responses. They MUST NOT treat it as a known elicitation action.
+    /// responses, and otherwise MUST handle it as `cancel`.
     #[serde(untagged)]
     Other(OtherElicitationAction),
 }
@@ -2001,12 +1998,14 @@ impl From<OtherElicitationAction> for ElicitationAction {
 #[non_exhaustive]
 pub struct ElicitationAcceptAction {
     /// The user-provided content, if any, as an object matching the requested schema.
+    ///
+    /// Omitted and `null` are equivalent and mean no content is provided.
     #[serde(default)]
     pub content: Option<BTreeMap<String, ElicitationContentValue>>,
 }
 
 impl ElicitationAcceptAction {
-    /// Builds [`ElicitationAcceptAction`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ElicitationAcceptAction`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self { content: None }
@@ -2023,7 +2022,7 @@ impl ElicitationAcceptAction {
     }
 }
 
-/// Allowed wire representations for [`ElicitationContentValue`].
+/// Allowed wire representations for `ElicitationContentValue`.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
@@ -2039,6 +2038,11 @@ pub enum ElicitationContentValue {
     Boolean(bool),
     /// String array value accepted in elicitation response content.
     StringArray(Vec<String>),
+    /// Any other JSON value, such as the value of a custom or future property type.
+    ///
+    /// Preserved as sent. Agents validate it against the requested schema like any
+    /// other value.
+    Other(serde_json::Value),
 }
 
 impl From<String> for ElicitationContentValue {
@@ -2109,12 +2113,10 @@ pub struct CompleteElicitationNotification {
     /// The ID of the elicitation that completed.
     pub elicitation_id: ElicitationId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean no metadata.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2123,7 +2125,7 @@ pub struct CompleteElicitationNotification {
 }
 
 impl CompleteElicitationNotification {
-    /// Builds [`CompleteElicitationNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`CompleteElicitationNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(elicitation_id: impl Into<ElicitationId>) -> Self {
         Self {
@@ -2133,12 +2135,12 @@ impl CompleteElicitationNotification {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2150,6 +2152,39 @@ impl CompleteElicitationNotification {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn content_values_accept_other_shapes() {
+        let wire = json!({
+            "name": "Ada",
+            "age": 36,
+            "ratio": 0.5,
+            "agree": true,
+            "tags": ["a", "b"],
+            "_custom": { "lat": 1.0, "lng": 2.0 },
+            "mixed": ["a", 1]
+        });
+        let content: BTreeMap<String, ElicitationContentValue> =
+            serde_json::from_value(wire.clone()).unwrap();
+        assert_eq!(
+            content["name"],
+            ElicitationContentValue::String("Ada".into())
+        );
+        assert_eq!(content["age"], ElicitationContentValue::Integer(36));
+        assert_eq!(
+            content["tags"],
+            ElicitationContentValue::StringArray(vec!["a".into(), "b".into()])
+        );
+        assert_eq!(
+            content["_custom"],
+            ElicitationContentValue::Other(json!({ "lat": 1.0, "lng": 2.0 }))
+        );
+        assert_eq!(
+            content["mixed"],
+            ElicitationContentValue::Other(json!(["a", 1]))
+        );
+        assert_eq!(serde_json::to_value(&content).unwrap(), wire);
+    }
 
     #[test]
     fn form_mode_request_serialization() {
@@ -2354,6 +2389,38 @@ mod tests {
     }
 
     #[test]
+    fn scope_requires_exactly_one_non_null_id() {
+        let request = |scope: serde_json::Value| {
+            let mut json = json!({
+                "mode": "form",
+                "message": "Enter your name",
+                "requestedSchema": { "type": "object", "properties": {} }
+            });
+            json.as_object_mut()
+                .unwrap()
+                .extend(scope.as_object().unwrap().clone());
+            serde_json::from_value::<CreateElicitationRequest>(json)
+        };
+
+        assert!(request(json!({ "sessionId": "sess_1", "requestId": 42 })).is_err());
+        assert!(request(json!({})).is_err());
+        assert!(request(json!({ "sessionId": 42, "requestId": 42 })).is_err());
+        assert!(request(json!({ "sessionId": 42 })).is_err());
+        assert_eq!(
+            *request(json!({ "sessionId": "sess_1", "toolCallId": "call_1" }))
+                .unwrap()
+                .scope(),
+            ElicitationSessionScope::new("sess_1")
+                .tool_call_id("call_1")
+                .into()
+        );
+        assert_eq!(
+            *request(json!({ "requestId": "req_1" })).unwrap().scope(),
+            ElicitationRequestScope::new("req_1".to_string()).into()
+        );
+    }
+
+    #[test]
     fn request_scope_request_serialization() {
         let req = CreateElicitationRequest::new(
             ElicitationFormMode::new(
@@ -2535,6 +2602,28 @@ mod tests {
 
         let json = serde_json::to_value(&schema).unwrap();
         assert_eq!(json["type"], "object");
+    }
+
+    #[test]
+    fn schema_root_requires_object_type_and_properties() {
+        let schema: ElicitationSchema =
+            serde_json::from_value(json!({ "type": "object", "properties": {} })).unwrap();
+        assert_eq!(schema.type_, ElicitationSchemaType::Object);
+        for missing in [json!({ "properties": {} }), json!({ "type": "object" })] {
+            assert!(
+                serde_json::from_value::<ElicitationSchema>(missing.clone()).is_err(),
+                "{missing}"
+            );
+        }
+        for bad in [json!("array"), json!(42), json!(null)] {
+            assert!(
+                serde_json::from_value::<ElicitationSchema>(
+                    json!({ "type": bad, "properties": {} })
+                )
+                .is_err(),
+                "{bad}"
+            );
+        }
     }
 
     #[test]
@@ -2795,29 +2884,29 @@ mod tests {
     }
 
     #[test]
-    fn schema_string_pattern_serialization() {
-        let schema = ElicitationSchema::new().property(
-            "name",
-            StringPropertySchema::new()
-                .min_length(1)
-                .max_length(64)
-                .pattern("^[a-zA-Z_][a-zA-Z0-9_]*$"),
-            true,
-        );
+    fn schema_string_ignores_pattern() {
+        let schema: ElicitationSchema = serde_json::from_value(json!({
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                }
+            },
+            "required": ["name"]
+        }))
+        .unwrap();
+
+        let ElicitationPropertySchema::String(name) = schema.properties.get("name").unwrap() else {
+            panic!("expected String variant");
+        };
+        assert_eq!(name.min_length, Some(1));
+        assert_eq!(name.max_length, Some(64));
 
         let json = serde_json::to_value(&schema).unwrap();
-        assert_eq!(json["properties"]["name"]["type"], "string");
-        assert_eq!(
-            json["properties"]["name"]["pattern"],
-            "^[a-zA-Z_][a-zA-Z0-9_]*$"
-        );
-
-        let roundtripped: ElicitationSchema = serde_json::from_value(json).unwrap();
-        if let ElicitationPropertySchema::String(s) = roundtripped.properties.get("name").unwrap() {
-            assert_eq!(s.pattern.as_deref(), Some("^[a-zA-Z_][a-zA-Z0-9_]*$"));
-        } else {
-            panic!("expected String variant");
-        }
+        assert_eq!(json["properties"]["name"].get("pattern"), None);
     }
 
     #[test]
@@ -2829,22 +2918,6 @@ mod tests {
         let json = serde_json::to_value(&schema).unwrap();
         assert!(json.get("required").is_none());
         assert_eq!(json["properties"]["name"]["format"], "email");
-    }
-
-    #[test]
-    fn schema_defaults_invalid_object_type() {
-        let schema = serde_json::from_value::<ElicitationSchema>(json!({
-            "type": "array",
-            "properties": {
-                "name": {
-                    "type": "string"
-                }
-            }
-        }))
-        .unwrap();
-
-        assert_eq!(schema.type_, ElicitationSchemaType::Object);
-        assert!(schema.properties.contains_key("name"));
     }
 
     #[test]
@@ -2891,18 +2964,17 @@ mod tests {
     }
 
     #[test]
-    fn response_accept_rejects_nested_object_content() {
-        assert!(
-            serde_json::from_value::<CreateElicitationResponse>(json!({
-                "action": "accept",
-                "content": {
-                    "profile": {
-                        "name": "Alice"
-                    }
+    fn response_accept_preserves_nested_object_content() {
+        let wire = json!({
+            "action": "accept",
+            "content": {
+                "profile": {
+                    "name": "Alice"
                 }
-            }))
-            .is_err()
-        );
+            }
+        });
+        let response: CreateElicitationResponse = serde_json::from_value(wire.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&response).unwrap(), wire);
     }
 
     #[test]

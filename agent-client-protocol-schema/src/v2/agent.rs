@@ -16,10 +16,20 @@ use serde_with::{DefaultOnError, DefaultOnNull, VecSkipError, serde_as, skip_ser
 
 use super::{
     AbsolutePath, AvailableCommand, ClientCapabilities, ContentBlock, Error, ExtNotification,
-    ExtRequest, ExtResponse, MessageId, Meta, SessionId,
+    ExtRequest, ExtResponse, MessageId, Meta, SessionId, TerminalId, ToolCallId,
 };
 use crate::{IntoOption, ProtocolVersion};
 
+#[cfg(all(
+    feature = "unstable_session_fork",
+    feature = "unstable_session_cursors"
+))]
+use super::CursorId;
+#[cfg(feature = "unstable_session_status")]
+use super::StateUpdate;
+
+#[cfg(all(feature = "unstable_auth_status", feature = "schemars"))]
+use super::AUTH_STATUS_UPDATE_NOTIFICATION;
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpNotification};
 
@@ -29,7 +39,7 @@ use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpNotification};
 ///
 /// Sent by the client to establish connection and negotiate capabilities.
 ///
-/// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+/// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -48,10 +58,10 @@ pub struct InitializeRequest {
     #[serde(default)]
     pub capabilities: ClientCapabilities,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -60,7 +70,7 @@ pub struct InitializeRequest {
 }
 
 impl InitializeRequest {
-    /// Builds [`InitializeRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`InitializeRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(protocol_version: ProtocolVersion, info: Implementation) -> Self {
         Self {
@@ -79,10 +89,10 @@ impl InitializeRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -94,7 +104,7 @@ impl InitializeRequest {
 ///
 /// Contains the negotiated protocol version and agent capabilities.
 ///
-/// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+/// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -120,17 +130,17 @@ pub struct InitializeResponse {
     /// Authentication methods supported by the agent.
     ///
     /// Optional. Omitted or empty means the agent does not advertise the
-    /// authentication method surface. Supplying one or more valid methods means
+    /// `auth/login` and `auth/logout` methods. Supplying one or more methods means
     /// the agent MUST support both `auth/login` and `auth/logout`.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub auth_methods: Vec<AuthMethod>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -139,7 +149,7 @@ pub struct InitializeResponse {
 }
 
 impl InitializeResponse {
-    /// Builds [`InitializeResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`InitializeResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(protocol_version: ProtocolVersion, info: Implementation) -> Self {
         Self {
@@ -160,7 +170,7 @@ impl InitializeResponse {
 
     /// Authentication methods supported by the agent.
     ///
-    /// Supplying one or more valid methods means the agent MUST support both
+    /// Supplying one or more methods means the agent MUST support both
     /// `auth/login` and `auth/logout`.
     #[must_use]
     pub fn auth_methods(mut self, auth_methods: Vec<AuthMethod>) -> Self {
@@ -169,10 +179,10 @@ impl InitializeResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -191,12 +201,14 @@ impl InitializeResponse {
 #[non_exhaustive]
 pub struct Implementation {
     /// Intended for programmatic or logical use, but can be used as a display
-    /// name fallback if title isn’t present.
+    /// name fallback if title isn't present.
     pub name: String,
-    /// Intended for UI and end-user contexts — optimized to be human-readable
+    /// Intended for UI and end-user contexts and optimized to be human-readable
     /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
+    ///
+    /// Omitted and `null` are equivalent and mean the `name` is used for display.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -205,10 +217,10 @@ pub struct Implementation {
     /// for debugging or metrics purposes. (e.g. "1.0.0").
     pub version: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -217,7 +229,7 @@ pub struct Implementation {
 }
 
 impl Implementation {
-    /// Builds [`Implementation`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Implementation`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, version: impl Into<String>) -> Self {
         Self {
@@ -228,7 +240,7 @@ impl Implementation {
         }
     }
 
-    /// Intended for UI and end-user contexts — optimized to be human-readable
+    /// Intended for UI and end-user contexts and optimized to be human-readable
     /// and easily understood.
     ///
     /// If not provided, the name should be used for display.
@@ -239,10 +251,10 @@ impl Implementation {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -256,8 +268,8 @@ impl Implementation {
 ///
 /// Specifies which authentication method to use.
 ///
-/// Agents MUST support this method when their `initialize` response advertised
-/// at least one valid authentication method. Clients MUST NOT call this method
+/// Agents MUST support this method when their `initialize` response included
+/// a non-empty `authMethods` list. Clients MUST NOT call this method
 /// when `authMethods` was omitted or empty.
 #[serde_as]
 #[skip_serializing_none]
@@ -271,10 +283,10 @@ pub struct LoginAuthRequest {
     /// Must be one of the methods advertised in the initialize response.
     pub method_id: AuthMethodId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -283,7 +295,7 @@ pub struct LoginAuthRequest {
 }
 
 impl LoginAuthRequest {
-    /// Builds [`LoginAuthRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`LoginAuthRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method_id: impl Into<AuthMethodId>) -> Self {
         Self {
@@ -293,10 +305,10 @@ impl LoginAuthRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -315,10 +327,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct LoginAuthResponse {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -328,17 +340,17 @@ crate::serde_util::default_on_null! {
 }
 
 impl LoginAuthResponse {
-    /// Builds [`LoginAuthResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`LoginAuthResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -353,8 +365,8 @@ crate::serde_util::default_on_null! {
     ///
     /// Terminates the current authenticated session.
     ///
-    /// Agents MUST support this method when their `initialize` response advertised
-    /// at least one valid authentication method. Clients MUST NOT call this method
+    /// Agents MUST support this method when their `initialize` response included
+    /// a non-empty `authMethods` list. Clients MUST NOT call this method
     /// when `authMethods` was omitted or empty.
     #[serde_as]
     #[skip_serializing_none]
@@ -365,10 +377,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct LogoutAuthRequest {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -378,17 +390,17 @@ crate::serde_util::default_on_null! {
 }
 
 impl LogoutAuthRequest {
-    /// Builds [`LogoutAuthRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`LogoutAuthRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -407,10 +419,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct LogoutAuthResponse {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -420,17 +432,427 @@ crate::serde_util::default_on_null! {
 }
 
 impl LogoutAuthResponse {
-    /// Builds [`LogoutAuthResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`LogoutAuthResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Auth status
+
+#[cfg(feature = "unstable_auth_status")]
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Request parameters for the `auth/status` method.
+    ///
+    /// Queries the agent's current authentication state without changing it.
+    ///
+    /// Agents MUST NOT reject it with `auth_required` (`-32000`), since Clients call it to learn
+    /// whether authentication is required.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_STATUS_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct AuthStatusRequest {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusRequest {
+    /// Builds [`AuthStatusRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response to the `auth/status` method.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_STATUS_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthStatusResponse {
+    /// Whether the agent can start sessions without the user signing in first.
+    ///
+    /// Clients use this field to decide whether sign-in is needed. Clients MUST treat
+    /// values they do not recognize as `unknown`.
+    pub state: AuthState,
+    /// The accounts the agent has configured, for display.
+    ///
+    /// Optional. Omitted and empty are equivalent and mean no accounts are reported.
+    /// Agents that hold credentials for several providers or accounts SHOULD list each
+    /// of them and mark the ones in effect with `active`.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub accounts: Vec<AuthAccount>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusResponse {
+    /// Builds [`AuthStatusResponse`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(state: AuthState) -> Self {
+        Self {
+            state,
+            accounts: vec![],
+            meta: None,
+        }
+    }
+
+    /// The accounts the agent has configured, for display.
+    #[must_use]
+    pub fn accounts(mut self, accounts: Vec<AuthAccount>) -> Self {
+        self.accounts = accounts;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Notification sent by the agent when its authentication status changes.
+///
+/// Carries the same fields as the `auth/status` response. Agents that advertise the
+/// `auth.status` capability MAY send it at any time after `initialize`, and SHOULD only
+/// send it when the reported status differs from the last one sent on the connection.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = AUTH_STATUS_UPDATE_NOTIFICATION)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthStatusUpdateNotification {
+    /// Whether the agent can start sessions without the user signing in first.
+    ///
+    /// Clients use this field to decide whether sign-in is needed. Clients MUST treat
+    /// values they do not recognize as `unknown`.
+    pub state: AuthState,
+    /// The accounts the agent has configured, for display.
+    ///
+    /// Optional. Omitted and empty are equivalent and mean no accounts are reported.
+    /// Agents that hold credentials for several providers or accounts SHOULD list each
+    /// of them and mark the ones in effect with `active`.
+    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub accounts: Vec<AuthAccount>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusUpdateNotification {
+    /// Builds [`AuthStatusUpdateNotification`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(state: AuthState) -> Self {
+        Self {
+            state,
+            accounts: vec![],
+            meta: None,
+        }
+    }
+
+    /// The accounts the agent has configured, for display.
+    #[must_use]
+    pub fn accounts(mut self, accounts: Vec<AuthAccount>) -> Self {
+        self.accounts = accounts;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// The agent's overall authentication state.
+#[cfg(feature = "unstable_auth_status")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum AuthState {
+    /// Credentials are configured. This does not guarantee that they are valid.
+    Authenticated,
+    /// The user needs to sign in. This includes credentials that are missing,
+    /// expired, or known to be invalid.
+    Unauthenticated,
+    /// No authentication is needed, for example because the agent uses a local model.
+    NotRequired,
+    /// The agent cannot currently determine the state.
+    Unknown,
+    /// Custom or future authentication state.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// An account or credential the agent has configured, such as a signed-in user
+/// account or an API key.
+///
+/// All fields are display information only. Clients MUST NOT use them as stable
+/// account identifiers, and SHOULD NOT log them or send them elsewhere, such as to
+/// telemetry.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct AuthAccount {
+    /// Human-readable name for the account, suitable for display on its own,
+    /// for example `Claude Max`, `OpenAI API key`, or `Vertex AI`.
+    pub label: String,
+    /// Short text shown with the label, such as the credential source, for example
+    /// `API key helper`. MUST NOT contain credentials.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no description is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Whether the agent currently uses this account by default.
+    ///
+    /// Several accounts MAY be active, for example one per provider.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not indicate whether this account is in effect.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub active: Option<bool>,
+    /// Display name of the user, such as a username or full name.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no name is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Email address of the user.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no email is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub email: Option<String>,
+    /// Display name of the organization, team, or workspace the account is using.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no organization is reported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub organization: Option<String>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthAccount {
+    /// Builds [`AuthAccount`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(label: impl Into<String>) -> Self {
+        Self {
+            label: label.into(),
+            description: None,
+            active: None,
+            name: None,
+            email: None,
+            organization: None,
+            meta: None,
+        }
+    }
+
+    /// Short text shown with the label, such as the credential source.
+    #[must_use]
+    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
+        self.description = description.into_option();
+        self
+    }
+
+    /// Whether the agent currently uses this account by default.
+    #[must_use]
+    pub fn active(mut self, active: impl IntoOption<bool>) -> Self {
+        self.active = active.into_option();
+        self
+    }
+
+    /// Display name of the user, such as a username or full name.
+    #[must_use]
+    pub fn name(mut self, name: impl IntoOption<String>) -> Self {
+        self.name = name.into_option();
+        self
+    }
+
+    /// Email address of the user.
+    #[must_use]
+    pub fn email(mut self, email: impl IntoOption<String>) -> Self {
+        self.email = email.into_option();
+        self
+    }
+
+    /// Display name of the organization, team, or workspace the account is using.
+    #[must_use]
+    pub fn organization(mut self, organization: impl IntoOption<String>) -> Self {
+        self.organization = organization.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Auth status capabilities supported by the agent.
+///
+/// Supplying `{}` means the agent supports the `auth/status` method.
+#[cfg(feature = "unstable_auth_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct AuthStatusCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_auth_status")]
+impl AuthStatusCapabilities {
+    /// Builds an empty [`AuthStatusCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -450,11 +872,24 @@ impl LogoutAuthResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AgentAuthCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports the `auth/status` method.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports the `auth/status` method.
+    #[cfg(feature = "unstable_auth_status")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub status: Option<AuthStatusCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -469,11 +904,23 @@ impl AgentAuthCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports the `auth/status` method.
+    #[cfg(feature = "unstable_auth_status")]
+    #[must_use]
+    pub fn status(mut self, status: impl IntoOption<AuthStatusCapabilities>) -> Self {
+        self.status = status.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -546,26 +993,29 @@ impl AuthMethod {
         }
     }
 
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[must_use]
     pub fn description(&self) -> Option<&str> {
         match self {
             Self::Agent(a) => a.description.as_deref(),
-            Self::Other(a) => a.description.as_deref(),
+            Self::Other(a) => a
+                .fields
+                .get("description")
+                .and_then(serde_json::Value::as_str),
             Self::Terminal(t) => t.description.as_deref(),
         }
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(&self) -> Option<&Meta> {
         match self {
             Self::Agent(a) => a.meta.as_ref(),
-            Self::Other(a) => a.meta.as_ref(),
+            Self::Other(a) => a.fields.get("_meta").and_then(serde_json::Value::as_object),
             Self::Terminal(t) => t.meta.as_ref(),
         }
     }
@@ -592,22 +1042,8 @@ pub struct OtherAuthMethod {
     pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
-    /// Optional description providing more details about this authentication method.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    pub description: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-    /// Additional fields from the unknown authentication method payload.
+    /// The remaining fields of the unknown authentication method payload, preserved verbatim,
+    /// including `description` and `_meta`.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
 }
@@ -624,34 +1060,12 @@ impl OtherAuthMethod {
         fields.remove("type");
         fields.remove("methodId");
         fields.remove("name");
-        fields.remove("description");
-        fields.remove("_meta");
         Self {
             type_: type_.into(),
             method_id: method_id.into(),
             name: name.into(),
-            description: None,
-            meta: None,
             fields,
         }
-    }
-
-    /// Optional description providing more details about this authentication method.
-    #[must_use]
-    pub fn description(mut self, description: impl IntoOption<String>) -> Self {
-        self.description = description.into_option();
-        self
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
     }
 }
 
@@ -667,9 +1081,6 @@ impl<'de> Deserialize<'de> for OtherAuthMethod {
             type_: String,
             method_id: AuthMethodId,
             name: String,
-            description: Option<String>,
-            #[serde(rename = "_meta")]
-            meta: Option<Meta>,
             #[serde(flatten)]
             fields: BTreeMap<String, serde_json::Value>,
         }
@@ -686,8 +1097,6 @@ impl<'de> Deserialize<'de> for OtherAuthMethod {
             type_: raw.type_,
             method_id: raw.method_id,
             name: raw.name,
-            description: raw.description,
-            meta: raw.meta,
             fields: raw.fields,
         })
     }
@@ -716,16 +1125,18 @@ pub struct AuthMethodAgent {
     pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -734,7 +1145,7 @@ pub struct AuthMethodAgent {
 }
 
 impl AuthMethodAgent {
-    /// Builds [`AuthMethodAgent`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthMethodAgent`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method_id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
@@ -745,7 +1156,7 @@ impl AuthMethodAgent {
         }
     }
 
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -753,10 +1164,10 @@ impl AuthMethodAgent {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -769,7 +1180,7 @@ impl AuthMethodAgent {
 /// The client runs the configured agent program as a separate interactive
 /// process for the user to authenticate via a TUI. Agents MUST advertise this
 /// method only when the client enabled its terminal authentication capability.
-/// A zero exit status signals success; any other termination signals failure.
+/// A zero exit status signals success. Any other termination signals failure.
 /// The client MUST NOT pass this method to `auth/login`.
 #[serde_as]
 #[skip_serializing_none]
@@ -782,26 +1193,30 @@ pub struct AuthMethodTerminal {
     pub method_id: AuthMethodId,
     /// Human-readable name of the authentication method.
     pub name: String,
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Additional arguments to append to the configured agent invocation for terminal auth.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
     /// Additional environment variables to set on the configured agent invocation for terminal auth.
     /// Names MUST be unique. These values override same-named variables in the
     /// base launch configuration.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -810,7 +1225,7 @@ pub struct AuthMethodTerminal {
 }
 
 impl AuthMethodTerminal {
-    /// Builds [`AuthMethodTerminal`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`AuthMethodTerminal`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(method_id: impl Into<AuthMethodId>, name: impl Into<String>) -> Self {
         Self {
@@ -839,7 +1254,7 @@ impl AuthMethodTerminal {
         self
     }
 
-    /// Optional description providing more details about this authentication method.
+    /// Optional human-readable description of this authentication method.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -847,10 +1262,10 @@ impl AuthMethodTerminal {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -862,7 +1277,7 @@ impl AuthMethodTerminal {
 
 /// Request parameters for creating a new session.
 ///
-/// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+/// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v2/session-setup#creating-a-session)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -879,29 +1294,48 @@ pub struct NewSessionRequest {
     /// remains the base for relative paths. When omitted or empty, no
     /// additional roots are activated for the new session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP (Model Context Protocol) servers the agent should connect to.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the new session.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the Agent uses its
     /// own default instructions. Clients MUST only send this when the Agent
     /// advertises `session.systemPrompt`.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde(default)]
     pub system_prompt: Option<SystemPrompt>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `session.options`.
+    ///
+    /// The Agent applies the entries in list order, as if the Client had called
+    /// `session/set_config_option` for each entry after the session was set up. Malformed
+    /// entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
+    /// ignore an entry whose `configId` is unknown, whose `type` does not match the option,
+    /// or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
+    #[cfg(feature = "unstable_session_options")]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<InitialSessionConfigOption>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -910,15 +1344,16 @@ pub struct NewSessionRequest {
 }
 
 impl NewSessionRequest {
-    /// Builds [`NewSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`NewSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
-            #[cfg(feature = "unstable_session_system_prompt")]
             system_prompt: None,
+            #[cfg(feature = "unstable_session_options")]
+            config_options: vec![],
             meta: None,
         }
     }
@@ -941,23 +1376,42 @@ impl NewSessionRequest {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the new session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
         self.system_prompt = system_prompt.into_option();
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `session.options`.
+    ///
+    /// The Agent applies the entries in list order, as if the Client had called
+    /// `session/set_config_option` for each entry after the session was set up. Malformed
+    /// entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
+    /// ignore an entry whose `configId` is unknown, whose `type` does not match the option,
+    /// or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
+    #[cfg(feature = "unstable_session_options")]
+    #[must_use]
+    pub fn config_options(mut self, config_options: Vec<InitialSessionConfigOption>) -> Self {
+        self.config_options = config_options;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -971,7 +1425,10 @@ impl NewSessionRequest {
 /// Updates may arrive before or after this response. Clients MUST NOT overwrite
 /// an already-reported state when the response arrives.
 ///
-/// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/session-setup#creating-a-session)
+/// An Agent whose new session is not `idle` MUST send the session's
+/// `state_update` after this response.
+///
+/// See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol/v2/session-setup#creating-a-session)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -985,6 +1442,10 @@ pub struct NewSessionResponse {
     /// Used in all subsequent requests for this conversation.
     pub session_id: SessionId,
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -992,17 +1453,17 @@ pub struct NewSessionResponse {
     /// Initial commands the agent can execute in this session.
     ///
     /// Optional. Omitted or empty means no initial commands are advertised.
-    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
     /// Later `available_commands_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1011,7 +1472,7 @@ pub struct NewSessionResponse {
 }
 
 impl NewSessionResponse {
-    /// Builds [`NewSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`NewSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1023,6 +1484,10 @@ impl NewSessionResponse {
     }
 
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
@@ -1037,10 +1502,10 @@ impl NewSessionResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1071,6 +1536,21 @@ impl NewSessionResponse {
 pub struct ForkSessionRequest {
     /// The ID of the session to fork.
     pub session_id: SessionId,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The session cursor to fork at. The new session's history is the source
+    /// session's history before the cursor.
+    ///
+    /// Optional. Omitted and `null` are equivalent and fork the whole session.
+    /// Clients MUST only send the ID of a cursor that the Agent announced on the
+    /// source session and that currently advertises `capabilities.fork`. The Agent
+    /// rejects any other ID with `-32602`. It does not fall back to forking the
+    /// whole session.
+    #[cfg(feature = "unstable_session_cursors")]
+    #[serde(default)]
+    pub cursor_id: Option<CursorId>,
     /// The working directory for this session. Must be an absolute path.
     pub cwd: AbsolutePath,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -1079,31 +1559,51 @@ pub struct ForkSessionRequest {
     /// this is the complete resulting additional-root list for the forked
     /// session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the forked session.
     ///
-    /// Optional. Omitted and `null` are equivalent; the Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
     /// system prompt it stored with the source session or use its default
     /// instructions. Clients MUST only send this when the Agent advertises
     /// `session.systemPrompt`, and SHOULD send the same value they used for the
     /// source session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde(default)]
     pub system_prompt: Option<SystemPrompt>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the forked session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `session.options`.
+    ///
+    /// The Agent applies the entries in list order on top of the configuration the fork
+    /// starts with, as if the Client had called `session/set_config_option` for each entry
+    /// after the session was set up. Malformed entries and duplicate `configId` values fail
+    /// the request with `-32602`. The Agent MUST ignore an entry whose `configId` is unknown,
+    /// whose `type` does not match the option, or whose value is not allowed when it is
+    /// applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
+    #[cfg(feature = "unstable_session_options")]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<InitialSessionConfigOption>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1113,18 +1613,36 @@ pub struct ForkSessionRequest {
 
 #[cfg(feature = "unstable_session_fork")]
 impl ForkSessionRequest {
-    /// Builds [`ForkSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ForkSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
             session_id: session_id.into(),
+            #[cfg(feature = "unstable_session_cursors")]
+            cursor_id: None,
             cwd: cwd.into(),
             additional_directories: vec![],
             mcp_servers: vec![],
-            #[cfg(feature = "unstable_session_system_prompt")]
             system_prompt: None,
+            #[cfg(feature = "unstable_session_options")]
+            config_options: vec![],
             meta: None,
         }
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// The session cursor to fork at. Omitting it forks the whole session.
+    ///
+    /// Clients MUST only send the ID of a cursor that the Agent announced on the
+    /// source session and that currently advertises `capabilities.fork`.
+    #[cfg(feature = "unstable_session_cursors")]
+    #[must_use]
+    pub fn cursor_id(mut self, cursor_id: impl IntoOption<CursorId>) -> Self {
+        self.cursor_id = cursor_id.into_option();
+        self
     }
 
     /// Additional workspace roots to activate for this session. Each path must be absolute.
@@ -1145,23 +1663,43 @@ impl ForkSessionRequest {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the forked session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
         self.system_prompt = system_prompt.into_option();
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the forked session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `session.options`.
+    ///
+    /// The Agent applies the entries in list order on top of the configuration the fork
+    /// starts with, as if the Client had called `session/set_config_option` for each entry
+    /// after the session was set up. Malformed entries and duplicate `configId` values fail
+    /// the request with `-32602`. The Agent MUST ignore an entry whose `configId` is unknown,
+    /// whose `type` does not match the option, or whose value is not allowed when it is
+    /// applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries,
+    /// and SHOULD NOT send other `session/update` notifications caused by applying them
+    /// before it responds.
+    #[cfg(feature = "unstable_session_options")]
+    #[must_use]
+    pub fn config_options(mut self, config_options: Vec<InitialSessionConfigOption>) -> Self {
+        self.config_options = config_options;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1186,6 +1724,10 @@ pub struct ForkSessionResponse {
     /// Unique identifier for the newly created forked session.
     pub session_id: SessionId,
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1193,17 +1735,17 @@ pub struct ForkSessionResponse {
     /// Initial commands the agent can execute in this session.
     ///
     /// Optional. Omitted or empty means no initial commands are advertised.
-    /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
     /// Later `available_commands_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub available_commands: Vec<AvailableCommand>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1213,7 +1755,7 @@ pub struct ForkSessionResponse {
 
 #[cfg(feature = "unstable_session_fork")]
 impl ForkSessionResponse {
-    /// Builds [`ForkSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ForkSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1225,6 +1767,10 @@ impl ForkSessionResponse {
     }
 
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
@@ -1239,10 +1785,10 @@ impl ForkSessionResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1267,6 +1813,9 @@ pub struct ResumeSessionRequest {
     /// The ID of the session to resume.
     pub session_id: SessionId,
     /// The working directory for this session. Must be an absolute path.
+    ///
+    /// Clients MUST send the session's working directory. Agents MAY reject a different directory
+    /// with `-32602`, and MAY normalize paths when comparing.
     pub cwd: AbsolutePath,
     /// Additional workspace roots to activate for this session. Each path must be absolute.
     ///
@@ -1275,15 +1824,20 @@ pub struct ResumeSessionRequest {
     /// session. It may differ from any previously used or reported list as long as
     /// the request `cwd` matches the session's `cwd`.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// List of MCP servers to connect to for this session.
+    ///
+    /// The complete set of Client-provided servers. Omitted and `[]` mean none. Agents SHOULD
+    /// NOT restore servers from earlier requests.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub mcp_servers: Vec<McpServer>,
     /// Inclusive cursor describing where conversation replay should begin.
     ///
-    /// Optional. Omitted or `null` both mean the Agent should resume without
+    /// Optional. Omitted and `null` are equivalent and mean the Agent should resume without
     /// replaying previous conversation history. Replay cursors are inclusive:
     /// replay includes the position identified by the cursor. Supplying
     /// `{ "type": "start" }` means the Agent should replay all retained
@@ -1294,25 +1848,45 @@ pub struct ResumeSessionRequest {
     /// or resuming without replay.
     #[serde(default)]
     pub replay_from: Option<ReplayFrom>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the resumed session.
     ///
-    /// Optional. Omitted and `null` are equivalent; the Agent may then keep a
+    /// Optional. Omitted and `null` are equivalent. The Agent may then keep a
     /// system prompt it stored with the session or use its default instructions.
     /// Clients MUST only send this when the Agent advertises
     /// `session.systemPrompt`, and SHOULD send the same value they used when the
     /// session was created.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde(default)]
     pub system_prompt: Option<SystemPrompt>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `session.options`.
+    ///
+    /// The Agent applies the entries in list order, as if the Client had called
+    /// `session/set_config_option` for each entry after the session was set up. Malformed
+    /// entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
+    /// ignore an entry whose `configId` is unknown, whose `type` does not match the option,
+    /// or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries
+    /// on the requesting connection. If the session is active on other connections, the
+    /// Agent SHOULD send `config_option_update` on those connections.
+    ///
+    /// The Agent applies the entries before it replays history for `replayFrom` and before
+    /// it responds.
+    #[cfg(feature = "unstable_session_options")]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_options: Vec<InitialSessionConfigOption>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1321,7 +1895,7 @@ pub struct ResumeSessionRequest {
 }
 
 impl ResumeSessionRequest {
-    /// Builds [`ResumeSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ResumeSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
@@ -1330,8 +1904,9 @@ impl ResumeSessionRequest {
             additional_directories: vec![],
             mcp_servers: vec![],
             replay_from: None,
-            #[cfg(feature = "unstable_session_system_prompt")]
             system_prompt: None,
+            #[cfg(feature = "unstable_session_options")]
+            config_options: vec![],
             meta: None,
         }
     }
@@ -1356,7 +1931,7 @@ impl ResumeSessionRequest {
 
     /// Inclusive cursor describing where conversation replay should begin.
     ///
-    /// Omitted or `null` both mean the Agent should resume without replaying
+    /// Omitted and `null` are equivalent and mean the Agent should resume without replaying
     /// previous conversation history. Replay cursors are inclusive: replay
     /// includes the position identified by the cursor. Supplying
     /// `{ "type": "start" }` means the Agent should replay all retained
@@ -1367,23 +1942,42 @@ impl ResumeSessionRequest {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// System-level instructions for the resumed session.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(mut self, system_prompt: impl IntoOption<SystemPrompt>) -> Self {
         self.system_prompt = system_prompt.into_option();
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Initial values for the session's config options.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list. Clients MUST only send
+    /// this when the Agent advertises `session.options`.
+    ///
+    /// The Agent applies the entries in list order, as if the Client had called
+    /// `session/set_config_option` for each entry after the session was set up. Malformed
+    /// entries and duplicate `configId` values fail the request with `-32602`. The Agent MUST
+    /// ignore an entry whose `configId` is unknown, whose `type` does not match the option,
+    /// or whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually
+    /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries
+    /// on the requesting connection. If the session is active on other connections, the
+    /// Agent SHOULD send `config_option_update` on those connections.
+    #[cfg(feature = "unstable_session_options")]
+    #[must_use]
+    pub fn config_options(mut self, config_options: Vec<InitialSessionConfigOption>) -> Self {
+        self.config_options = config_options;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1430,10 +2024,10 @@ impl From<ReplayFromStart> for ReplayFrom {
 #[non_exhaustive]
 pub struct ReplayFromStart {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1449,10 +2043,10 @@ impl ReplayFromStart {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1477,17 +2071,8 @@ pub struct OtherReplayFrom {
     /// future ACP variants.
     #[serde(rename = "type")]
     pub type_: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
-    /// Additional fields from the unknown replay cursor payload.
+    /// The remaining fields of the unknown replay cursor payload, preserved verbatim,
+    /// including `_meta`.
     #[serde(flatten)]
     pub fields: BTreeMap<String, serde_json::Value>,
 }
@@ -1497,23 +2082,10 @@ impl OtherReplayFrom {
     #[must_use]
     pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
         fields.remove("type");
-        fields.remove("_meta");
         Self {
             type_: type_.into(),
-            meta: None,
             fields,
         }
-    }
-
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
-    ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
-    #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
-        self
     }
 }
 
@@ -1536,15 +2108,7 @@ impl<'de> Deserialize<'de> for OtherReplayFrom {
             )));
         }
 
-        let meta = fields
-            .remove("_meta")
-            .and_then(|value| serde_json::from_value(value).ok());
-
-        Ok(Self {
-            type_,
-            meta,
-            fields,
-        })
+        Ok(Self { type_, fields })
     }
 }
 
@@ -1564,7 +2128,7 @@ crate::serde_util::default_on_null! {
     /// replay and before this response, even without replay. The update reports
     /// foreground state after resuming. The response alone does not imply `idle`.
     ///
-    /// See protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/session-setup#current-state-synchronization)
+    /// See protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/v2/session-setup#current-state-synchronization)
     #[serde_as]
     #[skip_serializing_none]
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1574,6 +2138,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct ResumeSessionResponse {
         /// Initial session configuration options.
+        ///
+        /// Optional. Omitted or empty means no config options are advertised.
+        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+        /// Later `config_option_update` notifications replace this list.
         #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1581,17 +2149,17 @@ crate::serde_util::default_on_null! {
         /// Initial commands the agent can execute in this session.
         ///
         /// Optional. Omitted or empty means no initial commands are advertised.
-        /// Senders MUST use an array, not `null`; receivers treat `null` like omission.
+        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
         /// Later `available_commands_update` notifications replace this list.
         #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub available_commands: Vec<AvailableCommand>,
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -1601,13 +2169,17 @@ crate::serde_util::default_on_null! {
 }
 
 impl ResumeSessionResponse {
-    /// Builds [`ResumeSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ResumeSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Initial session configuration options.
+    ///
+    /// Optional. Omitted or empty means no config options are advertised.
+    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
         self.config_options = config_options;
@@ -1622,10 +2194,10 @@ impl ResumeSessionResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1637,17 +2209,21 @@ impl ResumeSessionResponse {
 
 /// Request parameters for closing an active session.
 ///
-/// The agent **must** cancel any ongoing work related to the session (treat it
-/// as if `session/cancel` was called) and then free up any resources associated
-/// with the session.
+/// The Agent MUST cancel any ongoing work related to the session as if `session/cancel`
+/// was called, then free the resources associated with the session. Unlike `session/cancel`,
+/// closing also stops the session's background work. After the close response, the Agent
+/// sends no other messages for the session on that connection.
+///
+/// Closing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD
+/// treat a `-32002` response as a successful close.
 ///
 /// When closing cancels active foreground work, the Agent MUST send the final
 /// updates for that work and the idle `state_update` with `stopReason: "cancelled"`
 /// before responding successfully to `session/close`. Closing an idle session
 /// does not itself require another idle update.
 ///
-/// Closing may also cancel pending `session/prompt` requests, including queued
-/// prompts. If closing prevents a prompt's user message from being inserted, the
+/// Closing also cancels pending `session/prompt` requests whose messages have not
+/// been inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the
 /// Agent MUST answer that request with `-32800` (Request Cancelled). If the message
 /// has already been inserted, the Agent MUST respond successfully with its
 /// `messageId`. Prompt responses need not precede the close response.
@@ -1662,10 +2238,10 @@ pub struct CloseSessionRequest {
     /// The ID of the session to close.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1674,7 +2250,7 @@ pub struct CloseSessionRequest {
 }
 
 impl CloseSessionRequest {
-    /// Builds [`CloseSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`CloseSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1684,10 +2260,10 @@ impl CloseSessionRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1706,10 +2282,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct CloseSessionResponse {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -1719,17 +2295,635 @@ crate::serde_util::default_on_null! {
 }
 
 impl CloseSessionResponse {
-    /// Builds [`CloseSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`CloseSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Session status
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for checking the status of a session.
+///
+/// Only available if the Agent supports the `session.status` capability.
+///
+/// `session/status` MUST NOT have side effects. The Agent does not load, resume, create,
+/// close, or change the session, and does not attach the requesting connection to it.
+/// A session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.
+#[cfg(feature = "unstable_session_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_STATUS_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionStatusRequest {
+    /// The ID of the session to check.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_status")]
+impl SessionStatusRequest {
+    /// Builds [`SessionStatusRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from checking the status of a session.
+///
+/// The result is a snapshot. A session reported `open` may be closed or evicted before
+/// the Client's next request.
+#[cfg(feature = "unstable_session_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_STATUS_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionStatusResponse {
+    /// Whether the Agent has the session in memory.
+    ///
+    /// Required. Clients MUST treat a value they do not recognize as `saved`.
+    pub status: SessionStatus,
+    /// The session's current foreground state, as the same snapshot the Agent sends in
+    /// `state_update` notifications.
+    ///
+    /// Optional. Agents SHOULD include it when `status` is `open`. Omitted, `null`, and
+    /// malformed values mean the Agent is not reporting foreground state, and Clients
+    /// MUST NOT read that as `idle`. This is a snapshot, not a new transition. Clients
+    /// MUST NOT count an `idle` snapshot as a new completion.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub state: Option<StateUpdate>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_status")]
+impl SessionStatusResponse {
+    /// Builds [`SessionStatusResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(status: SessionStatus) -> Self {
+        Self {
+            status,
+            state: None,
+            meta: None,
+        }
+    }
+
+    /// The session's current foreground state, as the same snapshot the Agent sends in
+    /// `state_update` notifications.
+    #[must_use]
+    pub fn state(mut self, state: impl IntoOption<StateUpdate>) -> Self {
+        self.state = state.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Whether the Agent has a session in memory, as reported by `session/status`.
+#[cfg(feature = "unstable_session_status")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SessionStatus {
+    /// The Agent has the session in memory, for any connection.
+    ///
+    /// This does not mean the requesting connection is attached to it. A Client that did
+    /// not create or resume the session on its own connection MUST still call
+    /// `session/resume` before sending `session/prompt` or expecting
+    /// `session/update` notifications.
+    Open,
+    /// The Agent knows the session and can resume it, but does not have it in memory.
+    ///
+    /// The Client can call `session/resume` to start it.
+    Saved,
+    /// Custom or future session status.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants. Clients MUST treat a value they do not recognize as
+    /// `saved`.
+    #[serde(untagged)]
+    Other(String),
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for `session/options`, which returns the config options a session
+/// would start with, without creating or resuming a session.
+///
+/// Only available if the Agent supports the `session.options` capability.
+///
+/// `session/options` MUST NOT create or resume a session, send `session/update`
+/// notifications, add an entry to `session/list`, or change an existing session. Agents
+/// SHOULD NOT connect to MCP servers to answer it. Agents MAY start their runtime to resolve
+/// the options. The rules above still hold for it.
+#[cfg(feature = "unstable_session_options")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_OPTIONS_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SessionOptionsRequest {
+    /// The working directory to resolve options for. Must be an absolute path.
+    pub cwd: AbsolutePath,
+    /// Additional workspace roots to resolve options for. Each path must be absolute.
+    ///
+    /// Optional. Omitted and `null` are equivalent to an empty list.
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub additional_directories: Vec<AbsolutePath>,
+    /// The session to resolve options for.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean a new session. When present,
+    /// the Agent returns what `session/resume` with the same `cwd` and
+    /// `additionalDirectories` would return, with the same `cwd` rules. A session the
+    /// Agent does not know gets `-32002`.
+    #[serde(default)]
+    pub session_id: Option<SessionId>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_options")]
+impl SessionOptionsRequest {
+    /// Builds [`SessionOptionsRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(cwd: impl Into<AbsolutePath>) -> Self {
+        Self {
+            cwd: cwd.into(),
+            additional_directories: vec![],
+            session_id: None,
+            meta: None,
+        }
+    }
+
+    /// Additional workspace roots to resolve options for. Each path must be absolute.
+    #[must_use]
+    pub fn additional_directories<I, P>(mut self, additional_directories: I) -> Self
+    where
+        I: IntoIterator<Item = P>,
+        P: Into<AbsolutePath>,
+    {
+        self.additional_directories = additional_directories.into_iter().map(Into::into).collect();
+        self
+    }
+
+    /// The session to resolve options for. Unset means a new session.
+    #[must_use]
+    pub fn session_id(mut self, session_id: impl IntoOption<SessionId>) -> Self {
+        self.session_id = session_id.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(feature = "unstable_session_options")]
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response from `session/options`.
+    ///
+    /// The result is a snapshot. The options a session actually starts with are the ones in
+    /// the session setup response.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_OPTIONS_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct SessionOptionsResponse {
+        /// The config options the session would start with, with the same rules as on
+        /// `NewSessionResponse`.
+        ///
+        /// Optional. Omitted or empty means no config options are advertised.
+        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub config_options: Vec<SessionConfigOption>,
+        /// Commands the Agent knows the session would have.
+        ///
+        /// Optional. Omitted or empty means no commands are advertised.
+        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+        ///
+        /// Advisory. Agents MAY return a partial list. Clients MUST use the commands from the
+        /// `session/new` or `session/resume` response and later `available_commands_update`
+        /// notifications for the session itself.
+        #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub available_commands: Vec<AvailableCommand>,
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+#[cfg(feature = "unstable_session_options")]
+impl SessionOptionsResponse {
+    /// Builds [`SessionOptionsResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The config options the session would start with.
+    #[must_use]
+    pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
+        self.config_options = config_options;
+        self
+    }
+
+    /// Commands the Agent knows the session would have. Advisory.
+    #[must_use]
+    pub fn available_commands(mut self, available_commands: Vec<AvailableCommand>) -> Self {
+        self.available_commands = available_commands;
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// An initial value for a config option, sent on session setup requests.
+///
+/// Same shape as `session/set_config_option` without `sessionId`. Unlike
+/// `session/set_config_option`, an unknown `configId`, a `type` that does not match the
+/// option, or a value that is not allowed is ignored instead of rejected.
+#[cfg(feature = "unstable_session_options")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct InitialSessionConfigOption {
+    /// The ID of the configuration option to set.
+    pub config_id: SessionConfigId,
+    /// The value to set, including a `type` discriminator and the raw `value`.
+    ///
+    /// Payloads must send `type: "id"` for id-based options. A value `type` the Agent
+    /// does not support fails the request with `-32602`.
+    #[serde(flatten)]
+    pub value: SessionConfigOptionValue,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_options")]
+impl InitialSessionConfigOption {
+    /// Builds [`InitialSessionConfigOption`] with the required fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(
+        config_id: impl Into<SessionConfigId>,
+        value: impl Into<SessionConfigOptionValue>,
+    ) -> Self {
+        Self {
+            config_id: config_id.into(),
+            value: value.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Cancel tool call
+
+/// Request parameters for cancelling one tool call.
+///
+/// Clients MUST NOT send it unless the tool call currently advertises `capabilities.cancel`.
+///
+/// The Agent responds once it has accepted the cancellation. The response does not mean
+/// the work has stopped. The Agent confirms it with a `tool_call_update` to a final
+/// status: normally `cancelled`, or `completed` or `failed` if the work finished first.
+///
+/// The Agent responds with `-32602` if the tool call is unknown, already final, or not
+/// cancellable. Cancelling a tool call does not change the foreground state by itself.
+///
+/// See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TOOL_CALL_CANCEL_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CancelToolCallRequest {
+    /// The ID of the session that owns the tool call.
+    pub session_id: SessionId,
+    /// The ID of the tool call to cancel.
+    pub tool_call_id: ToolCallId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CancelToolCallRequest {
+    /// Builds [`CancelToolCallRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>, tool_call_id: impl Into<ToolCallId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            tool_call_id: tool_call_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+crate::serde_util::default_on_null! {
+    /// Response from cancelling a tool call.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TOOL_CALL_CANCEL_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct CancelToolCallResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+impl CancelToolCallResponse {
+    /// Builds [`CancelToolCallResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Cancel terminal
+
+/// Request parameters for cancelling one terminal.
+///
+/// Clients MUST NOT send it unless the terminal currently advertises `capabilities.cancel`.
+///
+/// The Agent responds once it has accepted the cancellation. The response does not mean
+/// the work has stopped. The Agent confirms it with a `terminal_update` that sets
+/// `exitStatus`. Cancelling stops the process but does not release the terminal, and does
+/// not change the status of a tool call that references it.
+///
+/// The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not
+/// cancellable. Cancelling a terminal does not change the foreground state by itself.
+///
+/// See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TERMINAL_CANCEL_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct CancelTerminalRequest {
+    /// The ID of the session that owns the terminal.
+    pub session_id: SessionId,
+    /// The ID of the terminal to cancel.
+    pub terminal_id: TerminalId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+impl CancelTerminalRequest {
+    /// Builds [`CancelTerminalRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>, terminal_id: impl Into<TerminalId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            terminal_id: terminal_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+crate::serde_util::default_on_null! {
+    /// Response from cancelling a terminal.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = TERMINAL_CANCEL_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct CancelTerminalResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+impl CancelTerminalResponse {
+    /// Builds [`CancelTerminalResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1796,16 +2990,36 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct ListSessionsRequest {
         /// Filter sessions by working directory. Must be an absolute path.
+        ///
+        /// Only sessions whose `cwd` is this same directory match. Subdirectories and
+        /// `additionalDirectories` don't. Agents MAY normalize paths when comparing.
+        ///
+        /// Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
+        /// Clients keep the same value when following `nextCursor`.
         #[serde(default)]
         pub cwd: Option<AbsolutePath>,
         /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
+        ///
+        /// Omitted and `null` are equivalent and mean the first page is requested.
         #[serde(default)]
         pub cursor: Option<SessionListCursor>,
-        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// **UNSTABLE**
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// This capability is not part of the spec yet, and may be removed or changed at any point.
+        ///
+        /// Filter sessions by archive state.
+        ///
+        /// Optional. Omitted and `null` are equivalent and mean `exclude`. Only send this when
+        /// the Agent advertises the `session.archive` capability. The filter combines with `cwd` and
+        /// applies before pagination. Clients keep the same value when following `nextCursor`.
+        #[cfg(feature = "unstable_session_archive")]
+        #[serde(default)]
+        pub archived: Option<SessionArchiveFilter>,
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -1815,7 +3029,7 @@ crate::serde_util::default_on_null! {
 }
 
 impl ListSessionsRequest {
-    /// Builds [`ListSessionsRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ListSessionsRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -1835,11 +3049,23 @@ impl ListSessionsRequest {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Filter sessions by archive state.
+    #[cfg(feature = "unstable_session_archive")]
+    #[must_use]
+    pub fn archived(mut self, archived: impl IntoOption<SessionArchiveFilter>) -> Self {
+        self.archived = archived.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1857,20 +3083,21 @@ impl ListSessionsRequest {
 #[non_exhaustive]
 pub struct ListSessionsResponse {
     /// Array of session information objects.
+    ///
+    /// Agents SHOULD return the sessions with the most recent activity first.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub sessions: Vec<SessionInfo>,
     /// Opaque cursor token. If present, pass this in the next request's cursor parameter
-    /// to fetch the next page. If absent, there are no more results.
-    #[serde_as(deserialize_as = "DefaultOnError")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    /// to fetch the next page. Omitted and `null` are equivalent and mean there are no more
+    /// results. An empty string is a valid cursor, not the end of results.
     #[serde(default)]
     pub next_cursor: Option<SessionListCursor>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1879,7 +3106,7 @@ pub struct ListSessionsResponse {
 }
 
 impl ListSessionsResponse {
-    /// Builds [`ListSessionsResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ListSessionsResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(sessions: Vec<SessionInfo>) -> Self {
         Self {
@@ -1897,10 +3124,10 @@ impl ListSessionsResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1924,10 +3151,10 @@ pub struct DeleteSessionRequest {
     /// The ID of the session to delete.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -1936,7 +3163,7 @@ pub struct DeleteSessionRequest {
 }
 
 impl DeleteSessionRequest {
-    /// Builds [`DeleteSessionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`DeleteSessionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -1946,10 +3173,10 @@ impl DeleteSessionRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -1968,10 +3195,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct DeleteSessionResponse {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -1981,22 +3208,269 @@ crate::serde_util::default_on_null! {
 }
 
 impl DeleteSessionResponse {
-    /// Builds [`DeleteSessionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`DeleteSessionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
         self
     }
+}
+
+// Archive session
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for archiving a session.
+///
+/// Only available if the Agent supports the `session.archive` capability.
+///
+/// Archiving hides the session from default `session/list` results. It keeps the session ID
+/// and saved history. If the session is active, the Agent MUST cancel any ongoing work and
+/// free the session's resources as if `session/close` had been called, then archive it.
+/// Archiving an archived session succeeds. A session that does not exist gets `-32002`.
+///
+#[cfg(feature = "unstable_session_archive")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_ARCHIVE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct ArchiveSessionRequest {
+    /// The ID of the session to archive.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl ArchiveSessionRequest {
+    /// Builds [`ArchiveSessionRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response from archiving a session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_ARCHIVE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct ArchiveSessionResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl ArchiveSessionResponse {
+    /// Builds [`ArchiveSessionResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for unarchiving a session.
+///
+/// Only available if the Agent supports the `session.archive` capability.
+///
+/// Unarchiving returns the session to default `session/list` results with the same ID and
+/// saved history. It never loads or resumes the session. Clients that want to continue an
+/// archived session SHOULD unarchive it before calling `session/resume`.
+/// Unarchiving a session that is not archived succeeds. A session that does not exist
+/// gets `-32002`.
+///
+#[cfg(feature = "unstable_session_archive")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_UNARCHIVE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct UnarchiveSessionRequest {
+    /// The ID of the session to unarchive.
+    pub session_id: SessionId,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl UnarchiveSessionRequest {
+    /// Builds [`UnarchiveSessionRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+crate::serde_util::default_on_null! {
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response from unarchiving a session.
+    #[serde_as]
+    #[skip_serializing_none]
+    #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+    #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_UNARCHIVE_METHOD_NAME)))]
+    #[serde(rename_all = "camelCase")]
+    #[non_exhaustive]
+    pub struct UnarchiveSessionResponse {
+        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
+        ///
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+        #[serde_as(deserialize_as = "DefaultOnError")]
+        #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+        #[serde(default)]
+        #[serde(rename = "_meta")]
+        pub meta: Option<Meta>,
+    }
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl UnarchiveSessionResponse {
+    /// Builds [`UnarchiveSessionResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Which sessions `session/list` returns based on their archive state.
+///
+/// Unknown values are preserved so they can be stored, proxied, or forwarded. An Agent MUST
+/// return `-32602` for a value it does not support rather than treating it as `exclude`.
+#[cfg(feature = "unstable_session_archive")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SessionArchiveFilter {
+    /// Only sessions that are not archived. This is the default.
+    #[default]
+    Exclude,
+    /// Both archived sessions and sessions that are not archived.
+    Include,
+    /// Only archived sessions.
+    Only,
+    /// Custom or future archive filter.
+    ///
+    /// Values beginning with `_` are reserved for implementation-specific
+    /// extensions. Unknown values that do not begin with `_` are reserved for
+    /// future ACP variants.
+    #[serde(untagged)]
+    Other(String),
 }
 
 /// Information about a session returned by session/list
@@ -2016,26 +3490,43 @@ pub struct SessionInfo {
     /// When present, this is the complete ordered additional-root list reported
     /// by the Agent. Omitted and empty values are equivalent: the response
     /// reports no additional roots.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
 
     /// Human-readable title for the session
+    ///
+    /// Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
     /// RFC 3339 timestamp of last activity.
+    ///
+    /// Omitted and `null` are equivalent and mean the last activity time is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
     #[serde(default)]
     pub updated_at: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the session is archived.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the archive state is not reported.
+    /// Agents that advertise the `session.archive` capability MUST include it on every listed session.
+    #[cfg(feature = "unstable_session_archive")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub archived: Option<bool>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2044,7 +3535,7 @@ pub struct SessionInfo {
 }
 
 impl SessionInfo {
-    /// Builds [`SessionInfo`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionInfo`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, cwd: impl Into<AbsolutePath>) -> Self {
         Self {
@@ -2053,6 +3544,8 @@ impl SessionInfo {
             additional_directories: vec![],
             title: None,
             updated_at: None,
+            #[cfg(feature = "unstable_session_archive")]
+            archived: None,
             meta: None,
         }
     }
@@ -2082,11 +3575,146 @@ impl SessionInfo {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the session is archived.
+    #[cfg(feature = "unstable_session_archive")]
+    #[must_use]
+    pub fn archived(mut self, archived: impl IntoOption<bool>) -> Self {
+        self.archived = archived.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+// Set session title
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Request parameters for setting the title of a session.
+///
+/// Only available if the Agent supports the `session.title` capability.
+///
+/// The session does not need to be active on the connection. Any session the Agent would
+/// return from `session/list` can be retitled. A session that does not exist gets `-32002`.
+///
+/// The Agent responds only after it has stored the title. After a successful response, the
+/// Agent SHOULD NOT replace the title with one it generates automatically.
+#[cfg(feature = "unstable_session_set_title")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_TITLE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetSessionTitleRequest {
+    /// The ID of the session to retitle.
+    pub session_id: SessionId,
+    /// The new title for the session.
+    ///
+    /// Required and non-null. Omission and explicit `null` are both invalid. The Agent MAY
+    /// normalize the title before storing it, for example by trimming whitespace or
+    /// truncating it. The Agent rejects a title that fails its validation, including one
+    /// that is empty after normalization, with `-32602`.
+    pub title: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_set_title")]
+impl SetSessionTitleRequest {
+    /// Builds [`SetSessionTitleRequest`] with the required request fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(session_id: impl Into<SessionId>, title: impl Into<String>) -> Self {
+        Self {
+            session_id: session_id.into(),
+            title: title.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Response from setting the title of a session.
+#[cfg(feature = "unstable_session_set_title")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_TITLE_METHOD_NAME)))]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct SetSessionTitleResponse {
+    /// The title the Agent stored.
+    ///
+    /// This differs from the requested title if the Agent normalized it. Clients SHOULD
+    /// display this value rather than the one they sent.
+    pub title: String,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_set_title")]
+impl SetSessionTitleResponse {
+    /// Builds [`SetSessionTitleResponse`] with the required response fields set. Optional fields start unset or empty.
+    #[must_use]
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            meta: None,
+        }
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2157,15 +3785,17 @@ pub struct SessionConfigSelectOption {
     /// Human-readable label for this option value.
     pub name: String,
     /// Optional description for this option value.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2174,7 +3804,7 @@ pub struct SessionConfigSelectOption {
 }
 
 impl SessionConfigSelectOption {
-    /// Builds [`SessionConfigSelectOption`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigSelectOption`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(value: impl Into<SessionConfigValueId>, name: impl Into<String>) -> Self {
         Self {
@@ -2193,10 +3823,10 @@ impl SessionConfigSelectOption {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2212,19 +3842,19 @@ impl SessionConfigSelectOption {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigSelectGroup {
-    /// Unique identifier for this group.
+    /// Identifier for this group. MUST be unique within the option.
     pub group_id: SessionConfigGroupId,
     /// Human-readable label for this group.
     pub name: String,
-    /// The set of option values in this group.
+    /// The set of option values in this group. MUST contain at least one value.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1), extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub options: Vec<SessionConfigSelectOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2233,7 +3863,7 @@ pub struct SessionConfigSelectGroup {
 }
 
 impl SessionConfigSelectGroup {
-    /// Builds [`SessionConfigSelectGroup`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigSelectGroup`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         group_id: impl Into<SessionConfigGroupId>,
@@ -2249,10 +3879,10 @@ impl SessionConfigSelectGroup {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2267,9 +3897,13 @@ impl SessionConfigSelectGroup {
 #[non_exhaustive]
 pub enum SessionConfigSelectOptions {
     /// A flat list of options with no grouping.
-    Ungrouped(Vec<SessionConfigSelectOption>),
+    Ungrouped(
+        #[cfg_attr(feature = "schemars", schemars(length(min = 1)))] Vec<SessionConfigSelectOption>,
+    ),
     /// A list of options grouped under headers.
-    Grouped(Vec<SessionConfigSelectGroup>),
+    Grouped(
+        #[cfg_attr(feature = "schemars", schemars(length(min = 1)))] Vec<SessionConfigSelectGroup>,
+    ),
 }
 
 impl From<Vec<SessionConfigSelectOption>> for SessionConfigSelectOptions {
@@ -2291,14 +3925,15 @@ impl From<Vec<SessionConfigSelectGroup>> for SessionConfigSelectOptions {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigSelect {
-    /// The currently selected value.
+    /// The currently selected value. MUST be one of the `value`s in `options`.
     pub current_value: SessionConfigValueId,
-    /// The set of selectable options.
+    /// The set of selectable options. MUST contain at least one value, and each `value` MUST be
+    /// unique within the option, including across groups.
     pub options: SessionConfigSelectOptions,
 }
 
 impl SessionConfigSelect {
-    /// Builds [`SessionConfigSelect`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigSelect`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         current_value: impl Into<SessionConfigValueId>,
@@ -2323,7 +3958,7 @@ pub struct SessionConfigBoolean {
 }
 
 impl SessionConfigBoolean {
-    /// Builds [`SessionConfigBoolean`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigBoolean`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(current_value: bool) -> Self {
         Self { current_value }
@@ -2350,6 +3985,13 @@ pub enum SessionConfigOptionCategory {
     Model,
     /// Model-related configuration parameter.
     ModelConfig,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Response speed selector, such as a fast mode toggle.
+    #[cfg(feature = "unstable_speed_config_category")]
+    Speed,
     /// Thought/reasoning level selector.
     ThoughtLevel,
     /// Custom or future category.
@@ -2379,7 +4021,7 @@ pub enum SessionConfigKind {
     ///
     /// Clients that do not understand this option type should preserve the raw
     /// payload when storing, replaying, proxying, or forwarding configuration
-    /// data, and otherwise ignore the option or display it generically.
+    /// data, and otherwise ignore the option. The Agent keeps using its `currentValue`.
     #[serde(untagged)]
     Other(OtherSessionConfigKind),
 }
@@ -2457,16 +4099,20 @@ fn other_session_config_kind_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigOption {
-    /// Unique identifier for the configuration option.
+    /// Identifier for the configuration option. MUST be unique within `configOptions`.
     pub config_id: SessionConfigId,
     /// Human-readable label for the option.
     pub name: String,
     /// Optional description for the Client to display to the user.
+    ///
+    /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
     /// Optional semantic category for this option (UX only).
+    ///
+    /// Omitted and `null` are equivalent and mean no category is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2475,10 +4121,10 @@ pub struct SessionConfigOption {
     #[serde(flatten)]
     pub kind: SessionConfigKind,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2487,7 +4133,7 @@ pub struct SessionConfigOption {
 }
 
 impl SessionConfigOption {
-    /// Builds [`SessionConfigOption`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SessionConfigOption`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         config_id: impl Into<SessionConfigId>,
@@ -2548,10 +4194,10 @@ impl SessionConfigOption {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2572,7 +4218,7 @@ impl SessionConfigOption {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum SessionConfigOptionValue {
-    /// A [`SessionConfigValueId`] string value (`type: "id"`).
+    /// A `SessionConfigValueId` string value (`type: "id"`).
     Id {
         /// The value ID.
         value: SessionConfigValueId,
@@ -2587,6 +4233,9 @@ pub enum SessionConfigOptionValue {
     /// Values beginning with `_` are reserved for implementation-specific
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
+    ///
+    /// Agents MUST reject a `session/set_config_option` request with a value type
+    /// they do not support with `-32602`.
     #[serde(untagged)]
     Other(OtherSessionConfigOptionValue),
 }
@@ -2769,6 +4418,12 @@ impl From<&str> for SessionConfigOptionValue {
 }
 
 /// Request parameters for setting a session configuration option.
+///
+/// Agents MUST support this method for any session where they advertise config options.
+/// Agents MUST reject an unknown `configId` or invalid value with `-32602` and leave the
+/// configuration unchanged.
+///
+/// See protocol docs: [Session Config Options](https://agentclientprotocol.com/protocol/v2/session-config-options#setting-a-config-option)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2787,10 +4442,10 @@ pub struct SetSessionConfigOptionRequest {
     #[serde(flatten)]
     pub value: SessionConfigOptionValue,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2799,7 +4454,7 @@ pub struct SetSessionConfigOptionRequest {
 }
 
 impl SetSessionConfigOptionRequest {
-    /// Builds [`SetSessionConfigOptionRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`SetSessionConfigOptionRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         session_id: impl Into<SessionId>,
@@ -2815,10 +4470,10 @@ impl SetSessionConfigOptionRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2836,14 +4491,14 @@ impl SetSessionConfigOptionRequest {
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {
     /// The full set of configuration options and their current values.
-    #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
+    #[serde_as(deserialize_as = "VecSkipError<_>")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub config_options: Vec<SessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -2852,7 +4507,7 @@ pub struct SetSessionConfigOptionResponse {
 }
 
 impl SetSessionConfigOptionResponse {
-    /// Builds [`SetSessionConfigOptionResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`SetSessionConfigOptionResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(config_options: Vec<SessionConfigOption>) -> Self {
         Self {
@@ -2862,10 +4517,10 @@ impl SetSessionConfigOptionResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -2880,7 +4535,7 @@ impl SetSessionConfigOptionResponse {
 /// MCP servers provide tools and context that the agent can use when
 /// processing prompts.
 ///
-/// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/session-setup#mcp-servers)
+/// See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/v2/session-setup#mcp-servers)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -2912,7 +4567,8 @@ pub enum McpServer {
     ///
     /// Receivers that do not understand this transport should preserve the raw
     /// payload when storing, replaying, proxying, or forwarding session setup
-    /// data, and otherwise ignore it or reject the server configuration.
+    /// data. Agents MUST reject a request with a transport they do not support
+    /// with `-32602`.
     #[serde(untagged)]
     Other(OtherMcpServer),
 }
@@ -3008,15 +4664,17 @@ pub struct McpServerHttp {
     /// URL to the MCP server.
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub url: String,
-    /// HTTP headers to set when making requests to the MCP server.
+    /// HTTP headers to set when making requests to the MCP server. Headers the MCP transport
+    /// defines are owned by the transport, and Agents use the transport's values for them.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub headers: Vec<HttpHeader>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3025,7 +4683,7 @@ pub struct McpServerHttp {
 }
 
 impl McpServerHttp {
-    /// Builds [`McpServerHttp`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`McpServerHttp`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, url: impl Into<String>) -> Self {
         Self {
@@ -3036,7 +4694,8 @@ impl McpServerHttp {
         }
     }
 
-    /// HTTP headers to set when making requests to the MCP server.
+    /// HTTP headers to set when making requests to the MCP server. Headers the MCP transport
+    /// defines are owned by the transport, and Agents use the transport's values for them.
     #[must_use]
     pub fn headers(mut self, headers: Vec<HttpHeader>) -> Self {
         self.headers = headers;
@@ -3044,10 +4703,10 @@ impl McpServerHttp {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3104,10 +4763,10 @@ pub struct McpServerAcp {
     /// on the same ACP connection.
     pub server_id: McpServerAcpId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3117,7 +4776,7 @@ pub struct McpServerAcp {
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 impl McpServerAcp {
-    /// Builds [`McpServerAcp`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`McpServerAcp`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, server_id: impl Into<McpServerAcpId>) -> Self {
         Self {
@@ -3128,10 +4787,10 @@ impl McpServerAcp {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3149,21 +4808,26 @@ impl McpServerAcp {
 pub struct McpServerStdio {
     /// Human-readable name identifying this MCP server.
     pub name: String,
-    /// Absolute path to the MCP server executable.
+    /// Path to the MCP server executable. Must be an absolute path.
+    ///
+    /// Agents reject a request with a relative `command` with `-32602`.
     pub command: AbsolutePath,
     /// Command-line arguments to pass to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub args: Vec<String>,
-    /// Environment variables to set when launching the MCP server.
+    /// Environment variables to set when launching the MCP server. Names SHOULD be unique.
+    /// Agents MAY reject duplicates with `-32602`, and otherwise the last entry wins.
     #[serde_as(deserialize_as = "DefaultOnNull")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub env: Vec<EnvVariable>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3172,7 +4836,7 @@ pub struct McpServerStdio {
 }
 
 impl McpServerStdio {
-    /// Builds [`McpServerStdio`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`McpServerStdio`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, command: impl Into<AbsolutePath>) -> Self {
         Self {
@@ -3191,7 +4855,8 @@ impl McpServerStdio {
         self
     }
 
-    /// Environment variables to set when launching the MCP server.
+    /// Environment variables to set when launching the MCP server. Names SHOULD be unique.
+    /// Agents MAY reject duplicates with `-32602`, and otherwise the last entry wins.
     #[must_use]
     pub fn env(mut self, env: Vec<EnvVariable>) -> Self {
         self.env = env;
@@ -3199,10 +4864,10 @@ impl McpServerStdio {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3223,10 +4888,10 @@ pub struct EnvVariable {
     /// The value to set for the environment variable.
     pub value: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3235,7 +4900,7 @@ pub struct EnvVariable {
 }
 
 impl EnvVariable {
-    /// Builds [`EnvVariable`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`EnvVariable`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
@@ -3246,10 +4911,10 @@ impl EnvVariable {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3270,10 +4935,10 @@ pub struct HttpHeader {
     /// The value to set for the HTTP header.
     pub value: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3282,7 +4947,7 @@ pub struct HttpHeader {
 }
 
 impl HttpHeader {
-    /// Builds [`HttpHeader`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`HttpHeader`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(name: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
@@ -3293,10 +4958,10 @@ impl HttpHeader {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3306,17 +4971,12 @@ impl HttpHeader {
 
 // System prompt
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Client-provided system-level instructions for a session.
 ///
 /// Clients MUST only send this when the Agent advertises
 /// `session.systemPrompt`. Agents that cannot apply it, for example because of
 /// an unadvertised mode or an unsupported content block type, MUST return an
-/// error instead of creating, resuming, or forking the session.
-#[cfg(feature = "unstable_session_system_prompt")]
+/// error instead of creating or resuming the session.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3326,24 +4986,24 @@ impl HttpHeader {
 pub struct SystemPrompt {
     /// How the Agent combines `content` with its own instructions.
     ///
-    /// Required on the wire, so every request states its mode. In Rust,
-    /// [`SystemPrompt::new`] starts it as [`SystemPromptMode::Append`]. Unknown
-    /// values parse as [`SystemPromptMode::Other`]; Agents MUST return an error
-    /// for modes they do not support.
+    /// Required. Agents MUST return an error for a mode they do not support rather than
+    /// treating it as `append` or `override`.
     pub mode: SystemPromptMode,
     /// The system prompt content.
     ///
-    /// Agents advertising the capability MUST accept [`ContentBlock::Text`].
+    /// Agents advertising the capability MUST accept `text` content blocks.
     /// Clients MUST NOT send other content block types until a future
     /// capability allows them, and Agents MUST return an error for content
-    /// blocks they do not support, including unknown types preserved as
-    /// [`ContentBlock::Other`].
+    /// blocks they do not support, including unknown types.
+    ///
+    /// Clients MUST NOT send an empty array. Agents MAY reject one with
+    /// `-32602` without creating or resuming the session.
     pub content: Vec<ContentBlock>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3351,11 +5011,10 @@ pub struct SystemPrompt {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SystemPrompt {
-    /// Builds [`SystemPrompt`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`SystemPrompt`] with the required fields set. Optional fields start unset or empty.
     ///
-    /// `mode` starts as [`SystemPromptMode::Append`]; use [`SystemPrompt::mode`]
+    /// `mode` starts as [`SystemPromptMode::Append`]. Use [`SystemPrompt::mode`]
     /// to request another mode.
     #[must_use]
     pub fn new(content: Vec<ContentBlock>) -> Self {
@@ -3374,10 +5033,10 @@ impl SystemPrompt {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3385,16 +5044,11 @@ impl SystemPrompt {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// How the Agent combines a client-provided system prompt with its own instructions.
 ///
-/// Unknown modes parse as [`SystemPromptMode::Other`] so they can be stored,
+/// Unknown modes are preserved so they can be stored,
 /// proxied, or forwarded. An Agent MUST return an error for a mode it does not
 /// support rather than treating it as `append` or `override`.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -3428,11 +5082,133 @@ pub enum SystemPromptMode {
 
 // Prompt
 
+/// A key the Client generates to identify one `session/prompt` submission across attempts.
+///
+/// The key is an opaque, case-sensitive string of 1 to 255 characters. It is scoped to the
+/// session named by the request's `sessionId`.
+///
+/// See protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#retrying-a-prompt)
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq, Hash, Display)]
+#[serde(transparent)]
+pub struct IdempotencyKey(
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1, max = 255)))] Arc<str>,
+);
+
+impl IdempotencyKey {
+    /// The maximum length of a key, in characters.
+    pub const MAX_LENGTH: usize = 255;
+
+    /// Wraps a string as a typed [`IdempotencyKey`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InvalidIdempotencyKey`] if the key is empty or longer than
+    /// [`Self::MAX_LENGTH`] characters.
+    pub fn new(key: impl Into<Arc<str>>) -> Result<Self, InvalidIdempotencyKey> {
+        let key = key.into();
+        if key.is_empty() {
+            return Err(InvalidIdempotencyKey::Empty);
+        }
+        // The limit counts characters, as JSON Schema `maxLength` does, not bytes.
+        if key.chars().nth(Self::MAX_LENGTH).is_some() {
+            return Err(InvalidIdempotencyKey::TooLong);
+        }
+        Ok(Self(key))
+    }
+
+    /// Generates a key from a random version 4 UUID ([RFC 9562]).
+    ///
+    /// Generate one key per submission, when the user submits the input, and store it
+    /// with the pending input. Every attempt for that submission sends the same key.
+    ///
+    /// [RFC 9562]: https://www.rfc-editor.org/rfc/rfc9562
+    #[cfg(feature = "uuid")]
+    #[must_use]
+    pub fn generate() -> Self {
+        uuid::Uuid::new_v4().into()
+    }
+
+    /// Returns the key as a string slice.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for IdempotencyKey {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+#[cfg(feature = "uuid")]
+impl From<uuid::Uuid> for IdempotencyKey {
+    /// Uses the UUID's hyphenated lowercase form. It is 36 characters, so it is always a
+    /// valid key.
+    fn from(uuid: uuid::Uuid) -> Self {
+        Self(uuid.to_string().into())
+    }
+}
+
+impl TryFrom<String> for IdempotencyKey {
+    type Error = InvalidIdempotencyKey;
+
+    fn try_from(key: String) -> Result<Self, Self::Error> {
+        Self::new(key)
+    }
+}
+
+impl TryFrom<&str> for IdempotencyKey {
+    type Error = InvalidIdempotencyKey;
+
+    fn try_from(key: &str) -> Result<Self, Self::Error> {
+        Self::new(key)
+    }
+}
+
+impl std::str::FromStr for IdempotencyKey {
+    type Err = InvalidIdempotencyKey;
+
+    fn from_str(key: &str) -> Result<Self, Self::Err> {
+        Self::new(key)
+    }
+}
+
+// Deserialization validates the key, so a malformed value fails the request
+// instead of being treated as omitted.
+impl<'de> Deserialize<'de> for IdempotencyKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let key = Arc::<str>::deserialize(deserializer)?;
+        Self::new(key).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Error returned when a string is not a valid [`IdempotencyKey`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[non_exhaustive]
+pub enum InvalidIdempotencyKey {
+    /// The key is an empty string.
+    #[display("idempotency key must not be empty")]
+    Empty,
+    /// The key is longer than [`IdempotencyKey::MAX_LENGTH`] characters.
+    #[display(
+        "idempotency key must be at most {} characters",
+        IdempotencyKey::MAX_LENGTH
+    )]
+    TooLong,
+}
+
+impl std::error::Error for InvalidIdempotencyKey {}
+
 /// Request parameters for sending a user prompt to the agent.
 ///
 /// Contains the user's message and any additional context.
 ///
-/// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/prompt-lifecycle#1-user-message)
+/// See protocol docs: [User Message](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#1-user-message)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3445,23 +5221,45 @@ pub struct PromptRequest {
     pub session_id: SessionId,
     /// The blocks of content that compose the user's message.
     ///
-    /// As a baseline, the Agent MUST support [`ContentBlock::Text`] and [`ContentBlock::ResourceLink`],
-    /// while other variants are optionally enabled via [`PromptCapabilities`].
+    /// As a baseline, the Agent MUST support `text` and `resource_link` content blocks,
+    /// while other variants are optionally enabled via `PromptCapabilities`.
     ///
-    /// The Client MUST adapt its interface according to [`PromptCapabilities`].
+    /// The Client MUST adapt its interface according to `PromptCapabilities`.
     ///
     /// The client MAY include referenced pieces of context as either
-    /// [`ContentBlock::Resource`] or [`ContentBlock::ResourceLink`].
+    /// `resource` or `resource_link` content blocks.
     ///
-    /// When available, [`ContentBlock::Resource`] is preferred
+    /// When available, `resource` is preferred
     /// as it avoids extra round-trips and allows the message to include
     /// pieces of context from sources the agent may not have access to.
-    pub prompt: Vec<ContentBlock>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// Clients MUST NOT send an empty array. Agents MAY reject one with `-32602` without
+    /// inserting it.
+    #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
+    pub prompt: Vec<ContentBlock>,
+    /// Identifies this submission, so the Client can send the request again without the
+    /// user message being inserted twice.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean no key. The Agent then handles
+    /// the prompt without duplicate detection.
+    ///
+    /// The Client generates the key and sends the same key on every attempt for the same
+    /// submission. The Agent inserts at most one user message for a key in a session, and
+    /// answers a retry with the `messageId` of the message it already inserted. Agents that
+    /// advertise `capabilities.session` MUST support the key.
+    ///
+    /// When present, the value is an opaque, case-sensitive string of 1 to 255 characters.
+    /// Agents MUST reject any other value with `-32602` (Invalid params) and MUST NOT treat
+    /// it as omitted.
+    ///
+    /// See protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#retrying-a-prompt)
+    #[serde(default)]
+    pub idempotency_key: Option<IdempotencyKey>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3470,21 +5268,35 @@ pub struct PromptRequest {
 }
 
 impl PromptRequest {
-    /// Builds [`PromptRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`PromptRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>, prompt: Vec<ContentBlock>) -> Self {
         Self {
             session_id: session_id.into(),
             prompt,
+            idempotency_key: None,
             meta: None,
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// Identifies this submission, so the Client can send the request again without the
+    /// user message being inserted twice.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// The Client generates the key and sends the same key on every attempt for the same
+    /// submission. `None` means no key.
+    ///
+    /// See protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#retrying-a-prompt)
+    #[must_use]
+    pub fn idempotency_key(mut self, idempotency_key: impl IntoOption<IdempotencyKey>) -> Self {
+        self.idempotency_key = idempotency_key.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3494,14 +5306,14 @@ impl PromptRequest {
 
 /// Response acknowledging that a user prompt was inserted into the ACP conversation.
 ///
-/// This response does not indicate that the prompt was merely received or queued, nor that the
+/// This response does not indicate that the prompt was merely received or held, nor that the
 /// agent has finished processing it.
 /// Processing and completion are reported through `state_update` session updates.
 ///
 /// Insertion is the logical addition of a user message with a message ID and a position
 /// relative to other messages in the ACP conversation.
 ///
-/// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/prompt-lifecycle#2-prompt-accepted)
+/// See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#2-prompt-accepted)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3519,10 +5331,10 @@ pub struct PromptResponse {
     /// not required to retain it. If retained and replayed, the message keeps this identifier.
     pub message_id: MessageId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3531,7 +5343,7 @@ pub struct PromptResponse {
 }
 
 impl PromptResponse {
-    /// Builds [`PromptResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`PromptResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(message_id: impl Into<MessageId>) -> Self {
         Self {
@@ -3541,10 +5353,10 @@ impl PromptResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3554,7 +5366,7 @@ impl PromptResponse {
 
 /// Reasons why an agent stops active session work.
 ///
-/// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/prompt-lifecycle#stop-reasons)
+/// See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "stopReason", rename_all = "snake_case")]
@@ -3566,13 +5378,15 @@ pub enum StopReason {
     /// The active work ended because the agent reached the maximum number of tokens.
     MaxTokens,
     /// The active work ended because the agent reached the maximum number of
-    /// allowed agent requests before returning idle.
+    /// model requests for the foreground work.
     MaxTurnRequests,
-    /// The active work ended because the agent refused to continue. The user
-    /// prompt and everything that comes after it won't be included in the next
-    /// prompt, so this should be reflected in the UI.
+    /// The active work ended because the agent refused to continue.
     Refusal,
-    /// Active session work was cancelled by the client via `session/cancel`.
+    /// The user or client chose to stop the work: via `session/cancel`, by
+    /// closing the session, or through an interaction the agent offers, such
+    /// as a permission option that tells the agent to stop. Work the agent
+    /// stops for its own reasons uses another reason, such as `error` for an
+    /// internal timeout.
     ///
     /// Agents MUST report this stop reason on an idle `state_update` when
     /// cancellation ends active foreground work, even if aborting causes
@@ -3582,7 +5396,7 @@ pub enum StopReason {
     /// The active work ended because something failed.
     ///
     /// This includes pre-insertion foreground work. A prompt failure before
-    /// insertion also requires an error response to `session/prompt`; after
+    /// insertion also requires an error response to `session/prompt`. After
     /// insertion, the prompt's response remains successful.
     Error(ErrorStopReason),
     /// Custom or future stop reason.
@@ -3610,7 +5424,7 @@ impl From<ErrorStopReason> for StopReason {
 pub struct ErrorStopReason {
     /// The failure, as a JSON-RPC error object.
     ///
-    /// Optional. Omitted or `null` both mean the agent is not reporting failure details.
+    /// Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
     /// Agents SHOULD include it.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -3619,7 +5433,7 @@ pub struct ErrorStopReason {
 }
 
 impl ErrorStopReason {
-    /// Builds [`ErrorStopReason`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ErrorStopReason`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -3723,7 +5537,7 @@ fn other_stop_reason_schema(schema: &mut Schema) {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Token usage information for completed session work.
+/// Token usage for the foreground work that just completed, not cumulative for the session.
 #[cfg(feature = "unstable_end_turn_token_usage")]
 #[serde_as]
 #[skip_serializing_none]
@@ -3732,32 +5546,38 @@ fn other_stop_reason_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Usage {
-    /// Sum of all token types across session.
+    /// Sum of all token types for the completed work.
     pub total_tokens: u64,
-    /// Total input tokens.
+    /// Input tokens for the completed work.
     pub input_tokens: u64,
-    /// Total output tokens.
+    /// Output tokens for the completed work.
     pub output_tokens: u64,
-    /// Total thought/reasoning tokens
+    /// Thought/reasoning tokens for the completed work.
+    ///
+    /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub thought_tokens: Option<u64>,
-    /// Total cache read tokens.
+    /// Cache read tokens for the completed work.
+    ///
+    /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cached_read_tokens: Option<u64>,
-    /// Total cache write tokens.
+    /// Cache write tokens for the completed work.
+    ///
+    /// Omitted and `null` are equivalent and mean the count is not reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cached_write_tokens: Option<u64>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3767,7 +5587,7 @@ pub struct Usage {
 
 #[cfg(feature = "unstable_end_turn_token_usage")]
 impl Usage {
-    /// Builds [`Usage`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`Usage`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(total_tokens: u64, input_tokens: u64, output_tokens: u64) -> Self {
         Self {
@@ -3781,21 +5601,21 @@ impl Usage {
         }
     }
 
-    /// Total thought/reasoning tokens
+    /// Thought/reasoning tokens for the completed work.
     #[must_use]
     pub fn thought_tokens(mut self, thought_tokens: impl IntoOption<u64>) -> Self {
         self.thought_tokens = thought_tokens.into_option();
         self
     }
 
-    /// Total cache read tokens.
+    /// Cache read tokens for the completed work.
     #[must_use]
     pub fn cached_read_tokens(mut self, cached_read_tokens: impl IntoOption<u64>) -> Self {
         self.cached_read_tokens = cached_read_tokens.into_option();
         self
     }
 
-    /// Total cache write tokens.
+    /// Cache write tokens for the completed work.
     #[must_use]
     pub fn cached_write_tokens(mut self, cached_write_tokens: impl IntoOption<u64>) -> Self {
         self.cached_write_tokens = cached_write_tokens.into_option();
@@ -3803,10 +5623,10 @@ impl Usage {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3872,10 +5692,10 @@ pub struct ProviderCurrentConfig {
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub base_url: String,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3885,7 +5705,7 @@ pub struct ProviderCurrentConfig {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ProviderCurrentConfig {
-    /// Builds [`ProviderCurrentConfig`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ProviderCurrentConfig`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(api_type: LlmProtocol, base_url: impl Into<String>) -> Self {
         Self {
@@ -3896,10 +5716,10 @@ impl ProviderCurrentConfig {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -3956,10 +5776,10 @@ pub struct ProviderInfo {
     #[serde(default)]
     pub current: Option<ProviderCurrentConfig>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -3969,7 +5789,7 @@ pub struct ProviderInfo {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ProviderInfo {
-    /// Builds [`ProviderInfo`] with the required fields set; optional fields start unset or empty.
+    /// Builds [`ProviderInfo`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         provider_id: impl Into<ProviderId>,
@@ -3987,10 +5807,10 @@ impl ProviderInfo {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4014,10 +5834,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct ListProvidersRequest {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -4028,17 +5848,17 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ListProvidersRequest {
-    /// Builds [`ListProvidersRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`ListProvidersRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4063,10 +5883,10 @@ pub struct ListProvidersResponse {
     /// Configurable providers with current routing info suitable for UI display.
     pub providers: Vec<ProviderInfo>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4076,7 +5896,7 @@ pub struct ListProvidersResponse {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ListProvidersResponse {
-    /// Builds [`ListProvidersResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`ListProvidersResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(providers: Vec<ProviderInfo>) -> Self {
         Self {
@@ -4086,10 +5906,10 @@ impl ListProvidersResponse {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4125,10 +5945,10 @@ pub struct SetProviderRequest {
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub headers: HashMap<String, String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4138,7 +5958,7 @@ pub struct SetProviderRequest {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl SetProviderRequest {
-    /// Builds [`SetProviderRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`SetProviderRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(
         provider_id: impl Into<ProviderId>,
@@ -4163,10 +5983,10 @@ impl SetProviderRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4190,10 +6010,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct SetProviderResponse {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -4204,17 +6024,17 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl SetProviderResponse {
-    /// Builds [`SetProviderResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`SetProviderResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4239,10 +6059,10 @@ pub struct DisableProviderRequest {
     /// Provider ID to disable.
     pub provider_id: ProviderId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4252,7 +6072,7 @@ pub struct DisableProviderRequest {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl DisableProviderRequest {
-    /// Builds [`DisableProviderRequest`] with the required request fields set; optional fields start unset or empty.
+    /// Builds [`DisableProviderRequest`] with the required request fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(provider_id: impl Into<ProviderId>) -> Self {
         Self {
@@ -4262,10 +6082,10 @@ impl DisableProviderRequest {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4289,10 +6109,10 @@ crate::serde_util::default_on_null! {
     #[non_exhaustive]
     pub struct DisableProviderResponse {
         /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-        /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-        /// these keys.
+        /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+        /// Implementations MUST NOT assign meaning to keys they do not recognize.
         ///
-        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+        /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
         #[serde_as(deserialize_as = "DefaultOnError")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
         #[serde(default)]
@@ -4303,17 +6123,17 @@ crate::serde_util::default_on_null! {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl DisableProviderResponse {
-    /// Builds [`DisableProviderResponse`] with the required response fields set; optional fields start unset or empty.
+    /// Builds [`DisableProviderResponse`] with the required response fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4328,7 +6148,7 @@ impl DisableProviderResponse {
 /// Advertised during initialization to inform the client about
 /// available features and content types.
 ///
-/// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/initialization#agent-capabilities)
+/// See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#agent-capabilities)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4338,8 +6158,8 @@ impl DisableProviderResponse {
 pub struct AgentCapabilities {
     /// Session capabilities supported by the agent.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not support the
-    /// `session/*` method surface. Supplying `{}` means the agent supports the
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not support the
+    /// `session/*` methods. Supplying `{}` means the agent supports the
     /// baseline session methods: `session/new`, `session/list`,
     /// `session/resume`, `session/close`, `session/prompt`, `session/cancel`,
     /// and `session/update`.
@@ -4349,9 +6169,9 @@ pub struct AgentCapabilities {
     pub session: Option<SessionCapabilities>,
     /// Authentication-related extension capabilities supported by the agent.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise any
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
     /// authentication-related extensions. This field does not advertise support
-    /// for `auth/login` or `auth/logout`; those methods are advertised by a
+    /// for `auth/login` or `auth/logout`. Those methods are advertised by a
     /// non-empty `authMethods` list in the `initialize` response.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4363,7 +6183,7 @@ pub struct AgentCapabilities {
     ///
     /// Provider configuration capabilities supported by the agent.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports provider configuration methods.
     #[cfg(feature = "unstable_llm_providers")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4371,10 +6191,10 @@ pub struct AgentCapabilities {
     #[serde(default)]
     pub providers: Option<ProvidersCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4383,7 +6203,7 @@ pub struct AgentCapabilities {
 }
 
 impl AgentCapabilities {
-    /// Builds an empty [`AgentCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`AgentCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4391,8 +6211,8 @@ impl AgentCapabilities {
 
     /// Session capabilities supported by the agent.
     ///
-    /// Omitted or `null` both mean the agent does not support the `session/*`
-    /// method surface. Supplying `{}` means the agent supports the baseline
+    /// Omitted and `null` are equivalent and mean the agent does not support the `session/*`
+    /// methods. Supplying `{}` means the agent supports the baseline
     /// session methods: `session/new`, `session/list`, `session/resume`,
     /// `session/close`, `session/prompt`, `session/cancel`, and
     /// `session/update`.
@@ -4424,10 +6244,10 @@ impl AgentCapabilities {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4450,10 +6270,10 @@ impl AgentCapabilities {
 #[non_exhaustive]
 pub struct ProvidersCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4463,17 +6283,17 @@ pub struct ProvidersCapabilities {
 
 #[cfg(feature = "unstable_llm_providers")]
 impl ProvidersCapabilities {
-    /// Builds an empty [`ProvidersCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`ProvidersCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4491,7 +6311,7 @@ impl ProvidersCapabilities {
 /// prompt content types, and MCP transports by specifying additional
 /// capabilities.
 ///
-/// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/initialization#session-capabilities)
+/// See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-capabilities)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4501,7 +6321,7 @@ impl ProvidersCapabilities {
 pub struct SessionCapabilities {
     /// Prompt capabilities supported by the agent in `session/prompt` requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise any
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
     /// prompt extensions beyond the baseline text and resource-link content
     /// required by `session/prompt`.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4510,7 +6330,7 @@ pub struct SessionCapabilities {
     pub prompt: Option<PromptCapabilities>,
     /// MCP capabilities supported by the agent for session lifecycle requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise MCP
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise MCP
     /// server transport support for sessions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4518,7 +6338,7 @@ pub struct SessionCapabilities {
     pub mcp: Option<McpCapabilities>,
     /// Whether the agent supports `session/delete`.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4526,7 +6346,7 @@ pub struct SessionCapabilities {
     pub delete: Option<SessionDeleteCapabilities>,
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
@@ -4536,15 +6356,10 @@ pub struct SessionCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub additional_directories: Option<SessionAdditionalDirectoriesCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `systemPrompt` on session lifecycle requests.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4555,18 +6370,75 @@ pub struct SessionCapabilities {
     ///
     /// Whether the agent supports `session/fork`.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports forking sessions.
     #[cfg(feature = "unstable_session_fork")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub fork: Option<SessionForkCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/archive` and `session/unarchive`.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports both methods, the `archived` filter on
+    /// `session/list`, and `SessionInfo.archived`.
+    #[cfg(feature = "unstable_session_archive")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub archive: Option<SessionArchiveCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/status`.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports checking session status.
+    #[cfg(feature = "unstable_session_status")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub status: Option<SessionStatusCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/options`.
+    ///
+    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `session/options` and accepts initial
+    /// config option values on session setup requests.
+    #[cfg(feature = "unstable_session_options")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub options: Option<SessionOptionsCapabilities>,
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/set_title`.
+    ///
+    /// Agents report titles through `session/list` and `session_info_update` without this
+    /// capability. It only advertises that Clients can set titles.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports setting session titles.
+    #[cfg(feature = "unstable_session_set_title")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub title: Option<SessionTitleCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4575,7 +6447,7 @@ pub struct SessionCapabilities {
 }
 
 impl SessionCapabilities {
-    /// Builds an empty [`SessionCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4583,7 +6455,7 @@ impl SessionCapabilities {
 
     /// Prompt capabilities supported by the agent in `session/prompt` requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise any prompt
+    /// Omitted and `null` are equivalent and mean the agent does not advertise any prompt
     /// extensions beyond the baseline text and resource-link content required by
     /// `session/prompt`.
     #[must_use]
@@ -4594,7 +6466,7 @@ impl SessionCapabilities {
 
     /// MCP capabilities supported by the agent for session lifecycle requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise MCP server
+    /// Omitted and `null` are equivalent and mean the agent does not advertise MCP server
     /// transport support for sessions.
     #[must_use]
     pub fn mcp(mut self, mcp: impl IntoOption<McpCapabilities>) -> Self {
@@ -4604,7 +6476,7 @@ impl SessionCapabilities {
 
     /// Whether the agent supports `session/delete`.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports deleting sessions from `session/list`.
     #[must_use]
     pub fn delete(mut self, delete: impl IntoOption<SessionDeleteCapabilities>) -> Self {
@@ -4614,7 +6486,7 @@ impl SessionCapabilities {
 
     /// Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `additionalDirectories` on
     /// supported session lifecycle requests.
     ///
@@ -4629,15 +6501,10 @@ impl SessionCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the agent supports `systemPrompt` on session lifecycle requests.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports `systemPrompt` in `append` mode.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[must_use]
     pub fn system_prompt(
         mut self,
@@ -4650,7 +6517,7 @@ impl SessionCapabilities {
     #[cfg(feature = "unstable_session_fork")]
     /// Whether the agent supports `session/fork`.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports forking sessions.
     #[must_use]
     pub fn fork(mut self, fork: impl IntoOption<SessionForkCapabilities>) -> Self {
@@ -4658,11 +6525,76 @@ impl SessionCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/archive` and `session/unarchive`.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports both methods, the `archived` filter on
+    /// `session/list`, and `SessionInfo.archived`.
+    #[cfg(feature = "unstable_session_archive")]
+    #[must_use]
+    pub fn archive(mut self, archive: impl IntoOption<SessionArchiveCapabilities>) -> Self {
+        self.archive = archive.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/status`.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports checking session status.
+    #[cfg(feature = "unstable_session_status")]
+    #[must_use]
+    pub fn status(mut self, status: impl IntoOption<SessionStatusCapabilities>) -> Self {
+        self.status = status.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/options`.
+    ///
+    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports `session/options` and accepts initial
+    /// config option values on session setup requests.
+    #[cfg(feature = "unstable_session_options")]
+    #[must_use]
+    pub fn options(mut self, options: impl IntoOption<SessionOptionsCapabilities>) -> Self {
+        self.options = options.into_option();
+        self
+    }
+
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Whether the agent supports `session/set_title`.
+    ///
+    /// Agents report titles through `session/list` and `session_info_update` without this
+    /// capability. It only advertises that Clients can set titles.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means the agent supports setting session titles.
+    #[cfg(feature = "unstable_session_set_title")]
+    #[must_use]
+    pub fn title(mut self, title: impl IntoOption<SessionTitleCapabilities>) -> Self {
+        self.title = title.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4680,10 +6612,10 @@ impl SessionCapabilities {
 #[non_exhaustive]
 pub struct SessionDeleteCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4692,17 +6624,17 @@ pub struct SessionDeleteCapabilities {
 }
 
 impl SessionDeleteCapabilities {
-    /// Builds an empty [`SessionDeleteCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionDeleteCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4713,8 +6645,8 @@ impl SessionDeleteCapabilities {
 /// Capabilities for additional session directories support.
 ///
 /// Supplying `{}` means the agent supports the `additionalDirectories` field on
-/// supported session lifecycle requests. Agents that also support
-/// `session/list` may return `SessionInfo.additionalDirectories` to report the
+/// supported session lifecycle requests. Agents may return
+/// `SessionInfo.additionalDirectories` in `session/list` to report the
 /// complete ordered additional-root list associated with a listed session.
 #[serde_as]
 #[skip_serializing_none]
@@ -4723,10 +6655,10 @@ impl SessionDeleteCapabilities {
 #[non_exhaustive]
 pub struct SessionAdditionalDirectoriesCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4735,17 +6667,17 @@ pub struct SessionAdditionalDirectoriesCapabilities {
 }
 
 impl SessionAdditionalDirectoriesCapabilities {
-    /// Builds an empty [`SessionAdditionalDirectoriesCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionAdditionalDirectoriesCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4753,15 +6685,10 @@ impl SessionAdditionalDirectoriesCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for client-provided system prompts.
 ///
 /// Supplying `{}` means the agent supports `systemPrompt` on session lifecycle
 /// requests in `append` mode.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4771,16 +6698,16 @@ impl SessionAdditionalDirectoriesCapabilities {
 pub struct SessionSystemPromptCapabilities {
     /// Delivery modes the agent supports in addition to `append`.
     ///
-    /// Optional. Omitted or `null` both mean the agent supports only `append`.
+    /// Optional. Omitted and `null` are equivalent and mean the agent supports only `append`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mode: Option<SessionSystemPromptModeCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4788,9 +6715,8 @@ pub struct SessionSystemPromptCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptCapabilities {
-    /// Builds an empty [`SessionSystemPromptCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionSystemPromptCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4798,7 +6724,7 @@ impl SessionSystemPromptCapabilities {
 
     /// Delivery modes the agent supports in addition to `append`.
     ///
-    /// Omitted or `null` both mean the agent supports only `append`.
+    /// Omitted and `null` are equivalent and mean the agent supports only `append`.
     #[must_use]
     pub fn mode(mut self, mode: impl IntoOption<SessionSystemPromptModeCapabilities>) -> Self {
         self.mode = mode.into_option();
@@ -4806,10 +6732,10 @@ impl SessionSystemPromptCapabilities {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4817,15 +6743,10 @@ impl SessionSystemPromptCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// System prompt delivery modes the agent supports in addition to `append`.
 ///
 /// `append` has no entry because every agent advertising `session.systemPrompt`
 /// supports it.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4835,7 +6756,7 @@ impl SessionSystemPromptCapabilities {
 pub struct SessionSystemPromptModeCapabilities {
     /// Whether the agent supports `override` mode.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports replacing its built-in default
     /// instructions with the client-provided system prompt.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4843,10 +6764,10 @@ pub struct SessionSystemPromptModeCapabilities {
     #[serde(default, rename = "override")]
     pub override_: Option<SessionSystemPromptOverrideCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4854,9 +6775,8 @@ pub struct SessionSystemPromptModeCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptModeCapabilities {
-    /// Builds an empty [`SessionSystemPromptModeCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionSystemPromptModeCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -4864,7 +6784,7 @@ impl SessionSystemPromptModeCapabilities {
 
     /// Whether the agent supports `override` mode.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports replacing its built-in default
     /// instructions with the client-provided system prompt.
     #[must_use]
@@ -4877,10 +6797,10 @@ impl SessionSystemPromptModeCapabilities {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4888,15 +6808,10 @@ impl SessionSystemPromptModeCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for the `override` system prompt mode.
 ///
 /// Supplying `{}` means the agent supports replacing its built-in default
 /// instructions with the client-provided system prompt.
-#[cfg(feature = "unstable_session_system_prompt")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4904,10 +6819,10 @@ impl SessionSystemPromptModeCapabilities {
 #[non_exhaustive]
 pub struct SessionSystemPromptOverrideCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4915,19 +6830,18 @@ pub struct SessionSystemPromptOverrideCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_session_system_prompt")]
 impl SessionSystemPromptOverrideCapabilities {
-    /// Builds an empty [`SessionSystemPromptOverrideCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionSystemPromptOverrideCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4950,10 +6864,10 @@ impl SessionSystemPromptOverrideCapabilities {
 #[non_exhaustive]
 pub struct SessionForkCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4963,17 +6877,204 @@ pub struct SessionForkCapabilities {
 
 #[cfg(feature = "unstable_session_fork")]
 impl SessionForkCapabilities {
-    /// Builds an empty [`SessionForkCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`SessionForkCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for `session/archive` and `session/unarchive`.
+///
+/// Supplying `{}` means the agent supports both methods, the `archived` filter on
+/// `session/list`, and `SessionInfo.archived`.
+#[cfg(feature = "unstable_session_archive")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionArchiveCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_archive")]
+impl SessionArchiveCapabilities {
+    /// Builds an empty [`SessionArchiveCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `session/status` method.
+///
+/// Supplying `{}` means the agent supports checking session status.
+#[cfg(feature = "unstable_session_status")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionStatusCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_status")]
+impl SessionStatusCapabilities {
+    /// Builds an empty [`SessionStatusCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for the `session/options` method.
+///
+/// Supplying `{}` means the agent supports `session/options` and accepts initial config
+/// option values on session setup requests.
+#[cfg(feature = "unstable_session_options")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionOptionsCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_options")]
+impl SessionOptionsCapabilities {
+    /// Builds an empty [`SessionOptionsCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for Client-set session titles.
+///
+/// Supplying `{}` means the agent supports `session/set_title`. Agents report titles
+/// through `session/list` and `session_info_update` without this capability.
+#[cfg(feature = "unstable_session_set_title")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct SessionTitleCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_session_set_title")]
+impl SessionTitleCapabilities {
+    /// Builds an empty [`SessionTitleCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -4983,8 +7084,8 @@ impl SessionForkCapabilities {
 
 /// Prompt capabilities supported by the agent in `session/prompt` requests.
 ///
-/// Baseline agent functionality requires support for [`ContentBlock::Text`]
-/// and [`ContentBlock::ResourceLink`] in prompt requests.
+/// Baseline agent functionality requires support for `text`
+/// and `resource_link` content blocks in prompt requests.
 ///
 /// Other variants must be explicitly opted in to.
 /// Capabilities for different types of content in prompt requests.
@@ -4992,7 +7093,7 @@ impl SessionForkCapabilities {
 /// Indicates which content types beyond the baseline (text and resource links)
 /// the agent can process.
 ///
-/// See protocol docs: [Prompt Capabilities](https://agentclientprotocol.com/protocol/initialization#prompt-capabilities)
+/// See protocol docs: [Session Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-prompt-capabilities)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -5000,17 +7101,17 @@ impl SessionForkCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PromptCapabilities {
-    /// Agent supports [`ContentBlock::Image`].
+    /// Agent supports `image` content blocks.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports image content in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub image: Option<PromptImageCapabilities>,
-    /// Agent supports [`ContentBlock::Audio`].
+    /// Agent supports `audio` content blocks.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports audio content in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -5018,20 +7119,34 @@ pub struct PromptCapabilities {
     pub audio: Option<PromptAudioCapabilities>,
     /// Agent supports embedded context in `session/prompt` requests.
     ///
-    /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
+    /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports embedded context in prompts.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub embedded_context: Option<PromptEmbeddedContextCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Agent supports `skill` content blocks.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain one `skill` content block, as its first block.
+    /// An agent that sends `skill` entries in `availableCommands` MUST advertise this capability.
+    #[cfg(feature = "unstable_agent_skills")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub skill: Option<PromptSkillCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5040,15 +7155,15 @@ pub struct PromptCapabilities {
 }
 
 impl PromptCapabilities {
-    /// Builds an empty [`PromptCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`PromptCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Agent supports [`ContentBlock::Image`].
+    /// Agent supports `image` content blocks.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports image content in prompts.
     #[must_use]
     pub fn image(mut self, image: impl IntoOption<PromptImageCapabilities>) -> Self {
@@ -5056,9 +7171,9 @@ impl PromptCapabilities {
         self
     }
 
-    /// Agent supports [`ContentBlock::Audio`].
+    /// Agent supports `audio` content blocks.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports audio content in prompts.
     #[must_use]
     pub fn audio(mut self, audio: impl IntoOption<PromptAudioCapabilities>) -> Self {
@@ -5068,10 +7183,10 @@ impl PromptCapabilities {
 
     /// Agent supports embedded context in `session/prompt` requests.
     ///
-    /// When enabled, the Client is allowed to include [`ContentBlock::Resource`]
+    /// When enabled, the Client is allowed to include `resource` content blocks
     /// in prompt requests for pieces of context that are referenced in the message.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports embedded context in prompts.
     #[must_use]
     pub fn embedded_context(
@@ -5082,11 +7197,26 @@ impl PromptCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// **UNSTABLE**
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Agent supports `skill` content blocks.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain one `skill` content block, as its first block.
+    #[cfg(feature = "unstable_agent_skills")]
+    #[must_use]
+    pub fn skill(mut self, skill: impl IntoOption<PromptSkillCapabilities>) -> Self {
+        self.skill = skill.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5104,10 +7234,10 @@ impl PromptCapabilities {
 #[non_exhaustive]
 pub struct PromptImageCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5116,17 +7246,17 @@ pub struct PromptImageCapabilities {
 }
 
 impl PromptImageCapabilities {
-    /// Builds an empty [`PromptImageCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`PromptImageCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5144,10 +7274,10 @@ impl PromptImageCapabilities {
 #[non_exhaustive]
 pub struct PromptAudioCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5156,17 +7286,17 @@ pub struct PromptAudioCapabilities {
 }
 
 impl PromptAudioCapabilities {
-    /// Builds an empty [`PromptAudioCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`PromptAudioCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5184,10 +7314,10 @@ impl PromptAudioCapabilities {
 #[non_exhaustive]
 pub struct PromptEmbeddedContextCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5196,17 +7326,132 @@ pub struct PromptEmbeddedContextCapabilities {
 }
 
 impl PromptEmbeddedContextCapabilities {
-    /// Builds an empty [`PromptEmbeddedContextCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`PromptEmbeddedContextCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for `skill` content blocks in prompt requests.
+///
+/// Supplying `{}` means a prompt may contain one `skill` content block, as
+/// its first block. The agent opts in to more with the `inline` field.
+#[cfg(feature = "unstable_agent_skills")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct PromptSkillCapabilities {
+    /// Agent supports `skill` content blocks at any position in a prompt.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain any number of `skill` content blocks, at any
+    /// position.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub inline: Option<PromptSkillInlineCapabilities>,
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_agent_skills")]
+impl PromptSkillCapabilities {
+    /// Builds an empty [`PromptSkillCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Agent supports `skill` content blocks at any position in a prompt.
+    ///
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
+    /// Supplying `{}` means a prompt may contain any number of `skill` content blocks, at any
+    /// position.
+    #[must_use]
+    pub fn inline(mut self, inline: impl IntoOption<PromptSkillInlineCapabilities>) -> Self {
+        self.inline = inline.into_option();
+        self
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[must_use]
+    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
+        self.meta = meta.into_option();
+        self
+    }
+}
+
+/// **UNSTABLE**
+///
+/// This capability is not part of the spec yet, and may be removed or changed at any point.
+///
+/// Capabilities for `skill` content blocks at any position in a prompt.
+///
+/// Supplying `{}` means a prompt may contain any number of `skill` content
+/// blocks, at any position.
+#[cfg(feature = "unstable_agent_skills")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptSkillInlineCapabilities {
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    #[serde(rename = "_meta")]
+    pub meta: Option<Meta>,
+}
+
+#[cfg(feature = "unstable_agent_skills")]
+impl PromptSkillInlineCapabilities {
+    /// Builds an empty [`PromptSkillInlineCapabilities`]. Use builder methods to advertise supported sub-capabilities.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
+    ///
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5222,17 +7467,17 @@ impl PromptEmbeddedContextCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct McpCapabilities {
-    /// Agent supports [`McpServer::Stdio`].
+    /// Agent supports `stdio` MCP servers.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports stdio MCP server transports.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub stdio: Option<McpStdioCapabilities>,
-    /// Agent supports [`McpServer::Http`].
+    /// Agent supports `http` MCP servers.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports HTTP MCP server transports.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -5242,9 +7487,9 @@ pub struct McpCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Agent supports [`McpServer::Acp`].
+    /// Agent supports `acp` MCP servers.
     ///
-    /// Optional. Omitted or `null` both mean the agent does not advertise support.
+    /// Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports ACP MCP server transports.
     #[cfg(feature = "unstable_mcp_over_acp")]
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -5252,10 +7497,10 @@ pub struct McpCapabilities {
     #[serde(default)]
     pub acp: Option<McpAcpCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5264,15 +7509,15 @@ pub struct McpCapabilities {
 }
 
 impl McpCapabilities {
-    /// Builds an empty [`McpCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`McpCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Agent supports [`McpServer::Stdio`].
+    /// Agent supports `stdio` MCP servers.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports stdio MCP server transports.
     #[must_use]
     pub fn stdio(mut self, stdio: impl IntoOption<McpStdioCapabilities>) -> Self {
@@ -5280,9 +7525,9 @@ impl McpCapabilities {
         self
     }
 
-    /// Agent supports [`McpServer::Http`].
+    /// Agent supports `http` MCP servers.
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports HTTP MCP server transports.
     #[must_use]
     pub fn http(mut self, http: impl IntoOption<McpHttpCapabilities>) -> Self {
@@ -5294,10 +7539,10 @@ impl McpCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Agent supports [`McpServer::Acp`].
+    /// Agent supports `acp` MCP servers.
     #[cfg(feature = "unstable_mcp_over_acp")]
     ///
-    /// Omitted or `null` both mean the agent does not advertise support.
+    /// Omitted and `null` are equivalent and mean the agent does not advertise support.
     /// Supplying `{}` means the agent supports ACP MCP server transports.
     #[must_use]
     pub fn acp(mut self, acp: impl IntoOption<McpAcpCapabilities>) -> Self {
@@ -5306,10 +7551,10 @@ impl McpCapabilities {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5327,10 +7572,10 @@ impl McpCapabilities {
 #[non_exhaustive]
 pub struct McpStdioCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5339,17 +7584,17 @@ pub struct McpStdioCapabilities {
 }
 
 impl McpStdioCapabilities {
-    /// Builds an empty [`McpStdioCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`McpStdioCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5367,10 +7612,10 @@ impl McpStdioCapabilities {
 #[non_exhaustive]
 pub struct McpHttpCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5379,17 +7624,17 @@ pub struct McpHttpCapabilities {
 }
 
 impl McpHttpCapabilities {
-    /// Builds an empty [`McpHttpCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`McpHttpCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5412,10 +7657,10 @@ impl McpHttpCapabilities {
 #[non_exhaustive]
 pub struct McpAcpCapabilities {
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5425,17 +7670,17 @@ pub struct McpAcpCapabilities {
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 impl McpAcpCapabilities {
-    /// Builds an empty [`McpAcpCapabilities`]; use builder methods to advertise supported sub-capabilities.
+    /// Builds an empty [`McpAcpCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5443,9 +7688,9 @@ impl McpAcpCapabilities {
     }
 }
 
-/// Notification to cancel ongoing operations for a session.
+/// Notification to cancel a session's foreground work and its prompts not yet inserted.
 ///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
+/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -5454,13 +7699,13 @@ impl McpAcpCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelSessionNotification {
-    /// The ID of the session to cancel operations for.
+    /// The ID of the session whose foreground work to cancel.
     pub session_id: SessionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
+    /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5469,7 +7714,7 @@ pub struct CancelSessionNotification {
 }
 
 impl CancelSessionNotification {
-    /// Builds [`CancelSessionNotification`] with the required notification fields set; optional fields start unset or empty.
+    /// Builds [`CancelSessionNotification`] with the required notification fields set. Optional fields start unset or empty.
     #[must_use]
     pub fn new(session_id: impl Into<SessionId>) -> Self {
         Self {
@@ -5479,10 +7724,10 @@ impl CancelSessionNotification {
     }
 
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
-    /// these keys.
+    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
+    /// do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
         self.meta = meta.into_option();
@@ -5529,12 +7774,34 @@ pub struct AgentMethodNames {
     /// Method for forking an existing session.
     #[cfg(feature = "unstable_session_fork")]
     pub session_fork: &'static str,
+    /// Method for archiving a session.
+    #[cfg(feature = "unstable_session_archive")]
+    pub session_archive: &'static str,
+    /// Method for unarchiving a session.
+    #[cfg(feature = "unstable_session_archive")]
+    pub session_unarchive: &'static str,
+    /// Method for checking the status of a session.
+    #[cfg(feature = "unstable_session_status")]
+    pub session_status: &'static str,
+    /// Method for querying the config options a session would start with.
+    #[cfg(feature = "unstable_session_options")]
+    pub session_options: &'static str,
+    /// Method for setting the title of a session.
+    #[cfg(feature = "unstable_session_set_title")]
+    pub session_set_title: &'static str,
     /// Method for resuming an existing session.
     pub session_resume: &'static str,
     /// Method for closing an active session.
     pub session_close: &'static str,
+    /// Method for cancelling one tool call.
+    pub tool_call_cancel: &'static str,
+    /// Method for cancelling one terminal's process.
+    pub terminal_cancel: &'static str,
     /// Method for logging out of an authenticated session.
     pub auth_logout: &'static str,
+    /// Method for querying the agent's authentication state.
+    #[cfg(feature = "unstable_auth_status")]
+    pub auth_status: &'static str,
 }
 
 /// Constant containing all agent method names.
@@ -5557,9 +7824,23 @@ pub const AGENT_METHOD_NAMES: AgentMethodNames = AgentMethodNames {
     session_delete: SESSION_DELETE_METHOD_NAME,
     #[cfg(feature = "unstable_session_fork")]
     session_fork: SESSION_FORK_METHOD_NAME,
+    #[cfg(feature = "unstable_session_archive")]
+    session_archive: SESSION_ARCHIVE_METHOD_NAME,
+    #[cfg(feature = "unstable_session_archive")]
+    session_unarchive: SESSION_UNARCHIVE_METHOD_NAME,
+    #[cfg(feature = "unstable_session_status")]
+    session_status: SESSION_STATUS_METHOD_NAME,
+    #[cfg(feature = "unstable_session_options")]
+    session_options: SESSION_OPTIONS_METHOD_NAME,
+    #[cfg(feature = "unstable_session_set_title")]
+    session_set_title: SESSION_SET_TITLE_METHOD_NAME,
     session_resume: SESSION_RESUME_METHOD_NAME,
     session_close: SESSION_CLOSE_METHOD_NAME,
+    tool_call_cancel: TOOL_CALL_CANCEL_METHOD_NAME,
+    terminal_cancel: TERMINAL_CANCEL_METHOD_NAME,
     auth_logout: AUTH_LOGOUT_METHOD_NAME,
+    #[cfg(feature = "unstable_auth_status")]
+    auth_status: AUTH_STATUS_METHOD_NAME,
 };
 
 /// Method name for the initialize request.
@@ -5590,12 +7871,34 @@ pub(crate) const SESSION_DELETE_METHOD_NAME: &str = "session/delete";
 /// Method name for forking an existing session.
 #[cfg(feature = "unstable_session_fork")]
 pub(crate) const SESSION_FORK_METHOD_NAME: &str = "session/fork";
+/// Method name for archiving a session.
+#[cfg(feature = "unstable_session_archive")]
+pub(crate) const SESSION_ARCHIVE_METHOD_NAME: &str = "session/archive";
+/// Method name for unarchiving a session.
+#[cfg(feature = "unstable_session_archive")]
+pub(crate) const SESSION_UNARCHIVE_METHOD_NAME: &str = "session/unarchive";
+/// Method name for checking the status of a session.
+#[cfg(feature = "unstable_session_status")]
+pub(crate) const SESSION_STATUS_METHOD_NAME: &str = "session/status";
+/// Method name for querying the config options a session would start with.
+#[cfg(feature = "unstable_session_options")]
+pub(crate) const SESSION_OPTIONS_METHOD_NAME: &str = "session/options";
+/// Method name for setting the title of a session.
+#[cfg(feature = "unstable_session_set_title")]
+pub(crate) const SESSION_SET_TITLE_METHOD_NAME: &str = "session/set_title";
 /// Method name for resuming an existing session.
 pub(crate) const SESSION_RESUME_METHOD_NAME: &str = "session/resume";
 /// Method name for closing an active session.
 pub(crate) const SESSION_CLOSE_METHOD_NAME: &str = "session/close";
+/// Method name for cancelling one tool call.
+pub(crate) const TOOL_CALL_CANCEL_METHOD_NAME: &str = "tool_call/cancel";
+/// Method name for cancelling one terminal's process.
+pub(crate) const TERMINAL_CANCEL_METHOD_NAME: &str = "terminal/cancel";
 /// Method name for the `auth/logout` request.
 pub(crate) const AUTH_LOGOUT_METHOD_NAME: &str = "auth/logout";
+/// Method name for the `auth/status` request.
+#[cfg(feature = "unstable_auth_status")]
+pub(crate) const AUTH_STATUS_METHOD_NAME: &str = "auth/status";
 
 /// All possible requests that a client can send to an agent.
 ///
@@ -5611,19 +7914,22 @@ pub(crate) const AUTH_LOGOUT_METHOD_NAME: &str = "auth/logout";
 pub enum ClientRequest {
     /// Establishes the connection with a client and negotiates protocol capabilities.
     ///
-    /// This method is called once at the beginning of the connection to:
+    /// This method is called at the beginning of the connection, before any other request, to:
     /// - Negotiate the protocol version to use
     /// - Exchange capability information between client and agent
     /// - Determine available authentication methods
     ///
+    /// The Client may repeat it before its first other request. The latest successful
+    /// `initialize` is authoritative.
+    ///
     /// The agent should respond with its supported protocol version and capabilities.
     ///
-    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
     InitializeRequest(Box<InitializeRequest>),
     /// Authenticates the client using the specified authentication method.
     ///
-    /// Agents MUST support this method when their `initialize` response advertised
-    /// at least one valid authentication method. Clients MUST call this method only
+    /// Agents MUST support this method when their `initialize` response included
+    /// a non-empty `authMethods` list. Clients MUST call this method only
     /// with a method whose type defines a protocol-driven login flow, and MUST NOT
     /// call it when `authMethods` was omitted or empty.
     ///
@@ -5631,9 +7937,9 @@ pub enum ClientRequest {
     /// The client provides the authentication method ID that was advertised during initialization.
     ///
     /// After successful authentication, the client can proceed to create sessions with
-    /// `new_session` without receiving an `auth_required` error.
+    /// `session/new` without receiving an `auth_required` (`-32000`) error.
     ///
-    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/initialization)
+    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
     LoginAuthRequest(Box<LoginAuthRequest>),
     /// **UNSTABLE**
     ///
@@ -5658,14 +7964,24 @@ pub enum ClientRequest {
     DisableProviderRequest(Box<DisableProviderRequest>),
     /// Logs out of the current authenticated state.
     ///
-    /// Agents MUST support this method when their `initialize` response advertised
-    /// at least one valid authentication method. Clients MUST NOT call this method
+    /// Agents MUST support this method when their `initialize` response included
+    /// a non-empty `authMethods` list. Clients MUST NOT call this method
     /// when `authMethods` was omitted or empty.
     ///
     /// After a successful logout, authentication-gated requests require the
     /// client to complete an advertised authentication flow again. There is no
     /// guarantee about the behavior of already running sessions.
     LogoutAuthRequest(Box<LogoutAuthRequest>),
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Queries the agent's current authentication state.
+    ///
+    /// This method is only available if the agent advertises the `auth.status` capability.
+    /// It MUST NOT change any agent state, and agents MUST NOT reject it with `auth_required`.
+    #[cfg(feature = "unstable_auth_status")]
+    AuthStatusRequest(Box<AuthStatusRequest>),
     /// Creates a new conversation session with the agent.
     ///
     /// Sessions represent independent conversation contexts with their own history and state.
@@ -5675,9 +7991,9 @@ pub enum ClientRequest {
     /// - Connect to any specified MCP servers
     /// - Return a unique session ID for future requests
     ///
-    /// May return an `auth_required` error if the agent requires authentication.
+    /// May return an `auth_required` (`-32000`) error if the agent requires authentication.
     ///
-    /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/session-setup)
+    /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/session-setup)
     NewSessionRequest(Box<NewSessionRequest>),
     /// Lists existing sessions known to the agent.
     ///
@@ -5704,6 +8020,54 @@ pub enum ClientRequest {
     /// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
     /// The client can prompt it without calling `session/resume` first.
     ForkSessionRequest(Box<ForkSessionRequest>),
+    #[cfg(feature = "unstable_session_archive")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Archives a session, hiding it from default `session/list` results.
+    ///
+    /// This method is only available if the agent advertises the `session.archive` capability.
+    ArchiveSessionRequest(Box<ArchiveSessionRequest>),
+    #[cfg(feature = "unstable_session_archive")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Unarchives a session, returning it to default `session/list` results.
+    ///
+    /// This method is only available if the agent advertises the `session.archive` capability.
+    UnarchiveSessionRequest(Box<UnarchiveSessionRequest>),
+    #[cfg(feature = "unstable_session_status")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Checks whether the Agent has a session in memory, without changing it.
+    ///
+    /// This method is only available if the agent advertises the `session.status` capability.
+    SessionStatusRequest(Box<SessionStatusRequest>),
+    #[cfg(feature = "unstable_session_options")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Returns the config options a session would start with, without creating or resuming a session.
+    ///
+    /// This method is only available if the agent advertises the `session.options` capability.
+    SessionOptionsRequest(Box<SessionOptionsRequest>),
+    #[cfg(feature = "unstable_session_set_title")]
+    /// **UNSTABLE**
+    ///
+    /// This capability is not part of the spec yet, and may be removed or changed at any point.
+    ///
+    /// Sets the title of a session.
+    ///
+    /// This method is only available if the agent advertises the `session.title` capability.
+    ///
+    /// The session does not need to be active on the connection. The agent stores the
+    /// title and returns the stored title, which may be normalized.
+    SetSessionTitleRequest(Box<SetSessionTitleRequest>),
     /// Resumes an existing session.
     ///
     /// The agent should resume the session context, allowing the conversation
@@ -5712,9 +8076,21 @@ pub enum ClientRequest {
     ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
     ///
-    /// The agent must cancel any ongoing work (as if `session/cancel` was called)
-    /// and then free up any resources associated with the session.
+    /// The Agent MUST cancel any ongoing work as if `session/cancel` was called, stop the
+    /// session's background work, and then free the resources associated with the session.
     CloseSessionRequest(Box<CloseSessionRequest>),
+    /// Cancels one tool call without cancelling the rest of the session's work.
+    ///
+    /// This method is only available while the tool call advertises `capabilities.cancel`.
+    /// The response means the Agent accepted the cancellation. A final `tool_call_update`
+    /// confirms it.
+    CancelToolCallRequest(Box<CancelToolCallRequest>),
+    /// Stops one terminal's process without cancelling the rest of the session's work.
+    ///
+    /// This method is only available while the terminal advertises `capabilities.cancel`.
+    /// The response means the Agent accepted the cancellation. A `terminal_update` with
+    /// `exitStatus` confirms it.
+    CancelTerminalRequest(Box<CancelTerminalRequest>),
     /// Sets the current value for a session configuration option.
     SetSessionConfigOptionRequest(Box<SetSessionConfigOptionRequest>),
     /// Processes a user prompt within a session.
@@ -5724,56 +8100,66 @@ pub enum ClientRequest {
     /// The Agent MUST return the inserted message's ID without waiting for
     /// processing to finish.
     ///
-    /// The Agent reports the user message with the same ID through `session/update`;
-    /// this notification may arrive before or after the response, but neither may
+    /// The Agent reports the user message with the same ID through `session/update`.
+    /// This notification may arrive before or after the response, but neither may
     /// precede insertion. Processing state, output, tool calls, and completion are
     /// also reported through session updates.
     ///
     /// An error response means the user message was not inserted. Once it is
     /// inserted, the Agent MUST NOT answer with an error, even if the work fails
-    /// before the response is sent; it ends that work with the `error` stop reason.
+    /// before the response is sent. It ends that work with the `error` stop reason.
     ///
     /// A rejected submission produces no user-message updates. Foreground state
     /// follows its normal lifecycle independently of the request outcome:
     /// `running` may precede insertion, and rejection alone does not imply `idle`.
     ///
-    /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/prompt-lifecycle)
+    /// See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)
     PromptRequest(Box<PromptRequest>),
     /// Handles extension method requests from the client.
     ///
     /// Extension methods provide a way to add custom functionality while maintaining
     /// protocol compatibility.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtMethodRequest(Box<ExtRequest>),
 }
 
-impl ClientRequest {
-    /// Returns the corresponding method name of the request.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::InitializeRequest(_) => AGENT_METHOD_NAMES.initialize,
-            Self::LoginAuthRequest(_) => AGENT_METHOD_NAMES.auth_login,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::ListProvidersRequest(_) => AGENT_METHOD_NAMES.providers_list,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::SetProviderRequest(_) => AGENT_METHOD_NAMES.providers_set,
-            #[cfg(feature = "unstable_llm_providers")]
-            Self::DisableProviderRequest(_) => AGENT_METHOD_NAMES.providers_disable,
-            Self::LogoutAuthRequest(_) => AGENT_METHOD_NAMES.auth_logout,
-            Self::NewSessionRequest(_) => AGENT_METHOD_NAMES.session_new,
-            Self::ListSessionsRequest(_) => AGENT_METHOD_NAMES.session_list,
-            Self::DeleteSessionRequest(_) => AGENT_METHOD_NAMES.session_delete,
-            #[cfg(feature = "unstable_session_fork")]
-            Self::ForkSessionRequest(_) => AGENT_METHOD_NAMES.session_fork,
-            Self::ResumeSessionRequest(_) => AGENT_METHOD_NAMES.session_resume,
-            Self::CloseSessionRequest(_) => AGENT_METHOD_NAMES.session_close,
-            Self::SetSessionConfigOptionRequest(_) => AGENT_METHOD_NAMES.session_set_config_option,
-            Self::PromptRequest(_) => AGENT_METHOD_NAMES.session_prompt,
-            Self::ExtMethodRequest(ext_request) => &ext_request.method,
-        }
+impl_request_dispatch! {
+    ClientRequest => AgentResponse {
+        InitializeRequest => InitializeResponse: AGENT_METHOD_NAMES.initialize,
+        LoginAuthRequest => LoginAuthResponse: AGENT_METHOD_NAMES.auth_login,
+        #[cfg(feature = "unstable_llm_providers")]
+        ListProvidersRequest => ListProvidersResponse: AGENT_METHOD_NAMES.providers_list,
+        #[cfg(feature = "unstable_llm_providers")]
+        SetProviderRequest => SetProviderResponse: AGENT_METHOD_NAMES.providers_set,
+        #[cfg(feature = "unstable_llm_providers")]
+        DisableProviderRequest => DisableProviderResponse: AGENT_METHOD_NAMES.providers_disable,
+        LogoutAuthRequest => LogoutAuthResponse: AGENT_METHOD_NAMES.auth_logout,
+        #[cfg(feature = "unstable_auth_status")]
+        AuthStatusRequest => AuthStatusResponse: AGENT_METHOD_NAMES.auth_status,
+        NewSessionRequest => NewSessionResponse: AGENT_METHOD_NAMES.session_new,
+        ListSessionsRequest => ListSessionsResponse: AGENT_METHOD_NAMES.session_list,
+        DeleteSessionRequest => DeleteSessionResponse: AGENT_METHOD_NAMES.session_delete,
+        #[cfg(feature = "unstable_session_fork")]
+        ForkSessionRequest => ForkSessionResponse: AGENT_METHOD_NAMES.session_fork,
+        #[cfg(feature = "unstable_session_archive")]
+        ArchiveSessionRequest => ArchiveSessionResponse: AGENT_METHOD_NAMES.session_archive,
+        #[cfg(feature = "unstable_session_archive")]
+        UnarchiveSessionRequest => UnarchiveSessionResponse: AGENT_METHOD_NAMES.session_unarchive,
+        #[cfg(feature = "unstable_session_status")]
+        SessionStatusRequest => SessionStatusResponse: AGENT_METHOD_NAMES.session_status,
+        #[cfg(feature = "unstable_session_options")]
+        SessionOptionsRequest => SessionOptionsResponse: AGENT_METHOD_NAMES.session_options,
+        #[cfg(feature = "unstable_session_set_title")]
+        SetSessionTitleRequest => SetSessionTitleResponse: AGENT_METHOD_NAMES.session_set_title,
+        ResumeSessionRequest => ResumeSessionResponse: AGENT_METHOD_NAMES.session_resume,
+        CloseSessionRequest => CloseSessionResponse: AGENT_METHOD_NAMES.session_close,
+        CancelToolCallRequest => CancelToolCallResponse: AGENT_METHOD_NAMES.tool_call_cancel,
+        CancelTerminalRequest => CancelTerminalResponse: AGENT_METHOD_NAMES.terminal_cancel,
+        SetSessionConfigOptionRequest => SetSessionConfigOptionResponse: AGENT_METHOD_NAMES.session_set_config_option,
+        PromptRequest => PromptResponse: AGENT_METHOD_NAMES.session_prompt,
     }
+    extension ExtMethodRequest(Box<ExtRequest>) => ExtMethodResponse;
 }
 
 /// All possible responses that an agent can send to a client.
@@ -5803,6 +8189,9 @@ pub enum AgentResponse {
     DisableProviderResponse(#[serde(default)] Box<DisableProviderResponse>),
     /// Successful result returned for an `auth/logout` request.
     LogoutAuthResponse(#[serde(default)] Box<LogoutAuthResponse>),
+    /// Successful result returned for an `auth/status` request.
+    #[cfg(feature = "unstable_auth_status")]
+    AuthStatusResponse(Box<AuthStatusResponse>),
     /// Successful result returned for a `session/new` request.
     NewSessionResponse(Box<NewSessionResponse>),
     /// Successful result returned for a `session/list` request.
@@ -5812,10 +8201,29 @@ pub enum AgentResponse {
     /// Successful result returned for a `session/fork` request.
     #[cfg(feature = "unstable_session_fork")]
     ForkSessionResponse(Box<ForkSessionResponse>),
+    /// Successful result returned for a `session/archive` request.
+    #[cfg(feature = "unstable_session_archive")]
+    ArchiveSessionResponse(#[serde(default)] Box<ArchiveSessionResponse>),
+    /// Successful result returned for a `session/unarchive` request.
+    #[cfg(feature = "unstable_session_archive")]
+    UnarchiveSessionResponse(#[serde(default)] Box<UnarchiveSessionResponse>),
+    /// Successful result returned for a `session/status` request.
+    #[cfg(feature = "unstable_session_status")]
+    SessionStatusResponse(Box<SessionStatusResponse>),
+    /// Successful result returned for a `session/options` request.
+    #[cfg(feature = "unstable_session_options")]
+    SessionOptionsResponse(#[serde(default)] Box<SessionOptionsResponse>),
+    /// Successful result returned for a `session/set_title` request.
+    #[cfg(feature = "unstable_session_set_title")]
+    SetSessionTitleResponse(Box<SetSessionTitleResponse>),
     /// Successful result returned for a `session/resume` request.
     ResumeSessionResponse(#[serde(default)] Box<ResumeSessionResponse>),
     /// Successful result returned for a `session/close` request.
     CloseSessionResponse(#[serde(default)] Box<CloseSessionResponse>),
+    /// Successful result returned for a `tool_call/cancel` request.
+    CancelToolCallResponse(#[serde(default)] Box<CancelToolCallResponse>),
+    /// Successful result returned for a `terminal/cancel` request.
+    CancelTerminalResponse(#[serde(default)] Box<CancelTerminalResponse>),
     /// Successful result returned for a `session/set_config_option` request.
     SetSessionConfigOptionResponse(Box<SetSessionConfigOptionResponse>),
     /// Successful result returned for a `session/prompt` request.
@@ -5836,13 +8244,18 @@ pub enum AgentResponse {
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum ClientNotification {
-    /// Cancels ongoing operations for a session.
+    /// Cancels a session's foreground work and its prompts not yet inserted.
     ///
-    /// This is a notification sent by the client to cancel active work in a
-    /// session.
+    /// Work in the latest `background` list is not covered and keeps running. The
+    /// Agent MAY stop background activity it does not list.
     ///
     /// Upon receiving this notification, the Agent SHOULD stop all language model
-    /// requests and all tool call invocations as soon as possible.
+    /// requests and all tool call invocations of the cancelled foreground work as soon
+    /// as possible.
+    ///
+    /// The Agent MUST stop waiting for pending `session/request_permission` requests of
+    /// the cancelled work and treat them as not approved. It MUST cancel each of them
+    /// with `$/cancel_request`.
     ///
     /// After all ongoing operations have been successfully aborted and pending
     /// updates have been sent, the Agent MUST send an idle `state_update` session
@@ -5860,7 +8273,7 @@ pub enum ClientNotification {
     /// `session/cancel`, but MUST send them before the idle `state_update` that
     /// reports cancellation.
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/prompt-lifecycle#cancellation)
+    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
     CancelSessionNotification(Box<CancelSessionNotification>),
     /// **UNSTABLE**
     ///
@@ -5874,21 +8287,17 @@ pub enum ClientNotification {
     /// Extension notifications provide a way to send one-way messages for custom functionality
     /// while maintaining protocol compatibility.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/extensibility)
+    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtNotification(Box<ExtNotification>),
 }
 
-impl ClientNotification {
-    /// Returns the corresponding method name of the notification.
-    #[must_use]
-    pub fn method(&self) -> &str {
-        match self {
-            Self::CancelSessionNotification(_) => AGENT_METHOD_NAMES.session_cancel,
-            #[cfg(feature = "unstable_mcp_over_acp")]
-            Self::MessageMcpNotification(_) => AGENT_METHOD_NAMES.mcp_message,
-            Self::ExtNotification(ext_notification) => &ext_notification.method,
-        }
+impl_message_dispatch! {
+    ClientNotification {
+        CancelSessionNotification => AGENT_METHOD_NAMES.session_cancel,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        MessageMcpNotification => AGENT_METHOD_NAMES.mcp_message,
     }
+    extension ExtNotification(Box<ExtNotification>);
 }
 
 #[cfg(test)]
@@ -5900,6 +8309,52 @@ mod test_serialization {
 
     fn test_meta() -> Meta {
         json!({ "source": "test" }).as_object().unwrap().clone()
+    }
+
+    #[test]
+    fn list_sessions_cursor_and_session_directories_are_strict() {
+        for cursor in [json!(null), json!("next")] {
+            let response = json!({ "sessions": [], "nextCursor": cursor });
+            serde_json::from_value::<ListSessionsResponse>(response).unwrap();
+        }
+        let malformed = json!({ "sessions": [], "nextCursor": 42 });
+        assert!(serde_json::from_value::<ListSessionsResponse>(malformed).is_err());
+
+        let session = |dirs: serde_json::Value| json!({ "sessionId": "s", "cwd": "/w", "additionalDirectories": dirs });
+        let info: SessionInfo = serde_json::from_value(session(json!(null))).unwrap();
+        assert_eq!(info.additional_directories, Vec::<AbsolutePath>::new());
+        for bad in [json!(["/a", 42]), json!("/a")] {
+            assert!(serde_json::from_value::<SessionInfo>(session(bad)).is_err());
+        }
+        // A session with malformed directories is skipped, not truncated.
+        let response = json!({ "sessions": [session(json!(["/a", 42]))] });
+        let response: ListSessionsResponse = serde_json::from_value(response).unwrap();
+        assert_eq!(response.sessions, Vec::<SessionInfo>::new());
+    }
+
+    #[test]
+    fn other_fallbacks_preserve_optional_fields_verbatim() {
+        let valid = json!({ "type": "_custom", "methodId": "m", "name": "M",
+            "description": "d", "_meta": { "k": 1 } });
+        let method: AuthMethod = serde_json::from_value(valid.clone()).unwrap();
+        assert_eq!(method.description(), Some("d"));
+        assert_eq!(
+            method.meta(),
+            Some(&json!({ "k": 1 }).as_object().unwrap().clone())
+        );
+        assert_eq!(serde_json::to_value(&method).unwrap(), valid);
+
+        // Malformed optional fields are kept as sent and read as absent.
+        let malformed = json!({ "type": "_custom", "methodId": "m", "name": "M",
+            "description": 42, "_meta": "bad", "extra": true });
+        let method: AuthMethod = serde_json::from_value(malformed.clone()).unwrap();
+        assert_eq!(method.description(), None);
+        assert_eq!(method.meta(), None);
+        assert_eq!(serde_json::to_value(&method).unwrap(), malformed);
+
+        let replay = json!({ "type": "_custom", "_meta": "bad", "cursor": 3 });
+        let decoded: ReplayFrom = serde_json::from_value(replay.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&decoded).unwrap(), replay);
     }
 
     fn serialized_meta_key_count(value: &impl serde::Serialize) -> usize {
@@ -6278,6 +8733,11 @@ mod test_serialization {
             serde_json::to_value(&SessionConfigOptionCategory::ModelConfig).unwrap(),
             json!("model_config")
         );
+        #[cfg(feature = "unstable_speed_config_category")]
+        assert_eq!(
+            serde_json::to_value(&SessionConfigOptionCategory::Speed).unwrap(),
+            json!("speed")
+        );
         assert_eq!(
             serde_json::to_value(&SessionConfigOptionCategory::ThoughtLevel).unwrap(),
             json!("thought_level")
@@ -6295,6 +8755,11 @@ mod test_serialization {
         assert_eq!(
             serde_json::from_str::<SessionConfigOptionCategory>("\"model_config\"").unwrap(),
             SessionConfigOptionCategory::ModelConfig
+        );
+        #[cfg(feature = "unstable_speed_config_category")]
+        assert_eq!(
+            serde_json::from_str::<SessionConfigOptionCategory>("\"speed\"").unwrap(),
+            SessionConfigOptionCategory::Speed
         );
         assert_eq!(
             serde_json::from_str::<SessionConfigOptionCategory>("\"thought_level\"").unwrap(),
@@ -6315,6 +8780,16 @@ mod test_serialization {
         // Test round-trip of unknown category
         let json = serde_json::to_value(&unknown).unwrap();
         assert_eq!(json, json!("some_future_category"));
+    }
+
+    #[cfg(not(feature = "unstable_speed_config_category"))]
+    #[test]
+    fn test_session_config_option_speed_is_unknown_without_feature() {
+        let unknown: SessionConfigOptionCategory = serde_json::from_str("\"speed\"").unwrap();
+        assert_eq!(
+            unknown,
+            SessionConfigOptionCategory::Other("speed".to_string())
+        );
     }
 
     #[test]
@@ -6411,23 +8886,26 @@ mod test_serialization {
 
     #[test]
     fn test_session_response_available_commands_roundtrip_with_config_options() {
-        use super::super::{AvailableCommandInput, TextCommandInput};
+        use super::super::{AvailableCommandInput, Command, TextCommandInput};
 
         let commands = vec![
-            AvailableCommand::new("web", "Search the web")
-                .input(AvailableCommandInput::Text(TextCommandInput::new("Query"))),
-            AvailableCommand::new("test", "Run project tests"),
+            AvailableCommand::Command(
+                Command::new("web", "Search the web")
+                    .input(AvailableCommandInput::Text(TextCommandInput::new("Query"))),
+            ),
+            AvailableCommand::Command(Command::new("test", "Run project tests")),
         ];
         let mut expected = json!({
             "sessionId": "sess",
             "configOptions": [test_config_option()],
             "availableCommands": [
                 {
+                    "type": "command",
                     "name": "web",
                     "description": "Search the web",
                     "input": { "type": "text", "hint": "Query" }
                 },
-                { "name": "test", "description": "Run project tests" }
+                { "type": "command", "name": "test", "description": "Run project tests" }
             ]
         });
 
@@ -6466,7 +8944,8 @@ mod test_serialization {
 
     #[test]
     fn test_session_response_available_commands_deserialize_missing_null_and_invalid() {
-        let command = AvailableCommand::new("test", "Run project tests");
+        let command =
+            AvailableCommand::Command(super::super::Command::new("test", "Run project tests"));
         let config_options = vec![test_config_option()];
 
         for (commands, expected) in [
@@ -6476,6 +8955,10 @@ mod test_serialization {
             (Some(json!("oops")), vec![]),
             (Some(json!({})), vec![]),
             (Some(json!([null, {}, { "name": "invalid" }])), vec![]),
+            (
+                Some(json!([{ "name": "test", "description": "Run project tests" }])),
+                vec![],
+            ),
             (
                 Some(json!([null, command, { "name": "invalid" }])),
                 vec![command.clone()],
@@ -6683,6 +9166,44 @@ mod test_serialization {
     }
 
     #[test]
+    fn test_tool_call_and_terminal_cancel_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.tool_call_cancel, "tool_call/cancel");
+        assert_eq!(AGENT_METHOD_NAMES.terminal_cancel, "terminal/cancel");
+        assert_eq!(
+            ClientRequest::CancelToolCallRequest(Box::new(CancelToolCallRequest::new(
+                "sess_abc123",
+                "call_012"
+            )))
+            .method(),
+            "tool_call/cancel"
+        );
+        assert_eq!(
+            ClientRequest::CancelTerminalRequest(Box::new(CancelTerminalRequest::new(
+                "sess_abc123",
+                "term_003"
+            )))
+            .method(),
+            "terminal/cancel"
+        );
+        assert_eq!(
+            serde_json::to_value(CancelToolCallRequest::new("sess_abc123", "call_012")).unwrap(),
+            json!({"sessionId": "sess_abc123", "toolCallId": "call_012"})
+        );
+        assert_eq!(
+            serde_json::to_value(CancelTerminalRequest::new("sess_abc123", "term_003")).unwrap(),
+            json!({"sessionId": "sess_abc123", "terminalId": "term_003"})
+        );
+        assert!(
+            serde_json::from_value::<CancelToolCallRequest>(json!({"sessionId": "sess_abc123"}))
+                .is_err()
+        );
+        assert_eq!(
+            serde_json::to_value(CancelTerminalResponse::new()).unwrap(),
+            json!({})
+        );
+    }
+
+    #[test]
     fn test_session_delete_serialization() {
         assert_eq!(AGENT_METHOD_NAMES.session_delete, "session/delete");
         assert_eq!(
@@ -6710,6 +9231,304 @@ mod test_serialization {
             })
         );
     }
+    #[cfg(feature = "unstable_session_set_title")]
+    #[test]
+    fn test_session_set_title_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_set_title, "session/set_title");
+        assert_eq!(
+            ClientRequest::SetSessionTitleRequest(Box::new(SetSessionTitleRequest::new(
+                "sess_abc123",
+                "Investigate OAuth timeout"
+            )))
+            .method(),
+            "session/set_title"
+        );
+        assert_eq!(
+            serde_json::to_value(SetSessionTitleRequest::new(
+                "sess_abc123",
+                "Investigate OAuth timeout"
+            ))
+            .unwrap(),
+            json!({
+                "sessionId": "sess_abc123",
+                "title": "Investigate OAuth timeout"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(SetSessionTitleResponse::new("Investigate OAuth timeout"))
+                .unwrap(),
+            json!({
+                "title": "Investigate OAuth timeout"
+            })
+        );
+        assert_eq!(
+            serde_json::to_value(SessionCapabilities::new().title(SessionTitleCapabilities::new()))
+                .unwrap(),
+            json!({
+                "title": {}
+            })
+        );
+    }
+
+    #[cfg(feature = "unstable_session_set_title")]
+    #[test]
+    fn test_session_set_title_requires_title() {
+        for params in [
+            json!({"sessionId": "sess_abc123"}),
+            json!({"sessionId": "sess_abc123", "title": null}),
+            json!({"sessionId": "sess_abc123", "title": 42}),
+        ] {
+            assert!(serde_json::from_value::<SetSessionTitleRequest>(params).is_err());
+        }
+        for result in [json!({}), json!({"title": null})] {
+            assert!(serde_json::from_value::<SetSessionTitleResponse>(result).is_err());
+        }
+    }
+
+    #[cfg(feature = "unstable_session_options")]
+    #[test]
+    fn test_session_options_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_options, "session/options");
+        assert_eq!(
+            ClientRequest::SessionOptionsRequest(Box::new(SessionOptionsRequest::new(
+                "/home/user/project"
+            )))
+            .method(),
+            "session/options"
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionOptionsRequest::new("/home/user/project")
+                    .session_id(SessionId::new("sess_abc123"))
+            )
+            .unwrap(),
+            json!({"cwd": "/home/user/project", "sessionId": "sess_abc123"})
+        );
+        assert_eq!(
+            serde_json::from_value::<SessionOptionsRequest>(
+                json!({"cwd": "/home/user/project", "additionalDirectories": null, "sessionId": null})
+            )
+            .unwrap(),
+            SessionOptionsRequest::new("/home/user/project")
+        );
+        let request = NewSessionRequest::new("/home/user/project").config_options(vec![
+            InitialSessionConfigOption::new("model", SessionConfigOptionValue::id("model-2")),
+            InitialSessionConfigOption::new("fast", SessionConfigOptionValue::boolean(true)),
+        ]);
+        let value = serde_json::to_value(&request).unwrap();
+        assert_eq!(
+            value["configOptions"],
+            json!([
+                {"configId": "model", "type": "id", "value": "model-2"},
+                {"configId": "fast", "type": "boolean", "value": true}
+            ])
+        );
+        assert_eq!(
+            serde_json::from_value::<NewSessionRequest>(value).unwrap(),
+            request
+        );
+        assert!(
+            serde_json::from_value::<NewSessionRequest>(json!({
+                "cwd": "/home/user/project",
+                "mcpServers": [],
+                "configOptions": [{"type": "boolean", "value": true}]
+            }))
+            .is_err()
+        );
+        assert_eq!(
+            serde_json::to_value(SessionOptionsResponse::new()).unwrap(),
+            json!({})
+        );
+        #[cfg(feature = "unstable_session_fork")]
+        {
+            let fork =
+                ForkSessionRequest::new("sess_abc123", "/home/user/project").config_options(vec![
+                    InitialSessionConfigOption::new(
+                        "model",
+                        SessionConfigOptionValue::id("model-2"),
+                    ),
+                ]);
+            let value = serde_json::to_value(&fork).unwrap();
+            assert_eq!(
+                value["configOptions"],
+                json!([{"configId": "model", "type": "id", "value": "model-2"}])
+            );
+            assert_eq!(
+                serde_json::from_value::<ForkSessionRequest>(value).unwrap(),
+                fork
+            );
+            // `null` is an empty list, and a malformed entry fails the request.
+            assert_eq!(
+                serde_json::from_value::<ForkSessionRequest>(json!({
+                    "sessionId": "sess_abc123",
+                    "cwd": "/home/user/project",
+                    "configOptions": null
+                }))
+                .unwrap(),
+                ForkSessionRequest::new("sess_abc123", "/home/user/project")
+            );
+            assert!(
+                serde_json::from_value::<ForkSessionRequest>(json!({
+                    "sessionId": "sess_abc123",
+                    "cwd": "/home/user/project",
+                    "configOptions": [{"type": "boolean", "value": true}]
+                }))
+                .is_err()
+            );
+        }
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().options(SessionOptionsCapabilities::new())
+            )
+            .unwrap(),
+            json!({"options": {}})
+        );
+    }
+
+    #[cfg(feature = "unstable_session_status")]
+    #[test]
+    fn test_session_status_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_status, "session/status");
+        assert_eq!(
+            ClientRequest::SessionStatusRequest(Box::new(SessionStatusRequest::new("sess_abc123")))
+                .method(),
+            "session/status"
+        );
+        assert_eq!(
+            serde_json::to_value(SessionStatusRequest::new("sess_abc123")).unwrap(),
+            json!({"sessionId": "sess_abc123"})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionStatusResponse::new(SessionStatus::Saved)).unwrap(),
+            json!({"status": "saved"})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().status(SessionStatusCapabilities::new())
+            )
+            .unwrap(),
+            json!({"status": {}})
+        );
+        assert_eq!(
+            serde_json::to_value(SessionStatusResponse::new(SessionStatus::Open).state(
+                StateUpdate::RequiresAction(crate::v2::RequiresActionStateUpdate::new())
+            ))
+            .unwrap(),
+            json!({
+                "status": "open",
+                "state": {"state": "requires_action"}
+            })
+        );
+        for state in [json!(null), json!("running"), json!({"state": 7})] {
+            let response = serde_json::from_value::<SessionStatusResponse>(
+                json!({"status": "open", "state": state}),
+            )
+            .unwrap();
+            assert_eq!(response.state, None);
+        }
+    }
+
+    #[cfg(feature = "unstable_session_status")]
+    #[test]
+    fn test_session_status_is_strict_and_open() {
+        let custom =
+            serde_json::from_value::<SessionStatusResponse>(json!({"status": "_suspended"}))
+                .unwrap();
+        assert_eq!(
+            custom.status,
+            SessionStatus::Other("_suspended".to_string())
+        );
+        assert_eq!(
+            serde_json::to_value(&custom).unwrap(),
+            json!({"status": "_suspended"})
+        );
+        for result in [json!({}), json!({"status": null}), json!({"status": 1})] {
+            assert!(serde_json::from_value::<SessionStatusResponse>(result).is_err());
+        }
+        for params in [json!({}), json!({"sessionId": null})] {
+            assert!(serde_json::from_value::<SessionStatusRequest>(params).is_err());
+        }
+    }
+
+    #[cfg(feature = "unstable_session_archive")]
+    #[test]
+    fn test_session_archive_serialization() {
+        assert_eq!(AGENT_METHOD_NAMES.session_archive, "session/archive");
+        assert_eq!(AGENT_METHOD_NAMES.session_unarchive, "session/unarchive");
+        assert_eq!(
+            ClientRequest::ArchiveSessionRequest(Box::new(ArchiveSessionRequest::new(
+                "sess_abc123"
+            )))
+            .method(),
+            "session/archive"
+        );
+        assert_eq!(
+            ClientRequest::UnarchiveSessionRequest(Box::new(UnarchiveSessionRequest::new(
+                "sess_abc123"
+            )))
+            .method(),
+            "session/unarchive"
+        );
+        assert_eq!(
+            serde_json::to_value(ArchiveSessionRequest::new("sess_abc123")).unwrap(),
+            json!({"sessionId": "sess_abc123"})
+        );
+        assert_eq!(
+            serde_json::to_value(UnarchiveSessionResponse::new()).unwrap(),
+            json!({})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionCapabilities::new().archive(SessionArchiveCapabilities::new())
+            )
+            .unwrap(),
+            json!({"archive": {}})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                ListSessionsRequest::new()
+                    .cwd("/home/user/project")
+                    .archived(SessionArchiveFilter::Only)
+            )
+            .unwrap(),
+            json!({"cwd": "/home/user/project", "archived": "only"})
+        );
+        assert_eq!(
+            serde_json::to_value(
+                SessionInfo::new("sess_abc123", "/home/user/project").archived(true)
+            )
+            .unwrap(),
+            json!({"sessionId": "sess_abc123", "cwd": "/home/user/project", "archived": true})
+        );
+    }
+
+    #[cfg(feature = "unstable_session_archive")]
+    #[test]
+    fn test_session_archive_filter_is_strict_and_open() {
+        for (value, expected) in [
+            (json!(null), None),
+            (json!("include"), Some(SessionArchiveFilter::Include)),
+            (
+                json!("_recent"),
+                Some(SessionArchiveFilter::Other("_recent".to_string())),
+            ),
+        ] {
+            let request =
+                serde_json::from_value::<ListSessionsRequest>(json!({"archived": value})).unwrap();
+            assert_eq!(request.archived, expected);
+        }
+        for value in [json!(true), json!(1), json!({})] {
+            assert!(
+                serde_json::from_value::<ListSessionsRequest>(json!({"archived": value})).is_err()
+            );
+        }
+        let info = serde_json::from_value::<SessionInfo>(
+            json!({"sessionId": "sess_abc123", "cwd": "/home/user/project", "archived": "yes"}),
+        )
+        .unwrap();
+        assert_eq!(info.archived, None);
+    }
+
     #[test]
     fn test_session_additional_directories_serialization() {
         assert_eq!(
@@ -6812,7 +9631,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_session_system_prompt_capabilities_serialization() {
         assert_eq!(
@@ -6873,7 +9691,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_lifecycle_request_serialization() {
         let system_prompt = SystemPrompt::new(vec![ContentBlock::from(
@@ -6932,7 +9749,6 @@ mod test_serialization {
 
     /// `SystemPrompt::new` defaults to `append` in Rust, but `mode` is required on
     /// the wire, so it is always serialized.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_new_defaults_to_append() {
         let system_prompt = SystemPrompt::new(vec![ContentBlock::from("...")]);
@@ -6946,7 +9762,6 @@ mod test_serialization {
     /// Unknown modes follow the enum variant extension rule: they parse as
     /// `SystemPromptMode::Other` so they are not dropped, and an agent that does
     /// not support them must reject the request.
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_system_prompt_preserves_unknown_modes() {
         for mode in ["_vendor_mode", "prepend"] {
@@ -6968,7 +9783,6 @@ mod test_serialization {
     /// The receiver acts on `systemPrompt`, so malformed values fail the request
     /// (`-32602`) instead of creating a session without the prompt, and `null`
     /// is equivalent to omitting the field.
-    #[cfg(feature = "unstable_session_system_prompt")]
     fn assert_system_prompt_is_strict<T>(base: &serde_json::Value)
     where
         T: serde::de::DeserializeOwned + PartialEq + std::fmt::Debug,
@@ -7002,7 +9816,6 @@ mod test_serialization {
         );
     }
 
-    #[cfg(feature = "unstable_session_system_prompt")]
     #[test]
     fn test_session_setup_requests_reject_malformed_system_prompts() {
         assert!(
@@ -7024,8 +9837,7 @@ mod test_serialization {
     }
 
     /// Unknown content block types parse as `ContentBlock::Other` so they are not
-    /// dropped; an agent that does not support them must reject the request.
-    #[cfg(feature = "unstable_session_system_prompt")]
+    /// dropped. An agent that does not support them must reject the request.
     #[test]
     fn test_system_prompt_preserves_unknown_content_blocks() {
         let request: NewSessionRequest = serde_json::from_value(json!({
@@ -7771,6 +10583,47 @@ mod test_serialization {
         assert!(deserialized.embedded_context.is_some());
     }
 
+    #[cfg(feature = "unstable_agent_skills")]
+    #[test]
+    fn prompt_skill_capability_has_two_levels() {
+        // `{}` allows one leading skill block. `inline` allows them anywhere.
+        let leading = PromptCapabilities::new().skill(PromptSkillCapabilities::new());
+        assert_eq!(
+            serde_json::to_value(&leading).unwrap(),
+            json!({ "skill": {} })
+        );
+
+        let inline = PromptCapabilities::new()
+            .skill(PromptSkillCapabilities::new().inline(PromptSkillInlineCapabilities::new()));
+        let wire = json!({ "skill": { "inline": {} } });
+        assert_eq!(serde_json::to_value(&inline).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<PromptCapabilities>(wire).unwrap(),
+            inline
+        );
+
+        for unsupported in [
+            json!({}),
+            json!({ "skill": null }),
+            json!({ "skill": false }),
+            json!({ "skill": true }),
+        ] {
+            let caps: PromptCapabilities = serde_json::from_value(unsupported).unwrap();
+            assert!(caps.skill.is_none());
+        }
+
+        // A malformed `inline` does not withdraw the first level.
+        for leading_only in [
+            json!({ "skill": { "inline": null } }),
+            json!({ "skill": { "inline": true } }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<PromptCapabilities>(leading_only).unwrap(),
+                leading
+            );
+        }
+    }
+
     #[test]
     fn test_mcp_capabilities_serialize_supported_transports_as_objects() {
         let caps = McpCapabilities::new()
@@ -7831,6 +10684,164 @@ mod test_serialization {
             }))
             .is_err()
         );
+    }
+
+    fn prompt_request_with_idempotency_key(key: &serde_json::Value) -> serde_json::Value {
+        serde_json::json!({
+            "sessionId": "sess-1",
+            "idempotencyKey": key,
+            "prompt": [{"type": "text", "text": "hello"}]
+        })
+    }
+
+    #[test]
+    fn prompt_request_idempotency_key_round_trips() {
+        use serde_json::json;
+
+        let key = "0b6f3c1e-8d2a-4c57-9a41-5e2f7d90c3ab";
+        let value = prompt_request_with_idempotency_key(&json!(key));
+
+        let request: PromptRequest = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(
+            request.idempotency_key.as_ref().map(IdempotencyKey::as_str),
+            Some(key)
+        );
+        assert_eq!(serde_json::to_value(&request).unwrap(), value);
+
+        let built = PromptRequest::new("sess-1", vec![ContentBlock::from("hello")])
+            .idempotency_key(IdempotencyKey::new(key).unwrap());
+        assert_eq!(built, request);
+    }
+
+    #[test]
+    fn prompt_request_omitted_and_null_idempotency_key_mean_no_key() {
+        use serde_json::json;
+
+        let omitted = json!({
+            "sessionId": "sess-1",
+            "prompt": [{"type": "text", "text": "hello"}]
+        });
+        let request: PromptRequest = serde_json::from_value(omitted.clone()).unwrap();
+        assert_eq!(request.idempotency_key, None);
+        // No key is serialized as an omitted field, not as `null`.
+        assert_eq!(serde_json::to_value(&request).unwrap(), omitted);
+
+        let null: PromptRequest =
+            serde_json::from_value(prompt_request_with_idempotency_key(&json!(null))).unwrap();
+        assert_eq!(null, request);
+    }
+
+    #[test]
+    fn prompt_request_rejects_malformed_idempotency_key() {
+        use serde_json::json;
+
+        let too_long = "k".repeat(IdempotencyKey::MAX_LENGTH + 1);
+        for (name, key) in [
+            ("an empty string", json!("")),
+            ("a string over 255 characters", json!(too_long)),
+            ("a number", json!(7)),
+            ("a boolean", json!(true)),
+            ("an object", json!({"key": "k"})),
+            ("an array", json!(["k"])),
+        ] {
+            assert!(
+                serde_json::from_value::<PromptRequest>(prompt_request_with_idempotency_key(&key))
+                    .is_err(),
+                "{name} must fail the request instead of being treated as no key"
+            );
+        }
+    }
+
+    #[test]
+    fn idempotency_key_length_is_counted_in_characters() {
+        use serde_json::json;
+
+        assert_eq!(IdempotencyKey::new(""), Err(InvalidIdempotencyKey::Empty));
+        assert_eq!(IdempotencyKey::new("k").unwrap().as_str(), "k");
+
+        let longest = "k".repeat(IdempotencyKey::MAX_LENGTH);
+        assert_eq!(
+            IdempotencyKey::new(longest.as_str()).unwrap().as_str(),
+            longest
+        );
+        assert_eq!(
+            IdempotencyKey::new(format!("{longest}k")),
+            Err(InvalidIdempotencyKey::TooLong)
+        );
+
+        // 255 two-byte characters are 510 bytes and still within the limit.
+        let multibyte = "é".repeat(IdempotencyKey::MAX_LENGTH);
+        assert!(IdempotencyKey::new(multibyte.as_str()).is_ok());
+        assert!(
+            serde_json::from_value::<PromptRequest>(prompt_request_with_idempotency_key(&json!(
+                multibyte
+            )))
+            .is_ok()
+        );
+        assert_eq!(
+            IdempotencyKey::new(format!("{multibyte}é")),
+            Err(InvalidIdempotencyKey::TooLong)
+        );
+
+        assert_eq!("k".parse::<IdempotencyKey>().unwrap().to_string(), "k");
+        assert_eq!(
+            IdempotencyKey::try_from(String::new()),
+            Err(InvalidIdempotencyKey::Empty)
+        );
+        assert_eq!(
+            InvalidIdempotencyKey::TooLong.to_string(),
+            "idempotency key must be at most 255 characters"
+        );
+    }
+
+    #[cfg(feature = "uuid")]
+    #[test]
+    fn generated_idempotency_keys_are_distinct_valid_v4_uuids() {
+        let first = IdempotencyKey::generate();
+        let second = IdempotencyKey::generate();
+        assert_ne!(first, second);
+
+        for key in [&first, &second] {
+            let uuid = uuid::Uuid::parse_str(key.as_str()).unwrap();
+            assert_eq!(uuid.get_version_num(), 4);
+            // A generated key passes the same validation as any other key.
+            assert_eq!(IdempotencyKey::new(key.as_str()).as_ref(), Ok(key));
+            let request = PromptRequest::new("sess-1", vec![ContentBlock::from("hello")])
+                .idempotency_key(key.clone());
+            let value = serde_json::to_value(&request).unwrap();
+            assert_eq!(value["idempotencyKey"], key.as_str());
+            assert_eq!(
+                serde_json::from_value::<PromptRequest>(value).unwrap(),
+                request
+            );
+        }
+
+        assert_eq!(
+            IdempotencyKey::from(uuid::Uuid::nil()).as_str(),
+            "00000000-0000-0000-0000-000000000000"
+        );
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn idempotency_key_schema_is_a_strict_bounded_string() {
+        use serde_json::json;
+
+        let key = serde_json::to_value(schemars::schema_for!(IdempotencyKey)).unwrap();
+        assert_eq!(key["type"], "string");
+        assert_eq!(key["minLength"], 1);
+        assert_eq!(key["maxLength"], json!(IdempotencyKey::MAX_LENGTH));
+
+        let request = serde_json::to_value(schemars::schema_for!(PromptRequest)).unwrap();
+        assert_eq!(request["required"], json!(["sessionId", "prompt"]));
+        let property = &request["properties"]["idempotencyKey"];
+        assert_eq!(
+            property["anyOf"],
+            json!([{"$ref": "#/$defs/IdempotencyKey"}, {"type": "null"}])
+        );
+        // The Agent acts on the key, so the schema must not mark it as tolerant
+        // of malformed values.
+        assert!(property.get("x-deserialize-default-on-error").is_none());
     }
 
     fn assert_session_setup_lists_are_strict<T>(base: &serde_json::Value)
@@ -7946,6 +10957,137 @@ mod test_serialization {
                 AuthMethod::Terminal(AuthMethodTerminal::new("null-config", "Log in")),
                 AuthMethod::Agent(AuthMethodAgent::new("agent", "Agent login")),
             ]
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_status")]
+    #[test]
+    fn auth_status_response_round_trips() {
+        let response = AuthStatusResponse::new(AuthState::Authenticated).accounts(vec![
+            AuthAccount::new("Anthropic API key")
+                .description("API key helper".to_string())
+                .active(true),
+            AuthAccount::new("Claude Max").email("user@example.com".to_string()),
+        ]);
+        let json = serde_json::to_value(&response).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "state": "authenticated",
+                "accounts": [
+                    {
+                        "label": "Anthropic API key",
+                        "description": "API key helper",
+                        "active": true
+                    },
+                    {
+                        "label": "Claude Max",
+                        "email": "user@example.com"
+                    }
+                ]
+            })
+        );
+        assert_eq!(
+            serde_json::from_value::<AuthStatusResponse>(json).unwrap(),
+            response
+        );
+        assert_eq!(
+            serde_json::to_value(AuthStatusResponse::new(AuthState::NotRequired)).unwrap(),
+            json!({"state": "not_required"})
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_status")]
+    #[test]
+    fn auth_status_state_is_strict_and_accounts_are_lenient() {
+        assert!(serde_json::from_value::<AuthStatusResponse>(json!({})).is_err());
+        assert!(serde_json::from_value::<AuthStatusResponse>(json!({"state": null})).is_err());
+        assert!(serde_json::from_value::<AuthStatusResponse>(json!({"state": 1})).is_err());
+
+        let response: AuthStatusResponse = serde_json::from_value(json!({
+            "state": "_vendor_state",
+            "accounts": [
+                {"active": true},
+                {
+                    "label": "Vertex AI",
+                    "description": 42,
+                    "active": "yes",
+                    "email": ["not", "a", "string"]
+                }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(
+            response,
+            AuthStatusResponse::new(AuthState::Other("_vendor_state".to_string()))
+                .accounts(vec![AuthAccount::new("Vertex AI")])
+        );
+        assert_eq!(
+            serde_json::from_value::<AuthStatusResponse>(
+                json!({"state": "unknown", "accounts": null})
+            )
+            .unwrap(),
+            AuthStatusResponse::new(AuthState::Unknown)
+        );
+    }
+
+    #[cfg(feature = "unstable_auth_status")]
+    #[test]
+    fn auth_status_update_notification_routes() {
+        use crate::v2::{AgentNotification, CLIENT_METHOD_NAMES};
+
+        assert_eq!(AGENT_METHOD_NAMES.auth_status, "auth/status");
+        assert_eq!(CLIENT_METHOD_NAMES.auth_status_update, "auth/status_update");
+        let notification = AgentNotification::AuthStatusUpdateNotification(Box::new(
+            AuthStatusUpdateNotification::new(AuthState::Unauthenticated),
+        ));
+        assert_eq!(notification.method(), "auth/status_update");
+        assert_eq!(
+            serde_json::to_value(&notification).unwrap(),
+            json!({"state": "unauthenticated"})
+        );
+    }
+
+    #[cfg(all(
+        feature = "unstable_session_fork",
+        feature = "unstable_session_cursors"
+    ))]
+    #[test]
+    fn fork_session_request_cursor_id_is_optional_and_strict() {
+        let request = ForkSessionRequest::new("sess_abc123", "/home/user/project")
+            .cursor_id(CursorId::new("cur_1"));
+        let wire = json!({
+            "sessionId": "sess_abc123",
+            "cursorId": "cur_1",
+            "cwd": "/home/user/project"
+        });
+        assert_eq!(serde_json::to_value(&request).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<ForkSessionRequest>(wire).unwrap(),
+            request
+        );
+
+        // Omitted and `null` both fork the whole session.
+        for wire in [
+            json!({ "sessionId": "sess_abc123", "cwd": "/home/user/project" }),
+            json!({ "sessionId": "sess_abc123", "cwd": "/home/user/project", "cursorId": null }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<ForkSessionRequest>(wire)
+                    .unwrap()
+                    .cursor_id,
+                None
+            );
+        }
+
+        // A malformed cursor ID fails the request. It never forks the whole session.
+        assert!(
+            serde_json::from_value::<ForkSessionRequest>(json!({
+                "sessionId": "sess_abc123",
+                "cwd": "/home/user/project",
+                "cursorId": 7
+            }))
+            .is_err()
         );
     }
 }
