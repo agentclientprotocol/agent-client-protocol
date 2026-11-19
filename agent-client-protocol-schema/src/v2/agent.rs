@@ -4805,7 +4805,9 @@ impl McpServerAcp {
 pub struct McpServerStdio {
     /// Human-readable name identifying this MCP server.
     pub name: String,
-    /// Absolute path to the MCP server executable.
+    /// Path to the MCP server executable. Must be an absolute path.
+    ///
+    /// Agents reject a request with a relative `command` with `-32602`.
     pub command: AbsolutePath,
     /// Command-line arguments to pass to the MCP server.
     #[serde_as(deserialize_as = "DefaultOnNull")]
