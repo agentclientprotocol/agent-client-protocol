@@ -3403,7 +3403,7 @@
           "x-deserialize-default-on-null": true
         },
         "env": {
-          "description": "Additional environment variables to set on the configured agent invocation for terminal auth.\nNames MUST be unique. These values override same-named variables in the\nbase launch configuration.",
+          "description": "Additional environment variables to set on the configured agent invocation for terminal auth.\nNames SHOULD be unique, and otherwise the last entry wins. These values override\nsame-named variables in the base launch configuration.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/EnvVariable"
@@ -7222,7 +7222,7 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Human-readable name identifying this MCP server.",
+          "description": "Human-readable name identifying this MCP server. MUST be unique within `mcpServers`.\n\nAgents reject a request with a duplicate `name` with `-32602`.",
           "type": "string"
         },
         "url": {
@@ -7252,7 +7252,7 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Human-readable name identifying this MCP server.",
+          "description": "Human-readable name identifying this MCP server. MUST be unique within `mcpServers`.\n\nAgents reject a request with a duplicate `name` with `-32602`.",
           "type": "string"
         },
         "command": {

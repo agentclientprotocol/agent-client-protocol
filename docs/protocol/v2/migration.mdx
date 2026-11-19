@@ -289,7 +289,7 @@ Stable v2 defines two types: `agent` and `terminal`. Custom types **MUST** begin
 
 `terminal` methods work as in v1: the Client launches the configured Agent program interactively with the method's `args` and `env`, and never sends `auth/login` for them. Besides the `methodId` rename, two things changed shape:
 
-- `env` is an array of `{ "name", "value" }` entries with unique names, instead of an object that maps names to values.
+- `env` is an array of `{ "name", "value" }` entries, instead of an object that maps names to values. Each entry **SHOULD** have a unique `name`. Otherwise the last entry with a given name wins.
 - The Client advertises terminal auth support with the support marker `capabilities.auth.terminal: {}` instead of `clientCapabilities.auth.terminal: true` (see [Support markers](#support-markers-are-objects-not-booleans)).
 
 <CodeGroup>
