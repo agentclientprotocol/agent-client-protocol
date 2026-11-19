@@ -1516,7 +1516,7 @@ impl ReplayComplete {
 /// including messages naming it as sender or recipient. Child events are
 /// delivered automatically. No separate child load, resume, or subscription is needed.
 /// Understanding this update, registering child sessions, and applying their
-/// operation restrictions are baseline v2 requirements. No Client capability
+/// operation restrictions are baseline requirements. No Client capability
 /// is required.
 ///
 /// Only `sessionId` is required. Other fields have

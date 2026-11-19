@@ -1975,8 +1975,7 @@ fn idle_state_update_schema(schema: &mut Schema) {
 ///
 /// Reason a child's foreground work stopped, reported on its idle state snapshot.
 ///
-/// Tagged by `stopReason` and flattened into [`IdleStateUpdate`], so the snapshot
-/// matches v2's idle `state_update`, including its handling of unknown values.
+/// Tagged by `stopReason` and flattened into [`IdleStateUpdate`].
 /// The known values are those of [`StopReason`](super::StopReason) plus `error`.
 /// A child has no prompt response of its own, so this snapshot is the only place
 /// to report that its work failed. The prompt response keeps

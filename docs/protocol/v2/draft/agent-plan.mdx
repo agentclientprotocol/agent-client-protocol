@@ -70,7 +70,7 @@ The draft unstable schema includes markdown plans and explicit plan removal. The
 
 Clients using the draft unstable schema **MUST** tolerate these variants. Tolerating a variant means the Client can deserialize and validate it, then render it, preserve it for replay or proxying, or ignore it.
 
-No Client capability is required in v2. Clients using only the baseline schema
+No Client capability is required. Clients using only the baseline schema
 accept unfamiliar plan representations through the unknown plan-content fallback
 and unfamiliar removal updates through the unknown session-update fallback.
 Agents cannot assume that these plans will be rendered. See [Experimental

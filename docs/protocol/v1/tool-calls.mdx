@@ -130,8 +130,7 @@ Updates use the `session/update` notification with `tool_call_update`:
 All fields except `toolCallId` are optional in updates. Only the fields being changed need to be included.
 
 For `name`, a string sets or replaces the tool name. Omission and `null` both
-leave the existing name unchanged, so ACP v1 cannot clear a previously reported
-name.
+leave the existing name unchanged, so a previously reported name cannot be cleared.
 
 ## Requesting permission
 
