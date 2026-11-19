@@ -65,7 +65,7 @@ impl McpError {
 ///
 /// Both branches require their carrier key. An error must be a non-null object.
 /// Unknown outer fields are ignored. Inner result and error fields are preserved.
-/// Carrier `_meta` is optional. Null or invalid values are treated as absent.
+/// Carrier `_meta` is optional. Omitted and `null` are equivalent.
 /// Senders must include exactly one outcome. Receivers prefer `result` if both are present.
 #[serde_as]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

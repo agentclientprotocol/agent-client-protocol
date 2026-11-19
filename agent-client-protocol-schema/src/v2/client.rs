@@ -1038,9 +1038,6 @@ impl CursorUpdate {
 ///
 /// The methods that currently accept a session cursor.
 ///
-/// A malformed value falls back to no capabilities, so the Client never passes a
-/// cursor to a method the Agent did not advertise.
-///
 /// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
 #[cfg(feature = "unstable_session_cursors")]
 #[serde_as]
@@ -2230,7 +2227,7 @@ pub struct RunningStateUpdate {
     /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
     /// background work, not that nothing is running. `[]` means no background work is
     /// running. An Agent that reports background work MUST include it on every state
-    /// update for the session. A malformed list is treated as not reported.
+    /// update for the session.
     ///
     /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -2279,8 +2276,7 @@ impl RunningStateUpdate {
 ///
 /// Agents SHOULD include a `stopReason` when the idle transition ends foreground
 /// work. An idle update that does not end foreground work need not include one.
-/// Receivers treat an omitted, `null`, or malformed `stopReason` as the agent not
-/// reporting one.
+/// Receivers treat an omitted or `null` `stopReason` as the agent not reporting one.
 /// Repeated or resume snapshots may carry the last stop reason for context.
 /// They MUST NOT be counted as new completions, cancellations, or additional usage.
 #[serde_as]
@@ -2312,7 +2308,7 @@ pub struct IdleStateUpdate {
     /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
     /// background work, not that nothing is running. `[]` means no background work is
     /// running. An Agent that reports background work MUST include it on every state
-    /// update for the session. A malformed list is treated as not reported.
+    /// update for the session.
     ///
     /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -2393,7 +2389,7 @@ fn idle_state_update_schema(schema: &mut Schema) {
         properties.insert(
             "stopReason".into(),
             serde_json::json!({
-                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
                 "type": ["string", "null"],
                 "x-deserialize-default-on-error": true
             }),
@@ -2439,7 +2435,7 @@ pub struct RequiresActionStateUpdate {
     /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
     /// background work, not that nothing is running. `[]` means no background work is
     /// running. An Agent that reports background work MUST include it on every state
-    /// update for the session. A malformed list is treated as not reported.
+    /// update for the session.
     ///
     /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -2508,7 +2504,7 @@ pub struct UnknownStateUpdate {
     /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting
     /// background work, not that nothing is running. `[]` means no background work is
     /// running. An Agent that reports background work MUST include it on every state
-    /// update for the session. A malformed list is treated as not reported.
+    /// update for the session.
     ///
     /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -3225,8 +3221,7 @@ pub struct PromptSuggestionsUpdate {
     /// The suggestions the Client can offer, ordered most likely first.
     ///
     /// Required and non-null. An empty list withdraws the suggestions the
-    /// Client is offering. A Client skips an entry it cannot parse and keeps
-    /// the rest.
+    /// Client is offering.
     #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub suggestions: Vec<PromptSuggestion>,

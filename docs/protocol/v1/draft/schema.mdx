@@ -2351,7 +2351,7 @@ Outer ACP errors are reserved for binding and runtime failures.
 
 Both branches require their carrier key. An error must be a non-null object.
 Unknown outer fields are ignored. Inner result and error fields are preserved.
-Carrier `_meta` is optional. Null or invalid values are treated as absent.
+Carrier `_meta` is optional. Omitted and `null` are equivalent.
 Senders must include exactly one outcome. Receivers prefer `result` if both are present.
 
 **Type:** Union
@@ -4397,9 +4397,6 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 The methods that currently accept a session cursor.
 
-A malformed value falls back to no capabilities, so the Client never passes a
-cursor to a method the Agent did not advertise.
-
 See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
 
 **Type:** Object
@@ -5578,7 +5575,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 The child is ready to process another prompt.
 
-An omitted, `null`, or malformed `stopReason` means not reported.
+An omitted or `null` `stopReason` means not reported.
 
 **Type:** Union
 
@@ -5592,7 +5589,7 @@ Optional. Omitted and `null` mean no metadata for this state snapshot.
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
 
 See protocol docs: [Work state](https://agentclientprotocol.com/protocol/v1/draft/subagents#work-state)
 
@@ -7162,8 +7159,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   The suggestions the Client can offer, ordered most likely first.
 
 Required and non-null. An empty list withdraws the suggestions the
-Client is offering. A Client skips an entry it cannot parse and keeps
-the rest.
+Client is offering.
 
 </ResponseField>
 
@@ -9052,8 +9048,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
   The suggestions the Client can offer, ordered most likely first.
 
 Required and non-null. An empty list withdraws the suggestions the
-Client is offering. A Client skips an entry it cannot parse and keeps
-the rest.
+Client is offering.
 
 </ResponseField>
 
@@ -9314,7 +9309,7 @@ Optional. Omitted and `null` mean no metadata for this state snapshot.
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.
+Optional. Omitted or `null` both mean the agent is not reporting a stop reason.
 
 See protocol docs: [Work state](https://agentclientprotocol.com/protocol/v1/draft/subagents#work-state)
 

@@ -184,9 +184,6 @@ impl TerminalExitStatus {
 
 /// Client-initiated controls a terminal currently supports.
 ///
-/// A malformed value falls back to no controls, so the Client never sends a request the
-/// Agent did not advertise.
-///
 /// See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)
 #[serde_as]
 #[skip_serializing_none]

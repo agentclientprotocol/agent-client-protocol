@@ -396,7 +396,7 @@ Everything else happens through `session/update` notifications:
 
 Clients reconcile their submitted input with the response's `(sessionId, messageId)`, including when the message update arrived first. They must not match by content or assume that a successful response means the session is idle. SDKs must keep the session's processing and notification handling alive after the prompt RPC completes.
 
-An Agent may know it is idle without knowing why the work stopped. Clients **MUST** recognize idle even when the stop reason is omitted, `null`, malformed, or unknown. They cannot infer success or failure without a recognized stop reason.
+An Agent may know it is idle without knowing why the work stopped. Clients **MUST** recognize idle even when the stop reason is omitted, `null`, or unknown. They cannot infer success or failure without a recognized stop reason.
 
 User messages, including [locally handled commands](/protocol/v2/slash-commands#running-commands), must be reported live but need not be retained. If an Agent retains and replays an inserted user message, it must reuse the response's ID. A lost prompt response is ambiguous. Neither replay omission nor an identical message proves which submission was inserted. v2 adds an optional `idempotencyKey` to `session/prompt` for this case. A Client that sent one can send the request again with the same key, and the Agent answers with the original `messageId` without inserting a second message. Without a key, a retry can create another submission. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).
 
@@ -1009,7 +1009,7 @@ See [Errors](/protocol/v2/error).
 3. **Strict where it counts.** Reject malformed payloads for _known_ discriminator values instead of demoting them to the unknown-variant fallback. The fallback exists only for genuinely unknown values.
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
 5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, exit state, command subjects, structured diffs, and child session announcements, routing, and resume.
-6. **Stop reasons.** Don't remove or mark the user's message on `refusal`. Model the idle update's stop reason as a union tagged by `stopReason` and flattened into the update, so a stop reason can carry fields of its own, such as the `error` stop reason's `error`. Keep unknown stop reasons with their fields, and treat a missing, `null`, or non-string `stopReason` as no stop reason rather than rejecting the update.
+6. **Stop reasons.** Don't remove or mark the user's message on `refusal`. Model the idle update's stop reason as a union tagged by `stopReason` and flattened into the update, so a stop reason can carry fields of its own, such as the `error` stop reason's `error`. Keep unknown stop reasons with their fields, and treat a missing or `null` `stopReason` as no stop reason.
 
 ## Supporting v1 and v2 side by side
 

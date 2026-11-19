@@ -1079,9 +1079,6 @@ impl CursorUpdate {
 ///
 /// The methods that currently accept a session cursor.
 ///
-/// A malformed value falls back to no capabilities, so the Client never passes a
-/// cursor to a method the Agent did not advertise.
-///
 /// See the [Session Cursors RFD](https://agentclientprotocol.com/rfds/session-cursors).
 #[cfg(feature = "unstable_session_cursors")]
 #[serde_as]
@@ -1868,7 +1865,7 @@ impl RunningStateUpdate {
 
 /// The child is ready to process another prompt.
 ///
-/// An omitted, `null`, or malformed `stopReason` means not reported.
+/// An omitted or `null` `stopReason` means not reported.
 #[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
@@ -1946,7 +1943,7 @@ fn idle_state_update_schema(schema: &mut Schema) {
         properties.insert(
             "stopReason".into(),
             serde_json::json!({
-                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Work state](https://agentclientprotocol.com/protocol/v1/subagents#work-state)",
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\n\nSee protocol docs: [Work state](https://agentclientprotocol.com/protocol/v1/subagents#work-state)",
                 "type": ["string", "null"],
                 "x-deserialize-default-on-error": true
             }),
@@ -2687,8 +2684,7 @@ pub struct PromptSuggestionsUpdate {
     /// The suggestions the Client can offer, ordered most likely first.
     ///
     /// Required and non-null. An empty list withdraws the suggestions the
-    /// Client is offering. A Client skips an entry it cannot parse and keeps
-    /// the rest.
+    /// Client is offering.
     #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub suggestions: Vec<PromptSuggestion>,

@@ -1663,7 +1663,7 @@
       "required": ["path"]
     },
     "ToolCallCapabilities": {
-      "description": "Client-initiated controls a tool call currently supports.\n\nA malformed value falls back to no controls, so the Client never sends a request the\nAgent did not advertise.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)",
+      "description": "Client-initiated controls a tool call currently supports.\n\nSee protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-tool-calls)",
       "type": "object",
       "properties": {
         "cancel": {
@@ -5345,7 +5345,7 @@
       "type": "object",
       "properties": {
         "background": {
-          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/BackgroundWork"
@@ -5379,11 +5379,11 @@
       }
     },
     "IdleStateUpdate": {
-      "description": "No foreground work is active. Background activity may continue.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An idle update that does not end foreground work need not include one.\nReceivers treat an omitted, `null`, or malformed `stopReason` as the agent not\nreporting one.\nRepeated or resume snapshots may carry the last stop reason for context.\nThey MUST NOT be counted as new completions, cancellations, or additional usage.",
+      "description": "No foreground work is active. Background activity may continue.\n\nAgents SHOULD include a `stopReason` when the idle transition ends foreground\nwork. An idle update that does not end foreground work need not include one.\nReceivers treat an omitted or `null` `stopReason` as the agent not reporting one.\nRepeated or resume snapshots may carry the last stop reason for context.\nThey MUST NOT be counted as new completions, cancellations, or additional usage.",
       "type": "object",
       "properties": {
         "background": {
-          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/BackgroundWork"
@@ -5397,7 +5397,7 @@
           "additionalProperties": true
         },
         "stopReason": {
-          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason; a malformed value is treated the same way.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
+          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         }
@@ -5568,7 +5568,7 @@
       "type": "object",
       "properties": {
         "background": {
-          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/BackgroundWork"
@@ -5588,7 +5588,7 @@
       "type": "object",
       "properties": {
         "background": {
-          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session. A malformed list is treated as not reported.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
+          "description": "Work running independently of foreground work, as a complete snapshot.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting\nbackground work, not that nothing is running. `[]` means no background work is\nrunning. An Agent that reports background work MUST include it on every state\nupdate for the session.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
           "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/BackgroundWork"
@@ -5827,7 +5827,7 @@
       "required": ["cols", "rows"]
     },
     "TerminalCapabilities": {
-      "description": "Client-initiated controls a terminal currently supports.\n\nA malformed value falls back to no controls, so the Client never sends a request the\nAgent did not advertise.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)",
+      "description": "Client-initiated controls a terminal currently supports.\n\nSee protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protocol/v2/tool-calls#cancelling-terminals)",
       "type": "object",
       "properties": {
         "cancel": {

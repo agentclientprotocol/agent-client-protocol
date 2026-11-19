@@ -211,7 +211,7 @@ Background work is work the user can reason about: something the user or the mod
 ```
 
 - **It is a snapshot.** A concrete list replaces the previous one, and `[]` means no background work is running.
-- **Omitted or `null` means not reported**, not that nothing is running. An Agent that reports background work **MUST** include `background` on every `state_update` for the session. If a later snapshot omits it, or it is malformed, the Client treats background work as unknown until a list is reported again.
+- **Omitted or `null` means not reported**, not that nothing is running. An Agent that reports background work **MUST** include `background` on every `state_update` for the session. If a later snapshot omits it, the Client treats background work as unknown until a list is reported again.
 - **The Agent re-sends the state when the list changes.** When background work starts or ends, the Agent **SHOULD** send a repeated `state_update` with the current state and the updated list. A repeated snapshot is not a [state transition](#state-transitions), and a repeated `idle` without a new stop reason is not a new completion.
 - **Items are announced before they are listed and finalized before they are removed.** The Agent **MUST** send a `terminal_update` for a terminal, a `tool_call_update` for a tool call, or a `subagent_update` for a child, before the first snapshot that lists it. When a terminal exits or a tool call ends, the Agent **MUST** send its `exitStatus` or final status before the snapshot that removes it.
 - **Known follow-up work is reported with the removal.** When finished background work starts new foreground work and the Agent knows this when it removes the item, the Agent **SHOULD** report `running` in the same snapshot that removes the item, or earlier. An Agent that only learns of the follow-up later, for example because the underlying agent decides after the work ends, reports `running` when that work starts. Clients cover that gap with the grace period described below.
@@ -757,7 +757,7 @@ Each suggestion's `prompt` **MUST** be valid as the `prompt` of a `session/promp
 - `text` and `resource_link` are always allowed.
 - `image`, `audio`, and `resource` blocks are allowed only when the Agent advertised the type in its [`session.prompt` capability](/protocol/v2/draft/initialization#session-prompt-capabilities) and the Client advertised it under [`session.promptSuggestions`](/protocol/v2/draft/initialization#session-unstable).
 
-A Client skips a suggestion it cannot use and keeps the rest, for example one with a block it cannot parse or a content type it does not understand. The Client **SHOULD** skip the whole suggestion rather than offer the remaining blocks, because dropping a block changes what the prompt asks for.
+A Client skips a suggestion it cannot use and keeps the rest, for example one with a content type it does not understand. The Client **SHOULD** skip the whole suggestion rather than offer the remaining blocks, because dropping a block changes what the prompt asks for.
 
 The Agent owns the list. A session starts with an empty list. The `suggestions` in the most recent update are the current list until the Agent sends another update. The Agent keeps the list up to date:
 
@@ -966,8 +966,7 @@ became possible at the position or to remove one that no longer is.
 Each capability in `capabilities` is an optional, nullable object. Omitted or `null`
 means unsupported, and `{}` advertises support. `capabilities: null` and
 `capabilities: {}` both mean that no method accepts the cursor. Clients ignore
-capabilities they don't recognize. A malformed `capabilities` value is treated as
-omitted.
+capabilities they don't recognize.
 
 | Capability | Meaning                                              |
 | ---------- | ---------------------------------------------------- |
@@ -1116,8 +1115,7 @@ in [`usage_update`](#session-usage-updates).
 
 `usage` is optional and nullable. Omission and `null` both mean no usage was
 reported. No capability is required. Clients without this experimental field
-ignore it, and Clients that recognize it discard malformed usage rather than
-rejecting the idle transition. Sending usage does not establish that the Client
+ignore it. Sending usage does not establish that the Client
 displays it. See [Experimental Features and
 Negotiation](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
 
@@ -1216,7 +1214,7 @@ The cycle returns to [step 3](#3-agent-reports-output), continuing until the lan
 
 ## Stop reasons
 
-When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update. If the Agent knows it is idle but cannot determine why the work stopped, it may omit the stop reason. Clients **MUST** recognize `idle` as the end of foreground work even when the stop reason is omitted, `null`, malformed, or unknown. Without a recognized stop reason, Clients cannot infer how the work ended.
+When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update. If the Agent knows it is idle but cannot determine why the work stopped, it may omit the stop reason. Clients **MUST** recognize `idle` as the end of foreground work even when the stop reason is omitted, `null`, or unknown. Without a recognized stop reason, Clients cannot infer how the work ended.
 
 <ResponseField name="end_turn">
   The Agent has finished foreground work, including a locally handled command

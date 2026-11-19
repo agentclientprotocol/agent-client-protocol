@@ -404,7 +404,7 @@ Each suggestion's `prompt` **MUST** be valid as the `prompt` of a `session/promp
 - `text` and `resource_link` are always allowed.
 - `image`, `audio`, and `resource` blocks are allowed only when the Agent advertised the type in its [prompt capabilities](/protocol/v1/draft/initialization#prompt-capabilities) and the Client advertised it under [`session.promptSuggestions`](/protocol/v1/draft/initialization#prompt-suggestions-unstable).
 
-A Client skips a suggestion it cannot use and keeps the rest, for example one with a block it cannot parse. The Client **SHOULD** skip the whole suggestion rather than offer the remaining blocks, because dropping a block changes what the prompt asks for.
+A Client skips a suggestion it cannot use and keeps the rest. The Client **SHOULD** skip the whole suggestion rather than offer the remaining blocks, because dropping a block changes what the prompt asks for.
 
 The Agent owns the list. A session starts with an empty list. The `suggestions` in the most recent update are the current list until the Agent sends another update. The Agent keeps the list up to date:
 
@@ -626,8 +626,7 @@ became possible at the position or to remove one that no longer is.
 Each capability in `capabilities` is an optional, nullable object. Omitted or `null`
 means unsupported, and `{}` advertises support. `capabilities: null` and
 `capabilities: {}` both mean that no method accepts the cursor. Clients ignore
-capabilities they don't recognize. A malformed `capabilities` value is treated as
-omitted.
+capabilities they don't recognize.
 
 | Capability | Meaning                                              |
 | ---------- | ---------------------------------------------------- |
