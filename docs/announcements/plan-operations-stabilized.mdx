@@ -1,0 +1,11 @@
+---
+title: Plan operations are stabilized
+sidebarTitle: Plan operations stabilized
+description: Agents can update and remove identified checklists and Markdown plans in ACP v1 and the v2 baseline.
+---
+
+**Published:** November 20, 2026
+
+The [Plan Operations Support RFD](/rfds/plan-operations) has moved to Completed. Agents can send a checklist or a complete Markdown document with `plan_update`, replace it using the same `planId`, and remove it with `plan_removed`. A Markdown plan can name its file with an absolute `path`. Clients do not need the file to display it.
+
+In [ACP v1](/protocol/v1/agent-plan#plan-operations), Clients opt in with `clientCapabilities.plan: {}`. Agents continue to send legacy `plan` checklists to Clients that do not opt in. In [ACP v2](/protocol/v2/agent-plan), Markdown and removal join the existing item-based plan update with no Client capability.

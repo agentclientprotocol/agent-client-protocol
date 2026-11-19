@@ -33,6 +33,7 @@ For example:
 | [Session deletion](/protocol/v2/session-delete)                                                                             | The Agent advertises `session.delete`. Clients **MUST NOT** call `session/delete` without it.                                             |
 | [Elicitation](/protocol/v2/elicitation#checking-support)                                                                    | The Client advertises each supported mode under `elicitation`. Agents **MUST NOT** request other modes.                                   |
 | [Notices](/protocol/v2/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/prompt-lifecycle#session-compaction) | No Client capability is required. Clients without feature-specific handling **MAY** preserve, ignore, or generically display the updates. |
+| [Plans](/protocol/v2/agent-plan)                                                                                            | No Client capability is required. A `plan_update` replaces the whole plan with that ID, even if the new plan type is unknown.             |
 
 These rules apply to this protocol version only. On a connection that negotiated an earlier version, features keep the capability gates that version defines.
 

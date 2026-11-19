@@ -1,14 +1,11 @@
 //! Execution plans for multi-step tasks.
 //!
-//! A plan is the agent's list of steps for a task. Agents send plans to clients
-//! through session updates and update them as work progresses.
+//! Agents send checklists or Markdown plans to Clients through session updates.
 //!
 //! See: [Agent Plan](https://agentclientprotocol.com/protocol/v1/agent-plan)
 
-#[cfg(feature = "unstable_plan_operations")]
 use std::{path::PathBuf, sync::Arc};
 
-#[cfg(feature = "unstable_plan_operations")]
 use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
@@ -17,11 +14,7 @@ use crate::IntoOption;
 
 use super::Meta;
 
-/// An execution plan for accomplishing complex tasks.
-///
-/// Plans consist of multiple entries representing individual tasks or goals.
-/// Agents report plans to clients to provide visibility into their execution strategy.
-/// Plans can evolve during execution as the agent discovers new requirements or completes tasks.
+/// A checklist sent with the `plan` session update.
 ///
 /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/agent-plan)
 #[serde_as]
@@ -33,8 +26,8 @@ use super::Meta;
 pub struct Plan {
     /// The list of tasks to be accomplished.
     ///
-    /// When updating a plan, the agent MUST send a complete list of all entries
-    /// with their current status. The client replaces the entire plan with each update.
+    /// The Agent MUST send all entries with their current status.
+    /// The Client MUST replace the entire checklist with each update.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
@@ -72,12 +65,7 @@ impl Plan {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Unique identifier for a plan within a session.
-#[cfg(feature = "unstable_plan_operations")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
@@ -85,7 +73,6 @@ impl Plan {
 #[non_exhaustive]
 pub struct PlanId(pub Arc<str>);
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanId {
     /// Wraps a protocol string as a typed [`PlanId`].
     #[must_use]
@@ -94,12 +81,7 @@ impl PlanId {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A content update for a plan identified by ID.
-#[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -107,7 +89,7 @@ impl PlanId {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanUpdate {
-    /// The updated plan content.
+    /// Replaces the whole plan with this `planId`, even if its `type` changes.
     pub plan: PlanUpdateContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -121,7 +103,6 @@ pub struct PlanUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanUpdate {
     /// Builds [`PlanUpdate`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -141,12 +122,7 @@ impl PlanUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Updated content for a plan.
-#[cfg(feature = "unstable_plan_operations")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -155,11 +131,10 @@ impl PlanUpdate {
 pub enum PlanUpdateContent {
     /// Structured plan entries.
     Items(PlanItems),
-    /// Raw markdown content for the plan.
+    /// The complete plan as Markdown.
     Markdown(PlanMarkdown),
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanUpdateContent {
     /// Builds a plan update that replaces the itemized entries for a plan.
     #[must_use]
@@ -177,12 +152,7 @@ impl PlanUpdateContent {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A plan represented as structured entries.
-#[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -194,8 +164,8 @@ pub struct PlanItems {
     pub plan_id: PlanId,
     /// The list of tasks to be accomplished.
     ///
-    /// When updating an item-based plan, the agent MUST send a complete list of all entries
-    /// with their current status. The client replaces that plan with each update.
+    /// The Agent MUST send all entries with their current status.
+    /// The Client MUST replace the checklist with this `planId` on each update.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
@@ -211,7 +181,6 @@ pub struct PlanItems {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanItems {
     /// Builds [`PlanItems`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -235,12 +204,7 @@ impl PlanItems {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A plan represented as raw markdown content.
-#[cfg(feature = "unstable_plan_operations")]
+/// A plan represented as Markdown.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -250,12 +214,12 @@ impl PlanItems {
 pub struct PlanMarkdown {
     /// The plan ID to update.
     pub plan_id: PlanId,
-    /// Markdown content for the plan.
+    /// The complete plan as Markdown, not just the text that changed.
     pub content: String,
     /// The absolute path of the file that holds this plan.
     ///
-    /// This field is optional. Omitting it or sending `null` both mean that the plan
-    /// has no file. `content` is the plan to display whether or not `path` is set.
+    /// Omitted and `null` both mean the plan has no file. A supplied path MUST
+    /// be absolute. `content` is the plan to display whether or not `path` is set.
     /// Clients can use `path` to open the file.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -273,7 +237,6 @@ pub struct PlanMarkdown {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
     /// Builds [`PlanMarkdown`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -307,12 +270,7 @@ impl PlanMarkdown {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Removal notice for a plan identified by ID.
-#[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -320,7 +278,7 @@ impl PlanMarkdown {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanRemoved {
-    /// The plan ID to remove.
+    /// The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
     pub plan_id: PlanId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT make assumptions about values at
@@ -334,7 +292,6 @@ pub struct PlanRemoved {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
     /// Builds [`PlanRemoved`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -357,12 +314,7 @@ impl PlanRemoved {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capabilities for receiving `plan_update` and `plan_removed` session updates.
-#[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -382,7 +334,6 @@ pub struct PlanCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanCapabilities {
     /// Builds an empty [`PlanCapabilities`]. Use builder methods to advertise supported sub-capabilities.
     #[must_use]

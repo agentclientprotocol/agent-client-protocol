@@ -35,10 +35,9 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 use super::{
     ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
-    SessionConfigOption, SessionId, SessionModeId, ToolCall, ToolCallUpdate,
+    PlanCapabilities, PlanRemoved, PlanUpdate, SessionConfigOption, SessionId, SessionModeId,
+    ToolCall, ToolCallUpdate,
 };
-#[cfg(feature = "unstable_plan_operations")]
-use super::{PlanCapabilities, PlanRemoved, PlanUpdate};
 
 #[cfg(feature = "unstable_mcp_over_acp")]
 use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpRequest, MessageMcpResponse};
@@ -121,19 +120,11 @@ pub enum SessionUpdate {
     /// The agent's execution plan for complex tasks.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/agent-plan)
     Plan(Plan),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// A content update for a plan identified by ID.
-    #[cfg(feature = "unstable_plan_operations")]
+    /// Replaces the plan with this ID. Agents MUST NOT send this update unless
+    /// the Client advertised `plan`.
     PlanUpdate(PlanUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Removal notice for a plan identified by ID.
-    #[cfg(feature = "unstable_plan_operations")]
+    /// Removes the plan with this ID. Agents MUST NOT send this update unless
+    /// the Client advertised `plan`.
     PlanRemoved(PlanRemoved),
     /// Available commands are ready or have changed
     AvailableCommandsUpdate(AvailableCommandsUpdate),
@@ -4091,15 +4082,10 @@ pub struct ClientCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub subagents: Option<SubagentCapabilities>,
-    /// **UNSTABLE**
+    /// Whether the Client supports `plan_update` and `plan_removed` session updates.
     ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Whether the client supports `plan_update` and `plan_removed` session updates.
-    ///
-    /// Optional. Omitted or `null` both mean the client does not advertise support.
-    /// Supplying `{}` means the client can receive both update types.
-    #[cfg(feature = "unstable_plan_operations")]
+    /// Optional. Omitted or `null` both mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can receive both update types.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4173,15 +4159,10 @@ impl ClientCapabilities {
         self
     }
 
-    /// **UNSTABLE**
+    /// Whether the Client supports `plan_update` and `plan_removed` session updates.
     ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Whether the client supports `plan_update` and `plan_removed` session updates.
-    ///
-    /// Omitted or `null` both mean the client does not advertise support.
-    /// Supplying `{}` means the client can receive both update types.
-    #[cfg(feature = "unstable_plan_operations")]
+    /// Omitted or `null` both mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can receive both update types.
     #[must_use]
     pub fn plan(mut self, plan: impl IntoOption<PlanCapabilities>) -> Self {
         self.plan = plan.into_option();
@@ -6715,7 +6696,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_plan_operations")]
     #[test]
     fn test_plan_operations_serialization() {
         use serde_json::json;
@@ -6756,6 +6736,16 @@ mod tests {
                 "planId": "plan-1"
             })
         );
+
+        let markdown = json!({
+            "sessionUpdate": "plan_update",
+            "plan": {
+                "type": "markdown", "planId": "plan-1",
+                "content": "# Next steps", "path": "/workspace/plan.md"
+            }
+        });
+        let update: SessionUpdate = serde_json::from_value(markdown.clone()).unwrap();
+        assert_eq!(serde_json::to_value(update).unwrap(), markdown);
 
         let capabilities = ClientCapabilities::new().plan(PlanCapabilities::new());
         let json = serde_json::to_value(&capabilities).unwrap();

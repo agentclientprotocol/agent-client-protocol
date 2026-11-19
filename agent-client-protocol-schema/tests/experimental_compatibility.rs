@@ -16,41 +16,6 @@ fn decode_update(wire: &Value) -> SessionUpdate {
 }
 
 #[test]
-fn experimental_plan_content_roundtrips_with_or_without_local_support() {
-    for plan in [
-        json!({"type": "markdown", "planId": "plan-1", "content": "# Next steps"}),
-        json!({
-            "type": "markdown",
-            "planId": "plan-1",
-            "content": "# Next steps",
-            "path": "/workspace/plan.md"
-        }),
-    ] {
-        let wire = json!({"sessionUpdate": "plan_update", "plan": plan});
-        let update = decode_update(&wire);
-        let SessionUpdate::PlanUpdate(plan_update) = &update else {
-            panic!("expected plan update");
-        };
-        #[cfg(feature = "unstable_plan_operations")]
-        assert!(matches!(plan_update.plan, PlanUpdateContent::Markdown(_)));
-        #[cfg(not(feature = "unstable_plan_operations"))]
-        assert!(matches!(plan_update.plan, PlanUpdateContent::Other(_)));
-        assert_eq!(serde_json::to_value(update).unwrap(), wire);
-    }
-}
-
-#[test]
-fn experimental_plan_removal_roundtrips_with_or_without_local_support() {
-    let wire = json!({"sessionUpdate": "plan_removed", "planId": "plan-1"});
-    let update = decode_update(&wire);
-    #[cfg(feature = "unstable_plan_operations")]
-    assert!(matches!(update, SessionUpdate::PlanRemoved(_)));
-    #[cfg(not(feature = "unstable_plan_operations"))]
-    assert!(matches!(update, SessionUpdate::Other(_)));
-    assert_eq!(serde_json::to_value(update).unwrap(), wire);
-}
-
-#[test]
 fn experimental_prompt_suggestions_roundtrip_with_or_without_local_support() {
     for suggestions in [
         json!([]),
@@ -205,11 +170,10 @@ fn plan_fallback_schema_excludes_only_locally_recognized_variants() {
     let schema = serde_json::to_value(schemars::schema_for!(OtherPlanUpdateContent)).unwrap();
     let excluded = schema["not"]["anyOf"].as_array().unwrap();
     for tag in ["items", "markdown"] {
-        assert_eq!(
+        assert!(
             excluded
                 .iter()
-                .any(|variant| variant["properties"]["type"]["const"] == tag),
-            tag == "items" || cfg!(feature = "unstable_plan_operations")
+                .any(|variant| variant["properties"]["type"]["const"] == tag)
         );
     }
 }
@@ -221,7 +185,7 @@ fn session_update_fallback_schema_excludes_only_locally_recognized_variants() {
     let excluded = schema["not"]["anyOf"].as_array().unwrap();
     for (tag, recognized) in [
         ("plan_update", true),
-        ("plan_removed", cfg!(feature = "unstable_plan_operations")),
+        ("plan_removed", true),
         (
             "prompt_suggestions_update",
             cfg!(feature = "unstable_prompt_suggestions"),

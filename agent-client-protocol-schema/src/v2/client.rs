@@ -14,14 +14,12 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 #[cfg(feature = "unstable_auth_status")]
 use super::AuthStatusUpdateNotification;
-#[cfg(feature = "unstable_plan_operations")]
-use super::PlanRemoved;
 #[cfg(feature = "unstable_end_turn_token_usage")]
 use super::Usage;
 use super::{
-    AbsolutePath, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanUpdate,
-    SessionConfigOption, SessionId, StopReason, TerminalId, TerminalOutputChunk, TerminalUpdate,
-    ToolCallContentChunk, ToolCallId, ToolCallUpdate,
+    AbsolutePath, ContentBlock, ExtNotification, ExtRequest, ExtResponse, Meta, PlanRemoved,
+    PlanUpdate, SessionConfigOption, SessionId, StopReason, TerminalId, TerminalOutputChunk,
+    TerminalUpdate, ToolCallContentChunk, ToolCallId, ToolCallUpdate,
 };
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
@@ -133,12 +131,7 @@ pub enum SessionUpdate {
     /// A content update for a plan identified by ID.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
     PlanUpdate(PlanUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Removal notice for a plan identified by ID.
-    #[cfg(feature = "unstable_plan_operations")]
     PlanRemoved(PlanRemoved),
     /// Available commands are ready or have changed
     AvailableCommandsUpdate(AvailableCommandsUpdate),
@@ -1879,10 +1872,6 @@ fn is_known_session_update(session_update: &str) -> bool {
     ) {
         return true;
     }
-    #[cfg(feature = "unstable_plan_operations")]
-    if session_update == "plan_removed" {
-        return true;
-    }
     #[cfg(feature = "unstable_prompt_suggestions")]
     if session_update == "prompt_suggestions_update" {
         return true;
@@ -1911,6 +1900,7 @@ fn is_known_session_update(session_update: &str) -> bool {
             | "terminal_update"
             | "terminal_output_chunk"
             | "plan_update"
+            | "plan_removed"
             | "available_commands_update"
             | "config_option_update"
             | "session_info_update"
@@ -1936,11 +1926,10 @@ fn other_session_update_schema(schema: &mut Schema) {
             "terminal_update",
             "terminal_output_chunk",
             "plan_update",
+            "plan_removed",
             "available_commands_update",
             "config_option_update",
             "session_info_update",
-            #[cfg(feature = "unstable_plan_operations")]
-            "plan_removed",
             "usage_update",
             "notice",
             "compaction_update",
@@ -7380,18 +7369,29 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_plan_operations")]
     #[test]
-    fn test_plan_removed_serialization() {
+    fn plan_operations_round_trip_as_known_session_updates() {
         use serde_json::json;
 
-        assert_eq!(
-            serde_json::to_value(SessionUpdate::PlanRemoved(PlanRemoved::new("plan-1"))).unwrap(),
-            json!({
-                "sessionUpdate": "plan_removed",
-                "planId": "plan-1"
-            })
-        );
+        let markdown = crate::v2::PlanUpdateContent::markdown("plan-1", "# Next steps");
+        for (wire, expected) in [
+            (
+                json!({"sessionUpdate": "plan_update", "plan": {
+                    "type": "markdown", "planId": "plan-1", "content": "# Next steps"
+                }}),
+                SessionUpdate::PlanUpdate(PlanUpdate::new(markdown)),
+            ),
+            (
+                json!({"sessionUpdate": "plan_removed", "planId": "plan-1"}),
+                SessionUpdate::PlanRemoved(PlanRemoved::new("plan-1")),
+            ),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<SessionUpdate>(wire.clone()).unwrap(),
+                expected
+            );
+            assert_eq!(serde_json::to_value(expected).unwrap(), wire);
+        }
     }
 
     #[test]
@@ -8165,7 +8165,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_plan_operations")]
     #[test]
     fn malformed_plan_removed_is_not_hidden_as_unknown_update() {
         use serde_json::json;

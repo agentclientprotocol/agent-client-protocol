@@ -2318,6 +2318,13 @@ Determines which file operations the agent can request.
     - Default: `{"readTextFile":false,"writeTextFile":false}`
 
 </ResponseField>
+<ResponseField name="plan" type={<><span><a href="#plancapabilities">PlanCapabilities</a></span><span> | null</span></>} >
+  Whether the Client supports `plan_update` and `plan_removed` session updates.
+
+Optional. Omitted or `null` both mean the Client does not advertise support.
+Supplying `\{\}` means the Client can receive both update types.
+
+</ResponseField>
 <ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
   Session-related capabilities supported by the client.
 
@@ -4408,11 +4415,7 @@ Helps clients choose appropriate icons and UI treatment.
 
 ## <span class="font-mono">Plan</span>
 
-An execution plan for accomplishing complex tasks.
-
-Plans consist of multiple entries representing individual tasks or goals.
-Agents report plans to clients to provide visibility into their execution strategy.
-Plans can evolve during execution as the agent discovers new requirements or completes tasks.
+A checklist sent with the `plan` session update.
 
 See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/agent-plan)
 
@@ -4431,8 +4434,25 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating a plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces the entire plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the entire checklist with each update.
+
+</ResponseField>
+
+## <span class="font-mono">PlanCapabilities</span>
+
+Capabilities for receiving `plan_update` and `plan_removed` session updates.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
 
 </ResponseField>
 
@@ -4508,6 +4528,180 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/ag
 
 <ResponseField name="completed" type="string">
   The task has been successfully completed.
+</ResponseField>
+
+## <span class="font-mono">PlanId</span>
+
+Unique identifier for a plan within a session.
+
+**Type:** `string`
+
+## <span class="font-mono">PlanItems</span>
+
+A plan represented as structured entries.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
+  The list of tasks to be accomplished.
+
+The Agent MUST send all entries with their current status.
+The Client MUST replace the checklist with this `planId` on each update.
+
+</ResponseField>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
+  The plan ID to update.
+</ResponseField>
+
+## <span class="font-mono">PlanMarkdown</span>
+
+A plan represented as Markdown.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={"string"} required>
+  The complete plan as Markdown, not just the text that changed.
+</ResponseField>
+<ResponseField name="path" type={"string | null"} >
+  The absolute path of the file that holds this plan.
+
+Omitted and `null` both mean the plan has no file. A supplied path MUST
+be absolute. `content` is the plan to display whether or not `path` is set.
+Clients can use `path` to open the file.
+
+</ResponseField>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
+  The plan ID to update.
+</ResponseField>
+
+## <span class="font-mono">PlanRemoved</span>
+
+Removal notice for a plan identified by ID.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
+  The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
+</ResponseField>
+
+## <span class="font-mono">PlanUpdate</span>
+
+A content update for a plan identified by ID.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="plan" type={<a href="#planupdatecontent">PlanUpdateContent</a>} required>
+  Replaces the whole plan with this `planId`, even if its `type` changes.
+</ResponseField>
+
+## <span class="font-mono">PlanUpdateContent</span>
+
+Updated content for a plan.
+
+**Type:** Union
+
+<ResponseField name="items" type="object">
+Structured plan entries.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
+  The list of tasks to be accomplished.
+
+The Agent MUST send all entries with their current status.
+The Client MUST replace the checklist with this `planId` on each update.
+
+</ResponseField>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
+  The plan ID to update.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"items"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="markdown" type="object">
+The complete plan as Markdown.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="content" type={"string"} required>
+  The complete plan as Markdown, not just the text that changed.
+</ResponseField>
+<ResponseField name="path" type={"string | null"} >
+  The absolute path of the file that holds this plan.
+
+Omitted and `null` both mean the plan has no file. A supplied path MUST
+be absolute. `content` is the plan to display whether or not `path` is set.
+Clients can use `path` to open the file.
+
+</ResponseField>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
+  The plan ID to update.
+</ResponseField>
+<ResponseField name="type" type={"string"} required>
+  The discriminator value. Must be `"markdown"`.
+</ResponseField>
+
+</Expandable>
 </ResponseField>
 
 ## <span class="font-mono">PromptCapabilities</span>
@@ -5565,12 +5759,60 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating a plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces the entire plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the entire checklist with each update.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"plan"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="plan_update" type="object">
+Replaces the plan with this ID. Agents MUST NOT send this update unless
+the Client advertised `plan`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="plan" type={<a href="#planupdatecontent">PlanUpdateContent</a>} required>
+  Replaces the whole plan with this `planId`, even if its `type` changes.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"plan_update"`.
+</ResponseField>
+
+</Expandable>
+</ResponseField>
+
+<ResponseField name="plan_removed" type="object">
+Removes the plan with this ID. Agents MUST NOT send this update unless
+the Client advertised `plan`.
+
+<Expandable title="Properties">
+
+<ResponseField name="_meta" type={"object | null"} >
+  The _meta property is reserved by ACP to allow clients and agents to attach additional
+metadata to their interactions. Implementations MUST NOT make assumptions about values at
+these keys.
+
+See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)
+
+</ResponseField>
+<ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
+  The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
+</ResponseField>
+<ResponseField name="sessionUpdate" type={"string"} required>
+  The discriminator value. Must be `"plan_removed"`.
 </ResponseField>
 
 </Expandable>

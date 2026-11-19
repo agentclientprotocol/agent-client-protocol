@@ -3,13 +3,13 @@ title: "Agent Plan"
 description: "How Agents communicate their execution plans"
 ---
 
-A plan is the Agent's list of steps for a multi-step task. Each entry has a description, a priority, and a status.
+A plan describes how the Agent intends to carry out a task. It can be a list of steps or a Markdown document.
 
 Agents **MAY** send plans to Clients through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications and update them as work progresses.
 
-`plan_update` carries a `plan` object with a `type` discriminator, and every plan format includes a required `planId` so Clients can track multiple plans independently.
+`plan_update` carries a `plan` object with a `type` discriminator and a required `planId` so Clients can track multiple plans independently.
 
-The stable plan content type is `items`. The draft unstable schema also includes additional plan operations while the Plan Operations RFD is in progress.
+Agents can send `items` or `markdown` plans and remove them with `plan_removed`. No Client capability is required. Clients **MUST** accept both plan types and `plan_removed`. Accepting a plan does not require displaying it.
 
 ## Creating plans
 
@@ -64,18 +64,6 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
   accomplished.
 </ParamField>
 
-## Unstable plan operations
-
-The draft unstable schema includes markdown plans and explicit plan removal. These operations are not part of the stable schema yet.
-
-Clients using the draft unstable schema **MUST** tolerate these variants. Tolerating a variant means the Client can deserialize and validate it, then render it, preserve it for replay or proxying, or ignore it.
-
-No Client capability is required. Clients using only the baseline schema
-accept unfamiliar plan representations through the unknown plan-content fallback
-and unfamiliar removal updates through the unknown session-update fallback.
-Agents cannot assume that these plans will be rendered. See [Experimental
-Features and Negotiation](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
-
 ### Markdown plans
 
 ```json
@@ -98,7 +86,7 @@ Features and Negotiation](/protocol/v2/draft/extensibility#experimental-features
 ```
 
 <ParamField path="plan.content" type="string" required>
-  The plan as Markdown.
+  The complete plan as Markdown, not just the text that changed.
 </ParamField>
 
 <ParamField path="plan.path" type="string | null">
@@ -106,9 +94,7 @@ Features and Negotiation](/protocol/v2/draft/extensibility#experimental-features
   equivalent and mean the plan has no file.
 </ParamField>
 
-`path` **MUST** be an absolute path.
-
-`content` is the plan to display whether or not `path` is set. Clients render `content` and don't need to read the file. Clients can use `path` to open the file.
+`path` **MUST** be an absolute path. A Client that displays the plan uses `content` whether or not it can reach the file. It can use `path` to open the file.
 
 ## Removing plans
 
@@ -130,7 +116,7 @@ Agents can remove a plan by sending `plan_removed` with the plan ID:
 
 Agents **SHOULD** send `plan_removed` when a plan is cancelled, for example when the user rejects it or the Agent abandons it. A finished plan doesn't need to be removed. Clients **MUST** ignore `plan_removed` for a `planId` they don't know.
 
-Clients without unstable plan operations may not act on `plan_removed`. To clear the plan for them too, Agents can first send an `items` update with `entries: []`.
+To clear the plan for older Clients that don't recognize `plan_removed`, Agents can first send an `items` update with the same `planId` and `entries: []`.
 
 ## Extensibility
 
