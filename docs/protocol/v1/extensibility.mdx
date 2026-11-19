@@ -34,7 +34,7 @@ example, the `Error` object does not.
 }
 ```
 
-Clients may propagate fields to the agent for correlation purposes, such as `requestId`. The following root-level keys in `_meta` **SHOULD** be reserved for [W3C trace context](https://www.w3.org/TR/trace-context/) to guarantee interop with existing MCP implementations and OpenTelemetry tooling:
+Clients **MAY** propagate fields to the agent for correlation purposes, such as `requestId`. The following root-level keys in `_meta` **SHOULD** be reserved for [W3C trace context](https://www.w3.org/TR/trace-context/) to guarantee interop with existing MCP implementations and OpenTelemetry tooling:
 
 - `traceparent`
 - `tracestate`
@@ -81,7 +81,7 @@ Upon receiving a custom request, implementations **MUST** respond accordingly wi
 }
 ```
 
-If the receiving end doesn't recognize the custom method name, it should respond with the standard "Method not found" error:
+If the receiving end doesn't recognize the custom method name, it **SHOULD** respond with the standard "Method not found" error:
 
 ```json
 {

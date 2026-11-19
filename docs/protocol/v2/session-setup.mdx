@@ -231,7 +231,7 @@ Replay does not include:
 
 - Historical `state_update` notifications. See [Current-State Synchronization](#current-state-synchronization).
 - Historical `usage_update`, `session_info_update`, `config_option_update`, and `available_commands_update` notifications. They describe past values and **SHOULD NOT** be replayed. See [Current-State Synchronization](#current-state-synchronization).
-- [Notices](/protocol/v2/prompt-lifecycle#session-notices), which are live-only and **SHOULD NOT** be replayed. If the condition is still relevant after resuming, the Agent may send a new notice.
+- [Notices](/protocol/v2/prompt-lifecycle#session-notices), which are live-only and **SHOULD NOT** be replayed. If the condition is still relevant after resuming, the Agent **MAY** send a new notice.
 - Pending permission requests and elicitations. See [Current-State Synchronization](#current-state-synchronization).
 
 Agents are not required to persist every inserted user message or retain it for
@@ -508,7 +508,7 @@ When present, `additionalDirectories` has the following behavior:
 - `cwd` remains the primary working directory and the base for relative paths
 - each `additionalDirectories` entry **MUST** be an absolute path
 - omitting the field or providing an empty array activates no additional roots for the resulting session
-- on `session/resume`, Clients **MUST** send the full intended additional-root list again. That list may differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
+- on `session/resume`, Clients **MUST** send the full intended additional-root list again. That list **MAY** differ from any previous or reported list as long as the request `cwd` matches the session's `cwd`, and omitting the field or providing an empty array does not restore stored roots implicitly
 
 Clients **MUST** only send `additionalDirectories` when the Agent advertises `session.additionalDirectories`.
 
@@ -548,7 +548,7 @@ system-level instructions on `session/new` and `session/resume`.
 - only `text` content blocks are supported for now: Agents **MUST** accept them, and Clients **MUST NOT** send other content block types until a future capability allows them. Agents **MUST** return an error for content blocks they do not support, including unknown types
 - Clients **MUST NOT** send an empty `content` array. Agents **MAY** reject one with `-32602` without creating or resuming the session
 - omitting the field or setting it to `null` on `session/new` means the Agent uses its default instructions
-- on `session/resume`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent may keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
+- on `session/resume`, Clients **SHOULD** send the same `systemPrompt` they used when the session was created. When it is omitted, the Agent **MAY** keep a prompt it stored with the session or use its default. When it differs, the Agent **SHOULD** apply it, and **MAY** defer the change until it next rebuilds its prompt (for example, after compaction) when applying it immediately would discard prompt caches or preserved reasoning
 - if the Agent cannot apply a supplied `systemPrompt`, it **MUST** return an error and **MUST NOT** create or resume the session. When the cause is the value itself, such as an unadvertised mode, an unsupported content block type, or content that exceeds its limits, the error **MUST** be `-32602` (Invalid params)
 
 Clients **MUST** only send `systemPrompt` when the Agent advertises `session.systemPrompt`, and **MUST** only use `override` mode when the Agent also advertises `session.systemPrompt.mode.override`:

@@ -97,7 +97,7 @@ pub enum PlanUpdateContent {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this content type should preserve the
+    /// Receivers that do not understand this content type SHOULD preserve the
     /// raw payload when storing, replaying, proxying, or forwarding plans, and
     /// otherwise ignore it or display it generically. It still replaces any earlier
     /// content for the same `planId`.
@@ -227,7 +227,7 @@ pub struct PlanItems {
     pub plan_id: PlanId,
     /// The list of tasks to be accomplished.
     ///
-    /// When updating an item-based plan, the agent must send a complete list of all entries
+    /// When updating an item-based plan, the agent MUST send a complete list of all entries
     /// with their current status. The client replaces that plan with each update.
     #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]

@@ -33,7 +33,7 @@ use super::Meta;
 pub struct Plan {
     /// The list of tasks to be accomplished.
     ///
-    /// When updating a plan, the agent must send a complete list of all entries
+    /// When updating a plan, the agent MUST send a complete list of all entries
     /// with their current status. The client replaces the entire plan with each update.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -194,7 +194,7 @@ pub struct PlanItems {
     pub plan_id: PlanId,
     /// The list of tasks to be accomplished.
     ///
-    /// When updating an item-based plan, the agent must send a complete list of all entries
+    /// When updating an item-based plan, the agent MUST send a complete list of all entries
     /// with their current status. The client replaces that plan with each update.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]

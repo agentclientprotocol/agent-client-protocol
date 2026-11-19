@@ -63,7 +63,7 @@ impl McpError {
 /// inner MCP outcome: an opaque result (including JSON null), or an MCP error.
 /// Outer ACP errors are reserved for binding and runtime failures.
 ///
-/// Both branches require their carrier key. An error must be a non-null object.
+/// Both branches require their carrier key. An error MUST be a non-null object.
 /// Unknown outer fields are ignored. Inner result and error fields are preserved.
 /// Carrier `_meta` is optional. Omitted and `null` are equivalent.
 /// Senders must include exactly one outcome. Receivers prefer `result` if both are present.

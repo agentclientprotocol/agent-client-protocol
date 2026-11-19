@@ -160,7 +160,7 @@ Note: in future versions of the protocol, this will be required.
   The protocol version the client specified if supported by the agent,
 or the latest protocol version supported by the agent.
 
-The client should disconnect, if it doesn't support this version.
+The client SHOULD disconnect, if it doesn't support this version.
 
 </ResponseField>
 
@@ -252,7 +252,7 @@ Closes an active session and frees up any resources associated with it.
 
 This method is only available if the agent advertises the `sessionCapabilities.close` capability.
 
-The agent must cancel any ongoing work (as if `session/cancel` was called)
+The agent MUST cancel any ongoing work (as if `session/cancel` was called)
 and then free up any resources associated with the session.
 
 #### <span class="font-mono">CloseSessionRequest</span>
@@ -438,11 +438,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  Additional workspace roots to activate for this session. Each path must be absolute.
+  Additional workspace roots to activate for this session. Each path MUST be absolute.
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the loaded
-session. It may differ from any previously used or reported list as long as
+session. It MAY differ from any previously used or reported list as long as
 the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
@@ -458,7 +458,7 @@ the request `cwd` matches the session's `cwd`.
 <ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
   System-level instructions for the loaded session.
 
-Optional. Omitted and `null` are equivalent. The Agent may then keep a
+Optional. Omitted and `null` are equivalent. The Agent MAY then keep a
 system prompt it stored with the session or use its default instructions.
 Clients MUST only send this when the Agent advertises
 `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -528,7 +528,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  Additional workspace roots for this session. Each path must be absolute.
+  Additional workspace roots for this session. Each path MUST be absolute.
 
 These expand the session's filesystem scope without changing `cwd`, which
 remains the base for relative paths. When omitted or empty, no
@@ -694,11 +694,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  Additional workspace roots to activate for this session. Each path must be absolute.
+  Additional workspace roots to activate for this session. Each path MUST be absolute.
 
 When omitted or empty, no additional roots are activated. When non-empty,
 this is the complete resulting additional-root list for the resumed
-session. It may differ from any previously used or reported list as long as
+session. It MAY differ from any previously used or reported list as long as
 the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
@@ -714,7 +714,7 @@ the request `cwd` matches the session's `cwd`.
 <ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
   System-level instructions for the resumed session.
 
-Optional. Omitted and `null` are equivalent. The Agent may then keep a
+Optional. Omitted and `null` are equivalent. The Agent MAY then keep a
 system prompt it stored with the session or use its default instructions.
 Clients MUST only send this when the Agent advertises
 `sessionCapabilities.systemPrompt`, and SHOULD send the same value they used
@@ -841,7 +841,7 @@ Sets the current mode for a session.
 Allows switching between different agent modes (e.g., "ask", "architect", "code")
 that affect system prompts, tool availability, and permission behaviors.
 
-The mode must be one of the modes advertised in `availableModes` during session
+The mode MUST be one of the modes advertised in `availableModes` during session
 creation or loading. Agents may also change modes autonomously and notify the
 client via `current_mode_update` notifications.
 
@@ -1087,7 +1087,7 @@ Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
-Clients that do not understand this mode should preserve the raw payload
+Clients that do not understand this mode SHOULD preserve the raw payload
 when storing, replaying, proxying, or forwarding elicitation requests.
 They MUST NOT render it as a known elicitation mode.
 
@@ -1211,7 +1211,7 @@ Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
-Agents that do not understand this action should preserve the raw
+Agents that do not understand this action SHOULD preserve the raw
 payload when storing, replaying, proxying, or forwarding elicitation
 responses. They MUST NOT treat it as a known elicitation action.
 
@@ -1969,9 +1969,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="terminal" type={"boolean"} >
   Whether the client supports `terminal` authentication methods.
 
-The client should set this to `true` only when it can reproduce the
+The client SHOULD set this to `true` only when it can reproduce the
 configured agent invocation in an interactive terminal. When `true`, the
-agent may include `terminal` entries in its authentication methods.
+agent MAY include `terminal` entries in its authentication methods.
 
     - Default: `false`
 
@@ -3264,7 +3264,7 @@ Values beginning with `_` are reserved for implementation-specific
 extensions. Unknown values that do not begin with `_` are reserved for
 future ACP variants.
 
-Clients that do not understand this property schema type should preserve
+Clients that do not understand this property schema type SHOULD preserve
 the raw schema when storing, replaying, proxying, or forwarding
 elicitation requests. They MUST NOT render it as a known input control.
 
@@ -3327,7 +3327,7 @@ Optional. Omitted and `null` are equivalent and mean no schema description is pr
 
 </ResponseField>
 <ResponseField name="properties" type={"object"} >
-  Property definitions (must be primitive types).
+  Property definitions (MUST be primitive types).
 
     - Default: `{}`
 
@@ -3610,7 +3610,7 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
 **Properties:**
 
 <ResponseField name="code" type={<a href="#errorcode">ErrorCode</a>} required>
-  A number indicating the error type that occurred. This must be an integer as
+  A number indicating the error type that occurred. This MUST be an integer as
   defined in the JSON-RPC specification.
 </ResponseField>
 <ResponseField name="data" type={"object"}>
@@ -3619,7 +3619,7 @@ See protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification
   details.
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
-  A string providing a short description of the error. The message should be
+  A string providing a short description of the error. The message SHOULD be
   limited to a concise single sentence.
 </ResponseField>
 
@@ -3807,7 +3807,7 @@ name fallback if title isn't present.
   Intended for UI and end-user contexts and optimized to be human-readable
 and easily understood.
 
-If not provided, the name should be used for display.
+If not provided, the name SHOULD be used for display.
 
 </ResponseField>
 <ResponseField name="version" type={"string"} required>
@@ -4431,7 +4431,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating a plan, the agent must send a complete list of all entries
+When updating a plan, the agent MUST send a complete list of all entries
 with their current status. The client replaces the entire plan with each update.
 
 </ResponseField>
@@ -5129,7 +5129,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span>"string"</span><span>[]</span></>} >
-  Additional workspace roots reported for this session. Each path must be absolute.
+  Additional workspace roots reported for this session. Each path MUST be absolute.
 
 When present, this is the complete ordered additional-root list reported
 by the Agent. Omitted and empty values are equivalent: the response
@@ -5565,7 +5565,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating a plan, the agent must send a complete list of all entries
+When updating a plan, the agent MUST send a complete list of all entries
 with their current status. The client replaces the entire plan with each update.
 
 </ResponseField>
@@ -5856,7 +5856,7 @@ The turn was cancelled by the client via `session/cancel`.
 
 This stop reason MUST be returned when the client sends a `session/cancel`
 notification, even if the cancellation causes exceptions in underlying operations.
-Agents should catch these exceptions and return this semantically meaningful
+Agents SHOULD catch these exceptions and return this semantically meaningful
 response to confirm successful cancellation.
 
 </ResponseField>
@@ -6069,7 +6069,7 @@ future ACP variants.
 
 Embed a terminal created with `terminal/create` by its id.
 
-The terminal must be added before calling `terminal/release`.
+The terminal MUST be added before calling `terminal/release`.
 
 See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)
 
@@ -6313,7 +6313,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 <ResponseField name="terminal" type="object">
 Embed a terminal created with `terminal/create` by its id.
 
-The terminal must be added before calling `terminal/release`.
+The terminal MUST be added before calling `terminal/release`.
 
 See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)
 

@@ -46,7 +46,7 @@ A receiver that does not implement a method, or receives a capability-gated meth
 
 Malformed parameters and unsupported values get `-32602`. For example, an invalid `session/list` cursor, or an unknown `configId` or value in `session/set_config_option`. The same applies to an unknown mode in `session/set_mode`.
 
-A `systemPrompt` the Agent cannot apply gets an error, and `-32602` is recommended. See [System prompt](/protocol/v1/draft/session-setup#system-prompt).
+A `systemPrompt` the Agent cannot apply gets an error, and `-32602` is **RECOMMENDED**. See [System prompt](/protocol/v1/draft/session-setup#system-prompt).
 
 ### Unknown sessions
 

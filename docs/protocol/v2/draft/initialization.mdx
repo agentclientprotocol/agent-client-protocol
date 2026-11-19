@@ -174,7 +174,7 @@ Omitted fields mean unsupported. Extension-specific capabilities belong in
 <ParamField path="auth.terminal" type="TerminalAuthCapabilities Object">
   The Client can reproduce the configured Agent invocation in an interactive
   terminal. Omitted or `null` means unsupported. Supplying `{}` means the Agent
-  may advertise `type: "terminal"` authentication methods.
+  **MAY** advertise `type: "terminal"` authentication methods.
 </ParamField>
 
 <Card icon="terminal" horizontal href="/protocol/v2/draft/authentication">
@@ -210,7 +210,7 @@ Omitted fields mean unsupported. Extension-specific capabilities belong in
   The Client can offer the suggestions in `prompt_suggestions_update` session
   updates to the user. Omitted or `null` means unsupported. Supplying `{}` means
   the Client can offer suggestions made of `text` and `resource_link` content
-  blocks. Agents must not send `prompt_suggestions_update` without this
+  blocks. Agents **MUST NOT** send `prompt_suggestions_update` without this
   capability.
 </ParamField>
 
@@ -257,7 +257,8 @@ The Client opts in to other content types with the following fields. They have t
 >
   The Client understands `skill` entries in `availableCommands` and invokes them
   with `skill` content blocks. Omitted or `null` means unsupported, and `{}`
-  means supported. Agents must not send `skill` entries without this capability.
+  means supported. Agents **MUST NOT** send `skill` entries without this
+  capability.
 </ParamField>
 
 <Card

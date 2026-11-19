@@ -65,7 +65,7 @@ pub fn apply_meta_update(stored: &mut MaybeUndefined<Meta>, update: MaybeUndefin
 pub struct ExtRequest {
     /// Wire method name for this extension request.
     ///
-    /// Extension method names must start with `_`.
+    /// Extension method names MUST start with `_`.
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
     /// Raw JSON parameters for this extension message.
@@ -117,7 +117,7 @@ impl ExtResponse {
 pub struct ExtNotification {
     /// Wire method name for this extension notification.
     ///
-    /// Extension method names must start with `_`.
+    /// Extension method names MUST start with `_`.
     #[serde(skip)] // this is used for routing, but when serializing we only want the params
     pub method: Arc<str>,
     /// Raw JSON parameters for this extension message.

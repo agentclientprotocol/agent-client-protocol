@@ -9,7 +9,7 @@ Agents report tool calls through [`session/update`](/protocol/v2/prompt-lifecycl
 
 Tool call updates may arrive while the Agent reports `idle`. They do not change the state.
 
-Agents may ask the user for approval before running a tool call. See
+Agents **MAY** ask the user for approval before running a tool call. See
 [Requesting Permission](#requesting-permission).
 
 ## Reporting
@@ -373,7 +373,7 @@ Each permission option provided to the Client contains:
 - `reject_once` - Reject this operation only this time
 - `reject_always` - Reject this operation and remember the choice
 
-Custom or future permission option kinds can be used as UI hints. Custom kinds **MUST** begin with `_`. Unknown non-underscore kinds are reserved for future ACP variants. Clients that do not understand a kind should preserve the value and use a generic permission option treatment.
+Custom or future permission option kinds can be used as UI hints. Custom kinds **MUST** begin with `_`. Unknown non-underscore kinds are reserved for future ACP variants. Clients that do not understand a kind **SHOULD** preserve the value and use a generic permission option treatment.
 
 </ParamField>
 
@@ -459,7 +459,7 @@ The Client cancels the tool call with a `tool_call/cancel` request:
 
 - The Client **MUST NOT** send it unless the tool call currently advertises `capabilities.cancel`.
 - `sessionId` is the session that reports the tool call. For a [subagent](/protocol/v2/subagents#restricted-methods)'s tool call, that is the child session: the tool call's own `cancel` enables the request even when the child doesn't advertise `cancel`.
-- The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the work has stopped. The Agent confirms that with a `tool_call_update` to a final status, normally `cancelled`, and may send `completed` or `failed` if the work finished first.
+- The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the work has stopped. The Agent confirms that with a `tool_call_update` to a final status, normally `cancelled`, and **MAY** send `completed` or `failed` if the work finished first.
 - The Agent responds with `-32602` if the tool call is unknown, already final, or not cancellable. This includes a request that the Client sends again after the first one was accepted and the tool call has since reached a final status. The `tool_call_update` with that status reports the outcome.
 - Cancelling a tool call does not change the foreground state by itself. This works for foreground tool calls too, so a user can stop one long-running step without cancelling the rest of the work.
 
@@ -775,7 +775,7 @@ it operates on, such as a [subagent](/protocol/v2/subagents) it spawned or waits
 ```
 
 <ParamField path="sessionId" type="string" required>
-  The referenced session. It must already be known through ordinary session
+  The referenced session. It **MUST** already be known through ordinary session
   setup or a `subagent_update` announcement.
 </ParamField>
 

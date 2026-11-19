@@ -212,7 +212,7 @@ For a `terminal` method, the Client:
 The descriptor cannot provide a command. The Client derives the command from its
 own Agent configuration. Agents **SHOULD** provide arguments that enter a
 login-only flow and exit when it completes. ACP does not define an output
-pattern or other in-band success signal. Clients may recognize
+pattern or other in-band success signal. Clients **MAY** recognize
 implementation-specific signals only as an extension. The terminal process is
 not the ACP connection, so the Client **MUST NOT** send an `auth/login` request
 for a terminal method.
@@ -235,7 +235,7 @@ reporting channel depends on whether the user message was inserted:
   failure terminates foreground work, the Agent **MUST** report `idle` and
   **SHOULD** include `stopReason: "error"` with `error.code: -32000`.
 
-Clients may prompt the user to complete an advertised authentication flow.
+Clients **MAY** prompt the user to complete an advertised authentication flow.
 Successful authentication does not itself restart work that already ended.
 Resending the prompt inserts a new message and does not undo the original
 insertion or any tool side effects. Clients **SHOULD NOT** automatically resubmit
@@ -245,7 +245,7 @@ an inserted prompt as though it had been rejected. See
 ## Logging out
 
 The `auth/logout` method allows Clients to end the current authenticated state.
-Clients may call it only when the Agent advertised one or more authentication methods during initialization. There is no separate logout
+Clients **MAY** call it only when the Agent advertised one or more authentication methods during initialization. There is no separate logout
 capability marker.
 
 ```json
@@ -275,7 +275,7 @@ Logging out is idempotent. If there is no authenticated state to end, for exampl
 ## Active sessions
 
 The protocol does not guarantee what happens to already-running sessions after
-`auth/logout`. Agents may terminate them, keep them running, or return
+`auth/logout`. Agents **MAY** terminate them, keep them running, or return
 `auth_required` errors for future session activity.
 
 Clients **SHOULD** be prepared for active session operations to fail with

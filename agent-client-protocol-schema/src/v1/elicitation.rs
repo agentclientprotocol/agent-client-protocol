@@ -984,7 +984,7 @@ pub enum ElicitationPropertySchema {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this property schema type should preserve
+    /// Clients that do not understand this property schema type SHOULD preserve
     /// the raw schema when storing, replaying, proxying, or forwarding
     /// elicitation requests. They MUST NOT render it as a known input control.
     #[serde(untagged)]
@@ -1141,7 +1141,7 @@ pub struct ElicitationSchema {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Property definitions (must be primitive types).
+    /// Property definitions (MUST be primitive types).
     #[serde(default)]
     // TODO(next major): use `IndexMap` to keep the key order, as the v2 type does.
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
@@ -1652,7 +1652,7 @@ pub enum ElicitationMode {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this mode should preserve the raw payload
+    /// Clients that do not understand this mode SHOULD preserve the raw payload
     /// when storing, replaying, proxying, or forwarding elicitation requests.
     /// They MUST NOT render it as a known elicitation mode.
     #[serde(untagged)]
@@ -1929,7 +1929,7 @@ pub enum ElicitationAction {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Agents that do not understand this action should preserve the raw
+    /// Agents that do not understand this action SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding elicitation
     /// responses. They MUST NOT treat it as a known elicitation action.
     #[serde(untagged)]

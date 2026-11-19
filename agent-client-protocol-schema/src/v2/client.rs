@@ -196,7 +196,7 @@ pub enum SessionUpdate {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Receivers that do not understand this update type should preserve the
+    /// Receivers that do not understand this update type SHOULD preserve the
     /// raw payload when storing, replaying, proxying, or forwarding session
     /// history, and otherwise ignore it or display it generically.
     #[serde(untagged)]
@@ -1589,7 +1589,7 @@ pub struct SubagentUpdate {
     /// effective working directory.
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub cwd: MaybeUndefined<AbsolutePath>,
-    /// Additional workspace roots for the child. Each path must be absolute.
+    /// Additional workspace roots for the child. Each path MUST be absolute.
     ///
     /// Optional and nullable. Omitted means unchanged. `null` clears the
     /// reported value. While unset, the child inherits its immediate parent's
@@ -3393,7 +3393,7 @@ pub enum AvailableCommand {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this command type should preserve the raw
+    /// Clients that do not understand this command type SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding command
     /// metadata, and otherwise ignore the command. They MUST NOT display it as a
     /// slash command.
@@ -3705,7 +3705,7 @@ pub enum AvailableCommandInput {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this input type should preserve the raw
+    /// Clients that do not understand this input type SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding command
     /// metadata, and otherwise ignore the input specification or display the
     /// command without structured input.
@@ -3939,7 +3939,7 @@ pub enum RequestPermissionSubject {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this subject type should preserve the raw
+    /// Clients that do not understand this subject type SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding permission
     /// requests, and otherwise display a generic permission prompt or decline it
     /// according to policy.
@@ -4320,7 +4320,7 @@ pub enum RequestPermissionOutcome {
     /// future ACP variants.
     ///
     /// Agents that do not understand this outcome MUST NOT treat it as approval.
-    /// They should preserve the raw payload when storing, replaying, proxying, or
+    /// They SHOULD preserve the raw payload when storing, replaying, proxying, or
     /// forwarding permission responses, and otherwise fail or decline the
     /// permission request according to policy.
     #[serde(untagged)]
@@ -4718,7 +4718,7 @@ pub struct CommandsCapabilities {
     /// Support for `skill` command entries.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the agent may send `skill` entries in `availableCommands`. The
+    /// Supplying `{}` means the agent MAY send `skill` entries in `availableCommands`. The
     /// client invokes them with `skill` content blocks.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -5063,9 +5063,9 @@ pub struct ClientAuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// The client should supply `{}` only when it can reproduce the configured
+    /// The client SHOULD supply `{}` only when it can reproduce the configured
     /// agent invocation in an interactive terminal. Supplying `{}` means the
-    /// agent may include `terminal` entries in its authentication methods.
+    /// agent MAY include `terminal` entries in its authentication methods.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5092,9 +5092,9 @@ impl ClientAuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// The client should supply `{}` only when it can reproduce the configured
+    /// The client SHOULD supply `{}` only when it can reproduce the configured
     /// agent invocation in an interactive terminal. Supplying `{}` means the
-    /// agent may include `AuthMethod::Terminal` entries in its authentication
+    /// agent MAY include `AuthMethod::Terminal` entries in its authentication
     /// methods.
     #[must_use]
     pub fn terminal(mut self, terminal: impl IntoOption<TerminalAuthCapabilities>) -> Self {

@@ -50,7 +50,7 @@ pub enum StringFormat {
     /// Custom or future string format.
     ///
     /// Unknown formats are preserved. Implementations that do not understand a
-    /// format should treat it as an annotation rather than rejecting the schema.
+    /// format SHOULD treat it as an annotation rather than rejecting the schema.
     #[serde(untagged)]
     Other(String),
 }
@@ -958,7 +958,7 @@ pub enum ElicitationPropertySchema {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this property schema type should preserve
+    /// Clients that do not understand this property schema type SHOULD preserve
     /// the raw schema when storing, replaying, proxying, or forwarding
     /// elicitation requests. They MUST NOT render it as a known input control.
     #[serde(untagged)]
@@ -1095,7 +1095,7 @@ pub struct ElicitationSchema {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Property definitions (must be primitive types).
+    /// Property definitions (MUST be primitive types).
     pub properties: IndexMap<String, ElicitationPropertySchema>,
     /// List of required property names.
     ///
@@ -1648,7 +1648,7 @@ pub enum ElicitationMode {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Clients that do not understand this mode should preserve the raw payload
+    /// Clients that do not understand this mode SHOULD preserve the raw payload
     /// when storing, replaying, proxying, or forwarding elicitation requests.
     /// They MUST NOT render it as a known elicitation mode.
     #[serde(untagged)]
@@ -1901,7 +1901,7 @@ pub enum ElicitationAction {
     /// extensions. Unknown values that do not begin with `_` are reserved for
     /// future ACP variants.
     ///
-    /// Agents that do not understand this action should preserve the raw
+    /// Agents that do not understand this action SHOULD preserve the raw
     /// payload when storing, replaying, proxying, or forwarding elicitation
     /// responses, and otherwise MUST handle it as `cancel`.
     #[serde(untagged)]

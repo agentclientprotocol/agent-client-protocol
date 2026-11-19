@@ -134,7 +134,7 @@ pub struct TerminalExitStatus {
     pub exit_code: Option<i64>,
     /// Signal that terminated the process, when known.
     ///
-    /// Agents should use the conventional platform signal name. POSIX examples
+    /// Agents SHOULD use the conventional platform signal name. POSIX examples
     /// include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use a
     /// platform-specific name. Omitted and `null` are equivalent.
     #[serde_as(deserialize_as = "DefaultOnError")]
