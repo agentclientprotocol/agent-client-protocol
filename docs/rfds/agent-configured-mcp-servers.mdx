@@ -1,0 +1,346 @@
+---
+title: "Agent-Configured MCP Servers"
+---
+
+- Author(s): [@ruchirkemnaik](https://github.com/ruchirkemnaik)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Clients tell an Agent which MCP servers to use through the `mcpServers` array on
+`session/new`. That list can only add servers, and it isn't the only place servers come from.
+Widely used Agents such as Claude Code and Codex also load MCP servers from their own
+configuration: user and project settings, plugins, and similar sources. ACP has no concept of
+this second set.
+
+So through ACP, a Client can't list the servers an Agent has configured, can't tell a global
+server from a project one, and can't turn any of them off when it starts a session. The
+protocol treats the session's MCP servers as the list the Client sent. In practice, the session
+gets that list plus servers the Client never sees.
+
+This RFD starts a discussion about giving Clients a way to see and control that second set.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+In v1, `session/new`, `session/load`, and `session/resume` accept an `mcpServers` array, and so
+does the unstable `session/fork`. v2 keeps it on `session/new`, `session/resume`, and the
+unstable `session/fork`, and drops `session/load`. On `session/new`, the schema describes the
+field as "List of MCP (Model Context Protocol) servers the agent should connect to." The spec's
+main rule for what an Agent does with the list is that
+[Agents **SHOULD** connect to all MCP servers specified by the Client](/protocol/v1/session-setup#mcp-servers).
+Both read as if the Client's list were the whole picture.
+
+It isn't. Agents also read MCP servers from their own configuration, usually a user-level file
+and a project-level file, and connect to those as well as the Client's. The protocol never
+mentions this. The words "pre-configured," "global," and "already configured" don't appear
+anywhere in the ACP spec in connection with MCP servers.
+
+This causes three problems.
+
+**Clients can't show users what a session can access.** A Client that wants to show "these are
+the tools this session can use", before or after the session starts, has no way in the
+protocol to get the Agent's own servers. Any such list is incomplete, and the user can't tell.
+
+**Clients can't turn an Agent's servers off.** A Client may have good reasons to want fewer
+servers: it's running in a restricted environment, a server writes to external systems, a
+server duplicates a tool the Client already provides, or the user simply asked. The protocol
+has no way to do this. The only options are Agent-specific: a vendor `_meta` option if the
+adapter offers one (see below), or editing the Agent's config files outside ACP. Editing those
+files also changes settings the user didn't ask to change.
+
+**Clients can't tell where a server came from.** Even if a user can see the servers some other
+way, the protocol doesn't say where each one was configured. A global server and a server set
+up for one repository look the same over ACP, so a Client can't present them clearly or know
+which ones depend on `cwd`.
+
+The [session fork RFD](/rfds/session-fork) shows the same assumption. It accepts `mcpServers`
+on `session/fork` partly because Claude "does not retain the configured MCP servers of a
+session," so the Client sends its own list again. The Agent's own servers don't come up.
+
+### Adapters are already working around it
+
+This isn't a theoretical problem. The ACP adapters for Codex and Claude have both run into it,
+and each works around it differently:
+
+- **Codex: turning off configured servers through `_meta`.**
+  [agentclientprotocol/codex-acp#548](https://github.com/agentclientprotocol/codex-acp/pull/548)
+  proposes `_meta.codex.strictMcpConfig` on `session/new`, `session/load`, `session/resume`,
+  and `session/fork`. It turns off the servers in the effective Codex configuration, plus the
+  features that add servers of their own, so the session gets exactly the servers the Client
+  sent. Its motivation is the second problem above: "a client that routes every tool approval
+  through its own UI and audit log, and must not let a session reach tools it never granted."
+- **Codex: its own rules for name clashes.** If a Codex config entry has the same name as a
+  server the Client sent, the adapter keeps the config entry and drops the Client's by default.
+  [agentclientprotocol/codex-acp#587](https://github.com/agentclientprotocol/codex-acp/pull/587)
+  reports each dropped server to the Client as a failed `mcp__<server>__startup` tool call.
+  [agentclientprotocol/codex-acp#534](https://github.com/agentclientprotocol/codex-acp/pull/534)
+  proposes the opposite rule when both entries use the same transport.
+- **Claude: an SDK option and a slash command.** claude-agent-acp passes
+  `_meta.claudeCode.options.strictMcpConfig` through to the Claude Agent SDK, which maps it to
+  Claude Code's `--strict-mcp-config` flag. The Codex proposal above cites it as the precedent.
+  To list servers, the adapter answers a `/mcp` prompt in chat with the configured servers and
+  their status, and the same command can reconnect, enable, or disable a server
+  ([agentclientprotocol/claude-agent-acp#1218](https://github.com/agentclientprotocol/claude-agent-acp/pull/1218)).
+  The list arrives as Markdown text in a message, not as data the Client can use.
+
+Each of these only works with one Agent. To get a strict session, a Client has to know each
+Agent's `_meta` namespace (`codex` or `claudeCode.options`), even though the adapters chose the
+same option name on purpose. To learn what was dropped, it has to recognize a special failed
+tool call. To get the server list, it has to send a slash command after the session exists and
+parse the Markdown reply. The closest standard channel, a
+[session notice](/protocol/v1/prompt-turn#session-notices), doesn't fill the gap either.
+Notices are plain text for the user and "must not carry information required for protocol
+correctness, authorization, user action, task completion, or fatal-error reporting."
+
+The need is real, and without a shared approach each Agent is inventing its own.
+
+### v2 makes this worse
+
+In v1 this is a visibility problem. In v2 it becomes a correctness problem. v2, whose protocol
+surface is still labeled draft, removes the `fs/*` and `terminal/*` Client methods and tells
+Clients to provide file access and command execution through `mcpServers` instead:
+
+> Clients that want to expose file access, unsaved editor state, or command execution to
+> agents should do so by providing an **MCP server** to the session (via `mcpServers` on
+> `session/new` / `session/resume`), which puts those tools on the same footing as every
+> other tool the Agent uses.
+>
+> — [v2 migration guide](/protocol/v2/migration)
+
+Once `mcpServers` is the main way Clients provide tools, the hidden set of Agent servers is more
+than an incomplete list. The two sets can overlap in ways that matter: two `read_file` tools
+that see unsaved editor changes differently, or two shells with different working directories
+or sandboxes. Only the Agent sees both sets. In practice the Codex adapter only catches servers
+that share a name, and its competing changes show there's no agreed rule even for that. Name
+matching can't catch overlap between servers with different names. The Client can't see the
+clash or how it was handled, so it can't sort it out, and which tool the model uses is left to
+chance.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+This section sets a direction, not a design. It leaves out the wire format for now so the
+discussion can focus on the problem. See the FAQ for the names suggested so far.
+
+We propose that ACP treat the MCP servers an Agent configures itself as a real part of the
+session, in two parts.
+
+**A read path.** Clients should be able to list the MCP servers an Agent has configured on its
+own, with enough detail to be useful:
+
+- a stable identity, so a Client can refer to a specific server across requests
+- the transport, so a Client can handle it the same way it handles its own servers
+- the **scope** it came from, for example user-level, project-level, or managed by an
+  organization, so a Client knows which servers depend on the project or `cwd`
+
+This should work _before_ `session/new`, so a Client can show users what they're about to get
+instead of finding out afterwards. That probably means the read path takes a working directory
+rather than a session ID, since project servers depend on which project is opened.
+
+**A control path.** When setting up a session, a Client should be able to turn off some or all
+of the Agent's configured servers, so both sides agree on what the session has. The Client
+already says what it's adding. It should also be able to say what it's leaving out.
+
+Neither part takes ownership of the configuration away from the Agent. The read path reports
+what the Agent has set up, and the control path only affects one session.
+
+### Out of scope
+
+This proposal deliberately leaves out three related problems:
+
+- **Changing MCP servers mid-session**: adding, removing, or restarting servers after a session
+  exists. It's worth discussing, but it's a separate problem with its own state questions.
+  Replacing a live session's server list is the subject of
+  [PR #582](https://github.com/agentclientprotocol/agent-client-protocol/pull/582), and more MCP
+  lifecycle methods are on the list of [v2 RFDs still to be written](/rfds/v2/overview). The FAQ
+  covers how #582 relates to this proposal.
+- **Writing the Agent's saved configuration.** Clients shouldn't be able to edit the Agent's
+  config files through ACP. Turning a server off only affects the session being created, not
+  the Agent's stored settings.
+- **The Agent's built-in tools.** Tools that ship with the Agent itself, such as file read and
+  write or a shell, aren't MCP servers, and this proposal doesn't cover them. The FAQ explains
+  why.
+
+## Shiny future
+
+> How will things will play out once this feature exists?
+
+A Client can tell the user exactly which MCP servers a session will have and where each one
+came from, before the session starts. When a user or a policy wants fewer servers, the Client
+can ask for that without editing the Agent's config files behind the user's back.
+
+In v2, a Client that provides file access and command execution through its own MCP server can
+see which servers the Agent already brings, spot likely overlap, and deal with it on purpose
+instead of leaving it to chance.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+This will be filled in once there's agreement on the direction. I'm happy to drive the design
+and schema work, and would welcome a champion to work with.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Isn't an Agent's MCP configuration internal, and so outside ACP's scope?
+
+That's a fair concern, and it matches how ACP handles model selection and permission modes
+today: the Agent defines them as [session config options](/protocol/v1/session-config-options),
+and the Client only picks from the values offered.
+
+But this proposal isn't about _setting_ the Agent's configuration. It's about the Client knowing
+which MCP servers a session actually has, which the protocol already partly covers.
+`session/new` takes an `mcpServers` array, and the spec says what Agents should do with it. So
+the protocol is already in this area. It just describes one of the two sources and says nothing
+about the other.
+
+The closest precedent is the [Configurable LLM Providers RFD](/rfds/custom-llm-endpoint). It's
+in Draft, with schema support behind unstable features in v1 and v2. It starts from the same
+situation: "provider configuration is usually done via environment variables or agent-specific
+config files." It gives Clients `providers/list` to see an Agent's providers and
+`providers/disable` to turn one off. Clients call these after `initialize` and, per its
+guidance, before creating sessions. Its configuration "is process-scoped and SHOULD NOT be
+persisted to disk." So there's already a draft RFD that lets a Client see and turn off part of
+an Agent's own configuration. This proposal differs mainly in scope. It applies per session
+rather than per process. It doesn't need anything like `providers/set`, because Clients already
+add servers through `mcpServers`. And project servers depend on `cwd`.
+
+The [Client-Provided System Prompt RFD](/rfds/client-system-prompt) is another recent precedent
+for a Client changing an Agent's defaults for one session. It's also in Draft with unstable
+schema support. It lets a Client add to the Agent's built-in instructions when creating a
+session, or replace them if the Agent supports that. It stops short of tools on purpose:
+override mode "does not change tool availability, MCP servers, permissions, or session
+configuration." This proposal takes the same per-session approach to the part that RFD leaves
+out.
+
+### Why not just expose each server as a session config option?
+
+An Agent could already show each configured server as a boolean config option, using the
+[boolean config option](/rfds/boolean-config-option) work. Users could then toggle servers, and
+it's the closest workaround the protocol itself offers. But it doesn't solve the problem:
+
+- **Not enough structure.** A config option has an `id`, a display name, an optional
+  description and category, and a value. There's no field for transport or scope, so a Client
+  still can't tell a global server from a project one, or check for overlap with its own
+  servers.
+- **Nothing is visible before the session exists.** Config options come back in the
+  `session/new` response. A Client that wants to show users what a session will include, or
+  decide what to send, needs that earlier.
+- **No way to turn them all off at once.** "Start this session without any of your own
+  servers" becomes N separate toggles, which the Client first has to find.
+- **It's a convention, not a contract.** Nothing in the protocol says an Agent should do this,
+  so no Client can rely on it. Config options also seem designed for a handful of settings,
+  not an open-ended list of servers.
+
+The [Configurable LLM Providers RFD](/rfds/custom-llm-endpoint) considered the same option for
+providers. It called session config "a possible alternative" that it "may revisit", but chose
+dedicated methods because providers need, among other things:
+
+> - Structured payloads (`apiType`, `baseUrl`, full `headers` map) rather than simple scalar values
+> - Explicit discoverable (`providers/list`) and disable (`providers/disable`) semantics
+
+MCP servers configured by the Agent need both, for the same reasons.
+
+### What about the Agent's built-in tools?
+
+They're out of scope. Built-in tools, such as file read and write or a shell, come with the
+Agent itself rather than from an MCP server, and Agents differ a lot in whether they can be
+separated out at all.
+
+This has come up on Zulip. In January, @nikomatsakis
+[described](https://agentclientprotocol.zulipchat.com/#narrow/channel/543465-general/topic/Disabling.20built-in.20tools/near/568494861)
+how things work today: the Client adds MCP servers, and "the agent has a base set of MCP
+servers that it includes by default." He suggested a session option to "disable all default
+tools", and wondered if disabling categories of tools, like file-system or bash, would be
+better. @benbrandt replied that the Claude Code adapter can do this, but "codex doesn't really
+have an option to do this", because "90+% of everything codex does is use bash". In August, a
+Client author
+[asked](https://agentclientprotocol.zulipchat.com/#narrow/channel/543465-general/topic/Native.20Tool.20Discovery.20and.20Selection/near/617547989)
+whether built-in tools could be discovered and allowed or excluded per session, and added:
+"This does not include the MCP tools. (Maybe it should?)"
+
+MCP servers are easier to handle. Each one is a separate, named entry with a transport, so it
+can be listed and turned off without changing how the Agent works. A way to control built-in
+tools could sit alongside this proposal, but it's a separate problem, and keeping this RFD to
+MCP servers keeps it small.
+
+### Doesn't this belong in the MCP spec rather than ACP?
+
+MCP defines how a client and a server talk to each other. It doesn't define how an Agent decides
+which servers to run, and it knows nothing about the ACP Client in front of the Agent. The
+mismatch here is between what two ACP participants believe about one ACP session, so it seems to
+belong in ACP.
+
+### Doesn't MCP-over-ACP already cover this?
+
+No. [MCP-over-ACP](/rfds/mcp-over-acp) adds a transport for servers the Client declares. A
+server entry with `"type": "acp"` in `mcpServers` is reached by sending request-scoped
+`mcp/message` requests to its `serverId` over the existing ACP connection, instead of over
+stdio or HTTP. It changes how the Client's servers are reached, not which servers a session
+has. Every server it can reach was declared by the Client or a proxy in front of it, so it
+doesn't let a Client see or turn off the Agent's own servers.
+
+If anything, it makes the problem bigger. Like v2, it puts more weight on tools the Client
+provides while the Agent's own servers stay hidden. The overlap it makes easy to create is the
+overlap this proposal wants to make visible.
+
+### How does this relate to dynamic MCP server updates?
+
+[PR #582](https://github.com/agentclientprotocol/agent-client-protocol/pull/582) proposes
+`session/update_servers` (a reviewer suggested the name `session/update_mcp_servers`), which
+replaces a live session's MCP server list with a new list from the Client. It doesn't say
+whether the Agent's own servers are part of the list being replaced, and the question this RFD
+takes up came up in review:
+
+> […] should it replace all? Should we instead have a add/remove endpoint? And a way to
+> retrieve all currently configured MCPs in case there were some from other agent config?
+>
+> — [@benbrandt on PR #582](https://github.com/agentclientprotocol/agent-client-protocol/pull/582#discussion_r2890099965)
+
+The two proposals fit together rather than compete. #582 covers changing the Client's servers
+after a session exists. This RFD covers seeing and turning off the Agent's servers before it
+starts. Whichever lands first, the other needs an answer to the question it raises: a "replace
+all" update only makes sense once it's clear whether "all" includes the Agent's own servers.
+
+### What would the method be called?
+
+That's still open, on purpose. The shape of the read path should come out of the discussion,
+not drive it. One option that fits the repository's naming convention is `mcp/servers`, a
+`noun/noun` pair that maps to a trait method `mcp_servers` with `McpServersRequest` /
+`McpServersResponse`, although the `mcp/` prefix is already used by MCP-over-ACP's
+`mcp/message`. Other ideas are welcome, including whether the read path should be an Agent
+method at all, or part of `initialize`.
+
+The closest precedent suggests a different shape. The
+[Configurable LLM Providers RFD](/rfds/custom-llm-endpoint) uses a `noun/verb` family of methods
+(`providers/list`, `providers/set`, `providers/disable`, with `ListProvidersRequest` /
+`ListProvidersResponse` in the Rust schema). On `initialize`, it says: "A dedicated method
+family keeps initialization focused on negotiation and leaves provider mutation to explicit
+steps." A read path modeled on it would be a `noun/verb` list method rather than `mcp/servers`.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+The alternatives so far are the ones above: leaving it to each Agent's config files, `_meta`
+keys, and slash commands, as adapters do today, or building it on session config options. Both
+fall short for the reasons given. Neither is a protocol-level contract, and neither gives the
+Client structured information before it has to decide what to send.
+
+[Additional directories](/rfds/additional-directories) faced the same choice and decided not to
+put extra roots in `_meta`: "A standardized workspace-root concept should be protocol-level,
+typed, and interoperable across implementations." The same is true here. Adapters already
+expose Agent-configured servers through their own `_meta` keys and slash commands. What's
+missing is a typed, protocol-level version.
+
+It's also fair to question splitting this into _two_ parts. A read path alone would fix the
+visibility problem and is a smaller change. The control path is what lets Clients act on what
+they see. Feedback on whether this should be one RFD or two is welcome.
+
+## Revision history
+
+- 2026-10-20: Initial draft.

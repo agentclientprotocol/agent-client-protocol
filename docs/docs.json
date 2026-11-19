@@ -235,7 +235,8 @@
               "rfds/speed-config-category",
               "rfds/prompt-suggestions",
               "rfds/agent-skills",
-              "rfds/session-cursors"
+              "rfds/session-cursors",
+              "rfds/agent-configured-mcp-servers"
             ]
           },
           {
