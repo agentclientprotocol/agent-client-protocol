@@ -8399,7 +8399,7 @@
                 },
                 {
                   "title": "LoginAuthRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving an `auth_required` (`-32000`) error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving a `-32000` (Authentication required) error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LoginAuthRequest"
@@ -8444,7 +8444,7 @@
                 },
                 {
                   "title": "AuthStatusRequest",
-                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nQueries the agent's current authentication state.\n\nThis method is only available if the agent advertises the `auth.status` capability.\nIt MUST NOT change any agent state, and agents MUST NOT reject it with `auth_required`.",
+                  "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nQueries the agent's current authentication state.\n\nThis method is only available if the agent advertises the `auth.status` capability.\nIt MUST NOT change any agent state, and agents MUST NOT reject it with `-32000` (Authentication required).",
                   "allOf": [
                     {
                       "$ref": "#/$defs/AuthStatusRequest"
@@ -8453,7 +8453,7 @@
                 },
                 {
                   "title": "NewSessionRequest",
-                  "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return an `auth_required` (`-32000`) error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/draft/session-setup)",
+                  "description": "Creates a new conversation session with the agent.\n\nSessions represent independent conversation contexts with their own history and state.\n\nThe agent should:\n- Create a new session context\n- Connect to any specified MCP servers\n- Return a unique session ID for future requests\n\nMay return a `-32000` (Authentication required) error if the agent requires authentication.\n\nSee protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/draft/session-setup)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/NewSessionRequest"
@@ -9065,7 +9065,7 @@
       "x-method": "auth/logout"
     },
     "AuthStatusRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for the `auth/status` method.\n\nQueries the agent's current authentication state without changing it.\n\nAgents MUST NOT reject it with `auth_required` (`-32000`), since Clients call it to learn\nwhether authentication is required.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for the `auth/status` method.\n\nQueries the agent's current authentication state without changing it.\n\nAgents MUST NOT reject it with `-32000` (Authentication required), since Clients call it to learn\nwhether authentication is required.",
       "type": "object",
       "properties": {
         "_meta": {

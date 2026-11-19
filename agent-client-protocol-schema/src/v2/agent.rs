@@ -460,7 +460,7 @@ crate::serde_util::default_on_null! {
     ///
     /// Queries the agent's current authentication state without changing it.
     ///
-    /// Agents MUST NOT reject it with `auth_required` (`-32000`), since Clients call it to learn
+    /// Agents MUST NOT reject it with `-32000` (Authentication required), since Clients call it to learn
     /// whether authentication is required.
     #[serde_as]
     #[skip_serializing_none]
@@ -7941,7 +7941,7 @@ pub enum ClientRequest {
     /// The client provides the authentication method ID that was advertised during initialization.
     ///
     /// After successful authentication, the client can proceed to create sessions with
-    /// `session/new` without receiving an `auth_required` (`-32000`) error.
+    /// `session/new` without receiving a `-32000` (Authentication required) error.
     ///
     /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
     LoginAuthRequest(Box<LoginAuthRequest>),
@@ -7983,7 +7983,7 @@ pub enum ClientRequest {
     /// Queries the agent's current authentication state.
     ///
     /// This method is only available if the agent advertises the `auth.status` capability.
-    /// It MUST NOT change any agent state, and agents MUST NOT reject it with `auth_required`.
+    /// It MUST NOT change any agent state, and agents MUST NOT reject it with `-32000` (Authentication required).
     #[cfg(feature = "unstable_auth_status")]
     AuthStatusRequest(Box<AuthStatusRequest>),
     /// Creates a new conversation session with the agent.
@@ -7995,7 +7995,7 @@ pub enum ClientRequest {
     /// - Connect to any specified MCP servers
     /// - Return a unique session ID for future requests
     ///
-    /// May return an `auth_required` (`-32000`) error if the agent requires authentication.
+    /// May return a `-32000` (Authentication required) error if the agent requires authentication.
     ///
     /// See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/session-setup)
     NewSessionRequest(Box<NewSessionRequest>),
