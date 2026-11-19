@@ -2725,7 +2725,7 @@ Defines the notifications that both Agents and Clients can send.
 Their methods start with `$/`. Acting on one is optional, because it might not be
 implementable in every Client or Agent. For example, a single-threaded synchronous
 implementation can do little to react to a `$/cancel_request` notification. An Agent
-or Client may ignore a `$/` notification it cannot act on.
+or Client **MAY** ignore a `$/` notification it cannot act on.
 
 <a id="$-cancel_request"></a>
 ### <span class="font-mono">$/cancel_request</span>
