@@ -6,9 +6,10 @@
 //!
 //! See: [Content](https://agentclientprotocol.com/protocol/v2/content)
 
-use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
+use std::{borrow::Cow, sync::Arc};
 
 use derive_more::{Display, From};
+use indexmap::IndexMap;
 #[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
@@ -146,14 +147,14 @@ pub struct OtherContentBlock {
     pub type_: String,
     /// Additional fields from the unknown content block payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherContentBlock {
     /// Builds [`OtherContentBlock`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -166,9 +167,9 @@ impl<'de> Deserialize<'de> for OtherContentBlock {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -1175,6 +1176,26 @@ mod tests {
                 "state": {"ok": true}
             })
         );
+    }
+
+    #[test]
+    fn unknown_content_block_keeps_its_field_order() {
+        // The discriminator is removed without reordering the remaining fields.
+        let wire = r#"{"type":"_custom","zeta":1,"alpha":2,"mid":3}"#;
+        let block: ContentBlock = serde_json::from_str(wire).unwrap();
+        let ContentBlock::Other(other) = &block else {
+            panic!("expected an unknown content block");
+        };
+        assert_eq!(
+            other.fields.keys().collect::<Vec<_>>(),
+            ["zeta", "alpha", "mid"]
+        );
+        assert_eq!(serde_json::to_string(&block).unwrap(), wire);
+
+        // A discriminator in the middle of the payload does not move the last field.
+        let block: ContentBlock =
+            serde_json::from_str(r#"{"zeta":1,"type":"_custom","alpha":2,"mid":3}"#).unwrap();
+        assert_eq!(serde_json::to_string(&block).unwrap(), wire);
     }
 
     #[test]

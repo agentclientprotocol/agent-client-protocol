@@ -3,12 +3,10 @@
 //! This module defines the Agent trait and all associated types for implementing
 //! an AI coding agent that follows the Agent Client Protocol (ACP).
 
-use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
-
-#[cfg(feature = "unstable_llm_providers")]
-use std::collections::HashMap;
+use std::{borrow::Cow, sync::Arc};
 
 use derive_more::{Display, From};
+use indexmap::IndexMap;
 #[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
@@ -1045,7 +1043,7 @@ pub struct OtherAuthMethod {
     /// The remaining fields of the unknown authentication method payload, preserved verbatim,
     /// including `description` and `_meta`.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherAuthMethod {
@@ -1055,11 +1053,11 @@ impl OtherAuthMethod {
         type_: impl Into<String>,
         method_id: impl Into<AuthMethodId>,
         name: impl Into<String>,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
-        fields.remove("type");
-        fields.remove("methodId");
-        fields.remove("name");
+        fields.shift_remove("type");
+        fields.shift_remove("methodId");
+        fields.shift_remove("name");
         Self {
             type_: type_.into(),
             method_id: method_id.into(),
@@ -1082,7 +1080,7 @@ impl<'de> Deserialize<'de> for OtherAuthMethod {
             method_id: AuthMethodId,
             name: String,
             #[serde(flatten)]
-            fields: BTreeMap<String, serde_json::Value>,
+            fields: IndexMap<String, serde_json::Value>,
         }
 
         let raw = RawOtherAuthMethod::deserialize(deserializer)?;
@@ -2074,14 +2072,14 @@ pub struct OtherReplayFrom {
     /// The remaining fields of the unknown replay cursor payload, preserved verbatim,
     /// including `_meta`.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherReplayFrom {
     /// Builds [`OtherReplayFrom`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -2094,9 +2092,9 @@ impl<'de> Deserialize<'de> for OtherReplayFrom {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -4043,15 +4041,15 @@ pub struct OtherSessionConfigKind {
     pub type_: String,
     /// Additional fields from the unknown session configuration option payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherSessionConfigKind {
     /// Builds [`OtherSessionConfigKind`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
-        fields.remove("_meta");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
+        fields.shift_remove("_meta");
         Self {
             type_: type_.into(),
             fields,
@@ -4064,9 +4062,9 @@ impl<'de> Deserialize<'de> for OtherSessionConfigKind {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -4259,7 +4257,7 @@ pub struct OtherSessionConfigOptionValue {
     pub value: serde_json::Value,
     /// Additional fields from the unknown session configuration option value payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherSessionConfigOptionValue {
@@ -4268,11 +4266,11 @@ impl OtherSessionConfigOptionValue {
     pub fn new(
         type_: impl Into<String>,
         value: serde_json::Value,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
-        fields.remove("type");
-        fields.remove("value");
-        fields.remove("_meta");
+        fields.shift_remove("type");
+        fields.shift_remove("value");
+        fields.shift_remove("_meta");
         Self {
             type_: type_.into(),
             value,
@@ -4286,9 +4284,9 @@ impl<'de> Deserialize<'de> for OtherSessionConfigOptionValue {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -4301,7 +4299,7 @@ impl<'de> Deserialize<'de> for OtherSessionConfigOptionValue {
         }
 
         let value = fields
-            .remove("value")
+            .shift_remove("value")
             .ok_or_else(|| serde::de::Error::missing_field("value"))?;
 
         Ok(Self {
@@ -4317,10 +4315,10 @@ impl<'de> Deserialize<'de> for SessionConfigOptionValue {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
-        let type_ = fields.remove("type");
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let type_ = fields.shift_remove("type");
         let value = fields
-            .remove("value")
+            .shift_remove("value")
             .ok_or_else(|| serde::de::Error::missing_field("value"))?;
 
         let type_ = type_.ok_or_else(|| serde::de::Error::missing_field("type"))?;
@@ -4590,14 +4588,14 @@ pub struct OtherMcpServer {
     pub type_: String,
     /// Additional fields from the unknown MCP server transport payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherMcpServer {
     /// Builds [`OtherMcpServer`] from an unknown discriminator and preserves the remaining extension fields.
     #[must_use]
-    pub fn new(type_: impl Into<String>, mut fields: BTreeMap<String, serde_json::Value>) -> Self {
-        fields.remove("type");
+    pub fn new(type_: impl Into<String>, mut fields: IndexMap<String, serde_json::Value>) -> Self {
+        fields.shift_remove("type");
         Self {
             type_: type_.into(),
             fields,
@@ -4610,9 +4608,9 @@ impl<'de> Deserialize<'de> for OtherMcpServer {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let type_ = fields
-            .remove("type")
+            .shift_remove("type")
             .ok_or_else(|| serde::de::Error::missing_field("type"))?;
         let serde_json::Value::String(type_) = type_ else {
             return Err(serde::de::Error::custom("`type` must be a string"));
@@ -5469,7 +5467,7 @@ pub struct OtherStopReason {
     pub stop_reason: String,
     /// Additional fields from the unknown stop reason payload.
     #[serde(flatten)]
-    pub fields: BTreeMap<String, serde_json::Value>,
+    pub fields: IndexMap<String, serde_json::Value>,
 }
 
 impl OtherStopReason {
@@ -5477,7 +5475,7 @@ impl OtherStopReason {
     #[must_use]
     pub fn new(
         stop_reason: impl Into<String>,
-        mut fields: BTreeMap<String, serde_json::Value>,
+        mut fields: IndexMap<String, serde_json::Value>,
     ) -> Self {
         remove_idle_state_update_fields(&mut fields);
         Self {
@@ -5492,9 +5490,9 @@ impl<'de> Deserialize<'de> for OtherStopReason {
     where
         D: serde::Deserializer<'de>,
     {
-        let mut fields = BTreeMap::<String, serde_json::Value>::deserialize(deserializer)?;
+        let mut fields = IndexMap::<String, serde_json::Value>::deserialize(deserializer)?;
         let stop_reason = fields
-            .remove("stopReason")
+            .shift_remove("stopReason")
             .ok_or_else(|| serde::de::Error::missing_field("stopReason"))?;
         let serde_json::Value::String(stop_reason) = stop_reason else {
             return Err(serde::de::Error::custom("`stopReason` must be a string"));
@@ -5524,10 +5522,10 @@ const KNOWN_STOP_REASONS: &[&str] = &[
 ];
 
 /// Keeps the idle update's own fields out of an unknown stop reason's payload.
-fn remove_idle_state_update_fields(fields: &mut BTreeMap<String, serde_json::Value>) {
-    fields.remove("stopReason");
-    fields.remove("usage");
-    fields.remove("_meta");
+fn remove_idle_state_update_fields(fields: &mut IndexMap<String, serde_json::Value>) {
+    fields.shift_remove("stopReason");
+    fields.shift_remove("usage");
+    fields.shift_remove("_meta");
 }
 
 #[cfg(feature = "schemars")]
@@ -5948,8 +5946,8 @@ pub struct SetProviderRequest {
     pub base_url: String,
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub headers: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub headers: IndexMap<String, String>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -5975,7 +5973,7 @@ impl SetProviderRequest {
             provider_id: provider_id.into(),
             api_type,
             base_url: base_url.into(),
-            headers: HashMap::new(),
+            headers: IndexMap::new(),
             meta: None,
         }
     }
@@ -5983,7 +5981,7 @@ impl SetProviderRequest {
     /// Full headers map for this provider.
     /// May include authorization, routing, or other integration-specific headers.
     #[must_use]
-    pub fn headers(mut self, headers: HashMap<String, String>) -> Self {
+    pub fn headers(mut self, headers: IndexMap<String, String>) -> Self {
         self.headers = headers;
         self
     }
@@ -10016,7 +10014,7 @@ mod test_serialization {
 
     #[test]
     fn test_session_config_option_value_roundtrip_other() {
-        let mut fields = BTreeMap::new();
+        let mut fields = IndexMap::new();
         fields.insert("maxLength".to_string(), json!(200));
         let original = SessionConfigOptionValue::Other(OtherSessionConfigOptionValue::new(
             "text",
@@ -10222,7 +10220,7 @@ mod test_serialization {
 
     #[test]
     fn test_session_config_option_unknown_kind_does_not_duplicate_flattened_meta() {
-        let mut fields = std::collections::BTreeMap::new();
+        let mut fields = IndexMap::new();
         fields.insert("currentValue".to_string(), json!(3));
         fields.insert("_meta".to_string(), json!({ "inner": "ignored" }));
 
@@ -10450,9 +10448,7 @@ mod test_serialization {
     #[cfg(feature = "unstable_llm_providers")]
     #[test]
     fn test_set_provider_request_serialization() {
-        use std::collections::HashMap;
-
-        let mut headers = HashMap::new();
+        let mut headers = IndexMap::new();
         headers.insert("Authorization".to_string(), "Bearer sk-test".to_string());
 
         let request =

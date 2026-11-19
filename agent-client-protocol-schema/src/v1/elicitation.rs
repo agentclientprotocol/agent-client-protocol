@@ -741,6 +741,7 @@ pub struct OtherMultiSelectItems {
     pub type_: String,
     /// Additional fields from the unknown item schema payload.
     #[serde(flatten)]
+    // TODO(next major): use `IndexMap` to keep the key order, as the v2 type does.
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
@@ -1011,6 +1012,7 @@ pub struct OtherElicitationPropertySchema {
     pub type_: String,
     /// Additional fields from the unknown property schema payload.
     #[serde(flatten)]
+    // TODO(next major): use `IndexMap` to keep the key order, as the v2 type does.
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
@@ -1141,6 +1143,7 @@ pub struct ElicitationSchema {
     pub title: Option<String>,
     /// Property definitions (must be primitive types).
     #[serde(default)]
+    // TODO(next major): use `IndexMap` to keep the key order, as the v2 type does.
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
     /// List of required property names.
     ///
@@ -1679,6 +1682,7 @@ pub struct OtherElicitationMode {
     pub scope: ElicitationScope,
     /// Additional fields from the unknown elicitation mode payload.
     #[serde(flatten)]
+    // TODO(next major): use `IndexMap` to keep the key order, as the v2 type does.
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
@@ -1952,6 +1956,7 @@ pub struct OtherElicitationAction {
     pub action: String,
     /// Additional fields from the unknown elicitation action payload.
     #[serde(flatten)]
+    // TODO(next major): use `IndexMap` to keep the key order, as the v2 type does.
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
@@ -2044,6 +2049,7 @@ impl From<OtherElicitationAction> for ElicitationAction {
 pub struct ElicitationAcceptAction {
     /// The user-provided content, if any, as an object matching the requested schema.
     #[serde(default)]
+    // TODO(next major): use `IndexMap` to keep the key order, as the v2 type does.
     pub content: Option<BTreeMap<String, ElicitationContentValue>>,
 }
 
