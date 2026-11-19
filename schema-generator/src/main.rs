@@ -1568,6 +1568,12 @@ mod markdown_generator {
                 .unwrap();
             }
             writeln!(&mut self.output).unwrap();
+            writeln!(
+                &mut self.output,
+                "Each request, response, and notification definition in the schema file has two extra keywords. `x-method` names the method the definition belongs to. `x-side` names the side that handles that method, such as `agent` or `client`. The root of the schema does not tie a method name to its payload, so a validator uses these keywords to select the definition for a message."
+            )
+            .unwrap();
+            writeln!(&mut self.output).unwrap();
 
             let mut agent_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
             let mut client_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();

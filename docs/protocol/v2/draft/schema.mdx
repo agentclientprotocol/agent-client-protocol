@@ -11,6 +11,8 @@ description: "Schema definitions for the Agent Client Protocol"
   has it as the `schema.unstable.json` download.
 </Note>
 
+Each request, response, and notification definition in the schema file has two extra keywords. `x-method` names the method the definition belongs to. `x-side` names the side that handles that method, such as `agent` or `client`. The root of the schema does not tie a method name to its payload, so a validator uses these keywords to select the definition for a message.
+
 ## Agent
 
 Defines the interface that all ACP-compliant agents must implement.
