@@ -27,7 +27,7 @@ When displaying Agent output, Clients **SHOULD** show text content. For image, a
 
 ### Text content
 
-Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) for raw HTML.
+Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. Adjacent text blocks form one continuous text, and Clients **SHOULD** join them without a separator before rendering. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) for raw HTML.
 
 ```json
 {
