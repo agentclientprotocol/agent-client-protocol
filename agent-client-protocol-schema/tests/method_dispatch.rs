@@ -301,7 +301,7 @@ mod v2 {
             json!({"messageId": "m1", "stopReason": "end_turn"}));
         request_case!(AgentRequest, ClientResponse, RequestPermissionRequest => RequestPermissionResponse,
             "session/request_permission",
-            json!({"sessionId": "s1", "title": "Run tests?", "subject": {"type": "tool_call", "toolCall": {"toolCallId": "t1", "title": "Run tests", "kind": "execute", "status": "pending"}}, "options": []}),
+            json!({"sessionId": "s1", "title": "Run tests?", "subject": {"type": "tool_call", "toolCall": {"toolCallId": "t1", "title": "Run tests", "kind": "execute", "status": "pending"}}, "options": [{"optionId": "allow", "name": "Allow", "kind": "allow_once"}]}),
             json!({"outcome": {"outcome": "cancelled"}}));
     }
 

@@ -3867,6 +3867,7 @@ pub struct RequestPermissionRequest {
     /// Available permission options for the user to choose from.
     /// Must contain at least one option.
     #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
+    #[serde(deserialize_with = "deserialize_permission_options")]
     pub options: Vec<PermissionOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -3878,6 +3879,24 @@ pub struct RequestPermissionRequest {
     #[serde(default)]
     #[serde(rename = "_meta")]
     pub meta: Option<Meta>,
+}
+
+// A Client cannot answer a permission request that offers nothing to select, so an empty
+// list fails the request instead of reaching the user.
+fn deserialize_permission_options<'de, D>(
+    deserializer: D,
+) -> Result<Vec<PermissionOption>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let options = Vec::<PermissionOption>::deserialize(deserializer)?;
+    if options.is_empty() {
+        return Err(serde::de::Error::invalid_length(
+            0,
+            &"at least one permission option",
+        ));
+    }
+    Ok(options)
 }
 
 impl RequestPermissionRequest {
@@ -7903,10 +7922,11 @@ mod tests {
             })
         );
 
+        let options = json!([{ "optionId": "allow", "name": "Allow", "kind": "allow_once" }]);
         let missing_subject: RequestPermissionRequest = serde_json::from_value(json!({
             "sessionId": "sess_abc123def456",
             "title": "Approve elevated permissions?",
-            "options": []
+            "options": options
         }))
         .unwrap();
         assert!(missing_subject.subject.is_none());
@@ -7915,7 +7935,7 @@ mod tests {
             "sessionId": "sess_abc123def456",
             "title": "Approve elevated permissions?",
             "subject": null,
-            "options": []
+            "options": options
         }))
         .unwrap();
         assert!(null_subject.subject.is_none());
@@ -7923,7 +7943,7 @@ mod tests {
         assert!(
             serde_json::from_value::<RequestPermissionRequest>(json!({
                 "sessionId": "sess_abc123def456",
-                "options": []
+                "options": options
             }))
             .is_err()
         );
@@ -8094,6 +8114,15 @@ mod tests {
                 "sessionId": "sess-1",
                 "title": "Run tool?",
                 "options": [{"optionId": "allow"}]
+            }))
+            .is_err()
+        );
+        // A request that offers nothing to select cannot be answered.
+        assert!(
+            serde_json::from_value::<RequestPermissionRequest>(json!({
+                "sessionId": "sess-1",
+                "title": "Run tool?",
+                "options": []
             }))
             .is_err()
         );

@@ -5804,14 +5804,14 @@
       "type": "object",
       "properties": {
         "cols": {
-          "description": "Number of columns.",
+          "description": "Number of columns. At least 1.",
           "type": "integer",
           "format": "uint16",
           "minimum": 1,
           "maximum": 65535
         },
         "rows": {
-          "description": "Number of rows.",
+          "description": "Number of rows. At least 1.",
           "type": "integer",
           "format": "uint16",
           "minimum": 1,
