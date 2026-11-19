@@ -159,10 +159,7 @@ When no sessions match the criteria, the Agent **MUST** return an empty `session
 
 ## Updating session metadata
 
-Agents **SHOULD** send a `session_info_update` notification via `session/update` on each connection where the session is [active](/protocol/v2/session-setup#session-lifecycle) whenever session metadata changes, including changes
-requested by a Client. The same response and notification ordering guidance as
-[`config_option_update`](/protocol/v2/session-config-options#from-the-agent)
-applies here.
+Agents **SHOULD** send a `session_info_update` notification via `session/update` on each connection where the session is [active](/protocol/v2/session-setup#session-lifecycle) whenever session metadata changes.
 
 ```json
 {
