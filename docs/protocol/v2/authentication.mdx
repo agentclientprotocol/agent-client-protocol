@@ -201,8 +201,8 @@ For a `terminal` method, the Client:
 1. Launches a separate interactive process using the same configured Agent
    program and base launch configuration as the ACP connection.
 2. Appends the method's `args` and applies its `env`, overriding any same-named
-   variables in the base launch configuration. Every `env` entry **MUST** have a
-   unique `name`.
+   variables in the base launch configuration. Each `env` entry **SHOULD** have a
+   unique `name`. Otherwise the last entry with a given name wins.
 3. Presents the terminal to the user and waits for the process to exit. Exit
    status zero signals success. A non-zero status, termination without an exit
    status, or cancellation signals failure.

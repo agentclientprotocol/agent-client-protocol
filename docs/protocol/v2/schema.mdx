@@ -1837,8 +1837,8 @@ Omitted and `null` are equivalent and mean no description is provided.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Additional environment variables to set on the configured agent invocation for terminal auth.
-Names MUST be unique. These values override same-named variables in the
-base launch configuration.
+Names SHOULD be unique, and otherwise the last entry wins. These values override
+same-named variables in the base launch configuration.
 </ResponseField>
 <ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
@@ -1988,8 +1988,8 @@ Omitted and `null` are equivalent and mean no description is provided.
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
   Additional environment variables to set on the configured agent invocation for terminal auth.
-Names MUST be unique. These values override same-named variables in the
-base launch configuration.
+Names SHOULD be unique, and otherwise the last entry wins. These values override
+same-named variables in the base launch configuration.
 </ResponseField>
 <ResponseField name="methodId" type={<a href="#authmethodid">AuthMethodId</a>} required>
   Unique identifier for this authentication method.
@@ -4756,7 +4756,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 defines are owned by the transport, and Agents use the transport's values for them.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name identifying this MCP server.
+  Human-readable name identifying this MCP server. MUST be unique within `mcpServers`.
+
+Agents reject a request with a duplicate `name` with `-32602`.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"http"`.
@@ -4800,7 +4803,10 @@ Agents reject a request with a relative `command` with `-32602`.
 Agents MAY reject duplicates with `-32602`, and otherwise the last entry wins.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name identifying this MCP server.
+  Human-readable name identifying this MCP server. MUST be unique within `mcpServers`.
+
+Agents reject a request with a duplicate `name` with `-32602`.
+
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"stdio"`.
@@ -4856,7 +4862,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 defines are owned by the transport, and Agents use the transport's values for them.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name identifying this MCP server.
+  Human-readable name identifying this MCP server. MUST be unique within `mcpServers`.
+
+Agents reject a request with a duplicate `name` with `-32602`.
+
 </ResponseField>
 <ResponseField name="url" type={"string"} required>
   URL to the MCP server.
@@ -4895,7 +4904,10 @@ Agents reject a request with a relative `command` with `-32602`.
 Agents MAY reject duplicates with `-32602`, and otherwise the last entry wins.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name identifying this MCP server.
+  Human-readable name identifying this MCP server. MUST be unique within `mcpServers`.
+
+Agents reject a request with a duplicate `name` with `-32602`.
+
 </ResponseField>
 
 ## <span class="font-mono">McpStdioCapabilities</span>
