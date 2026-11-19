@@ -5573,7 +5573,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 ## <span class="font-mono">IdleStateUpdate</span>
 
-The child is ready to process another prompt.
+Foreground work is not in progress. The parent can give the child more work.
 
 An omitted or `null` `stopReason` means not reported.
 
@@ -9294,7 +9294,7 @@ Foreground work is in progress.
 </ResponseField>
 
 <ResponseField name="idle" type="object">
-The child is ready to process another prompt.
+Foreground work is not in progress. The parent can give the child more work.
 
 <Expandable title="Properties">
 

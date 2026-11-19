@@ -94,7 +94,7 @@ The Agent **MUST** send the announcing `subagent_update` before any request or n
 - a [`session` content item](/protocol/v1/draft/tool-calls#sessions-unstable) that references the child
 - `session/request_permission`, `elicitation/create`, `fs/read_text_file`, `fs/write_text_file`, and `terminal/*` requests for the child
 
-The rule also applies to short-lived work. A Client SDK may buffer traffic for a child it does not know yet, but that does not release the Agent from the rule.
+The rule also applies to short-lived work.
 
 <ParamField path="sessionId" type="SessionId" required>
   The child session's ID. It is unique on the connection and identifies the same
@@ -403,7 +403,14 @@ A failure that ends the child's foreground work is `idle` with `stopReason: "err
 }
 ```
 
-The parent's `session/prompt` response does not mean that its children have stopped.
+### After the parent's prompt response
+
+The parent's `session/prompt` response does not mean that its children have stopped. The Agent keeps sending the updates and requests of a child that is still running.
+
+When such a child reports back, the parent can work on the result while no `session/prompt` request is pending. The Agent then sends the parent's updates and requests with the parent's `sessionId`, such as `agent_message_chunk`, `tool_call`, and `session/request_permission`. A Client that advertises `subagents` handles them as it does during a prompt turn.
+
+- No `session/prompt` response reports that this work stopped. The `state` field reports the state of child sessions only.
+- `session/cancel` with the parent's `sessionId` cancels this work. No response confirms the cancellation.
 
 ### Unknown state
 
@@ -519,7 +526,7 @@ Which `subagent_update` notifications are current depends on the request:
 - **Capabilities.** The Agent can omit `capabilities` for a child that permits nothing, because the effective set starts empty.
 - **No invented outcomes.** The Agent **MUST NOT** report a failure, a cancellation, or a permanently lost child only because the stored history has no final update or the child's runtime could not be restored. A child with history only stays visible, with unconfirmed state and no capabilities.
 - **Directories.** Replayed `cwd` and `additionalDirectories` values describe the recorded context. Agents **SHOULD** send current values after the load or resume when they differ, and **MUST** report a new value or `null` when a child's directory no longer exists.
-- **Configuration.** The Client **MUST NOT** present configuration it held before the load or resume as the child's confirmed current configuration. Agents **SHOULD** send a current `config_option_update` for a restored child when it is available. After `session/load`, they send it after the response.
+- **Configuration.** A child's `config_option_update` that arrives before the `session/load` response is historical. The Client **MUST NOT** present it, or configuration it held before the load or resume, as the child's confirmed current configuration. Agents **SHOULD** send a current `config_option_update` for a restored child when it is available. After `session/load`, they send it after the response.
 
 For example, `root` owns `coordinator`, which owns `worker`, and only `worker` is still running after a resume. The Agent announces `coordinator` under `root`, then `worker` under `coordinator`, before it sends new updates for `worker`. The `subagent_update` for `coordinator` can omit `capabilities` and `state`. The Agent does not announce `worker` directly under `root`.
 

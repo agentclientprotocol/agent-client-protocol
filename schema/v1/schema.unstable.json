@@ -6163,7 +6163,7 @@
           ]
         },
         {
-          "description": "The child is ready to process another prompt.",
+          "description": "Foreground work is not in progress. The parent can give the child more work.",
           "type": "object",
           "properties": {
             "state": {
@@ -6300,7 +6300,7 @@
       }
     },
     "IdleStateUpdate": {
-      "description": "The child is ready to process another prompt.\n\nAn omitted or `null` `stopReason` means not reported.",
+      "description": "Foreground work is not in progress. The parent can give the child more work.\n\nAn omitted or `null` `stopReason` means not reported.",
       "type": "object",
       "properties": {
         "usage": {
