@@ -49,7 +49,7 @@ pub struct ToolCallUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub name: MaybeUndefined<String>,
-    /// Human-readable title describing what the tool is doing.
+    /// Human-readable plain-text title describing what the tool is doing.
     ///
     /// Omission leaves the title unchanged, `null` unsets it, and a string replaces it.
     /// A new tool call starts without a title.

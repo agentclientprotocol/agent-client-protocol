@@ -143,7 +143,9 @@ Every plan content variant, including custom or future variants, **MUST** carry 
 Each plan entry represents a specific task or goal within the overall execution strategy:
 
 <ParamField path="content" type="string" required>
-  A human-readable description of what this task aims to accomplish
+  A human-readable description of what this task aims to accomplish. It may be
+  plain text or Markdown, like a [text content
+  block](/protocol/v2/draft/content#text-content).
 </ParamField>
 
 <ParamField path="priority" type="PlanEntryPriority" required>

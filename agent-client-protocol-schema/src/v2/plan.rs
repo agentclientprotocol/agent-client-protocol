@@ -400,6 +400,7 @@ impl PlanRemoved {
 #[non_exhaustive]
 pub struct PlanEntry {
     /// Human-readable description of what this task aims to accomplish.
+    /// May contain Markdown.
     pub content: String,
     /// The relative importance of this task.
     /// Used to indicate which tasks are most critical to the overall goal.

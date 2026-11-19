@@ -342,7 +342,7 @@
           "x-deserialize-default-on-error": true
         },
         "title": {
-          "description": "Human-readable title describing what the tool is doing.\n\nOmission leaves the title unchanged, `null` unsets it, and a string replaces it.\nA new tool call starts without a title.",
+          "description": "Human-readable plain-text title describing what the tool is doing.\n\nOmission leaves the title unchanged, `null` unsets it, and a string replaces it.\nA new tool call starts without a title.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -6039,7 +6039,7 @@
       "type": "object",
       "properties": {
         "content": {
-          "description": "Human-readable description of what this task aims to accomplish.",
+          "description": "Human-readable description of what this task aims to accomplish.\nMay contain Markdown.",
           "type": "string"
         },
         "priority": {
