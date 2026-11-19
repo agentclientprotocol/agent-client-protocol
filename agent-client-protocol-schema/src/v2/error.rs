@@ -53,7 +53,7 @@ pub struct Error {
     pub data: Option<serde_json::Value>,
 }
 
-/// Schema for [`Error::data`]: the shapes ACP defines, or any other value.
+/// Schema for the `data` field of an error: the shapes ACP defines, or any other value.
 #[cfg(feature = "schemars")]
 #[derive(schemars::JsonSchema)]
 #[serde(untagged)]
