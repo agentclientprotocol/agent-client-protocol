@@ -873,7 +873,7 @@ When a session has [child sessions](/protocol/v2/subagents#usage-and-cost), its 
 
 ### 4. Report completion
 
-When foreground work ends, the Agent **MUST** report `idle` with a `state_update` notification and **SHOULD** include the corresponding [`StopReason`](#stop-reasons):
+When foreground work ends, the Agent **MUST** report `idle` with a `state_update` notification and **SHOULD** include the corresponding [stop reason](#stop-reasons):
 
 ```json
 {
@@ -892,7 +892,7 @@ When foreground work ends, the Agent **MUST** report `idle` with a `state_update
 
 The Agent **MUST** send any pending updates for the foreground work that ended before sending its idle update. Background activity may continue to emit updates afterward.
 
-Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update. They **SHOULD** include the corresponding [`StopReason`](#stop-reasons).
+Agents **MAY** stop foreground work at any point by sending an idle `state_update` session update. They **SHOULD** include the corresponding [stop reason](#stop-reasons).
 
 ### 5. Tool invocation and status reporting
 
@@ -989,7 +989,7 @@ The cycle returns to [step 3](#3-agent-reports-output), continuing until the lan
 
 ## Stop reasons
 
-When an Agent stops foreground work, it **SHOULD** specify the corresponding `StopReason` on an idle `state_update` session update. If the Agent knows it is idle but cannot determine why the work stopped, it **MAY** omit the stop reason. Clients **MUST** recognize `idle` as the end of foreground work even when the stop reason is omitted, `null`, or unknown. Without a recognized stop reason, Clients cannot infer how the work ended.
+When an Agent stops foreground work, it **SHOULD** specify the corresponding `stopReason` on an idle `state_update` session update. If the Agent knows it is idle but cannot determine why the work stopped, it **MAY** omit the stop reason. Clients **MUST** recognize `idle` as the end of foreground work even when the stop reason is omitted, `null`, or unknown. Without a recognized stop reason, Clients cannot infer how the work ended.
 
 <ResponseField name="end_turn">
   The Agent has finished foreground work, including a locally handled command
