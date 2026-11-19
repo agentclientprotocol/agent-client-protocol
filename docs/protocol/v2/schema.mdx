@@ -2603,8 +2603,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 A context compaction upsert. The first notification fixes the compaction's
 timeline position. Later updates with the same ID patch that entity in place.
 
-`summary`, `error`, and `_meta` have patch semantics: omission leaves the
-stored value unchanged, `null` clears it, and a concrete value replaces it.
+Only `compactionId` is required. `status`, `summary`, `error`, and `_meta` have
+patch semantics: omission leaves the stored value unchanged, `null` clears it
+or resets it to its default, and a concrete value replaces it.
 `summary: []` also clears the summary. A concrete `_meta` object patches the
 stored metadata by top-level key instead of replacing it.
 
@@ -2629,8 +2630,12 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 <ResponseField name="error" type={"string | null"} >
   Human-readable error details for the compaction.
 </ResponseField>
-<ResponseField name="status" type={<a href="#compactionstatus">CompactionStatus</a>} required>
+<ResponseField name="status" type={<><span><a href="#compactionstatus">CompactionStatus</a></span><span> | null</span></>} >
   Current lifecycle status.
+
+Omission leaves the status unchanged, `null` resets it to `in_progress`, and a value
+replaces it. A new compaction starts as `in_progress`.
+
 </ResponseField>
 <ResponseField name="summary" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
   Complete replacement user-displayable summary content for the compaction.
@@ -7638,8 +7643,12 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"compaction_update"`.
 </ResponseField>
-<ResponseField name="status" type={<a href="#compactionstatus">CompactionStatus</a>} required>
+<ResponseField name="status" type={<><span><a href="#compactionstatus">CompactionStatus</a></span><span> | null</span></>} >
   Current lifecycle status.
+
+Omission leaves the status unchanged, `null` resets it to `in_progress`, and a value
+replaces it. A new compaction starts as `in_progress`.
+
 </ResponseField>
 <ResponseField name="summary" type={<><span><a href="#contentblock">ContentBlock[]</a></span><span> | null</span></>} >
   Complete replacement user-displayable summary content for the compaction.

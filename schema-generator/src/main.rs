@@ -454,23 +454,52 @@ mod schema_annotation_tests {
         ));
     }
 
+    type RequiredFieldsCase = (&'static str, Value, Vec<(&'static str, &'static str)>);
+
+    // v1 requires `status` on every `compaction_update`. In v2 it is a patch field.
+    #[cfg(not(feature = "unstable_protocol_v2"))]
+    fn compaction_update_case() -> RequiredFieldsCase {
+        (
+            "CompactionUpdate",
+            serde_json::json!(["compactionId", "status"]),
+            vec![
+                ("compactionId", "CompactionId"),
+                ("status", "CompactionStatus"),
+            ],
+        )
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    fn compaction_update_case() -> RequiredFieldsCase {
+        (
+            "CompactionUpdate",
+            serde_json::json!(["compactionId"]),
+            vec![("compactionId", "CompactionId")],
+        )
+    }
+
+    #[cfg(feature = "unstable_protocol_v2")]
+    #[test]
+    fn generated_compaction_status_is_a_patch_field() {
+        let schema = root_schema_value();
+        let status = property_schema(&schema, "CompactionUpdate", "status");
+        assert_eq!(
+            status["anyOf"],
+            serde_json::json!([{"$ref": "#/$defs/CompactionStatus"}, {"type": "null"}])
+        );
+        assert_bool_extension(status, DEFAULT_ON_ERROR_EXTENSION);
+    }
+
     #[test]
     fn generated_compaction_schema_is_available_without_unstable_features() {
         let schema = root_schema_value();
         assert_eq!(def_schema(&schema, "CompactionId")["type"], "string");
         for (definition, required, referenced_fields) in [
-            (
-                "CompactionUpdate",
-                serde_json::json!(["compactionId", "status"]),
-                [
-                    ("compactionId", "CompactionId"),
-                    ("status", "CompactionStatus"),
-                ],
-            ),
+            compaction_update_case(),
             (
                 "CompactionSummaryChunk",
                 serde_json::json!(["compactionId", "content"]),
-                [
+                vec![
                     ("compactionId", "CompactionId"),
                     ("content", "ContentBlock"),
                 ],

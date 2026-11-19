@@ -2,10 +2,14 @@
 //! These do not materialize session history or enforce lifecycle rules.
 
 macro_rules! compaction_tests {
-    ($version:ident) => {
+    // `$helpers` hides what differs between the versions: `status` is required on a
+    // v1 `compaction_update` and a patch field on a v2 one.
+    ($version:ident, { $($helpers:item)* }) => {
         mod $version {
             use agent_client_protocol_schema::$version::*;
             use serde_json::{Value, json};
+
+            $($helpers)*
 
             #[test]
             fn compaction_statuses_roundtrip() {
@@ -24,7 +28,7 @@ macro_rules! compaction_tests {
                         serde_json::from_value::<CompactionStatus>(json!(wire)).unwrap(),
                         status
                     );
-                    let update = SessionUpdate::CompactionUpdate(CompactionUpdate::new(
+                    let update = SessionUpdate::CompactionUpdate(new_update(
                         CompactionId::new("cmp_001"),
                         status,
                     ));
@@ -102,7 +106,7 @@ macro_rules! compaction_tests {
                 }
 
                 let completed = SessionUpdate::CompactionUpdate(
-                    CompactionUpdate::new("cmp_001", CompactionStatus::Completed)
+                    new_update("cmp_001", CompactionStatus::Completed)
                         .summary(vec![ContentBlock::Text(TextContent::new("retained"))]),
                 );
                 let wire = json!({
@@ -116,7 +120,7 @@ macro_rules! compaction_tests {
 
                 // Omission remains omission on terminal updates, not an implicit clear.
                 for status in [CompactionStatus::Failed, CompactionStatus::Cancelled] {
-                    let update = CompactionUpdate::new("cmp_001", status);
+                    let update = new_update("cmp_001", status);
                     assert!(update.summary.is_undefined());
                     assert!(serde_json::to_value(update).unwrap().get("summary").is_none());
                 }
@@ -179,14 +183,14 @@ macro_rules! compaction_tests {
                     CompactionStatus::Cancelled,
                 ] {
                     let terminal = SessionUpdate::CompactionUpdate(
-                        CompactionUpdate::new("cmp_001", status.clone()),
+                        new_update("cmp_001", status.clone()),
                     );
                     let SessionUpdate::CompactionUpdate(snapshot) =
                         serde_json::from_value(serde_json::to_value(&terminal).unwrap()).unwrap()
                     else {
                         panic!("expected status snapshot");
                     };
-                    assert_eq!(snapshot.status, status);
+                    assert_eq!(status_of(&snapshot), status);
 
                     // Exercise wire round trips and content patches, not a full
                     // Client reducer. Status does not seal summary delivery.
@@ -217,7 +221,7 @@ macro_rules! compaction_tests {
 
                     let replacement = vec![ContentBlock::Text(TextContent::new("replacement"))];
                     let patch = SessionUpdate::CompactionUpdate(
-                        CompactionUpdate::new("cmp_001", status.clone())
+                        new_update("cmp_001", status.clone())
                             .summary(replacement.clone()),
                     );
                     let SessionUpdate::CompactionUpdate(parsed) =
@@ -225,7 +229,7 @@ macro_rules! compaction_tests {
                     else {
                         panic!("expected same-status summary patch");
                     };
-                    assert_eq!(parsed.status, status);
+                    assert_eq!(status_of(&parsed), status);
                     parsed.summary.update_to(&mut summary);
                     assert_eq!(summary, Some(replacement.clone()));
 
@@ -262,11 +266,11 @@ macro_rules! compaction_tests {
 
                 // Use schema constructors and patch helpers to exercise Client
                 // defaults; this is not a full session materializer.
-                let initial = CompactionUpdate::new(
+                let initial = new_update(
                     chunk.compaction_id.clone(),
                     CompactionStatus::default(),
                 );
-                assert_eq!(initial.status, CompactionStatus::InProgress);
+                assert_eq!(status_of(&initial), CompactionStatus::InProgress);
                 assert!(initial.summary.is_undefined());
                 assert!(initial.error.is_undefined());
                 assert!(initial.meta.is_undefined());
@@ -282,7 +286,7 @@ macro_rules! compaction_tests {
                     panic!("expected later compaction update");
                 };
                 assert_eq!(completed.compaction_id, initial.compaction_id);
-                assert_eq!(completed.status, CompactionStatus::Completed);
+                assert_eq!(status_of(&completed), CompactionStatus::Completed);
                 completed.summary.update_to(&mut summary);
                 assert_eq!(
                     summary,
@@ -328,7 +332,7 @@ macro_rules! compaction_tests {
             fn compaction_patch_builders_preserve_three_states() {
                 use agent_client_protocol_schema::MaybeUndefined;
 
-                let nulls = CompactionUpdate::new("cmp_001", CompactionStatus::Failed)
+                let nulls = new_update("cmp_001", CompactionStatus::Failed)
                     .summary(None)
                     .error(None)
                     .meta(None);
@@ -345,7 +349,7 @@ macro_rules! compaction_tests {
                     .meta(MaybeUndefined::Undefined);
                 assert_eq!(
                     omitted,
-                    CompactionUpdate::new("cmp_001", CompactionStatus::Failed)
+                    new_update("cmp_001", CompactionStatus::Failed)
                 );
                 let concrete = omitted
                     .summary(Vec::new())
@@ -369,11 +373,14 @@ macro_rules! compaction_tests {
                             "compactionId": "cmp_001",
                             "status": "completed"
                         }),
-                        vec![
-                            ("sessionUpdate", json!(42)),
-                            ("compactionId", json!(42)),
-                            ("status", json!({})),
-                        ],
+                        {
+                            let mut fields =
+                                vec![("sessionUpdate", json!(42)), ("compactionId", json!(42))];
+                            if STATUS_REQUIRED {
+                                fields.push(("status", json!({})));
+                            }
+                            fields
+                        },
                     ),
                     (
                         json!({
@@ -455,9 +462,33 @@ macro_rules! compaction_tests {
     };
 }
 
-compaction_tests!(v1);
+compaction_tests!(v1, {
+    fn new_update(id: impl Into<CompactionId>, status: CompactionStatus) -> CompactionUpdate {
+        CompactionUpdate::new(id, status)
+    }
+
+    fn status_of(update: &CompactionUpdate) -> CompactionStatus {
+        update.status.clone()
+    }
+
+    const STATUS_REQUIRED: bool = true;
+});
 #[cfg(feature = "unstable_protocol_v2")]
-compaction_tests!(v2);
+compaction_tests!(v2, {
+    fn new_update(id: impl Into<CompactionId>, status: CompactionStatus) -> CompactionUpdate {
+        CompactionUpdate::new(id).status(status)
+    }
+
+    fn status_of(update: &CompactionUpdate) -> CompactionStatus {
+        update
+            .status
+            .value()
+            .cloned()
+            .expect("the update sets a status")
+    }
+
+    const STATUS_REQUIRED: bool = false;
+});
 
 #[test]
 fn v1_compaction_capability_gate_roundtrip() {

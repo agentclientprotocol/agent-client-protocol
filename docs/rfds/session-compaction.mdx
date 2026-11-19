@@ -92,7 +92,7 @@ non-null, unique within the session, and never reused for another compaction.
 Clients initialize a first-seen compaction ID with status `in_progress` and unset
 optional fields, then apply the notification.
 
-`status` is required and non-null on every update. Its initial values are:
+`status` is required and non-null on every update. In ACP v2 it is a patch field instead: an update that omits it leaves the status unchanged, and `null` resets it to `in_progress`. Its initial values are:
 
 - `in_progress` - Compaction has started and has not finished.
 - `completed` - Compaction finished successfully.
@@ -221,6 +221,8 @@ The initial Preview protocol implementation landed in
   v2 does not require a capability.
 - Both versions preserve unknown status strings and distinguish omitted,
   `null`, and concrete patch values.
+- V1 requires `status` on every `compaction_update`. In v2 it is a patch field,
+  like the other fields of the update.
 
 ### Stabilization preparation
 
@@ -340,6 +342,7 @@ correlate events heuristically rather than updating one ID-addressed entity.
 
 ## Revision history
 
+- 2026-11-19: In ACP v2, `status` on `compaction_update` is a patch field and can be omitted, like the other fields of an upsert. V1 is unchanged.
 - 2026-07-22: Initial draft.
 - 2026-09-23: Moved to Preview; documented the implemented protocol support and
   remaining integration validation.

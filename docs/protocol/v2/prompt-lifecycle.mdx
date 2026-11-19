@@ -734,9 +734,12 @@ For example, an Agent can report that compaction has started:
 }
 ```
 
-`compactionId` and `status` are required and non-null on every
-`compaction_update`. The ID is an opaque, Agent-owned string, unique within the
-session, and **MUST NOT** be reused for another compaction.
+`compactionId` is required and non-null on every `compaction_update`. The ID is
+an opaque, Agent-owned string, unique within the session, and **MUST NOT** be
+reused for another compaction.
+
+`status` is a patch field: omitted leaves it unchanged, `null` resets it to
+`in_progress`, and a value replaces it.
 
 Clients initialize a first-seen compaction ID with status `in_progress` and unset
 optional fields, then apply the notification.

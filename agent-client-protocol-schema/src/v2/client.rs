@@ -780,8 +780,9 @@ pub enum CompactionStatus {
 /// A context compaction upsert. The first notification fixes the compaction's
 /// timeline position. Later updates with the same ID patch that entity in place.
 ///
-/// `summary`, `error`, and `_meta` have patch semantics: omission leaves the
-/// stored value unchanged, `null` clears it, and a concrete value replaces it.
+/// Only `compactionId` is required. `status`, `summary`, `error`, and `_meta` have
+/// patch semantics: omission leaves the stored value unchanged, `null` clears it
+/// or resets it to its default, and a concrete value replaces it.
 /// `summary: []` also clears the summary. A concrete `_meta` object patches the
 /// stored metadata by top-level key instead of replacing it.
 #[serde_as]
@@ -794,7 +795,13 @@ pub struct CompactionUpdate {
     /// The Agent-owned ID of this compaction, unique within the session.
     pub compaction_id: CompactionId,
     /// Current lifecycle status.
-    pub status: CompactionStatus,
+    ///
+    /// Omission leaves the status unchanged, `null` resets it to `in_progress`, and a value
+    /// replaces it. A new compaction starts as `in_progress`.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
+    pub status: MaybeUndefined<CompactionStatus>,
     /// Complete replacement user-displayable summary content for the compaction.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -826,14 +833,21 @@ pub struct CompactionUpdate {
 impl CompactionUpdate {
     /// Builds a compaction update with optional patch fields omitted.
     #[must_use]
-    pub fn new(compaction_id: impl Into<CompactionId>, status: CompactionStatus) -> Self {
+    pub fn new(compaction_id: impl Into<CompactionId>) -> Self {
         Self {
             compaction_id: compaction_id.into(),
-            status,
+            status: MaybeUndefined::Undefined,
             summary: MaybeUndefined::Undefined,
             error: MaybeUndefined::Undefined,
             meta: MaybeUndefined::Undefined,
         }
+    }
+
+    /// Sets, resets, or omits the lifecycle status patch.
+    #[must_use]
+    pub fn status(mut self, status: impl IntoMaybeUndefined<CompactionStatus>) -> Self {
+        self.status = status.into_maybe_undefined();
+        self
     }
 
     /// Sets, clears, or omits the complete retained summary patch.
@@ -6452,9 +6466,11 @@ mod tests {
 
         assert_eq!(
             serde_json::to_value(SessionUpdate::CompactionUpdate(
-                CompactionUpdate::new("cmp_001", CompactionStatus::Completed).summary(vec![
-                    ContentBlock::Text(crate::v2::TextContent::new("retained")),
-                ]),
+                CompactionUpdate::new("cmp_001")
+                    .status(CompactionStatus::Completed)
+                    .summary(vec![ContentBlock::Text(crate::v2::TextContent::new(
+                        "retained",
+                    ))]),
             ))
             .unwrap(),
             json!({
@@ -6474,9 +6490,30 @@ mod tests {
         .unwrap() else {
             panic!("expected compaction update");
         };
-        assert_eq!(update.status, CompactionStatus::Other("paused".into()));
+        assert_eq!(
+            update.status,
+            MaybeUndefined::Value(CompactionStatus::Other("paused".into()))
+        );
         assert!(update.summary.is_null());
         assert!(update.error.is_undefined());
+
+        // `status` is a patch field: an update can change the summary alone.
+        let SessionUpdate::CompactionUpdate(patch) = serde_json::from_value(json!({
+            "sessionUpdate": "compaction_update",
+            "compactionId": "cmp_001",
+            "summary": []
+        }))
+        .unwrap() else {
+            panic!("expected compaction update");
+        };
+        assert!(patch.status.is_undefined());
+        assert_eq!(
+            serde_json::to_value(CompactionUpdate::new("cmp_001")).unwrap(),
+            json!({ "compactionId": "cmp_001" })
+        );
+        let reset: CompactionUpdate =
+            serde_json::from_value(json!({ "compactionId": "cmp_001", "status": null })).unwrap();
+        assert!(reset.status.is_null());
     }
 
     #[test]
