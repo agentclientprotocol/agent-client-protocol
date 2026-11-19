@@ -36,6 +36,7 @@ pub enum RequestId {
 }
 
 /// A JSON-RPC request object.
+#[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[allow(
@@ -43,7 +44,6 @@ pub enum RequestId {
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[cfg_attr(feature = "schemars", schemars(rename = "{Params}", extend("x-docs-ignore" = true)))]
-#[skip_serializing_none]
 pub struct Request<Params> {
     /// The request id used to correlate the matching response.
     pub id: RequestId,

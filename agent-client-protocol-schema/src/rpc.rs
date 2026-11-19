@@ -13,6 +13,7 @@ use serde_with::skip_serializing_none;
 pub use crate::v1::{Request, RequestId, Response};
 
 /// A JSON-RPC notification object.
+#[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[allow(
@@ -20,7 +21,6 @@ pub use crate::v1::{Request, RequestId, Response};
     reason = "This comes from the JSON-RPC specification itself"
 )]
 #[cfg_attr(feature = "schemars", schemars(rename = "{Params}", extend("x-docs-ignore" = true)))]
-#[skip_serializing_none]
 pub struct Notification<Params> {
     /// The notification method name.
     pub method: Arc<str>,
@@ -153,6 +153,42 @@ mod tests {
         SessionId, SessionNotification, SessionUpdate, TextContent,
     };
     use serde_json::{Value, json};
+
+    #[test]
+    fn notification_without_params_omits_the_key() {
+        let notification = Notification::<Value> {
+            method: "_example/ping".into(),
+            params: None,
+        };
+        assert_eq!(
+            serde_json::to_value(&notification).unwrap(),
+            json!({ "method": "_example/ping" })
+        );
+
+        // An omitted key and `null` both read as no params.
+        for wire in [
+            json!({ "method": "_example/ping" }),
+            json!({ "method": "_example/ping", "params": null }),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<Notification<Value>>(wire).unwrap(),
+                notification
+            );
+        }
+    }
+
+    #[test]
+    fn v1_request_without_params_omits_the_key() {
+        let request = Request::<Value> {
+            id: RequestId::Number(1),
+            method: "session/list".into(),
+            params: None,
+        };
+        assert_eq!(
+            serde_json::to_value(&request).unwrap(),
+            json!({ "id": 1, "method": "session/list" })
+        );
+    }
 
     #[test]
     fn batch_deserialization_requires_at_least_one_message() {
