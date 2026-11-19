@@ -177,8 +177,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
 >
   The Client supports `boolean` session configuration options. Omitted or `null`
   at any level means the Client does not advertise support. Supplying `{}` means
-  Agents **MAY** include `type: "boolean"` options in v1 `configOptions`
-  payloads.
+  Agents **MAY** include `type: "boolean"` options in `configOptions` payloads.
 </ParamField>
 
 <Card icon="sliders" horizontal href="/protocol/v1/session-config-options">
@@ -192,7 +191,7 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   `compaction_summary_chunk` session updates, including their lifecycle,
   placement, patch, and replay semantics. Omitted or `null` at either level
   means unsupported. Supplying `{}` advertises the complete contract. Agents
-  **MUST NOT** send these updates to a v1 Client that does not advertise it.
+  **MUST NOT** send these updates to a Client that does not advertise it.
 </ParamField>
 
 <Card

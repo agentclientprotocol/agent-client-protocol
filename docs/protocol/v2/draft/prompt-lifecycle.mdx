@@ -653,7 +653,7 @@ If the model requested tool calls, these are also reported immediately:
 
 #### Session notices
 
-No Client capability is required in v2. Clients that do not implement `notice`
+No Client capability is required. Clients that do not implement `notice`
 **MAY** preserve it through the [unknown-update
 fallback](/protocol/v2/draft/extensibility#enum-and-tagged-union-variants) and
 ignore it or present it generically. This does not give it replay semantics.
@@ -779,9 +779,9 @@ Suggestions are not conversation history. Agents **SHOULD NOT** include them in 
 
 #### Session compaction
 
-No Client capability is required in v2. Clients without compaction-specific
+No Client capability is required. Clients without compaction-specific
 handling **MAY** preserve, ignore, or generically display these informational updates
-under the [v2 negotiation rules](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
+under the [negotiation rules](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
 
 The Agent **MAY** report context compaction as one persistent, ID-addressed
 timeline entity. A single `compaction_update` with `status: "completed"` is
@@ -923,9 +923,9 @@ run a method, such as forking the session there. The Agent announces a cursor on
 for a position where at least one method works. A Client can't act at a position
 that has no cursor.
 
-No Client capability is required in v2. Clients without cursor-specific
+No Client capability is required. Clients without cursor-specific
 handling **MAY** preserve or ignore these updates under the
-[v2 negotiation rules](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
+[negotiation rules](/protocol/v2/draft/extensibility#experimental-features-and-negotiation).
 There is no Agent capability either. An Agent that supports cursors announces them.
 
 The Agent announces a cursor with a `cursor_update`:
@@ -1174,7 +1174,7 @@ Display-only terminal bytes use `terminal_output_chunk`, not
 Terminals](/protocol/v2/draft/tool-calls#display-only-terminals) for their
 per-terminal byte ordering and snapshot semantics.
 
-Tools execute on the Agent. Clients may expose tools through MCP servers supplied during session setup. v2 does not define Client file-system or terminal-execution capabilities. Client interactions such as elicitation remain subject to their own negotiated capabilities.
+Tools execute on the Agent. Clients may expose tools through MCP servers supplied during session setup. The protocol does not define Client file-system or terminal-execution capabilities. Client interactions such as elicitation remain subject to their own negotiated capabilities.
 
 When the tool completes, the Agent sends another update with the final status and any content:
 

@@ -138,7 +138,7 @@ When the Agent selects a lower version than requested, it may have ignored parts
 
 The Client **MAY** repeat `initialize` any number of times before its first other request, waiting for each response before sending the next. The Agent handles each one like the first and treats the latest successful `initialize` as authoritative. A repeat that fails leaves the previous successful initialization in effect. `initialize` **MUST NOT** be repeated after any other request.
 
-Agents that implement only v1 may not accept a repeated `initialize`. To change its parameters with such an Agent, the Client opens a new connection.
+Agents that implement only an earlier protocol version may not accept a repeated `initialize`. To change its parameters with such an Agent, the Client opens a new connection.
 
 ## Capabilities
 

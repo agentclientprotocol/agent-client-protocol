@@ -652,10 +652,10 @@ The entity **MUST** belong to the same session, and the Agent **MUST** report it
 that session before it sends a `cursor_update` anchored to it. A malformed anchor
 makes the whole update invalid. Unknown `type` and `position` values are preserved, so a later version or an extension can add more.
 
-v1 message IDs are optional, but an anchor to a message needs one. An Agent that
+Message IDs are optional, but an anchor to a message needs one. An Agent that
 announces cursors **MUST** send a `messageId` on every message it anchors to.
 
-v1 does not require the Agent to report the user's prompt as a session update, and
+The Agent is not required to report the user's prompt as a session update, and
 the `session/prompt` response carries no `messageId`. The Client then holds no user
 message for that prompt, and the Agent can't anchor `before` it. The Agent anchors
 the same position `after` the last message, tool call, or compaction before the

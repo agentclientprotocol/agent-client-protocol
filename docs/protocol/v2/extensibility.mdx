@@ -13,7 +13,7 @@ Implementations can add custom behavior without breaking peers that don't know a
 - Support describes whether a peer implements the feature's behavior, as advertised by its capability or another explicitly documented negotiation mechanism.
 - Forward compatibility describes whether a receiver can safely accept a field or variant without implementing its behavior.
 
-Negotiating `protocolVersion: 2` selects the v2 protocol, not all experimental
+Negotiating `protocolVersion: 2` selects the baseline protocol, not all experimental
 features in `schema/v2/schema.unstable.json`. There is no connection-wide
 "unstable schema" flag. Implementations **MUST NOT** infer peer support from
 their own schema selection, generated types, or local feature flags.
@@ -28,14 +28,13 @@ Each feature defines its negotiation requirements, whether stable or experimenta
 
 For example:
 
-| Feature                                                                                                                     | Negotiation and receiver behavior                                                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Session deletion](/protocol/v2/session-delete)                                                                             | The Agent advertises `session.delete`. Clients **MUST NOT** call `session/delete` without it.                                                   |
-| [Elicitation](/protocol/v2/elicitation#checking-support)                                                                    | The Client advertises each supported mode under `elicitation`. Agents **MUST NOT** request other modes.                                         |
-| [Notices](/protocol/v2/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/prompt-lifecycle#session-compaction) | No Client capability is required in v2. Clients without feature-specific handling **MAY** preserve, ignore, or generically display the updates. |
+| Feature                                                                                                                     | Negotiation and receiver behavior                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| [Session deletion](/protocol/v2/session-delete)                                                                             | The Agent advertises `session.delete`. Clients **MUST NOT** call `session/delete` without it.                                             |
+| [Elicitation](/protocol/v2/elicitation#checking-support)                                                                    | The Client advertises each supported mode under `elicitation`. Agents **MUST NOT** request other modes.                                   |
+| [Notices](/protocol/v2/prompt-lifecycle#session-notices) and [compaction](/protocol/v2/prompt-lifecycle#session-compaction) | No Client capability is required. Clients without feature-specific handling **MAY** preserve, ignore, or generically display the updates. |
 
-These rules are specific to v2. Features with capability gates in v1 retain
-those gates on v1 connections.
+These rules apply to this protocol version only. On a connection that negotiated an earlier version, features keep the capability gates that version defines.
 
 Experimental schema revisions may disagree about a feature's shape or semantics.
 A capability advertises the behavior defined for that feature, not compatibility
