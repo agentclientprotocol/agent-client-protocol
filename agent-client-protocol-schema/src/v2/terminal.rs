@@ -1,6 +1,6 @@
 //! Agent-owned terminal output reported for display by clients.
 
-use std::sync::Arc;
+use std::{num::NonZeroU16, sync::Arc};
 
 use derive_more::{Display, From};
 use serde::{Deserialize, Serialize};
@@ -456,12 +456,10 @@ impl TerminalUpdate {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TerminalSize {
-    /// Number of columns.
-    #[cfg_attr(feature = "schemars", schemars(range(min = 1)))]
-    pub cols: u16,
-    /// Number of rows.
-    #[cfg_attr(feature = "schemars", schemars(range(min = 1)))]
-    pub rows: u16,
+    /// Number of columns. At least 1.
+    pub cols: NonZeroU16,
+    /// Number of rows. At least 1.
+    pub rows: NonZeroU16,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -477,7 +475,7 @@ pub struct TerminalSize {
 impl TerminalSize {
     /// Builds a terminal size from its columns and rows.
     #[must_use]
-    pub fn new(cols: u16, rows: u16) -> Self {
+    pub fn new(cols: NonZeroU16, rows: NonZeroU16) -> Self {
         Self {
             cols,
             rows,
@@ -574,7 +572,10 @@ mod tests {
 
     #[test]
     fn terminal_size_is_an_optional_patch_field() {
-        let update = TerminalUpdate::new("term_1").size(TerminalSize::new(120, 40));
+        let update = TerminalUpdate::new("term_1").size(TerminalSize::new(
+            NonZeroU16::new(120).unwrap(),
+            NonZeroU16::new(40).unwrap(),
+        ));
         assert_eq!(
             serde_json::to_value(&update).unwrap(),
             serde_json::json!({ "terminalId": "term_1", "size": { "cols": 120, "rows": 40 } })
@@ -584,10 +585,27 @@ mod tests {
         stored.apply_update(TerminalUpdate::new("term_1").command("ls"));
         assert_eq!(
             stored.size,
-            MaybeUndefined::Value(TerminalSize::new(120, 40))
+            MaybeUndefined::Value(TerminalSize::new(
+                NonZeroU16::new(120).unwrap(),
+                NonZeroU16::new(40).unwrap()
+            ))
         );
         stored.apply_update(TerminalUpdate::new("term_1").size(None));
         assert_eq!(stored.size, MaybeUndefined::Null);
+    }
+
+    #[test]
+    fn terminal_size_of_zero_is_not_applied() {
+        // A terminal cannot have zero columns or rows, so such a size is not a size.
+        for size in [
+            json!({ "cols": 0, "rows": 40 }),
+            json!({ "cols": 120, "rows": 0 }),
+        ] {
+            assert!(serde_json::from_value::<TerminalSize>(size.clone()).is_err());
+            let update: TerminalUpdate =
+                serde_json::from_value(json!({ "terminalId": "term_1", "size": size })).unwrap();
+            assert!(update.size.is_undefined());
+        }
     }
 
     #[test]
