@@ -29,6 +29,7 @@ schemars = ["dep:schemars", "serde_with/schemars_1"]
 unstable = [
     "unstable_agent_skills",
     "unstable_auth_status",
+    "unstable_failure_entries",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
     "unstable_plan_operations",
@@ -50,6 +51,7 @@ unstable = [
 unstable_protocol_v2 = []
 unstable_agent_skills = []
 unstable_auth_status = []
+unstable_failure_entries = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
 unstable_plan_operations = []
