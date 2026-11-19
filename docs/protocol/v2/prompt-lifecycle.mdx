@@ -1156,6 +1156,20 @@ action. The session remains `running` if other foreground work can
 still progress, even if some permission requests or elicitations are pending.
 Clients present those requests independently of the aggregate state.
 
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "state_update",
+      "state": "requires_action"
+    }
+  }
+}
+```
+
 With several outstanding requests, opening or resolving a request does not
 itself cause a transition. Once `requires_action` is reported, the Agent
 **MUST** report `running` when progress resumes, even if other requests remain

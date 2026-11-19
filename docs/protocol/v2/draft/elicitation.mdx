@@ -193,6 +193,21 @@ The Client responds with one of three actions:
 - `decline`: the user explicitly declined.
 - `cancel`: the user dismissed the interaction without choosing.
 
+An `accept` response to the [form example](#form-mode) carries the submitted values in `content`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 43,
+  "result": {
+    "action": "accept",
+    "content": {
+      "strategy": "balanced"
+    }
+  }
+}
+```
+
 Agents **MUST** handle an unknown action as `cancel`.
 
 The `content` field is optional on `accept`. Receivers treat omission and `null`
@@ -214,6 +229,18 @@ connection, and the Client **MUST** treat it as opaque. The Agent **MAY** send
 send that notification only to the same Client that received the original
 request and include the original `elicitationId`. Clients **MUST** ignore
 unknown or already-completed IDs. On receiving it, Clients **MAY** retry the original operation, update the UI, or otherwise continue. They **SHOULD** still let the user retry or cancel if the notification never arrives.
+
+The notification for the [URL example](#url-mode):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "elicitation/complete",
+  "params": {
+    "elicitationId": "github-oauth-001"
+  }
+}
+```
 
 ## Session cancellation
 

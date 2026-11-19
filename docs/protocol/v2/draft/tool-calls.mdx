@@ -601,13 +601,25 @@ A terminal may keep running after its tool call returns control to the model, as
 }
 ```
 
-The Agent **SHOULD** stop advertising `cancel` once the terminal reports `exitStatus`. The Client stops the process with a `terminal/cancel` request with the `sessionId` and `terminalId`:
+The Agent **SHOULD** stop advertising `cancel` once the terminal reports `exitStatus`. The Client stops the process with a `terminal/cancel` request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "terminal/cancel",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "terminalId": "term_003"
+  }
+}
+```
 
 - The Client **MUST NOT** send it unless the terminal currently advertises `capabilities.cancel`.
 - `sessionId` is the session that reports the terminal. For a [subagent](/protocol/v2/draft/subagents#restricted-methods)'s terminal, that is the child session: the terminal's own `cancel` enables the request even when the child doesn't advertise `cancel`.
 - The Agent responds with an empty result once it has accepted the cancellation. The response does not mean the process has stopped. The Agent confirms that with a `terminal_update` that sets `exitStatus`.
 - The Agent responds with `-32602` if the terminal is unknown, has already exited, or is not cancellable. This includes a request that the Client sends again after the first one was accepted and the process has since exited. The `terminal_update` that sets `exitStatus` reports the outcome.
-- Cancelling stops the process but does not release the terminal: its output remains available for display and replay. It does not change the foreground state or the status of any tool call that references the terminal.
+- Cancelling stops the process but does not release the terminal: its output remains available for display and replay. It does not change the foreground state or the status of any tool call that references the terminal. If foreground work is waiting on the process, the Agent reports the tool call's outcome as it would for any other process exit.
 
 Input, resize, and other interactive control remain out of scope.
 
@@ -709,6 +721,27 @@ header, which is ambiguous when paths contain spaces.
   Optional MIME type of the file contents after the operation (for `delete`, of
   the deleted file).
 </ParamField>
+
+A `move` or `copy` entry carries the path before the operation in `oldPath`:
+
+```json
+{
+  "type": "diff",
+  "changes": [
+    {
+      "operation": "move",
+      "oldPath": "/home/user/project/src/config.json",
+      "path": "/home/user/project/src/settings.json",
+      "fileType": "text",
+      "mimeType": "application/json"
+    }
+  ],
+  "patch": {
+    "format": "git_patch",
+    "text": "diff --git /home/user/project/src/config.json /home/user/project/src/settings.json\nsimilarity index 100%\nrename from /home/user/project/src/config.json\nrename to /home/user/project/src/settings.json\n"
+  }
+}
+```
 
 Omit `patch` when there is no useful text patch, such as a same-path binary
 update or symlink target change:
