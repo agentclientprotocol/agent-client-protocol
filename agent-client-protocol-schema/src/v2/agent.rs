@@ -3842,7 +3842,7 @@ impl SessionConfigSelectOption {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigSelectGroup {
-    /// Unique identifier for this group.
+    /// Identifier for this group. MUST be unique within the option.
     pub group_id: SessionConfigGroupId,
     /// Human-readable label for this group.
     pub name: String,
@@ -4099,7 +4099,7 @@ fn other_session_config_kind_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionConfigOption {
-    /// Unique identifier for the configuration option.
+    /// Identifier for the configuration option. MUST be unique within `configOptions`.
     pub config_id: SessionConfigId,
     /// Human-readable label for the option.
     pub name: String,
