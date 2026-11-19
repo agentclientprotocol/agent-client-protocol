@@ -144,7 +144,9 @@ v1 used role-specific field names: the Client sent `clientCapabilities` and opti
       "sessionCapabilities": {
         "list": {},
         "resume": {},
-        "close": {}
+        "close": {},
+        "delete": {},
+        "additionalDirectories": {}
       }
     },
     "authMethods": [],
@@ -227,24 +229,31 @@ Convert a boolean support marker from `true` to `{}` and from `false` to an omit
 | `sessionCapabilities.additionalDirectories`                   | `session.additionalDirectories`.                                                             |
 | `sessionCapabilities.systemPrompt`, including `mode.override` | `session.systemPrompt`, including `mode.override`. Object markers unchanged.                 |
 | `sessionCapabilities.fork`                                    | **Draft only.** `session.fork`.                                                              |
+| `sessionCapabilities.archive`                                 | **Draft only.** `session.archive`.                                                           |
+| `sessionCapabilities.options`                                 | **Draft only.** `session.options`.                                                           |
+| `sessionCapabilities.status`                                  | **Draft only.** `session.status`.                                                            |
+| `sessionCapabilities.title`                                   | **Draft only.** `session.title`.                                                             |
 | `auth.logout`                                                 | Marker removed. A non-empty `authMethods` list requires both `auth/login` and `auth/logout`. |
+| `auth.status`                                                 | **Draft only.** `auth.status`.                                                               |
 | `auth`                                                        | `auth` remains a group for authentication-related extensions, not method availability.       |
 | `providers`                                                   | **Draft only.** `providers`. Object marker unchanged.                                        |
 
 #### Client capability fields
 
-| v1 Client field                       | v2 Client field or behavior                                                                                                 |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `fs.readTextFile`, `fs.writeTextFile` | Removed with Client file-system methods. Expose Client-provided file tools through MCP if needed.                           |
-| `terminal`                            | Removed with Client terminal-control methods. Agent-owned terminal display does not require a Client capability.            |
-| `auth.terminal`                       | `auth.terminal`. Boolean → object marker. This is distinct from the removed execution `terminal` capability.                |
-| `elicitation.form`, `elicitation.url` | `elicitation.form`, `elicitation.url`. Object markers unchanged. An empty `elicitation` object advertises no modes.         |
-| `session.configOptions.boolean`       | Marker removed. v2 supports boolean config options without Client capability negotiation.                                   |
-| `session.notices`                     | Marker removed. v2 notices require no Client capability and may be ignored.                                                 |
-| `session.compaction`                  | Marker removed. v2 compaction updates require no Client capability.                                                         |
-| `session`                             | Group removed. Its standard children have the behavior described above.                                                     |
-| `plan`                                | Marker removed. `plan_update` is stable in v2 without Client capability negotiation. `plan_removed` remains **Draft only**. |
-| `subagents`                           | Marker removed. Subagent updates and session-directed messages are part of v2 and require no Client `subagents` marker.     |
+| v1 Client field                       | v2 Client field or behavior                                                                                                                    |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fs.readTextFile`, `fs.writeTextFile` | Removed with Client file-system methods. Expose Client-provided file tools through MCP if needed.                                              |
+| `terminal`                            | Removed with Client terminal-control methods. Agent-owned terminal display does not require a Client capability.                               |
+| `auth.terminal`                       | `auth.terminal`. Boolean → object marker. This is distinct from the removed execution `terminal` capability.                                   |
+| `elicitation.form`, `elicitation.url` | `elicitation.form`, `elicitation.url`. Object markers unchanged. An empty `elicitation` object advertises no modes.                            |
+| `session.configOptions.boolean`       | Marker removed. v2 supports boolean config options without Client capability negotiation.                                                      |
+| `session.notices`                     | Marker removed. v2 notices require no Client capability and may be ignored.                                                                    |
+| `session.compaction`                  | Marker removed. v2 compaction updates require no Client capability.                                                                            |
+| `session.promptSuggestions`           | **Draft only.** `session.promptSuggestions`. Object markers unchanged.                                                                         |
+| `session.cursors`                     | **Draft only.** Marker removed. v2 cursor updates require no Client capability.                                                                |
+| `session`                             | No stable children in v2. Its v1 children have the behavior described above. The draft schema keeps the group for its **Draft only** children. |
+| `plan`                                | Marker removed. `plan_update` is stable in v2 without Client capability negotiation. `plan_removed` remains **Draft only**.                    |
+| `subagents`                           | Marker removed. Subagent updates and session-directed messages are part of v2 and require no Client `subagents` marker.                        |
 
 The per-child-session `capabilities.cancel` marker in `subagent_update` is unchanged. It is not an initialize capability.
 
@@ -506,7 +515,7 @@ clear cannot be represented by a v1 update because v1 treats `null` like
 omission. A strict adapter must reject that conversion, while an intentionally
 lossy adapter may omit the clear. The remaining fields (`title`, `kind`,
 `status`, `content`, `locations`, `rawInput`, `rawOutput`) and `kind` values are
-unchanged from v1. The `status` enum adds `cancelled` and `paused`, and both enums are now
+unchanged from v1, except that a location's `line` no longer accepts `0`. The `status` enum adds `cancelled` and `paused`, and both enums are now
 extensible. `tool_call_update` also gains an optional `capabilities` field. See
 [Background work and cancel controls](#background-work-and-cancel-controls).
 
@@ -704,7 +713,7 @@ A command permission subject is self-contained rather than a patch:
 
 `command` and `cwd` are required, and `cwd` **MUST** be absolute. `toolCallId`, `terminalId`, and `_meta` are optional and nullable. Omission and `null` are equivalent and mean the value was not provided. The IDs only associate the permission with displayed state and may be absent when permission is requested before execution. Approval authorizes the Agent to execute the command. It never asks the Client to execute it.
 
-`options` and the response shape are unchanged: options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`. Both unions are extensible in v2, with one safety rule: an Agent that receives an outcome it does not understand **MUST NOT** treat it as approval.
+`options` and the response shape are unchanged, except that `options` now needs at least one entry. Options carry `optionId`, `name`, and `kind` (`allow_once`, `allow_always`, `reject_once`, `reject_always`), and the response outcome is `{ "outcome": "selected", "optionId": ... }` or `{ "outcome": "cancelled" }`. Both unions are extensible in v2, with one safety rule: an Agent that receives an outcome it does not understand **MUST NOT** treat it as approval.
 
 In v1, `cancelled` meant the prompt turn was cancelled. In v2 the Client also sends it when the user dismisses the prompt or the Client declines it by policy. The Agent **MUST NOT** proceed with that operation, but `cancelled` alone doesn't mean the foreground work is ending. Cancellation is reported separately.
 
@@ -882,7 +891,7 @@ MCP transport configuration is aligned with the current MCP transport model:
 
 The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock). Notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`), and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback. `IconTheme` and annotation `Role` values are extensible too, and icons and annotations accept `_meta`.
 
-If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, `SessionInfo.updatedAt` is marked `format: "date-time"`, `annotations.priority` is bounded to the inclusive range 0–1, multi-select elicitation `items` need at least one option, `session/prompt` `prompt` needs at least one content block, form-mode `requestedSchema` requires `type: "object"` and `properties`, and setup-response `configOptions` is no longer nullable: omit it rather than sending `null`.
+If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, `SessionInfo.updatedAt` is marked `format: "date-time"`, `annotations.priority` is bounded to the inclusive range 0–1, multi-select elicitation `items` need at least one option, `session/prompt` `prompt` needs at least one content block, permission `options`, config `select` options, each config option group's `options`, and single-select elicitation `enum` and `oneOf` each need at least one entry, a tool call location's `line` starts at 1, `resource_link` `size` is unsigned, form-mode `requestedSchema` requires `type: "object"` and `properties`, and setup-response `configOptions` is no longer nullable: omit it rather than sending `null`. One detail is looser: a value in an accepted elicitation's `content` can be any JSON value, for custom or future property types.
 
 v2 also says which text is Markdown. Text content blocks may contain Markdown, as in v1. A plan entry `content` may contain Markdown too. Other strings shown to users, such as a tool call `title`, are plain text, and Clients do not render them as Markdown. v1 did not state a format for either.
 
@@ -943,15 +952,24 @@ v2 makes the whole schema forward-compatible by convention:
 
 ## Transports
 
-stdio remains the primary transport and is unchanged. Each message is a single JSON-RPC object. ACP does not use JSON-RPC batches, and receivers reject an array with `-32600`. Apply a session's `session/update` notifications in the order received. See [Transports](/protocol/v2/transports#no-batches).
+stdio remains the primary transport. Each message is a single JSON-RPC object. ACP does not use JSON-RPC batches, and receivers reject an array with `-32600`. v2 also states three rules that the v1 page did not:
+
+- **Shutdown.** The Client ends the connection by closing the Agent's `stdin`. The Agent **SHOULD** exit once it has finished or stopped its work.
+- **Message timing.** After `initialize`, Agents **MAY** send requests and notifications at any time. Clients **MUST** handle them independently of the responses they are awaiting.
+- **Message order.** Transports **MUST** deliver messages in the order they were sent, and receivers **MUST** apply a session's `session/update` notifications in the order received.
+
+See [Transports](/protocol/v2/transports).
 
 A standard remote transport (streamable HTTP with SSE streams, plus WebSocket) is being specified in its own RFD and is not part of core v2. See the [transport RFD](/rfds/streamable-http-websocket-transport) for its current state.
 
 ## Errors
 
-Several error rules that were SHOULD in v1 are MUST in v2, and v2 adds one. Agents and Clients **MUST**:
+Several error rules that were SHOULD in v1 are MUST in v2, and v2 adds one.
 
-- respond with `-32601` to a method they don't implement, or to a capability-gated method they didn't advertise
+Agents and Clients **MUST** respond with `-32601` to a method they don't implement, or to a capability-gated method they didn't advertise.
+
+Agents **MUST**:
+
 - respond with `-32002`, with `data.sessionId`, to a session-scoped request for a session that doesn't exist or isn't active on the connection
 - reject a request other than `initialize` that arrives before initialization completes with `-32600`, and also an `initialize` repeated after another request
 - reject a `systemPrompt` with an unadvertised mode, an unsupported content block type, or content that exceeds the Agent's limits with `-32602`
@@ -996,7 +1014,7 @@ See [Errors](/protocol/v2/error).
 11. **Modes and config options.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`. Read `configId` and `groupId`, render `boolean` options, and send `session/set_config_option` with a `type` of `"id"` or `"boolean"`.
 12. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and use `session/resume` without `replayFrom` to reattach when you still hold the session's entities and missed no updates. Request replay when you want them resynchronized, for example after a lost connection. Use `replay_complete` to find the end of the replayed history, and treat a replay that ends without it and without a successful response as truncated.
 13. **Client file and terminal methods.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`, using only transports the Agent advertises under `session.mcp`. Send an absolute `command` for each stdio server. Do not treat display terminals as Client resources.
-14. **Cancellation.** After `session/cancel`, keep accepting updates and wait for the idle `state_update` with `stopReason: "cancelled"` as confirmation. Don't answer every pending permission request when you send it. Dismiss and answer a request when the Agent cancels it with `$/cancel_request`.
+14. **Cancellation.** After `session/cancel`, keep accepting updates. An idle `state_update` ends the wait, and `stopReason: "cancelled"` on it confirms that foreground work was cancelled. The work can also end first with another stop reason, and the Agent sends no further update if no foreground work was active when the cancellation took effect. Don't answer every pending permission request when you send it. Dismiss and answer a request when the Agent cancels it with `$/cancel_request`.
 15. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, and read commands and their `input` as tagged unions. Replace the `configOptions` and `availableCommands` lists you hold with the lists in each setup response, including lists from updates that arrived before the response. An omitted list means none. Replace the command list on each `available_commands_update`, including `[]` to clear it.
 16. **Subagents.** Handle `subagent_update`, which needs no capability and cannot be ignored as an unknown update. Register each child session, attribute its updates and requests to it, and show `session_message` entries as messages between sessions. Send nothing for a child except responses to its requests, `session/cancel` while the child advertises `capabilities.cancel`, and `tool_call/cancel` or `terminal/cancel` for an item that advertises its own. Discard child state and capabilities when you resume the parent.
 17. **Elicitation.** Stop evaluating `pattern` on string properties. v2 forms don't carry it.
