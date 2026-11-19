@@ -73,13 +73,18 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Report foreground activity with [`state_update`](./prompt.mdx) (`running`, `idle`, `requires_action`), and move the stop reason from the `session/prompt` response to the idle update. A fourth state, `unknown`, reports that the Agent can no longer observe the foreground work.
 - Report [failures after prompt insertion](./prompt.mdx#report-failures-after-insertion) by ending foreground work with an idle `state_update` whose `stopReason` is `error`, carrying an optional JSON-RPC error object. A JSON-RPC error on `session/prompt` always means the message was not inserted.
 - Do not use JSON-RPC 2.0 batches. Each transport message is a single request, notification, or response, and receivers reject an array with `-32600`, as MCP does since 2025-06-18.
+- Require a string or integer request ID. `null` is no longer a valid ID for a request.
+- Make three error rules requirements that v1 only recommended: `-32601` for a method the receiver does not implement or did not advertise, `-32002` for a session that does not exist or is not active on the connection, and `-32600` for a request other than `initialize` before initialization completes. Agents also reject an `initialize` repeated after another request with `-32600`.
 - Make [enums and tagged unions open](./enum-variant-extension.mdx) where a safe fallback exists: `_`-prefixed values are for extensions, and other unknown values are reserved for future ACP versions.
 - Add the `cancelled` status for tool calls and plan entries.
 - Add [background work](./background-work.mdx): a `paused` tool call status, opt-in `capabilities.cancel` on tool calls and terminals with `tool_call/cancel` and `terminal/cancel`, and a `background` list on state snapshots.
 - Add the [`replay_complete`](./session-replay-complete.mdx) session update, which marks the end of the history replay requested by `session/resume`. A replay that ends without it and without a successful response is truncated.
 - Add [subagent sessions](../subagents.mdx) to the v2 baseline, without a capability. `subagent_update` announces a child session on its parent, `session_message` and `session_message_chunk` report messages between sessions, `session` tool call content links a tool call to a session, and a child's `capabilities.cancel` permits `session/cancel` for that child. v1 keeps them behind the Client's `subagents` capability. The rules are on the v2 [Subagents](/protocol/v2/subagents) page.
 - Add an optional [`idempotencyKey`](./idempotency-keys.mdx) to `session/prompt`. Agents that advertise `capabilities.session` insert at most one user message for a key in a session and answer a retry with the original `messageId`. They reject a malformed key with `-32602`.
-- Return the session's `configOptions` and `availableCommands` in `session/new` and `session/resume` responses, and add `type` discriminators to commands (`command`) and command input (`text`).
+- Add `availableCommands` to `session/new` and `session/resume` responses, make `configOptions` in those responses a non-null array, and add `type` discriminators to commands (`command`) and command input (`text`).
+- Remove the Client `session.notices`, `session.compaction`, and `session.configOptions.boolean` capabilities. Notices, compaction updates, and boolean config options need no Client capability.
+- Handle an unknown elicitation `action` as `cancel`. In v1 an Agent could not treat it as a known action.
+- Tighten schema validation where v1 was loose, for example at least one content block in `session/prompt`, `type: "object"` and `properties` in an elicitation `requestedSchema`, and at least one entry in permission `options`. The [migration guide](/protocol/v2/migration#content-blocks) has the full list.
 - Reject `initialize` with `-32022` (Unsupported protocol version) when no supported version is at or below the requested one, with the requested and supported versions in the error data.
 - Require a `type` discriminator on `session/set_config_option` values, and rename the config option `group` field to `groupId`.
 - Make `usage_update.cost` a patch field: omitted leaves it unchanged and `null` clears it.
@@ -89,6 +94,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
   - Require implementation metadata in both `initialize` params and results with a single role-agnostic `info` field, replacing the v1-style `clientInfo` and `agentInfo` fields so agent-to-agent and other symmetric ACP connections do not need role-specific field names.
   - Group authentication methods under `auth/*`: v2 uses `auth/login` and `auth/logout` instead of v1's top-level `authenticate` and `logout` method names. An Agent that returns a non-empty `authMethods` list advertises the authentication surface and **MUST** implement both methods; if the field is omitted or empty, Clients **MUST NOT** call either method. There is no `capabilities.auth.logout` support marker, and `capabilities.auth` remains orthogonal for authentication-related extensions. The generated request and response type names follow the grouped method naming as `LoginAuthRequest` / `LoginAuthResponse` and `LogoutAuthRequest` / `LogoutAuthResponse`.
   - Rename the authentication method descriptor's `id` to `methodId`, make its `type` discriminator required, and advertise Client support for `terminal` methods with a `capabilities.auth.terminal` object marker.
+  - Change a terminal authentication method's `env` from an object that maps names to values to an array of `{ name, value }` entries.
   - Use concise capability group names such as `session` and `auth`, replacing names like `sessionCapabilities`.
   - Make `session` optional so Agents that only expose non-session method surfaces can omit it.
   - Require the baseline session lifecycle methods when `session` is present: `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`.
@@ -101,12 +107,6 @@ This list tracks every breaking change in v2. Smaller changes without their own 
   - Require MCP server configurations to include a `type` discriminator, including `type: "stdio"`, so unknown future transports can be preserved as extension/future variants.
   - Keep HTTP as the remote MCP server transport capability.
 - Unify ID naming and typing across the v2 schema. Protocol fields should use domain-specific ID names such as `messageId`, `toolCallId`, `planId`, `terminalId`, `configId`, and `methodId` rather than a generic `id` whenever the field identifies a protocol entity or references another resource.
-
-### RFDs to be Written
-
-Changes under consideration that still need to be drafted or moved to draft:
-
-- MCP: revamp MCP server support, including tool timeouts and more lifecycle methods
 
 ## Shiny future
 
@@ -138,6 +138,8 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-19: Removed the MCP revamp from this RFD. That work will be additive and does not need a breaking change.
+- 2026-11-19: Added the changes that the list missed: non-null request IDs, the error rules that became requirements, the removed Client capabilities, the terminal authentication `env` shape, the unknown elicitation `action` rule, and schema validation. Corrected the entry on setup responses, where only `availableCommands` is new.
 - 2026-11-17: Removed `pattern` from elicitation string properties in v2, to match MCP's string schema.
 - 2026-11-17: Added Subagent Sessions to the v2 Preview scope and to the change list, together with the `unknown` state. The v2 rules are on the v2 [Subagents](/protocol/v2/subagents) page.
 - 2026-11-17: Added `idempotencyKey` on `session/prompt` to the change list now that it is in the v2 schema.

@@ -659,8 +659,7 @@ its session ID. The Agent adds a reference only when it can resolve that
 handle to a known session. It **MUST NOT** guess the session.
 
 In v1, `session` content is covered by the `subagents` Client capability like
-the rest of this RFD. In v2, receivers that do not recognize it preserve it as
-unknown tool call content.
+the rest of this RFD. In v2, it is part of the baseline and needs no capability.
 
 #### Delegated tasks
 
@@ -1691,6 +1690,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-19: In v2, `session` tool call content is part of the baseline. It is no longer described as unknown content that receivers preserve.
 - 2026-11-19: The v1 draft page says that a parent can work outside a prompt turn when a child reports back, and that `session/cancel` for the parent cancels that work. It also says that a child's `config_option_update` that arrives before the `session/load` response is historical.
 - 2026-11-19: Removed the statement about SDKs buffering traffic for an unannounced child. How an SDK handles a non-conforming Agent is not part of the protocol.
 - 2026-11-17: A session's cost includes its descendants' costs, in both versions. Clients show a session's cost as the cost of its subtree and do not add child costs to it.
