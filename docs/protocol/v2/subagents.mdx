@@ -75,7 +75,7 @@ The Agent **MUST** send the announcing `subagent_update` before any request or n
 - a [`background`](/protocol/v2/prompt-lifecycle#background-work) list that names the child
 - `session/request_permission` and `elicitation/create` requests for the child
 
-The rule also applies to short-lived work. A Client SDK may buffer traffic for a child it does not know yet, but that does not release the Agent from the rule.
+The rule also applies to short-lived work.
 
 <ParamField path="sessionId" type="SessionId" required>
   The child session's ID. It is unique on the connection and identifies the same

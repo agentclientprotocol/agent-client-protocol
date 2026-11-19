@@ -750,9 +750,9 @@ Optional nullable `_meta` is scoped to this content item. Omission and `null`
 both mean that no item metadata was provided. A tool call can reference several
 sessions. The reference is display-only. It does not establish ownership,
 enable Client-initiated controls on the referenced session, or report that
-session's work state. A message a parent
-sends a child is reported as a [session-directed message](/protocol/v2/draft/prompt-lifecycle#session-directed-messages),
-not through a tool call.
+session's work state. The reference does not
+report a message a parent sends a child. The Agent reports that message as a
+[session-directed message](/protocol/v2/draft/prompt-lifecycle#session-directed-messages).
 
 `content` on `tool_call_update` replaces the whole array, so an Agent that
 sends new content includes the session references again. When a tool addresses

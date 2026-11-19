@@ -1813,7 +1813,7 @@ impl SessionCancelCapabilities {
 pub enum StateUpdate {
     /// Foreground work is in progress.
     Running(RunningStateUpdate),
-    /// The child is ready to process another prompt.
+    /// Foreground work is not in progress. The parent can give the child more work.
     Idle(IdleStateUpdate),
     /// Foreground work is blocked on user action.
     RequiresAction(RequiresActionStateUpdate),
@@ -1863,7 +1863,7 @@ impl RunningStateUpdate {
     }
 }
 
-/// The child is ready to process another prompt.
+/// Foreground work is not in progress. The parent can give the child more work.
 ///
 /// An omitted or `null` `stopReason` means not reported.
 #[cfg(feature = "unstable_subagents")]

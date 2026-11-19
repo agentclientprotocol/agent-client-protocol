@@ -189,8 +189,6 @@ and history, and the Agent need not report anything further for it. See
 Announcement ordering also applies to short-lived work. Clients attribute
 subsequent traffic to the announced child and apply its restricted-session
 semantics; routing internals and presentation are implementation choices.
-SDKs may tolerate non-conforming Agents by buffering early traffic, but that
-tolerance does not replace the Agent's announcement obligation.
 
 Provider callbacks need not arrive in announcement order. If an interaction
 arrives before the corresponding spawn metadata, the adapter can announce a
@@ -1693,6 +1691,8 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-19: The v1 draft page says that a parent can work outside a prompt turn when a child reports back, and that `session/cancel` for the parent cancels that work. It also says that a child's `config_option_update` that arrives before the `session/load` response is historical.
+- 2026-11-19: Removed the statement about SDKs buffering traffic for an unannounced child. How an SDK handles a non-conforming Agent is not part of the protocol.
 - 2026-11-17: A session's cost includes its descendants' costs, in both versions. Clients show a session's cost as the cost of its subtree and do not add child costs to it.
 - 2026-11-17: Agents **SHOULD** reject a Client-initiated request that is not permitted for a child with `-32602`, in both versions.
 - 2026-11-17: The v1 rules are on the v1 draft [Subagents](/protocol/v1/draft/subagents) page. The v1 draft pages link to it instead of to this RFD.
