@@ -28,9 +28,7 @@ use schemars::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    env,
-    ffi::OsStr,
-    fs,
+    env, fs,
     path::{Path, PathBuf},
 };
 
@@ -130,53 +128,6 @@ fn repo_root() -> PathBuf {
         .parent()
         .expect("schema-generator manifest directory should have a repository root parent")
         .to_path_buf()
-}
-
-/// The directory cargo writes this workspace's build output to, honoring `CARGO_TARGET_DIR`.
-///
-/// The rustdoc invocation below runs cargo from the repository root, so cargo resolves a
-/// relative `CARGO_TARGET_DIR` against that root. Reading the JSON it produces has to resolve
-/// the same directory, or a shared build cache leaves the generator looking in `target/` for a
-/// file cargo wrote somewhere else.
-///
-/// A `build.target-dir` set in `.cargo/config.toml` is not consulted; this repository has none.
-fn cargo_target_dir(root: &Path, configured: Option<&OsStr>) -> PathBuf {
-    match configured {
-        Some(dir) if !dir.is_empty() => root.join(dir),
-        _ => root.join("target"),
-    }
-}
-
-#[cfg(test)]
-mod cargo_target_dir_tests {
-    use super::cargo_target_dir;
-    use std::ffi::OsStr;
-    use std::path::{Path, PathBuf};
-
-    const ROOT: &str = "/workspace/protocol";
-
-    fn resolve(configured: Option<&str>) -> PathBuf {
-        cargo_target_dir(Path::new(ROOT), configured.map(OsStr::new))
-    }
-
-    #[test]
-    fn unset_and_empty_configured_dir_fall_back_to_the_repository_target() {
-        assert_eq!(resolve(None), Path::new(ROOT).join("target"));
-        assert_eq!(resolve(Some("")), Path::new(ROOT).join("target"));
-    }
-
-    #[test]
-    fn absolute_configured_dir_is_used_as_written() {
-        assert_eq!(
-            resolve(Some("/var/cache/cargo")),
-            Path::new("/var/cache/cargo")
-        );
-    }
-
-    #[test]
-    fn relative_configured_dir_is_resolved_against_the_repository_root() {
-        assert_eq!(resolve(Some("build")), Path::new(ROOT).join("build"));
-    }
 }
 
 #[cfg(test)]
@@ -1565,6 +1516,7 @@ mod markdown_generator {
     use std::collections::{BTreeMap, BTreeSet, HashMap};
     use std::fmt::Write;
     use std::fs;
+    use std::path::{Path, PathBuf};
     use std::process::Command;
 
     pub struct MarkdownGenerator {
@@ -2806,11 +2758,28 @@ starting with '$/' it is free to ignore the notification."
         }
     }
 
+    fn schema_rustdoc_path(messages: &[u8]) -> Option<PathBuf> {
+        messages.split(|&b| b == b'\n').find_map(|line| {
+            let message: Value = serde_json::from_slice(line).ok()?;
+            if message["reason"] != "compiler-artifact"
+                || message["target"]["name"] != "agent_client_protocol_schema"
+            {
+                return None;
+            }
+            message["filenames"]
+                .as_array()?
+                .iter()
+                .filter_map(Value::as_str)
+                .map(Path::new)
+                .find(|path| path.extension().is_some_and(|ext| ext == "json"))
+                .map(Path::to_path_buf)
+        })
+    }
+
     #[expect(clippy::too_many_lines)]
     fn extract_side_docs() -> SideDocs {
-        let root = super::repo_root();
         let output = Command::new("cargo")
-            .current_dir(&root)
+            .current_dir(super::repo_root())
             .args([
                 "+nightly",
                 "rustdoc",
@@ -2818,14 +2787,14 @@ starting with '$/' it is free to ignore the notification."
                 "agent-client-protocol-schema",
                 "--lib",
                 "--all-features",
-                "--",
+                // Ask Cargo, not just rustdoc, for JSON so it reports the artifact path.
                 "-Z",
                 "unstable-options",
-                "--output-format",
-                "json",
+                "--output-format=json",
+                "--message-format=json-render-diagnostics",
             ])
             .output()
-            .unwrap();
+            .expect("failed to run cargo +nightly rustdoc");
 
         assert!(
             output.status.success(),
@@ -2833,14 +2802,12 @@ starting with '$/' it is free to ignore the notification."
             String::from_utf8_lossy(&output.stderr)
         );
 
-        // Parse the JSON output. Cargo honors `CARGO_TARGET_DIR`, so resolve the directory it
-        // actually wrote to instead of assuming the repository's `target/`.
-        let configured_target_dir = super::env::var_os("CARGO_TARGET_DIR");
-        let json_path = super::cargo_target_dir(&root, configured_target_dir.as_deref())
-            .join("doc/agent_client_protocol_schema.json");
+        let json_path = schema_rustdoc_path(&output.stdout).expect(
+            "cargo rustdoc did not report a JSON artifact for agent-client-protocol-schema",
+        );
         let json_content = fs::read_to_string(&json_path).unwrap_or_else(|error| {
             panic!(
-                "rustdoc reported success but left no JSON at {}: {error}",
+                "failed to read rustdoc JSON at {}: {error}",
                 json_path.display()
             )
         });
@@ -2974,8 +2941,31 @@ starting with '$/' it is free to ignore the notification."
 
     #[cfg(test)]
     mod tests {
-        use super::MarkdownGenerator;
+        use super::{MarkdownGenerator, schema_rustdoc_path};
         use serde_json::json;
+        use std::path::Path;
+
+        #[test]
+        fn reads_schema_rustdoc_path_from_cargo_artifacts() {
+            let messages = br#"{"reason":"compiler-artifact","target":{"name":"other"},"filenames":["/cache/doc/other.json"]}
+{"reason":"compiler-artifact","target":{"name":"agent_client_protocol_schema"},"filenames":["/cache/debug/deps/libagent_client_protocol_schema.rmeta"]}
+{"reason":"compiler-artifact","target":{"name":"agent_client_protocol_schema"},"filenames":["/shared cache/aarch64-apple-darwin/doc/agent_client_protocol_schema.json"],"fresh":true}
+{"reason":"build-finished","success":true}"#;
+            assert_eq!(
+                schema_rustdoc_path(messages).as_deref(),
+                Some(Path::new(
+                    "/shared cache/aarch64-apple-darwin/doc/agent_client_protocol_schema.json"
+                ))
+            );
+        }
+
+        #[test]
+        fn missing_rustdoc_artifact_has_no_fallback_path() {
+            assert_eq!(
+                schema_rustdoc_path(br#"{"reason":"build-finished","success":true}"#),
+                None
+            );
+        }
 
         #[test]
         fn unconstrained_json_schema_renders_any_value() {
