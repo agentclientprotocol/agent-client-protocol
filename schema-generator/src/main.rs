@@ -1552,14 +1552,15 @@ mod markdown_generator {
             writeln!(&mut self.output, "---").unwrap();
             writeln!(&mut self.output).unwrap();
             let schema_file = self.schema_file;
+            let download_file = schema_file.rsplit('/').next().unwrap_or(schema_file);
             if schema_file.starts_with("v2/") {
+                // `releases/latest` resolves to the v1 schema release, so link the v2 releases.
                 writeln!(
                     &mut self.output,
-                    "<Note>This schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). GitHub releases for this schema are not published yet.</Note>"
+                    "<Note>This schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). Each [`schema-v2` release](https://github.com/agentclientprotocol/agent-client-protocol/releases?q=schema-v2) has it as the `{download_file}` download.</Note>"
                 )
                 .unwrap();
             } else {
-                let download_file = schema_file.rsplit('/').next().unwrap_or(schema_file);
                 writeln!(
                     &mut self.output,
                     "<Note>The schema file can be downloaded directly from the [latest GitHub release](https://github.com/agentclientprotocol/agent-client-protocol/releases/latest/download/{download_file}).</Note>"
