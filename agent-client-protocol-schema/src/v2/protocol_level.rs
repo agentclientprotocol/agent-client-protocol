@@ -77,7 +77,7 @@ pub(crate) const CANCEL_REQUEST_METHOD_NAME: &str = "$/cancel_request";
 /// Their methods start with `$/`. Acting on one is optional, because it might not
 /// be implementable in every Client or Agent. For example, a single-threaded
 /// synchronous implementation can do little to react to a `$/cancel_request`
-/// notification. An Agent or Client may ignore a `$/` notification it cannot act on.
+/// notification. An Agent or Client MAY ignore a `$/` notification it cannot act on.
 ///
 /// Notifications do not expect a response.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
