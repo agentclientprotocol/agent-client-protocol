@@ -2995,6 +2995,7 @@ crate::serde_util::default_on_null! {
         /// `additionalDirectories` don't. Agents MAY normalize paths when comparing.
         ///
         /// Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
+        /// Clients keep the same value when following `nextCursor`.
         #[serde(default)]
         pub cwd: Option<AbsolutePath>,
         /// Opaque cursor token from a previous response's nextCursor field for cursor-based pagination
@@ -3082,6 +3083,8 @@ impl ListSessionsRequest {
 #[non_exhaustive]
 pub struct ListSessionsResponse {
     /// Array of session information objects.
+    ///
+    /// Agents SHOULD return the sessions with the most recent activity first.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     pub sessions: Vec<SessionInfo>,

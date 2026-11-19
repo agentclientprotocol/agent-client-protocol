@@ -946,6 +946,7 @@ Only sessions whose `cwd` is this same directory match. Subdirectories and
 `additionalDirectories` don't. Agents MAY normalize paths when comparing.
 
 Omitted and `null` are equivalent and mean sessions are not filtered by working directory.
+Clients keep the same value when following `nextCursor`.
 
 </ResponseField>
 
@@ -972,6 +973,9 @@ results. An empty string is a valid cursor, not the end of results.
 </ResponseField>
 <ResponseField name="sessions" type={<a href="#sessioninfo">SessionInfo[]</a>} required>
   Array of session information objects.
+
+Agents SHOULD return the sessions with the most recent activity first.
+
 </ResponseField>
 
 <a id="session-new"></a>
