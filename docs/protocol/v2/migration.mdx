@@ -884,6 +884,8 @@ The five content block types are unchanged: `text`, `image`, `audio`, `resource_
 
 If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, `SessionInfo.updatedAt` is marked `format: "date-time"`, `annotations.priority` is bounded to the inclusive range 0–1, multi-select elicitation `items` need at least one option, `session/prompt` `prompt` needs at least one content block, form-mode `requestedSchema` requires `type: "object"` and `properties`, and setup-response `configOptions` is no longer nullable: omit it rather than sending `null`.
 
+v2 also says which text is Markdown. Text content blocks may contain Markdown, as in v1. A plan entry `content` may contain Markdown too. Other strings shown to users, such as a tool call `title`, are plain text, and Clients do not render them as Markdown. v1 did not state a format for either.
+
 ## Slash commands
 
 `session/new` and `session/resume` responses now carry `availableCommands` alongside `configOptions`. An Agent with commands **MUST** include them there. A setup response replaces the Client's command list, including a list from an `available_commands_update` that arrived before the response. The draft `session/fork` response also supports commands for the newly created session when forking is supported. Agents no longer need to send command notifications before the `session/new` response. See the [setup response example](/protocol/v2/session-setup#initial-session-state).

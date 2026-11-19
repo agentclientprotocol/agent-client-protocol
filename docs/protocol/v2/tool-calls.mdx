@@ -39,8 +39,9 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 </ParamField>
 
 <ParamField path="title" type="string">
-  A human-readable title describing what the tool is doing. Agents **SHOULD**
-  include the title the first time they report a `toolCallId`.
+  A human-readable title describing what the tool is doing, as [plain
+  text](/protocol/v2/content#text-content). Agents **SHOULD** include the title
+  the first time they report a `toolCallId`.
 </ParamField>
 
 <ParamField path="name" type="string">
