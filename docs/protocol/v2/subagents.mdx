@@ -397,7 +397,7 @@ While a child's `capabilities.cancel` is an object, the Client **MAY** send [`se
 
 It cancels the child's foreground work, not the work of its parent or siblings. The capability governs what the Client can cancel. The Agent can cancel work it delegated at any time.
 
-- When cancellation stops the child's foreground work, the Agent sends that work's pending updates, then an idle `state_update` with `stopReason: "cancelled"` on the child, mirrored in the parent's `subagent_update`. An already-idle child needs no additional idle update. See [Cancellation](/protocol/v2/prompt-lifecycle#cancellation).
+- When cancellation stops the child's foreground work, including cancellation by its parent, the Agent sends that work's pending updates, then an idle `state_update` with `stopReason: "cancelled"` on the child, mirrored in the parent's `subagent_update`. An already-idle child needs no additional idle update. See [Cancellation](/protocol/v2/prompt-lifecycle#cancellation).
 - A provider that accepts a stop command has not yet stopped the work. The Agent reports `cancelled` when it observes that the work stopped. If it can no longer observe the child, it reports [`unknown`](#unknown-state).
 - A cancellation that arrives after the work ended does not change that work's outcome.
 - Cancellation does not close the child. The parent can give it more work afterwards.
