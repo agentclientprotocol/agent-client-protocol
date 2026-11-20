@@ -297,6 +297,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/acp-v2-preview",
               "announcements/subagents-stabilized",
               "announcements/plan-operations-stabilized",
               "announcements/client-system-prompt-stabilized",
