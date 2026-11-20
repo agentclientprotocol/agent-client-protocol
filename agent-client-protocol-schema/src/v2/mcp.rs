@@ -79,7 +79,7 @@ pub enum MessageMcpResponse {
         /// Required, even if JSON null.
         #[serde(deserialize_with = "Deserialize::deserialize")]
         result: Value,
-        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
         /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
         /// Implementations MUST NOT assign meaning to keys they do not recognize.
         /// This is ACP metadata, not the inner MCP message's `_meta`.
@@ -94,7 +94,7 @@ pub enum MessageMcpResponse {
     Error {
         /// Required, non-null MCP error object.
         error: McpError,
-        /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+        /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
         /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
         /// Implementations MUST NOT assign meaning to keys they do not recognize.
         /// This is ACP metadata, not the inner MCP message's `_meta`.
@@ -173,7 +173,7 @@ pub struct MessageMcpRequest {
     /// Optional inner MCP params. Null is equivalent to omission.
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This is ACP metadata, not the inner MCP message's `_meta`.
@@ -242,7 +242,7 @@ pub struct MessageMcpNotification {
     /// Optional inner MCP params. Null is equivalent to omission.
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This is ACP metadata, not the inner MCP message's `_meta`.

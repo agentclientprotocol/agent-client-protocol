@@ -1,7 +1,7 @@
-//! Tool calls represent actions that language models request agents to perform.
+//! Tool calls represent actions that language models request Agents to perform.
 //!
-//! Examples include reading a file or running a command. The agent executes the tool call on
-//! the model's behalf and reports its progress to the client.
+//! Examples include reading a file or running a command. The Agent executes the tool call on
+//! the model's behalf and reports its progress to the Client.
 //!
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
 use std::sync::Arc;
@@ -19,7 +19,7 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 /// Represents an upsert for a tool call that the language model has requested.
 ///
-/// Tool calls are actions that the agent executes on behalf of the language model,
+/// Tool calls are actions that the Agent executes on behalf of the language model,
 /// such as reading files, executing code, or fetching data from external sources.
 ///
 /// Only `toolCallId` is required. Other fields have patch semantics:
@@ -27,7 +27,7 @@ use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 /// unsets the value, and concrete values replace the previous value. For
 /// collection fields, concrete arrays replace the previous collection, and both
 /// `null` and `[]` clear the collection. A concrete `_meta` object instead
-/// patches the stored metadata by top-level key. When a client receives a tool
+/// patches the stored metadata by top-level key. When a Client receives a tool
 /// call ID it has not seen before, omitted fields start at their protocol defaults.
 ///
 /// See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
@@ -44,7 +44,7 @@ pub struct ToolCallUpdate {
     ///
     /// This field is optional and has patch semantics. Omission means no
     /// change, `null` clears the name, and a string replaces it. For a tool
-    /// call ID the client has not seen before, omission or `null` means that no
+    /// call ID the Client has not seen before, omission or `null` means that no
     /// tool name is available.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -59,7 +59,7 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// The category of tool being invoked.
-    /// Helps clients choose appropriate icons and UI treatment.
+    /// Helps Clients choose appropriate icons and UI treatment.
     ///
     /// Omission leaves the kind unchanged, `null` resets it to `other`, and a value replaces it.
     /// A new tool call starts as `other`.
@@ -82,7 +82,7 @@ pub struct ToolCallUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ToolCallContent>>,
     /// File locations affected by this tool call.
-    /// Enables "follow-along" features in clients.
+    /// Enables "follow-along" features in Clients.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<VecSkipError<_>>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -105,7 +105,7 @@ pub struct ToolCallUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub capabilities: MaybeUndefined<ToolCallCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -157,7 +157,7 @@ impl ToolCallUpdate {
     }
 
     /// The category of tool being invoked.
-    /// Helps clients choose appropriate icons and UI treatment.
+    /// Helps Clients choose appropriate icons and UI treatment.
     #[must_use]
     pub fn kind(mut self, kind: impl IntoMaybeUndefined<ToolKind>) -> Self {
         self.kind = kind.into_maybe_undefined();
@@ -179,7 +179,7 @@ impl ToolCallUpdate {
     }
 
     /// File locations affected by this tool call.
-    /// Enables "follow-along" features in clients.
+    /// Enables "follow-along" features in Clients.
     #[must_use]
     pub fn locations(mut self, locations: impl IntoMaybeUndefined<Vec<ToolCallLocation>>) -> Self {
         self.locations = locations.into_maybe_undefined();
@@ -276,7 +276,7 @@ pub struct ToolCallCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cancel: Option<ToolCallCancelCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -302,7 +302,7 @@ impl ToolCallCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -323,7 +323,7 @@ impl ToolCallCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct ToolCallCancelCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -342,7 +342,7 @@ impl ToolCallCancelCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -371,7 +371,7 @@ pub struct ToolCallContentChunk {
     pub tool_call_id: ToolCallId,
     /// A single item of content produced by the tool call.
     pub content: ToolCallContent,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This metadata is scoped to the chunk and does not patch stored metadata.
@@ -395,7 +395,7 @@ impl ToolCallContentChunk {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize. This field is chunk-scoped.
     ///
@@ -431,7 +431,7 @@ impl IntoOption<ToolCallId> for &str {
 
 /// Categories of tools that can be invoked.
 ///
-/// Tool kinds help clients choose appropriate icons and optimize how they
+/// Tool kinds help Clients choose appropriate icons and optimize how they
 /// display tool execution progress.
 ///
 /// See protocol docs: [Reporting](https://agentclientprotocol.com/protocol/v2/tool-calls#reporting)
@@ -521,7 +521,7 @@ pub enum ToolCallContent {
     Content(Box<Content>),
     /// File modification shown as a diff.
     Diff(Diff),
-    /// A display-only reference to an agent-owned terminal.
+    /// A display-only reference to an Agent-owned terminal.
     Terminal(Terminal),
     /// A display-only reference to another session, such as a subagent.
     Session(SessionReference),
@@ -642,7 +642,7 @@ impl From<Terminal> for ToolCallContent {
 pub struct SessionReference {
     /// The referenced session.
     pub session_id: SessionId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -664,7 +664,7 @@ impl SessionReference {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions.
     #[must_use]
     pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
@@ -689,7 +689,7 @@ impl From<SessionReference> for ToolCallContent {
 pub struct Content {
     /// The actual content block.
     pub content: ContentBlock,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -711,7 +711,7 @@ impl Content {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -752,7 +752,7 @@ pub struct Diff {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub patch: Option<DiffPatch>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -788,7 +788,7 @@ impl Diff {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -812,7 +812,7 @@ pub struct DiffPatch {
     pub format: DiffPatchFormat,
     /// Patch text in the format named by `format`.
     pub text: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -835,7 +835,7 @@ impl DiffPatch {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -899,7 +899,7 @@ pub enum DiffFileType {
 
 /// One file-level change described by a `Diff`.
 ///
-/// Structured change metadata lets clients identify affected files and
+/// Structured change metadata lets Clients identify affected files and
 /// operations without parsing the text patch.
 #[serde_as]
 #[skip_serializing_none]
@@ -925,7 +925,7 @@ pub struct DiffChange {
     /// File operation-specific fields.
     #[serde(flatten)]
     pub operation: DiffChangeOperation,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1001,7 +1001,7 @@ impl DiffChange {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -1157,8 +1157,8 @@ fn other_diff_change_schema(schema: &mut Schema) {
 
 /// A file location being accessed or modified by a tool.
 ///
-/// Enables clients to implement "follow-along" features that track
-/// which files the agent is working with in real-time.
+/// Enables Clients to implement "follow-along" features that track
+/// which files the Agent is working with in real-time.
 ///
 /// See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/v2/tool-calls#following-the-agent)
 #[serde_as]
@@ -1176,7 +1176,7 @@ pub struct ToolCallLocation {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub line: Option<std::num::NonZeroU32>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1209,7 +1209,7 @@ impl ToolCallLocation {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///

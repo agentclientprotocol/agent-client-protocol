@@ -81,7 +81,7 @@ pub struct UnsupportedProtocolVersionErrorData {
     pub requested: ProtocolVersion,
     /// The protocol versions the Agent supports.
     pub supported: Vec<ProtocolVersion>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -124,7 +124,7 @@ impl UnsupportedProtocolVersionErrorData {
 pub struct SessionNotFoundErrorData {
     /// The session ID from the request.
     pub session_id: SessionId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///

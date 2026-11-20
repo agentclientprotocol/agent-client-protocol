@@ -49,7 +49,7 @@ These apply to the `docs/protocol` pages and to Rust doc comments, which become 
 - Use periods instead of semicolons or em dashes to join clauses. Use straight quotes.
 - Prefer plain words: "use", not "leverage" or "utilize"; "to", not "in order to".
 - Use sentence case for headings and for the titles of steps and tabs. Keep Agent, Client, and acronyms capitalized.
-- On the `docs/protocol` pages, capitalize Agent and Client wherever the protocol role is meant. Lowercase is for other things, such as "the underlying agent" that an adapter wraps or "API client libraries".
+- On the `docs/protocol` pages and in doc comments, capitalize Agent and Client wherever the protocol role is meant. Lowercase is for other things, such as "the underlying agent" that an adapter wraps or "API client libraries".
 - Use one term for one thing. Write "final status" for `completed`, `failed`, and `cancelled`, not "terminal status", which reads as the status of a terminal. On the v2 pages, write "foreground work", not "turn", which only v1 defines.
 - Write error names as the Errors page lists them, in sentence case: `-32800` (Request cancelled), `-32600` (Invalid request).
 - Keep shorthand such as `idle(cancelled)` to tables and diagrams. In prose, write "`idle` with `stopReason: "cancelled"`".
