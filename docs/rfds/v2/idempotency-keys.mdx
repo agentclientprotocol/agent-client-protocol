@@ -12,8 +12,8 @@ When a Client sends a request and never sees the response, it can't tell whether
 
 This RFD proposes two changes for v2:
 
-- Give every method a documented retry class. A Client then knows whether a request is safe to send again as is, safe to send again with a key, or not resent at all.
-- Add an optional `idempotencyKey` parameter to `session/prompt`. The Client generates the key and sends the same key on every attempt. The Agent inserts the user message at most once for that key and answers retries with the `messageId` of the original.
+- Give every method a documented retry class.
+- Add an optional `idempotencyKey` parameter to `session/prompt`. The Client generates the key and sends the same key on every attempt. While the Agent recognizes the key for an inserted message, it returns that message's `messageId` without inserting another.
 
 Clients may omit the key. A prompt without one behaves as it does today. Agents that advertise `capabilities.session` honor a key whenever one is present. There is no separate capability, so Clients can rely on it on every v2 connection.
 
@@ -60,12 +60,12 @@ Some methods already define what a repeat does. `session/close` is idempotent, `
 
 The overview page states one of four classes for each method:
 
-| Class       | Meaning                                                                                                                          | Retry rule                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The Client may send it again as is. The response reports current state.                                 |
-| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client may send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
-| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client may send it again. If the first request also took effect, what it created is left unused.    |
-| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.             |
+| Class       | Meaning                                                                                                                          | Retry rule                                                                                           |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The Client may send it again as is. The response reports current state.                              |
+| Keyed       | The request accepts an `idempotencyKey`. The Agent recognizes retries while it retains the key.                                  | The Client may retry with the same key. A missing or forgotten key makes the retry a new operation.  |
+| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client may send it again. If the first request also took effect, what it created is left unused. |
+| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.          |
 
 The [method audit](#method-audit) finds one keyed method, `session/prompt`, and two duplicating methods, `session/new` and `session/fork`. Every method added to ACP later states its class.
 
@@ -109,7 +109,7 @@ The Agent looks the key up in the session:
 | A message that was inserted with this key                                                                                          | Doesn't insert a message. Responds with that message's `messageId`.                                      |
 | A prompt with this key that is not inserted yet, such as a [held prompt](/protocol/v2/prompt-lifecycle#prompts-during-active-work) | Doesn't hold a second prompt. Answers this request when it answers the first one, with the same outcome. |
 
-- **The response.** A retry gets the original `messageId` and nothing else. The Agent doesn't start a second round of work for the message. Whether it continues work that stopped before it finished is up to the Agent, as it is after any restart. The Client learns the session's current activity from live updates or from the `session/resume` snapshot.
+- **A recognized insertion.** The Agent returns the original `messageId` without inserting another message or starting a second round of work. Whether it continues work that stopped before it finished is up to the Agent, as it is after any restart. The Client learns the session's current activity from live updates or from the `session/resume` snapshot.
 - **Errors leave the key unused.** An error response to `session/prompt` already means the message was not inserted. The Agent records nothing, and the Client can send the same prompt with the same key again.
 - **A reused key.** The Agent **MUST NOT** insert a second message for a key it has recorded. If a request carries a recorded key with a different prompt, the Agent either answers as for a retry or, if it notices the difference, rejects the request with `-32602`. Agents are not required to compare prompts. After such a `-32602`, the key stays recorded for the first prompt.
 - **Cancelling.** An Agent that honors `$/cancel_request` for any pending request with the key withdraws the prompt if it is not inserted yet. It then answers every pending request for that key with `-32800`. Honoring `$/cancel_request` is optional. `session/cancel` and `session/close` answer held prompts the same way they do today.
@@ -119,16 +119,15 @@ The Agent looks the key up in the session:
 
 A key is scoped to the session named by `sessionId`. The same key string in another session, including a fork of this one, names an unrelated submission.
 
-A key lasts as long as the message it belongs to. There is no time window:
+There is no fixed retry window. Key retention depends on whether the Agent keeps the inserted message:
 
 - **Retained messages.** For a prompt whose inserted message the Agent retains, the Agent **MUST** recognize the key for as long as it retains the message. This holds across connections and Agent restarts. It follows the existing rule that a retained message keeps its `messageId`: if the Agent would still replay the message, it still recognizes the key.
 - **Live-only messages.** For a prompt whose message the Agent doesn't retain, such as a locally handled command, the Agent **MUST** recognize the key while the session stays active on a connection. After that it **MAY** forget it.
-- Once the Agent no longer has the message or the session, it **MAY** forget the key. A prompt with a forgotten key is a new submission.
-- Clients **SHOULD** resend a pending prompt as soon as they have resumed the session. A Client that has held a prompt for a long time, such as since a previous day, **SHOULD** show it to the user instead of resending it. By then the Agent may have discarded the message under its own history retention.
+- Once these retention requirements end, the Agent **MAY** forget the key. A prompt with a forgotten key is a new submission.
 
 Agents **SHOULD** store the key in the same step as the message, for example as part of the message's ID. The two then can't be stored or lost separately. If a restart loses a message that was never written to the stored session, the key is lost with it, and the retry inserts the message.
 
-A key is not tied to the connection that first carried it. The Agent recognizes it on any connection where the session is active. After reconnecting, the Client calls `initialize` and `session/resume`, then sends the prompt again. Proxies and conductors forward `idempotencyKey` unchanged.
+On a new connection, the Client calls `initialize` and `session/resume` before retrying. Neither resume nor replay reports which keys the Agent still holds. If a duplicate would matter and the Client cannot rule it out, the Client **SHOULD NOT** automatically resend an unanswered prompt. It **SHOULD** tell the user the prompt might already have run and let them decide whether to retry. A retry of the same submission sends the original prompt and key in a new `session/prompt` request. Proxies and conductors forward the key unchanged.
 
 ```mermaid
 sequenceDiagram
@@ -144,9 +143,14 @@ sequenceDiagram
     Client->>Agent: session/resume
     Agent->>Client: session/update (state_update: running)
     Agent-->>Client: session/resume response
+    Note over Client: Outcome unknown. The user chooses to retry.
     Client->>Agent: session/prompt (id=3, idempotencyKey=K)
-    Note right of Agent: K is recorded. Nothing is inserted
-    Agent-->>Client: response to id=3 (messageId: msg_user_8f7a1)
+    alt Agent still recognizes K
+        Agent-->>Client: original messageId (no new insertion)
+    else Agent forgot K for a live-only message
+        Note right of Agent: Insert another message. The work can run again.
+        Agent-->>Client: new messageId
+    end
 ```
 
 Where the record has to live follows from the transport:
@@ -158,8 +162,8 @@ Where the record has to live follows from the transport:
 
 > How will things play out once this feature exists?
 
-- A Client stores a key with each pending prompt. After a dropped connection or a crash, it resumes the session and sends the pending prompts again. Each one is inserted once, and the Client gets the `messageId` it needs to reconcile its optimistic message.
-- Client SDKs generate a key for every prompt by default and resend on transport failures without asking the application. Applications that persist pending input pass their own key.
+- A Client stores a key with each pending prompt. After a dropped connection or a crash, it can retry a submission with the original key. A recognized insertion returns the original `messageId`. A retry is not a read-only way to check what happened.
+- Client SDKs can generate a key for each submission without automatically resending unanswered prompts. Applications that persist pending input pass their own key.
 - SDK and Client authors read one table to learn which requests they may retry.
 
 ## Implementation details and plan
@@ -209,7 +213,7 @@ This audit covers the stable and unstable v2 methods. "Sending it again" means t
 | `session/update`                             | Upserts replace state by entity ID, but chunks append, so a resent chunk duplicates content. A Client that missed updates calls `session/resume`. | Not retried |
 | `elicitation/complete`, `auth/status_update` | Reports the same state again.                                                                                                                     | Not retried |
 
-When the connection that sent held prompts ends, the Agent may insert or discard them. With a key, either choice is safe: if the Agent kept the prompt, the retry gets its outcome, and if the Agent dropped it, the retry is a new submission.
+When a connection ends, the Agent may insert or discard a held prompt. Discarding it before insertion leaves its key unused. If it was inserted, the [key lifetime](#how-long-a-key-lasts) determines whether a retry can insert it again.
 
 ### Prior art
 
@@ -255,14 +259,14 @@ Both runtimes store an ID that the adapter chooses with each user message, and b
 - **The adapter does the lookup itself.** Neither runtime can be relied on to refuse a repeated ID. Before it submits a keyed prompt, the adapter looks for the derived ID among its pending prompts and in the stored session.
 - **Finding the ID after a restart means reading history.** The adapter keeps an in-memory set of the session's user message IDs. It fills the set from the session's history once, on the first keyed prompt after a restart, and adds each ID when it inserts a message. The set is a cache. The stored session stays the record. Filling it is about the work of a replay, and a replay the Client asked for can fill it. claude-agent-acp's replay already reads the messages before each compaction, which `getSessionMessages` alone leaves out, and the lookup can use the same read. codex-acp pages `thread/turns/list` with full items.
 - **There is no stored prompt to compare a retry with.** The runtimes store the prompt in their own form, and Claude Code itself ignores the text when it skips a repeated ID. This is why comparing prompts is not required.
-- **Keys for locally handled commands stay in memory.** These commands report status or set a value, so running one again after a restart does no harm.
+- **Keys for locally handled commands can stay in memory.** If a command is live-only and the adapter forgets its key after disconnection, retrying can run the command again.
 
 ### Plan
 
 1. Add an optional, nullable `idempotencyKey` to `PromptRequest` in the v2 schema, as an `IdempotencyKey` string type with a length of 1 to 255. Keep it strict: a malformed value fails with `-32602`.
 2. Document the retry classes in one table on the v2 overview page, and add the keyed-prompt rules to the prompt lifecycle, session setup, and transport pages. Replace the "outcome remains uncertain" paragraph in the prompt lifecycle with the keyed behavior.
 3. Add serialization and schema coverage for a valid key, `null`, an empty string, a string over 255 characters, and a non-string value.
-4. Exercise these traces in SDK tests and conformance suites: a retry on the same connection, a retry after `session/resume` on a new connection, a retry after an Agent restart with a stored session, a retry while the prompt is held, a retry after an error, the same key in another session, and a retry of a prompt that was inserted during active work.
+4. Exercise these traces in SDK tests and conformance suites: a retry on the same connection, a retry while held, a retry after an error, the same key in another session, and a retry of a prompt inserted during active work. For response loss followed by close/resume or restart, cover both branches in [How long a key lasts](#how-long-a-key-lasts): a retained message returns its original ID without new work. For a live-only command whose key the Agent forgot, verify that the Client does not automatically repeat a side effect and that a user-confirmed retry can insert a new message.
 5. Have Client SDKs generate keys by default, and give Agent SDKs a helper that records keys for a session.
 6. Implement the derived ID and the lookup in claude-agent-acp and codex-acp.
 
@@ -278,7 +282,7 @@ Status on 2026-11-18:
 
 ### Why is there no capability?
 
-A Client that has to check a capability also has to keep the unsafe path for Agents that lack it, and an SDK can't resend on its own. v2 is still a draft, so the requirement can be part of the baseline now. Adding it after v2 is stable would need a capability.
+All Agents that advertise `capabilities.session` follow the same key-retention rules. A capability for accepting keys would not tell a Client whether a particular key survived a disconnect. v2 is still a draft, so the requirement can be part of the baseline now. Adding it after v2 is stable would need a capability.
 
 The Agent's obligation scales with what it already stores. An Agent that keeps sessions in memory keeps a map in memory. An Agent that stores sessions stores the key with the message, and both adapters can do that without storage of their own (see [Adapter validation](#adapter-validation)).
 
@@ -298,7 +302,7 @@ A payments API has to refuse a key that comes back with a different amount. Here
 
 ### Why is there no time window?
 
-Payments APIs keep a key for a fixed time, such as Stripe's 24 hours, because their clients retry on a schedule and the key lives in a table of its own. Neither holds here. An ACP Client resends when it reconnects, and the key belongs to a message that the Agent already keeps or discards under its own retention. Tying the key to the message needs no number, and it matches the rule that a retained message keeps its `messageId`.
+Payments APIs keep a key for a fixed time, such as Stripe's 24 hours. In ACP the key belongs to a message that the Agent already keeps or discards under its own retention. Tying the key to the message matches the rule that a retained message keeps its `messageId`. There is no minimum retry window after disconnect.
 
 A window would do one thing: an adapter could stop reading a session's history early when it looks for a key after a restart. Without one, the adapter reads the history once per session to build an in-memory set of user message IDs, and checks each keyed prompt against that set. The read is about the work of a replay. If that is too slow for long sessions, a window can be added later as a cap on that lookup.
 
@@ -314,7 +318,7 @@ Stripe accepts a key on every `POST`. ACP could do the same and skip the audit. 
 
 ### Does a key make the work run exactly once?
 
-No. It makes insertion happen at most once. If the Agent stops after inserting the message, the work may be incomplete, and a retry doesn't promise to finish it. If the user then prompts again, that is a new submission with a new key. Tool calls the Agent makes are also outside this proposal. Whether an MCP `tools/call` can be retried is a question for MCP.
+No. A retry does not insert a second message while the Agent recognizes the key. If the Agent stops after inserting the message, the work may be incomplete, and a retry doesn't promise to finish it. If the user then prompts again, that is a new submission with a new key. Tool calls the Agent makes are also outside this proposal. Whether an MCP `tools/call` can be retried is a question for MCP.
 
 ### Why does a retry wait for a held prompt and not get an error?
 
@@ -326,7 +330,7 @@ It solves one case. `Last-Event-ID`-style resumption redelivers a response that 
 
 ### Should `user_message` updates echo the key?
 
-Not in this proposal. A Client that wants to know what happened to a key sends the prompt again and gets the `messageId`. Echoing the key in updates would show one Client's keys to every other Client on the session and would turn the key into a second message identity, which the Prompt Lifecycle RFD [decided against](./prompt.mdx#client-generated-correlation-token).
+Not in this proposal. Retrying is not a lookup: if the Agent no longer recognizes the key, it handles the prompt as new. Echoing the key in updates would show one Client's keys to every other Client on the session and would turn the key into a second message identity, which the Prompt Lifecycle RFD [decided against](./prompt.mdx#client-generated-correlation-token).
 
 ### What about v1?
 
@@ -341,6 +345,7 @@ This RFD doesn't change v1. A v1 `session/prompt` response arrives at the end of
 
 ## Revision history
 
+- 2026-11-20: Clarified that reconnecting does not guarantee a key survived. Clients should not automatically retry unanswered prompts when duplicate work would matter and cannot be ruled out.
 - 2026-11-18: Recorded the status of the implementation plan.
 - 2026-11-17: The retry classes and the class of each method are documented in one table on the overview page, not on each method's page.
 - 2026-11-17: An Agent may insert or discard held prompts when the connection that sent them ends. Withdrawing a held prompt with `$/cancel_request` is best effort. `session/cancel` and `session/close` are the guaranteed ways to drop one.

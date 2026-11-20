@@ -237,8 +237,7 @@ reporting channel depends on whether the user message was inserted:
 
 Clients **MAY** prompt the user to complete an advertised authentication flow.
 Successful authentication does not itself restart work that already ended.
-Resending the prompt inserts a new message and does not undo the original
-insertion or any tool side effects. Clients **SHOULD NOT** automatically resubmit
+Submitting the prompt as new input can repeat tool side effects. Clients **SHOULD NOT** automatically resubmit
 an inserted prompt as though it had been rejected. See
 [Failures](/protocol/v2/draft/prompt-lifecycle#failures).
 

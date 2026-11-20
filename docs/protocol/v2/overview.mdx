@@ -226,12 +226,12 @@ Either side can send [`$/cancel_request`](/protocol/v2/cancellation) to cancel a
 
 When a response is lost, for example because the connection ended, the sender cannot tell whether the request took effect. Each method has one of four retry classes:
 
-| Class       | Meaning                                                                                                                          | Retry rule                                                                                                  |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender **MAY** send it again as is. The response reports current state.                                 |
-| Keyed       | Each request performs the operation again, and a duplicate does real damage. The request accepts an `idempotencyKey`.            | The Client **MAY** send it again with the same `idempotencyKey`. Without a key, a retry is a new operation. |
-| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client **MAY** send it again. If the first request also took effect, what it created is left unused.    |
-| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.                 |
+| Class       | Meaning                                                                                                                          | Retry rule                                                                                               |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Idempotent  | Sending the request again with the same parameters has no effect beyond the first. This includes read-only requests.             | The sender **MAY** send it again as is. The response reports current state.                              |
+| Keyed       | The request accepts an `idempotencyKey`. The Agent recognizes retries while it retains the key.                                  | The Client **MAY** retry with the same key. A missing or forgotten key makes the retry a new operation.  |
+| Duplicating | Each request creates something new, and an extra one does little harm.                                                           | The Client **MAY** send it again. If the first request also took effect, what it created is left unused. |
+| Not retried | Notifications, which have no response to lose, and messages that only have meaning on one connection or for one pending request. | The sender doesn't send it again. It recovers through `session/resume` or a new connection.              |
 
 Requests the Client sends:
 
@@ -242,7 +242,7 @@ Requests the Client sends:
 | `auth/logout`                         | Idempotent  | Succeeds when the authenticated state has already ended.                                                                                                                                                       |
 | `session/new`                         | Duplicating | Creates a second session. If the first response was lost, the Client never learned that session's ID. The Agent [may discard](/protocol/v2/session-setup#session-lifecycle) a session that was never prompted. |
 | `session/resume`                      | Idempotent  | Synchronizes the session again. The request's MCP servers and workspace roots replace the previous ones, which are the same on a retry.                                                                        |
-| `session/prompt`                      | Keyed       | Without a key, inserts a second user message and may start the work twice. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).                                                           |
+| `session/prompt`                      | Keyed       | A missing or forgotten key can mean a second insertion, even immediately after reconnecting. See [Retrying a prompt](/protocol/v2/prompt-lifecycle#retrying-a-prompt).                                         |
 | `session/set_config_option`           | Idempotent  | Sets the same value and returns the complete current options. A retry sent after a later change to the same option overwrites that change, so Clients retry before sending further changes.                    |
 | `session/list`                        | Idempotent  | Read-only.                                                                                                                                                                                                     |
 | `session/close`                       | Idempotent  | Succeeds.                                                                                                                                                                                                      |

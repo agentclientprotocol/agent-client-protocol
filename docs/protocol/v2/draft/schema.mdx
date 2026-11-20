@@ -1253,16 +1253,21 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="idempotencyKey" type={<><span><a href="#idempotencykey">IdempotencyKey</a></span><span> | null</span></>} >
-  Identifies this submission, so the Client can send the request again without the
-user message being inserted twice.
+  Identifies one prompt submission within this session.
 
 Optional. Omitted and `null` are equivalent and mean no key. The Agent then handles
 the prompt without duplicate detection.
 
 The Client generates the key and sends the same key on every attempt for the same
-submission. The Agent inserts at most one user message for a key in a session, and
-answers a retry with the `messageId` of the message it already inserted. Agents that
-advertise `capabilities.session` MUST support the key.
+submission. Agents that advertise `capabilities.session` MUST support the key.
+A retry of a recorded insertion returns the original `messageId` without inserting
+another message.
+
+The Agent MUST recognize the key for as long as it retains the message, including
+across connections and Agent restarts. For a live-only message, it MUST recognize
+the key while the session stays active on a connection. A retry with a forgotten
+key is a new submission, even immediately after reconnecting. If a duplicate
+would matter and the Client cannot rule it out, it SHOULD NOT retry automatically.
 
 When present, the value is an opaque, case-sensitive string of 1 to 255 characters.
 Agents MUST reject any other value with `-32602` (Invalid params) and MUST NOT treat
