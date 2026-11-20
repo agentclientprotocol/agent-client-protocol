@@ -295,7 +295,6 @@
       "x-session-state": [
         {
           "action": "upsert",
-          "session": "sessionId",
           "target": "toolCall",
           "id": "subject.toolCall.toolCallId",
           "value": "subject.toolCall"
@@ -4261,15 +4260,13 @@
       "x-session-state": [
         {
           "action": "replace",
-          "session": "result.sessionId",
           "target": "configOptions",
-          "value": "result.configOptions"
+          "value": "configOptions"
         },
         {
           "action": "replace",
-          "session": "result.sessionId",
           "target": "availableCommands",
-          "value": "result.availableCommands"
+          "value": "availableCommands"
         }
       ]
     },
@@ -4917,15 +4914,13 @@
       "x-session-state": [
         {
           "action": "replace",
-          "session": "result.sessionId",
           "target": "configOptions",
-          "value": "result.configOptions"
+          "value": "configOptions"
         },
         {
           "action": "replace",
-          "session": "result.sessionId",
           "target": "availableCommands",
-          "value": "result.availableCommands"
+          "value": "availableCommands"
         }
       ]
     },
@@ -5859,10 +5854,9 @@
       "x-session-state": [
         {
           "action": "replace",
-          "session": "params.sessionId",
           "target": "sessionInfo",
           "field": "title",
-          "value": "result.title"
+          "value": "title"
         }
       ]
     },
@@ -5900,15 +5894,13 @@
       "x-session-state": [
         {
           "action": "replace",
-          "session": "params.sessionId",
           "target": "configOptions",
-          "value": "result.configOptions"
+          "value": "configOptions"
         },
         {
           "action": "replace",
-          "session": "params.sessionId",
           "target": "availableCommands",
-          "value": "result.availableCommands"
+          "value": "availableCommands"
         }
       ]
     },
@@ -5979,9 +5971,8 @@
       "x-session-state": [
         {
           "action": "replace",
-          "session": "params.sessionId",
           "target": "configOptions",
-          "value": "result.configOptions"
+          "value": "configOptions"
         }
       ]
     },

@@ -3877,7 +3877,7 @@ impl TextCommandInput {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "upsert", "session": "sessionId", "target": "toolCall", "id": "subject.toolCall.toolCallId", "value": "subject.toolCall"}])))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "upsert", "target": "toolCall", "id": "subject.toolCall.toolCallId", "value": "subject.toolCall"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct RequestPermissionRequest {

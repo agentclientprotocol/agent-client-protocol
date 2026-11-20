@@ -1576,19 +1576,21 @@ mod schema_annotation_tests {
     /// - `value` is the field of the message to write. Without it the rule
     ///   writes the whole update, params, or result.
     ///
-    /// A field is a dotted path into the schema that has the hint. On a response
-    /// it starts with `result.`, or with `params.` to read the params of the
-    /// request. A rule on a request or response names the field holding the
-    /// `session` ID. A rule on a `session/update` variant writes to the session
-    /// of its notification.
+    /// A field is a dotted path into the schema that has the hint.
+    ///
+    /// No rule names the session, because it is always in `sessionId`. A rule
+    /// on a `session/update` variant writes to the session of its notification.
+    /// A rule on a request writes to the session in its `sessionId`. A rule on a
+    /// response writes to the session in the `sessionId` of the result, or of
+    /// the request's params when the result has none.
     #[cfg(feature = "unstable_protocol_v2")]
     mod session_state {
         use super::{def_schema, root_schema_value};
-        use serde_json::{Value, json};
+        use serde_json::Value;
         use std::collections::{BTreeMap, BTreeSet};
 
         const STATE_EXTENSION: &str = "x-session-state";
-        const RULE_KEYS: [&str; 6] = ["action", "session", "target", "id", "field", "value"];
+        const RULE_KEYS: [&str; 5] = ["action", "target", "id", "field", "value"];
 
         #[test]
         fn every_session_update_has_state_rules() {
@@ -1604,7 +1606,7 @@ mod schema_annotation_tests {
                     continue;
                 };
                 assert!(
-                    assert_state_rules(&schema, name, variant, variant, false),
+                    assert_state_rules(&schema, name, variant),
                     "{name} has no {STATE_EXTENSION}"
                 );
                 checked += 1;
@@ -1619,22 +1621,33 @@ mod schema_annotation_tests {
                 .iter()
                 .filter(|variant| variant.get(STATE_EXTENSION).is_some())
                 .count();
+            let session = |name: &str, holder: &Value| {
+                assert_eq!(id_type(&schema, name, holder, "sessionId"), "SessionId");
+            };
             for name in method_defs(&schema, &["AgentRequest", "AgentNotification"]) {
                 let def = def_schema(&schema, name);
-                checked += usize::from(assert_state_rules(&schema, name, def, def, true));
+                if assert_state_rules(&schema, name, def) {
+                    session(name, def);
+                    checked += 1;
+                }
             }
             let requests = method_defs(&schema, &["ClientRequest"]);
             for name in method_defs(&schema, &["AgentResponse"]) {
                 let def = def_schema(&schema, name);
+                if !assert_state_rules(&schema, name, def) {
+                    continue;
+                }
+                // The session is in the result, or else in the params of the request.
                 let request = requests
                     .iter()
                     .find(|request| def_schema(&schema, request)["x-method"] == def["x-method"])
                     .unwrap_or_else(|| panic!("{name} has no request"));
-                let message = json!({"properties": {
-                    "params": {"$ref": format!("#/$defs/{request}")},
-                    "result": {"$ref": format!("#/$defs/{name}")}
-                }});
-                checked += usize::from(assert_state_rules(&schema, name, def, &message, true));
+                if field_schemas(&schema, def, "sessionId").is_empty() {
+                    session(name, def_schema(&schema, request));
+                } else {
+                    session(name, def);
+                }
+                checked += 1;
             }
             assert_eq!(
                 checked,
@@ -1676,16 +1689,10 @@ mod schema_annotation_tests {
             targets
         }
 
-        /// Checks the `x-session-state` rules on `annotated` against `message`, the
-        /// schema its fields are read from. Returns whether it has the hint.
-        fn assert_state_rules(
-            schema: &Value,
-            owner: &str,
-            annotated: &Value,
-            message: &Value,
-            names_session: bool,
-        ) -> bool {
-            let Some(rules) = annotated.get(STATE_EXTENSION) else {
+        /// Checks the `x-session-state` rules on `message`, the schema their
+        /// fields are read from. Returns whether it has the hint.
+        fn assert_state_rules(schema: &Value, owner: &str, message: &Value) -> bool {
+            let Some(rules) = message.get(STATE_EXTENSION) else {
                 return false;
             };
             let targets = targets(schema);
@@ -1707,10 +1714,6 @@ mod schema_annotation_tests {
                     _ => panic!("{owner}: unknown {STATE_EXTENSION} action {action}"),
                 };
                 assert!(complete, "{owner}: {action} has the wrong keys");
-
-                let session = get("session").map(|field| id_type(schema, owner, message, field));
-                let expected = names_session.then_some("SessionId");
-                assert_eq!(session, expected, "{owner}: session");
 
                 let target = targets
                     .get(name)
