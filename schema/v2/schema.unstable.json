@@ -3411,6 +3411,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "delivery": {
+          "description": "Delivery modes supported by the Agent for `session/prompt`.\nOmitted and `null` are equivalent and mean neither mode is supported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptDeliveryCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -3490,6 +3502,40 @@
           "additionalProperties": true
         }
       }
+    },
+    "PromptDeliveryCapabilities": {
+      "description": "Delivery modes supported by the Agent for `session/prompt`.",
+      "type": "object",
+      "properties": {
+        "steer": {
+          "description": "Supplying `{}` advertises `steer`. Omitted and `null` mean unsupported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptDeliveryModeCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "queue": {
+          "description": "Supplying `{}` advertises `queue`. Omitted and `null` mean unsupported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptDeliveryModeCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        }
+      }
+    },
+    "PromptDeliveryModeCapabilities": {
+      "description": "An advertised prompt delivery mode. An empty object indicates support.",
+      "type": "object"
     },
     "McpCapabilities": {
       "description": "MCP capabilities supported by the agent for session lifecycle requests.",
@@ -10528,6 +10574,17 @@
           },
           "minItems": 1
         },
+        "delivery": {
+          "description": "How to insert the prompt while foreground work is active.\nOmitted and `null` are equivalent and select the ordinary prompt behavior.\nClients MUST NOT send a mode that the Agent did not advertise.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PromptDelivery"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "idempotencyKey": {
           "description": "Identifies one prompt submission within this session.\n\nOptional. Omitted and `null` are equivalent and mean no key. The Agent then handles\nthe prompt without duplicate detection.\n\nThe Client generates the key and sends the same key on every attempt for the same\nsubmission. Agents that advertise `capabilities.session` MUST support the key.\nA retry of a recorded insertion returns the original `messageId` without inserting\nanother message.\n\nThe Agent MUST recognize the key for as long as it retains the message, including\nacross connections and Agent restarts. For a live-only message, it MUST recognize\nthe key while the session stays active on a connection. A retry with a forgotten\nkey is a new submission, even immediately after reconnecting. If a duplicate\nwould matter and the Client cannot rule it out, it SHOULD NOT retry automatically.\n\nWhen present, the value is an opaque, case-sensitive string of 1 to 255 characters.\nAgents MUST reject any other value with `-32602` (Invalid params) and MUST NOT treat\nit as omitted.\n\nSee protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#retrying-a-prompt)",
           "anyOf": [
@@ -10549,6 +10606,21 @@
       "required": ["sessionId", "prompt"],
       "x-side": "agent",
       "x-method": "session/prompt"
+    },
+    "PromptDelivery": {
+      "description": "How to insert a prompt received during foreground work.",
+      "oneOf": [
+        {
+          "description": "Insert at the next safe point in the current turn, or start the next turn if it ends first.",
+          "type": "string",
+          "const": "steer"
+        },
+        {
+          "description": "Wait until the current turn ends, then start a new turn with the prompt.",
+          "type": "string",
+          "const": "queue"
+        }
+      ]
     },
     "IdempotencyKey": {
       "description": "A key the Client generates to identify one `session/prompt` submission across attempts.\n\nThe key is an opaque, case-sensitive string of 1 to 255 characters. It is scoped to the\nsession named by the request's `sessionId`.\n\nSee protocol docs: [Retrying a prompt](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#retrying-a-prompt)",
@@ -11056,7 +11128,7 @@
       "x-docs-ignore": true
     },
     "CancelSessionNotification": {
-      "description": "Cancels the named session's active foreground work and earlier prompts not yet inserted.\nIt does not cancel later submissions or work in the session's latest `background` list.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
+      "description": "Cancels the named session's active foreground work and earlier prompts not yet inserted.\nIt does not cancel later submissions or work in the session's latest `background` list.\nExplicit steers and queued prompts are not covered by this cancellation.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)",
       "type": "object",
       "properties": {
         "sessionId": {

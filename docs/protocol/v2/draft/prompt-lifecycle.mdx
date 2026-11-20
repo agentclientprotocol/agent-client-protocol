@@ -416,16 +416,18 @@ The same insertion boundary applies when [closing the session](/protocol/v2/draf
 
 #### Prompts during active work
 
-Clients **MAY** send `session/prompt` in any state, including while foreground work is `running` or `requires_action`. The Agent either inserts the prompt right away or holds it and inserts it later. Held prompts are inserted in the order they were received. What inserting during active work means, such as steering the current turn or starting the next one, is up to the Agent. Agents **MUST NOT** reject a prompt only because foreground work is active.
+Clients **MAY** send `session/prompt` in any state, including while foreground work is `running` or `requires_action`. The Agent either inserts the prompt right away or holds it and inserts it later. Ordinary held prompts are inserted in the order they were received. The Agent decides when to insert a prompt whose `delivery` is omitted or `null`. Agents **MUST NOT** reject a prompt only because foreground work is active.
 
-A held prompt's response stays pending until the prompt is inserted. Until then, the Client can drop it in two ways:
+A held prompt's response stays pending until the prompt is inserted. Until then, these cancellation rules apply:
 
-- [`session/cancel`](#cancellation) and `session/close` drop prompts the Agent has already received but not inserted. The Agent answers each of them with `-32800`. Both also stop the foreground work.
+- [`session/cancel`](#cancellation) stops foreground work and drops ordinary prompts the Agent has not inserted. `session/close` also drops any uninserted explicit steers and queued prompts. The Agent answers each dropped prompt with `-32800`.
 - [`$/cancel_request`](/protocol/v2/draft/cancellation) for the prompt's request is best effort, because request cancellation is optional for the receiver. An Agent that honors it answers with `-32800` and does not insert the message. Otherwise the prompt is inserted as usual, and the response carries its `messageId`.
 
 Once a prompt is inserted, the Client cannot withdraw it. It stops the work the prompt started with `session/cancel`.
 
-A guaranteed way to remove one held prompt is left to future capabilities, which may also let Agents advertise steering or queueing behavior.
+Agents that advertise experimental [prompt delivery](https://github.com/agentclientprotocol/agent-client-protocol/pull/1261) support one or both explicit modes under `capabilities.session.prompt.delivery`. A Client **MUST NOT** send a mode the Agent did not advertise. The Agent **MUST** reject an unsupported or unrecognized mode with `-32602` before insertion. `steer` inserts at the next safe point in the current turn or starts the next turn if the current turn ends first. If the turn ends first, waiting steers enter the next turn together in receipt order. `queue` waits until the current turn ends. Queued prompts follow any waiting steers in receipt order, each in its own turn. The response still acknowledges insertion, and it can arrive before or after the `user_message` update.
+
+`session/cancel` stops the current turn but does not drop explicit steers or queued prompts. To withdraw one before insertion, the Client sends `$/cancel_request` for that request.
 
 #### Prompts that are never inserted
 
@@ -1484,7 +1486,7 @@ Clients **MAY** cancel the session's foreground work at any time by sending a `s
 }
 ```
 
-`session/cancel` covers foreground work and prompts received before it that the Agent has not yet inserted. The Agent **MUST** answer the covered prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). A `session/prompt` received after `session/cancel` is not cancelled by it. Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list. To stop a listed tool call or terminal, the Client sends [`tool_call/cancel`](/protocol/v2/draft/tool-calls#cancelling-tool-calls) or [`terminal/cancel`](/protocol/v2/draft/tool-calls#cancelling-terminals) while that item advertises `capabilities.cancel`.
+`session/cancel` covers foreground work and ordinary prompts received before it that the Agent has not yet inserted. It does not cover [pending explicit steers or queued prompts](#prompts-during-active-work). The Agent **MUST** answer the covered prompts with `-32800`, as described in [request cancellation](/protocol/v2/draft/cancellation). A `session/prompt` received after `session/cancel` is not cancelled by it. Once a message is inserted, its prompt request still succeeds with its `messageId`. Cancellation does not undo that insertion. Work in the latest [`background`](#background-work) list is not covered and keeps running. The Agent **MAY** stop background activity it does not list. To stop a listed tool call or terminal, the Client sends [`tool_call/cancel`](/protocol/v2/draft/tool-calls#cancelling-tool-calls) or [`terminal/cancel`](/protocol/v2/draft/tool-calls#cancelling-terminals) while that item advertises `capabilities.cancel`.
 
 For a [child session](/protocol/v2/draft/subagents#cancellation), the Client sends `session/cancel` only while the child advertises `capabilities.cancel`. Cancelling a session also cancels the child work that the cancelled work is waiting on.
 

@@ -5250,6 +5250,11 @@ pub struct PromptRequest {
     /// inserting it.
     #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
     pub prompt: Vec<ContentBlock>,
+    /// How to insert the prompt while foreground work is active.
+    /// Omitted and `null` are equivalent and select the ordinary prompt behavior.
+    /// Clients MUST NOT send a mode that the Agent did not advertise.
+    #[cfg(feature = "unstable_prompt_delivery")]
+    pub delivery: Option<PromptDelivery>,
     /// Identifies one prompt submission within this session.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no key. The Agent then handles
@@ -5292,6 +5297,8 @@ impl PromptRequest {
         Self {
             session_id: session_id.into(),
             prompt,
+            #[cfg(feature = "unstable_prompt_delivery")]
+            delivery: None,
             idempotency_key: None,
             meta: None,
         }
@@ -5306,6 +5313,14 @@ impl PromptRequest {
         self
     }
 
+    /// Selects the delivery mode for this prompt.
+    #[cfg(feature = "unstable_prompt_delivery")]
+    #[must_use]
+    pub fn delivery(mut self, delivery: impl IntoOption<PromptDelivery>) -> Self {
+        self.delivery = delivery.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
@@ -5316,6 +5331,19 @@ impl PromptRequest {
         self.meta = meta.into_option();
         self
     }
+}
+
+/// How to insert a prompt received during foreground work.
+#[cfg(feature = "unstable_prompt_delivery")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub enum PromptDelivery {
+    /// Insert at the next safe point in the current turn, or start the next turn if it ends first.
+    Steer,
+    /// Wait until the current turn ends, then start a new turn with the prompt.
+    Queue,
 }
 
 /// Response acknowledging that a user prompt was inserted into the ACP conversation.
@@ -7156,6 +7184,13 @@ pub struct PromptCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub skill: Option<PromptSkillCapabilities>,
+    /// Delivery modes supported by the Agent for `session/prompt`.
+    /// Omitted and `null` are equivalent and mean neither mode is supported.
+    #[cfg(feature = "unstable_prompt_delivery")]
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub delivery: Option<PromptDeliveryCapabilities>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -7226,6 +7261,14 @@ impl PromptCapabilities {
         self
     }
 
+    /// Sets the delivery modes supported by the Agent.
+    #[cfg(feature = "unstable_prompt_delivery")]
+    #[must_use]
+    pub fn delivery(mut self, delivery: impl IntoOption<PromptDeliveryCapabilities>) -> Self {
+        self.delivery = delivery.into_option();
+        self
+    }
+
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
@@ -7237,6 +7280,45 @@ impl PromptCapabilities {
         self
     }
 }
+
+/// Delivery modes supported by the Agent for `session/prompt`.
+#[cfg(feature = "unstable_prompt_delivery")]
+#[serde_as]
+#[skip_serializing_none]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptDeliveryCapabilities {
+    /// Supplying `{}` advertises `steer`. Omitted and `null` mean unsupported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub steer: Option<PromptDeliveryModeCapabilities>,
+    /// Supplying `{}` advertises `queue`. Omitted and `null` mean unsupported.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub queue: Option<PromptDeliveryModeCapabilities>,
+}
+
+#[cfg(feature = "unstable_prompt_delivery")]
+impl PromptDeliveryCapabilities {
+    /// Builds the advertisement for the given modes.
+    #[must_use]
+    pub fn new(steer: bool, queue: bool) -> Self {
+        Self {
+            steer: steer.then(PromptDeliveryModeCapabilities::default),
+            queue: queue.then(PromptDeliveryModeCapabilities::default),
+        }
+    }
+}
+
+/// An advertised prompt delivery mode. An empty object indicates support.
+#[cfg(feature = "unstable_prompt_delivery")]
+#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct PromptDeliveryModeCapabilities {}
 
 /// Capabilities for image content in prompt requests.
 ///
@@ -7704,6 +7786,10 @@ impl McpAcpCapabilities {
 
 /// Cancels the named session's active foreground work and earlier prompts not yet inserted.
 /// It does not cancel later submissions or work in the session's latest `background` list.
+#[cfg_attr(
+    feature = "unstable_prompt_delivery",
+    doc = "Explicit steers and queued prompts are not covered by this cancellation."
+)]
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
 #[serde_as]
@@ -8320,6 +8406,68 @@ mod test_serialization {
 
     use super::*;
     use serde_json::json;
+
+    #[cfg(feature = "unstable_prompt_delivery")]
+    #[test]
+    fn prompt_delivery_request_is_optional_and_strict() {
+        let mut params = json!({"sessionId": "session", "prompt": []});
+        let request = serde_json::from_value::<PromptRequest>(params.clone()).unwrap();
+        assert_eq!(request.delivery, None);
+        params["delivery"] = serde_json::Value::Null;
+        assert_eq!(
+            serde_json::from_value::<PromptRequest>(params.clone()).unwrap(),
+            request
+        );
+        assert!(
+            serde_json::to_value(&request)
+                .unwrap()
+                .get("delivery")
+                .is_none()
+        );
+        for (value, mode) in [
+            ("steer", PromptDelivery::Steer),
+            ("queue", PromptDelivery::Queue),
+        ] {
+            params["delivery"] = json!(value);
+            let request = request.clone().delivery(mode);
+            assert_eq!(
+                serde_json::from_value::<PromptRequest>(params.clone()).unwrap(),
+                request
+            );
+            assert_eq!(serde_json::to_value(request).unwrap(), params);
+        }
+        for invalid in [json!("interrupt"), json!({}), json!(true)] {
+            params["delivery"] = invalid;
+            assert!(serde_json::from_value::<PromptRequest>(params.clone()).is_err());
+        }
+    }
+
+    #[cfg(feature = "unstable_prompt_delivery")]
+    #[test]
+    fn prompt_delivery_capabilities_advertise_only_supported_modes() {
+        let steer =
+            PromptCapabilities::new().delivery(PromptDeliveryCapabilities::new(true, false));
+        let both = PromptCapabilities::new().delivery(PromptDeliveryCapabilities::new(true, true));
+        assert_eq!(
+            serde_json::to_value(&steer).unwrap(),
+            json!({"delivery": {"steer": {}}})
+        );
+        assert_eq!(
+            serde_json::to_value(both).unwrap(),
+            json!({"delivery": {"steer": {}, "queue": {}}})
+        );
+        assert_eq!(
+            serde_json::from_value::<PromptCapabilities>(
+                json!({"delivery": {"steer": {}, "queue": null}})
+            )
+            .unwrap(),
+            steer
+        );
+        assert_eq!(
+            serde_json::from_value::<PromptCapabilities>(json!({"delivery": null})).unwrap(),
+            PromptCapabilities::new()
+        );
+    }
 
     fn test_meta() -> Meta {
         json!({ "source": "test" }).as_object().unwrap().clone()
