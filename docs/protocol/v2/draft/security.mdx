@@ -37,6 +37,7 @@ This applies to `uri` on images, resource links, and embedded resources, to icon
 - Automatic fetches **SHOULD** use only `https:` or `data:` URIs, **SHOULD NOT** carry credentials, **SHOULD** refuse loopback and private-network targets, and **SHOULD** bound the response size.
 - Clients **SHOULD NOT** run scripts in SVG images from Agent content.
 - Apart from icons, which never use `file:`, Clients **SHOULD NOT** read a `file:` URI from Agent content outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
+- Clients **SHOULD NOT** read a [Markdown plan's](/protocol/v2/draft/agent-plan#markdown-plans) `path` outside the session's root set without user action.
 - Agents **SHOULD** apply the root set and these fetch rules to URIs in prompts.
 
 ## Credentials
@@ -77,5 +78,4 @@ A user can approve a harmful operation, prompt injection can steer operations th
 
 ## Unstable features
 
-- Clients **SHOULD NOT** read a markdown plan's `path` outside the session's [root set](/protocol/v2/draft/session-setup#workspace-root-security) without user action.
 - Provider `headers` are credentials. Agents **SHOULD NOT** return them from `providers/list`.

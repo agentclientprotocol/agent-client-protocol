@@ -169,6 +169,22 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Elicitation
 </Card>
 
+#### Plan operations
+
+<ParamField path="plan" type="PlanCapabilities Object">
+  Supplying `{}` advertises support for both `plan_update` and `plan_removed`.
+  Omitted or `null` means the Client does not advertise support. The Agent then
+  sends structured checklists with the `plan` update.
+</ParamField>
+
+<Card
+  icon="list-check"
+  horizontal
+  href="/protocol/v1/agent-plan#plan-operations"
+>
+  Learn more about plan operations
+</Card>
+
 #### Boolean config options
 
 <ParamField

@@ -30,6 +30,7 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `terminal_update`           | Creates or updates an [Agent-owned terminal](/protocol/v2/tool-calls#display-only-terminals).                                          |
 | `terminal_output_chunk`     | Appends output bytes to an [Agent-owned terminal](/protocol/v2/tool-calls#display-only-terminals).                                     |
 | `plan_update`               | Creates or updates the [content of a plan](/protocol/v2/agent-plan) identified by ID.                                                  |
+| `plan_removed`              | [Removes the plan](/protocol/v2/agent-plan#removing-plans) with the given ID.                                                          |
 | `available_commands_update` | The set of [available slash commands](/protocol/v2/slash-commands) is ready or has changed.                                            |
 | `config_option_update`      | The session's [configuration options](/protocol/v2/session-config-options#from-the-agent) have changed.                                |
 | `session_info_update`       | [Session metadata](/protocol/v2/session-list#updating-session-metadata), such as the title or last update time, has changed.           |
@@ -59,14 +60,16 @@ Messages, tool calls, terminals, plans, and compactions are entities that the Ag
 | Session-directed message | `session_message`, `session_message_chunk`      | `messageId`    |
 | Tool call                | `tool_call_update`, `tool_call_content_chunk`   | `toolCallId`   |
 | Terminal                 | `terminal_update`, `terminal_output_chunk`      | `terminalId`   |
-| Plan                     | `plan_update`                                   | `planId`       |
+| Plan                     | `plan_update`, `plan_removed`                   | `planId`       |
 | Compaction               | `compaction_update`, `compaction_summary_chunk` | `compactionId` |
 
 An ID is unique among entities of the same type within a session, not across all entity types, so the same string can identify one entity of each type. User messages, Agent messages, Agent thoughts, and session-directed messages are separate types even though they share the `messageId` field. For example, an Agent may report a thought and a response derived from the same model output with the same `messageId`. They remain two distinct entities.
 
 The Agent **MUST NOT** reuse an ID for a different entity of the same type within a session. Clients **MUST** key entities by both type and ID. An update applies only to the entity of its own type: an `agent_thought` whose `messageId` matches an existing Agent message creates or updates a thought and leaves the message unchanged. Likewise, a field that references an entity identifies an entity of one specific type. For example, the `messageId` returned by `session/prompt` identifies a user message.
 
-An update or chunk for an ID the Client hasn't seen creates the entity with its defaults and then applies, so a chunk can arrive before any full update. Clients **MUST NOT** drop it. An entity's first update or chunk fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks apply to the entity in place without moving it, including after the session reports `idle`. Most updates patch the entity. A `plan_update` replaces the whole plan. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, **MAY** ignore its position.
+An update or chunk for an ID the Client hasn't seen creates the entity with its defaults and then applies, so a chunk can arrive before any full update. Clients **MUST NOT** drop it. The exception is `plan_removed`: Clients **MUST** ignore it for a `planId` they don't know.
+
+An entity's first update or chunk fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks apply to the entity in place without moving it, including after the session reports `idle`. Most updates patch the entity. A `plan_update` replaces the whole plan. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, **MAY** ignore its position.
 
 ### Session-directed messages
 

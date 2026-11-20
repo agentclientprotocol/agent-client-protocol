@@ -7628,8 +7628,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating an item-based plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces that plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the checklist with this `planId` on each update.
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
@@ -7638,11 +7638,7 @@ with their current status. The client replaces that plan with each update.
 
 ## <span class="font-mono">PlanMarkdown</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A plan represented as raw markdown content.
+A plan represented as Markdown.
 
 **Type:** Object
 
@@ -7657,13 +7653,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="content" type={"string"} required>
-  Markdown content for the plan.
+  The complete plan as Markdown, not just the text that changed.
 </ResponseField>
 <ResponseField name="path" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   The absolute path of the file that holds this plan.
 
-Omitted and `null` are equivalent and mean the plan has no file. `content` is the
-plan to display whether or not `path` is set. Clients can use `path` to open the file.
+Omitted and `null` both mean the plan has no file. A supplied path MUST
+be absolute. `content` is the plan to display whether or not `path` is set.
+Clients can use `path` to open the file.
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
@@ -7671,10 +7668,6 @@ plan to display whether or not `path` is set. Clients can use `path` to open the
 </ResponseField>
 
 ## <span class="font-mono">PlanRemoved</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Removal notice for a plan identified by ID.
 
@@ -7691,7 +7684,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
-  The plan ID to remove.
+  The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
 </ResponseField>
 
 ## <span class="font-mono">PlanUpdate</span>
@@ -7711,7 +7704,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="plan" type={<a href="#planupdatecontent">PlanUpdateContent</a>} required>
-  The updated plan content.
+  Replaces the whole plan with this `planId`, even if its `type` changes.
 </ResponseField>
 
 ## <span class="font-mono">PlanUpdateContent</span>
@@ -7736,8 +7729,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating an item-based plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces that plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the checklist with this `planId` on each update.
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
@@ -7751,11 +7744,7 @@ with their current status. The client replaces that plan with each update.
 </ResponseField>
 
 <ResponseField name="markdown" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Raw markdown content for the plan.
+The complete plan as Markdown.
 
 <Expandable title="Properties">
 
@@ -7768,13 +7757,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="content" type={"string"} required>
-  Markdown content for the plan.
+  The complete plan as Markdown, not just the text that changed.
 </ResponseField>
 <ResponseField name="path" type={<><span><a href="#absolutepath">AbsolutePath</a></span><span> | null</span></>} >
   The absolute path of the file that holds this plan.
 
-Omitted and `null` are equivalent and mean the plan has no file. `content` is the
-plan to display whether or not `path` is set. Clients can use `path` to open the file.
+Omitted and `null` both mean the plan has no file. A supplied path MUST
+be absolute. `content` is the plan to display whether or not `path` is set.
+Clients can use `path` to open the file.
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
@@ -10448,7 +10438,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="plan" type={<a href="#planupdatecontent">PlanUpdateContent</a>} required>
-  The updated plan content.
+  Replaces the whole plan with this `planId`, even if its `type` changes.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"plan_update"`.
@@ -10458,10 +10448,6 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="plan_removed" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Removal notice for a plan identified by ID.
 
 <Expandable title="Properties">
@@ -10475,7 +10461,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
-  The plan ID to remove.
+  The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"plan_removed"`.

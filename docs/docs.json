@@ -240,7 +240,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/plan-operations", "rfds/subagents"]
+            "pages": ["rfds/subagents"]
           },
           {
             "group": "Completed",
@@ -267,7 +267,8 @@
               "rfds/tool-call-name",
               "rfds/session-compaction",
               "rfds/session-notices",
-              "rfds/client-system-prompt"
+              "rfds/client-system-prompt",
+              "rfds/plan-operations"
             ]
           }
         ]
@@ -293,6 +294,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/plan-operations-stabilized",
               "announcements/client-system-prompt-stabilized",
               "announcements/tool-call-name-stabilized",
               "announcements/elicitation-stabilized",

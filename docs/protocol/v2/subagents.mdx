@@ -207,7 +207,7 @@ The Client did not set up the child, so the Agent reports the child's context:
 | The child's own conversation title           | `session_info_update` on the child                                                                                       |
 | Model, reasoning level, and other options    | `config_option_update` on the child. See [Configuration](#configuration)                                                 |
 | Foreground state                             | `state_update` on the child, mirrored in the parent's `subagent_update`. See [Work state](#work-state)                   |
-| Plan, context window usage, and cost         | `plan_update` and `usage_update` on the child. See [Usage and cost](#usage-and-cost)                                     |
+| Plan, context window usage, and cost         | `plan_update`, `plan_removed`, and `usage_update` on the child. See [Usage and cost](#usage-and-cost)                    |
 
 The Client cannot prompt a child, so a child's [slash commands](/protocol/v2/slash-commands) cannot be run. Agents need not send `available_commands_update` for a child, and Clients **MUST NOT** offer a child's commands as input to the child or its parent.
 

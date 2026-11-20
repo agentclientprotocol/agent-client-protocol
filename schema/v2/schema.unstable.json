@@ -6235,7 +6235,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
+          "description": "Removal notice for a plan identified by ID.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -6596,6 +6596,16 @@
                 "properties": {
                   "sessionUpdate": {
                     "type": "string",
+                    "const": "plan_removed"
+                  }
+                },
+                "required": ["sessionUpdate"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "sessionUpdate": {
+                    "type": "string",
                     "const": "available_commands_update"
                   }
                 },
@@ -6617,16 +6627,6 @@
                   "sessionUpdate": {
                     "type": "string",
                     "const": "session_info_update"
-                  }
-                },
-                "required": ["sessionUpdate"]
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "sessionUpdate": {
-                    "type": "string",
-                    "const": "plan_removed"
                   }
                 },
                 "required": ["sessionUpdate"]
@@ -7121,7 +7121,7 @@
           ]
         },
         {
-          "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRaw markdown content for the plan.",
+          "description": "The complete plan as Markdown.",
           "type": "object",
           "properties": {
             "type": {
@@ -7288,7 +7288,7 @@
           ]
         },
         "entries": {
-          "description": "The list of tasks to be accomplished.\n\nWhen updating an item-based plan, the agent MUST send a complete list of all entries\nwith their current status. The client replaces that plan with each update.",
+          "description": "The list of tasks to be accomplished.\n\nThe Agent MUST send all entries with their current status.\nThe Client MUST replace the checklist with this `planId` on each update.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/PlanEntry"
@@ -7305,7 +7305,7 @@
       "required": ["planId", "entries"]
     },
     "PlanMarkdown": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nA plan represented as raw markdown content.",
+      "description": "A plan represented as Markdown.",
       "type": "object",
       "properties": {
         "planId": {
@@ -7317,11 +7317,11 @@
           ]
         },
         "content": {
-          "description": "Markdown content for the plan.",
+          "description": "The complete plan as Markdown, not just the text that changed.",
           "type": "string"
         },
         "path": {
-          "description": "The absolute path of the file that holds this plan.\n\nOmitted and `null` are equivalent and mean the plan has no file. `content` is the\nplan to display whether or not `path` is set. Clients can use `path` to open the file.",
+          "description": "The absolute path of the file that holds this plan.\n\nOmitted and `null` both mean the plan has no file. A supplied path MUST\nbe absolute. `content` is the plan to display whether or not `path` is set.\nClients can use `path` to open the file.",
           "anyOf": [
             {
               "$ref": "#/$defs/AbsolutePath"
@@ -7346,7 +7346,7 @@
       "type": "object",
       "properties": {
         "plan": {
-          "description": "The updated plan content.",
+          "description": "Replaces the whole plan with this `planId`, even if its `type` changes.",
           "allOf": [
             {
               "$ref": "#/$defs/PlanUpdateContent"
@@ -7363,11 +7363,11 @@
       "required": ["plan"]
     },
     "PlanRemoved": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRemoval notice for a plan identified by ID.",
+      "description": "Removal notice for a plan identified by ID.",
       "type": "object",
       "properties": {
         "planId": {
-          "description": "The plan ID to remove.",
+          "description": "The plan ID to remove. Clients MUST ignore a removal for an unknown ID.",
           "allOf": [
             {
               "$ref": "#/$defs/PlanId"

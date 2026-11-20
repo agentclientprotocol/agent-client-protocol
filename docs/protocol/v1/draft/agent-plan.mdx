@@ -3,11 +3,11 @@ title: "Agent Plan"
 description: "How Agents communicate their execution plans"
 ---
 
-A plan is the Agent's list of steps for a multi-step task. Each entry has a description, a priority, and a status.
+A plan describes how the Agent intends to carry out a task. It can be a list of steps or a Markdown document.
 
 Agents **MAY** send plans to Clients through [`session/update`](/protocol/v1/draft/prompt-turn#3-agent-reports-output) notifications and update them as work progresses.
 
-The existing `plan` update is the baseline format. Clients that advertise `plan` during [initialization](/protocol/v1/draft/initialization#client-capabilities) can also receive identified plan operations through `plan_update` and `plan_removed`.
+The `plan` update carries a single checklist. Clients that advertise `plan` during [initialization](/protocol/v1/draft/initialization#plan-operations) can also receive identified plans through `plan_update` and `plan_removed`.
 
 ## Creating plans
 
@@ -50,13 +50,9 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
 
 ## Plan operations
 
-Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client advertised `plan`. If the Client omits `plan`, the Agent **MUST** fall back to the existing `plan` update.
+Agents **MUST NOT** send `plan_update` or `plan_removed` unless the Client advertised `plan`. If the Client omits `plan` or sends `null`, the Agent **MUST** use the `plan` update for structured checklists.
 
-`plan_update` carries a `plan` object with a `type` discriminator. Every plan format includes a required `planId` so Clients can track multiple plans independently.
-
-When the Client advertised `plan`, the Agent **SHOULD** send its plans with `plan_update` instead of the `plan` update.
-
-Each `plan_update` replaces the whole plan with that `planId`, whatever its `type`, including when the type differs from the previous update.
+When the Client advertises `plan`, the Agent **SHOULD** send its plans with `plan_update` instead of `plan`. The `plan` object requires a `type` and a `planId` unique within the session. Each `plan_update` replaces the whole plan with that ID, even if its type changes. It does not affect other plans.
 
 ### Item-based plans
 
@@ -106,7 +102,7 @@ Each `plan_update` replaces the whole plan with that `planId`, whatever its `typ
 ```
 
 <ParamField path="plan.content" type="string" required>
-  The plan as Markdown.
+  The complete plan as Markdown, not just the text that changed.
 </ParamField>
 
 <ParamField path="plan.path" type="string | null">
@@ -114,13 +110,9 @@ Each `plan_update` replaces the whole plan with that `planId`, whatever its `typ
   equivalent and mean the plan has no file.
 </ParamField>
 
-`path` **MUST** be an absolute path.
-
-`content` is the plan to display whether or not `path` is set. Clients render `content` and don't need to read the file. Clients can use `path` to open the file.
+`path` **MUST** be an absolute path. Clients display `content` whether or not they can reach the file. They can use `path` to open it.
 
 ### Removing plans
-
-Agents can remove a plan by sending `plan_removed` with the plan ID:
 
 ```json
 {
@@ -168,9 +160,7 @@ Each plan entry represents a specific task or goal within the overall execution 
 
 As the Agent progresses through the plan, it **SHOULD** report updates by sending more `session/update` notifications with the same structure.
 
-The Agent **MUST** send a complete list of all plan entries in each update and their current status. The Client **MUST** replace the current plan completely.
-
-For `plan_update`, the Agent sends updates with the same `planId`. For item-based plans, the Agent **MUST** send a complete list of all plan entries in each update and their current status, and the Client **MUST** replace the current contents of that plan completely. An empty `entries` array empties the plan. Clients **MAY** hide an empty plan.
+For both `plan` and `items` plans, the Agent **MUST** send the complete list of entries and their current status in each update. The Client **MUST** replace the current checklist completely. For `plan_update`, this applies only to the plan with the given `planId`. An empty `entries` array empties the plan. Clients **MAY** hide an empty `items` plan.
 
 ### Dynamic planning
 

@@ -281,6 +281,29 @@ mod schema_annotation_tests {
     const DEFAULT_ON_NULL_EXTENSION: &str = "x-deserialize-default-on-null";
 
     #[test]
+    fn generated_plan_schema_keeps_version_specific_negotiation() {
+        let schema = root_schema_value();
+        let updates = def_schema(&schema, "SessionUpdate");
+        let content = def_schema(&schema, "PlanUpdateContent");
+        for (union, target) in [
+            (updates, "PlanUpdate"),
+            (updates, "PlanRemoved"),
+            (content, "PlanItems"),
+            (content, "PlanMarkdown"),
+        ] {
+            assert!(schema_contains_ref(union, &format!("#/$defs/{target}")));
+        }
+        let v1 = !cfg!(feature = "unstable_protocol_v2");
+        assert_eq!(schema_contains_ref(updates, "#/$defs/Plan"), v1);
+        let capabilities = def_schema(&schema, "ClientCapabilities");
+        assert_eq!(capabilities["properties"].get("plan").is_some(), v1);
+        assert_eq!(
+            def_schema(&schema, "PlanMarkdown")["required"],
+            serde_json::json!(["planId", "content"])
+        );
+    }
+
+    #[test]
     fn generated_notice_schema_is_available_without_unstable_features() {
         let schema = root_schema_value();
         let notice = def_schema(&schema, "Notice");

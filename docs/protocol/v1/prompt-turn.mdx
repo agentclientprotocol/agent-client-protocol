@@ -19,6 +19,8 @@ Agents send `session/update` notifications to report streamed content, tool acti
 | `tool_call`                 | A new [tool call](/protocol/v1/tool-calls#creating).                                                                                   |
 | `tool_call_update`          | A change to a [tool call's status or results](/protocol/v1/tool-calls#updating).                                                       |
 | `plan`                      | The Agent's [execution plan](/protocol/v1/agent-plan).                                                                                 |
+| `plan_update`               | Replaces an [identified plan](/protocol/v1/agent-plan#plan-operations). Requires the Client's `plan` capability.                       |
+| `plan_removed`              | [Removes an identified plan](/protocol/v1/agent-plan#removing-plans). Requires the Client's `plan` capability.                         |
 | `available_commands_update` | The set of [available slash commands](/protocol/v1/slash-commands) is ready or has changed.                                            |
 | `current_mode_update`       | The current [session mode](/protocol/v1/session-modes#from-the-agent) has changed.                                                     |
 | `config_option_update`      | The session's [configuration options](/protocol/v1/session-config-options#from-the-agent) have changed.                                |

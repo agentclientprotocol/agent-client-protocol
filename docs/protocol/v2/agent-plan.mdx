@@ -3,13 +3,13 @@ title: "Agent Plan"
 description: "How Agents communicate their execution plans"
 ---
 
-A plan is the Agent's list of steps for a multi-step task. Each entry has a description, a priority, and a status.
+A plan describes how the Agent intends to carry out a task. It can be a list of steps or a Markdown document.
 
 Agents **MAY** send plans to Clients through [`session/update`](/protocol/v2/prompt-lifecycle#3-agent-reports-output) notifications and update them as work progresses.
 
 `plan_update` carries a `plan` object with a `type` discriminator and a required `planId` so Clients can track multiple plans independently.
 
-The plan content type is `items`. Additional plan operations remain unstable while the Plan Operations RFD is in progress.
+Agents can send `items` or `markdown` plans and remove them with `plan_removed`. No Client capability is required. Clients **MUST** accept both plan types and `plan_removed`. Accepting a plan does not require displaying it.
 
 ## Creating plans
 
@@ -63,6 +63,60 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
   An array of [plan entries](#plan-entries) representing the tasks to be
   accomplished.
 </ParamField>
+
+### Markdown plans
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_update",
+      "plan": {
+        "type": "markdown",
+        "planId": "implementation-plan",
+        "content": "## Steps\n- [ ] Refactor module\n- [ ] Add tests",
+        "path": "/home/user/project/PLAN.md"
+      }
+    }
+  }
+}
+```
+
+<ParamField path="plan.content" type="string" required>
+  The complete plan as Markdown, not just the text that changed.
+</ParamField>
+
+<ParamField path="plan.path" type="string | null">
+  The absolute path of the file that holds this plan. Omission and `null` are
+  equivalent and mean the plan has no file.
+</ParamField>
+
+`path` **MUST** be an absolute path. A Client that displays the plan uses `content` whether or not it can reach the file. It can use `path` to open the file.
+
+## Removing plans
+
+Agents can remove a plan by sending `plan_removed` with the plan ID:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123def456",
+    "update": {
+      "sessionUpdate": "plan_removed",
+      "planId": "plan-1"
+    }
+  }
+}
+```
+
+Agents **SHOULD** send `plan_removed` when a plan is cancelled, for example when the user rejects it or the Agent abandons it. A finished plan doesn't need to be removed. Clients **MUST** ignore `plan_removed` for a `planId` they don't know.
+
+To clear the plan for older Clients that don't recognize `plan_removed`, Agents can first send an `items` update with the same `planId` and `entries: []`.
 
 ## Extensibility
 

@@ -1,7 +1,6 @@
 //! Execution plans for multi-step tasks.
 //!
-//! A plan is the agent's list of steps for a task. Agents send plans to clients
-//! through session updates and update them as work progresses.
+//! Agents send checklists or Markdown plans to Clients through session updates.
 //!
 //! See: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
 
@@ -14,9 +13,7 @@ use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
-#[cfg(feature = "unstable_plan_operations")]
-use super::AbsolutePath;
-use super::Meta;
+use super::{AbsolutePath, Meta};
 use crate::IntoOption;
 
 /// Unique identifier for a plan within a session.
@@ -43,7 +40,7 @@ impl PlanId {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanUpdate {
-    /// The updated plan content.
+    /// Replaces the whole plan with this `planId`, even if its `type` changes.
     pub plan: PlanUpdateContent,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -84,12 +81,7 @@ impl PlanUpdate {
 pub enum PlanUpdateContent {
     /// Structured plan entries.
     Items(PlanItems),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
-    /// Raw markdown content for the plan.
-    #[cfg(feature = "unstable_plan_operations")]
+    /// The complete plan as Markdown.
     Markdown(PlanMarkdown),
     /// Custom or future plan update content.
     ///
@@ -191,11 +183,7 @@ fn other_plan_update_content_schema(schema: &mut Schema) {
     );
 }
 
-const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &[
-    "items",
-    #[cfg(feature = "unstable_plan_operations")]
-    "markdown",
-];
+const KNOWN_PLAN_UPDATE_CONTENT_TYPES: &[&str] = &["items", "markdown"];
 
 impl PlanUpdateContent {
     /// Builds a plan update that replaces the itemized entries for a plan.
@@ -208,7 +196,6 @@ impl PlanUpdateContent {
     ///
     /// To also name the file that holds the plan, wrap a [`PlanMarkdown`] built with
     /// [`PlanMarkdown::path`] in [`PlanUpdateContent::Markdown`].
-    #[cfg(feature = "unstable_plan_operations")]
     #[must_use]
     pub fn markdown(plan_id: impl Into<PlanId>, content: impl Into<String>) -> Self {
         Self::Markdown(PlanMarkdown::new(plan_id, content))
@@ -227,8 +214,8 @@ pub struct PlanItems {
     pub plan_id: PlanId,
     /// The list of tasks to be accomplished.
     ///
-    /// When updating an item-based plan, the agent MUST send a complete list of all entries
-    /// with their current status. The client replaces that plan with each update.
+    /// The Agent MUST send all entries with their current status.
+    /// The Client MUST replace the checklist with this `planId` on each update.
     #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub entries: Vec<PlanEntry>,
@@ -267,12 +254,7 @@ impl PlanItems {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
-/// A plan represented as raw markdown content.
-#[cfg(feature = "unstable_plan_operations")]
+/// A plan represented as Markdown.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -282,12 +264,13 @@ impl PlanItems {
 pub struct PlanMarkdown {
     /// The plan ID to update.
     pub plan_id: PlanId,
-    /// Markdown content for the plan.
+    /// The complete plan as Markdown, not just the text that changed.
     pub content: String,
     /// The absolute path of the file that holds this plan.
     ///
-    /// Omitted and `null` are equivalent and mean the plan has no file. `content` is the
-    /// plan to display whether or not `path` is set. Clients can use `path` to open the file.
+    /// Omitted and `null` both mean the plan has no file. A supplied path MUST
+    /// be absolute. `content` is the plan to display whether or not `path` is set.
+    /// Clients can use `path` to open the file.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -304,7 +287,6 @@ pub struct PlanMarkdown {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanMarkdown {
     /// Builds [`PlanMarkdown`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -338,12 +320,7 @@ impl PlanMarkdown {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Removal notice for a plan identified by ID.
-#[cfg(feature = "unstable_plan_operations")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -351,7 +328,7 @@ impl PlanMarkdown {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PlanRemoved {
-    /// The plan ID to remove.
+    /// The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
     pub plan_id: PlanId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -365,7 +342,6 @@ pub struct PlanRemoved {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_plan_operations")]
 impl PlanRemoved {
     /// Builds [`PlanRemoved`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -552,27 +528,15 @@ mod tests {
 
     #[test]
     fn plan_update_content_does_not_hide_malformed_known_variant() {
-        assert!(
-            serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
-                "type": "items"
-            }))
-            .is_err()
-        );
-    }
-
-    #[cfg(feature = "unstable_plan_operations")]
-    #[test]
-    fn plan_update_content_does_not_hide_malformed_known_experimental_variant() {
-        assert!(
-            serde_json::from_value::<PlanUpdateContent>(serde_json::json!({
-                "type": "markdown",
+        for tag in ["items", "markdown"] {
+            let wire = serde_json::json!({
+                "type": tag,
                 "planId": "plan-1"
-            }))
-            .is_err()
-        );
+            });
+            assert!(serde_json::from_value::<PlanUpdateContent>(wire).is_err());
+        }
     }
 
-    #[cfg(feature = "unstable_plan_operations")]
     #[test]
     fn markdown_plan_path_round_trips() {
         let wire = serde_json::json!({
@@ -591,7 +555,6 @@ mod tests {
         assert_eq!(serde_json::to_value(content).unwrap(), wire);
     }
 
-    #[cfg(feature = "unstable_plan_operations")]
     #[test]
     fn markdown_plan_path_is_optional_and_lenient() {
         let without_path = PlanUpdateContent::markdown("plan-1", "# Next steps");

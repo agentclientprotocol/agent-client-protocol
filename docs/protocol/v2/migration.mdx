@@ -77,6 +77,7 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 | -                                               | **New:** `terminal_update` for Agent-owned display terminal state and replay                                                                                                                                           |
 | -                                               | **New:** `terminal_output_chunk` for appending display terminal bytes                                                                                                                                                  |
 | `plan`                                          | Replaced by `plan_update` with a `planId` and a `type` discriminator                                                                                                                                                   |
+| `plan_update`, `plan_removed`                   | Kept. Unlike v1, v2 requires no `plan` capability.                                                                                                                                                                     |
 | `current_mode_update`                           | **Removed**. Modes are config options. Use `config_option_update`                                                                                                                                                      |
 | `available_commands_update`                     | Kept. Commands and their `input` now carry a required `type` discriminator                                                                                                                                             |
 | `config_option_update`                          | Kept. Options use `configId` instead of `id` and groups use `groupId` instead of `group`                                                                                                                               |
@@ -252,7 +253,7 @@ Convert a boolean support marker from `true` to `{}` and from `false` to an omit
 | `session.promptSuggestions`           | **Draft only.** `session.promptSuggestions`. Object markers unchanged.                                                                         |
 | `session.cursors`                     | **Draft only.** Marker removed. v2 cursor updates require no Client capability.                                                                |
 | `session`                             | No stable children in v2. Its v1 children have the behavior described above. The draft schema keeps the group for its **Draft only** children. |
-| `plan`                                | Marker removed. `plan_update` is stable in v2 without Client capability negotiation. `plan_removed` remains **Draft only**.                    |
+| `plan`                                | Marker removed. V2 requires no Client capability for `plan_update` or `plan_removed`.                                                          |
 | `subagents`                           | Marker removed. Subagent updates and session-directed messages are part of v2 and require no Client `subagents` marker.                        |
 
 The per-child-session `capabilities.cancel` marker in `subagent_update` is unchanged. It is not an initialize capability.
@@ -732,7 +733,7 @@ One rule also changes. An Agent **MUST** handle a response `action` it does not 
 
 ## Plans
 
-The v1 `plan` update was a flat entries list with no identity and no room to grow. v2 replaces it with `plan_update`, whose payload is a tagged union keyed by a required `planId`:
+V1 supports the legacy `plan` checklist as well as identified plan operations for Clients that advertise `plan`. V2 uses only the identified operations and requires no capability. To report a legacy checklist in v2, send `plan_update` with `type: "items"` and a `planId`:
 
 <CodeGroup>
 
@@ -768,7 +769,7 @@ The v1 `plan` update was a flat entries list with no identity and no room to gro
 
 </CodeGroup>
 
-Stable v2 defines the `items` plan type. The entry shape (`content`, `priority`, `status`, all required) is unchanged from v1. Entry priorities and statuses are now extensible enums, and `status` adds `cancelled`. Each `plan_update` for a given `planId` replaces that plan's entries (send `entries: []` to empty it), and the `planId` allows multiple plans per session and future plan content types (such as markdown or file-backed plans, which remain unstable) without another breaking change.
+The `items` entry fields (`content`, `priority`, `status`) remain required. V2 priorities and statuses are extensible, and `status` adds `cancelled`. For `markdown`, send the complete `content` and optionally an absolute `path`. Each update replaces the whole plan with that `planId`, even if its type changes. An empty `entries` list empties a checklist. To remove a plan, send `plan_removed` with its `planId`. See [Agent Plan](/protocol/v2/agent-plan).
 
 ## Session setup and lifecycle
 
@@ -989,7 +990,7 @@ See [Errors](/protocol/v2/error).
 7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, size, snapshots, and exit state. Send independently base64-encoded `terminal_output_chunk` values for live bytes. The Client's only control is `terminal/cancel`, which you opt into for each terminal with `capabilities.cancel`.
 8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible. If a tool's input describes an edit only as a snippet, read the file somewhere the tool waits on, before it can run, or send no diff until the change is done (see [Edits known only as a snippet](#edits-known-only-as-a-snippet)).
 9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations. Treat a `cancelled` outcome as "don't proceed with this operation", not as the turn ending.
-10. **Plans.** Send `plan_update` with `{ "sessionUpdate": "plan_update", "plan": { "type": "items", "planId": ..., "entries": [...] } }`.
+10. **Plans.** Send `plan_update` with the complete `items` or `markdown` plan, and `plan_removed` to remove it. Neither requires a Client capability.
 11. **Modes and config options.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`. Return the session's `configOptions` in every `session/new` and `session/resume` response. Rename option `id` to `configId` and group `group` to `groupId`, and require the `type` discriminator (`"id"` or `"boolean"`) on `session/set_config_option`. List the values of a `select` `thought_level` option from lowest to highest.
 12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, current-state snapshots such as terminal `output` are fine. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Start each entity that you replay as chunks with an update that empties the chunked field. Send `replay_complete` after the last replayed update, also for an empty history, and hold every other update for the session until after it. Remove `session/load`.
 13. **Client file and terminal methods.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
@@ -1011,7 +1012,7 @@ See [Errors](/protocol/v2/error).
 6. **Terminal output.** Maintain Agent-owned terminal state by `terminalId`. Apply update patch and snapshot-replacement semantics, and use the reported `size` for rendering when present. Independently decode and append chunk bytes. Render them in an isolated terminal emulator or sanitized transcript, with no input. The only process control is `terminal/cancel`, for a terminal that advertises `capabilities.cancel`.
 7. **Diffs.** Render `patch.text` when present. Drive file trees and summaries from `changes`. Handle patch-less diffs (binary, symlink, directory).
 8. **Permissions.** Render `title`/`description`. Apply `tool_call` subjects like ordinary tool-call updates, and render `command` subjects from their command, required absolute cwd, and optional associations. Show a generic prompt for absent or unknown subjects. Answer `cancelled` when the user dismisses the prompt or policy declines it. When the Agent cancels a request with `$/cancel_request`, dismiss the prompt and answer `cancelled`.
-9. **Plans.** Handle `plan_update` keyed by `planId`. Each update replaces that plan's entries.
+9. **Plans.** Track plans by `planId`. Replace the whole plan on `plan_update` and remove only the named plan on `plan_removed`.
 10. **Notices and compaction.** Handle `notice`, `compaction_update`, and `compaction_summary_chunk`, or ignore them. v2 sends them without a Client capability.
 11. **Modes and config options.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`. Read `configId` and `groupId`, render `boolean` options, and send `session/set_config_option` with a `type` of `"id"` or `"boolean"`.
 12. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and use `session/resume` without `replayFrom` to reattach when you still hold the session's entities and missed no updates. Request replay when you want them resynchronized, for example after a lost connection. Use `replay_complete` to find the end of the replayed history, and treat a replay that ends without it and without a successful response as truncated.

@@ -3652,14 +3652,10 @@ Determines which file operations the agent can request.
 
 </ResponseField>
 <ResponseField name="plan" type={<><span><a href="#plancapabilities">PlanCapabilities</a></span><span> | null</span></>} >
-  **UNSTABLE**
+  Whether the Client supports `plan_update` and `plan_removed` session updates.
 
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Whether the client supports `plan_update` and `plan_removed` session updates.
-
-Optional. Omitted or `null` both mean the client does not advertise support.
-Supplying `\{\}` means the client can receive both update types.
+Optional. Omitted or `null` both mean the Client does not advertise support.
+Supplying `\{\}` means the Client can receive both update types.
 
 </ResponseField>
 <ResponseField name="session" type={<><span><a href="#clientsessioncapabilities">ClientSessionCapabilities</a></span><span> | null</span></>} >
@@ -6601,11 +6597,7 @@ Helps clients choose appropriate icons and UI treatment.
 
 ## <span class="font-mono">Plan</span>
 
-An execution plan for accomplishing complex tasks.
-
-Plans consist of multiple entries representing individual tasks or goals.
-Agents report plans to clients to provide visibility into their execution strategy.
-Plans can evolve during execution as the agent discovers new requirements or completes tasks.
+A checklist sent with the `plan` session update.
 
 See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v1/draft/agent-plan)
 
@@ -6624,16 +6616,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating a plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces the entire plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the entire checklist with each update.
 
 </ResponseField>
 
 ## <span class="font-mono">PlanCapabilities</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Capabilities for receiving `plan_update` and `plan_removed` session updates.
 
@@ -6726,19 +6714,11 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v1/dr
 
 ## <span class="font-mono">PlanId</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
 Unique identifier for a plan within a session.
 
 **Type:** `string`
 
 ## <span class="font-mono">PlanItems</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 A plan represented as structured entries.
 
@@ -6757,8 +6737,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating an item-based plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces that plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the checklist with this `planId` on each update.
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
@@ -6767,11 +6747,7 @@ with their current status. The client replaces that plan with each update.
 
 ## <span class="font-mono">PlanMarkdown</span>
 
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A plan represented as raw markdown content.
+A plan represented as Markdown.
 
 **Type:** Object
 
@@ -6786,13 +6762,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="content" type={"string"} required>
-  Markdown content for the plan.
+  The complete plan as Markdown, not just the text that changed.
 </ResponseField>
 <ResponseField name="path" type={"string | null"} >
   The absolute path of the file that holds this plan.
 
-This field is optional. Omitting it or sending `null` both mean that the plan
-has no file. `content` is the plan to display whether or not `path` is set.
+Omitted and `null` both mean the plan has no file. A supplied path MUST
+be absolute. `content` is the plan to display whether or not `path` is set.
 Clients can use `path` to open the file.
 
 </ResponseField>
@@ -6801,10 +6777,6 @@ Clients can use `path` to open the file.
 </ResponseField>
 
 ## <span class="font-mono">PlanRemoved</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Removal notice for a plan identified by ID.
 
@@ -6821,14 +6793,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
-  The plan ID to remove.
+  The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
 </ResponseField>
 
 ## <span class="font-mono">PlanUpdate</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 A content update for a plan identified by ID.
 
@@ -6845,14 +6813,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="plan" type={<a href="#planupdatecontent">PlanUpdateContent</a>} required>
-  The updated plan content.
+  Replaces the whole plan with this `planId`, even if its `type` changes.
 </ResponseField>
 
 ## <span class="font-mono">PlanUpdateContent</span>
-
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
 
 Updated content for a plan.
 
@@ -6874,8 +6838,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating an item-based plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces that plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the checklist with this `planId` on each update.
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
@@ -6889,7 +6853,7 @@ with their current status. The client replaces that plan with each update.
 </ResponseField>
 
 <ResponseField name="markdown" type="object">
-Raw markdown content for the plan.
+The complete plan as Markdown.
 
 <Expandable title="Properties">
 
@@ -6902,13 +6866,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="content" type={"string"} required>
-  Markdown content for the plan.
+  The complete plan as Markdown, not just the text that changed.
 </ResponseField>
 <ResponseField name="path" type={"string | null"} >
   The absolute path of the file that holds this plan.
 
-This field is optional. Omitting it or sending `null` both mean that the plan
-has no file. `content` is the plan to display whether or not `path` is set.
+Omitted and `null` both mean the plan has no file. A supplied path MUST
+be absolute. `content` is the plan to display whether or not `path` is set.
 Clients can use `path` to open the file.
 
 </ResponseField>
@@ -8708,8 +8672,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 <ResponseField name="entries" type={<a href="#planentry">PlanEntry[]</a>} required>
   The list of tasks to be accomplished.
 
-When updating a plan, the agent MUST send a complete list of all entries
-with their current status. The client replaces the entire plan with each update.
+The Agent MUST send all entries with their current status.
+The Client MUST replace the entire checklist with each update.
 
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
@@ -8720,11 +8684,8 @@ with their current status. The client replaces the entire plan with each update.
 </ResponseField>
 
 <ResponseField name="plan_update" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-A content update for a plan identified by ID.
+Replaces the plan with this ID. Agents MUST NOT send this update unless
+the Client advertised `plan`.
 
 <Expandable title="Properties">
 
@@ -8737,7 +8698,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="plan" type={<a href="#planupdatecontent">PlanUpdateContent</a>} required>
-  The updated plan content.
+  Replaces the whole plan with this `planId`, even if its `type` changes.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"plan_update"`.
@@ -8747,11 +8708,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 </ResponseField>
 
 <ResponseField name="plan_removed" type="object">
-**UNSTABLE**
-
-This capability is not part of the spec yet, and may be removed or changed at any point.
-
-Removal notice for a plan identified by ID.
+Removes the plan with this ID. Agents MUST NOT send this update unless
+the Client advertised `plan`.
 
 <Expandable title="Properties">
 
@@ -8764,7 +8722,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/d
 
 </ResponseField>
 <ResponseField name="planId" type={<a href="#planid">PlanId</a>} required>
-  The plan ID to remove.
+  The plan ID to remove. Clients MUST ignore a removal for an unknown ID.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"plan_removed"`.
