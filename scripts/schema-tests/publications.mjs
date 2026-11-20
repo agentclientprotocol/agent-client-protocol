@@ -13,6 +13,8 @@ export function createAjv(version) {
     "x-docs-ignore",
     "x-method",
     "x-side",
+    "x-state",
+    "x-scope",
     "x-deserialize-default-on-error",
     "x-deserialize-default-on-null",
     "x-deserialize-skip-invalid-items",
