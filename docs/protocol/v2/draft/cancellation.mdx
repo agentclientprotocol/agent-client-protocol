@@ -61,7 +61,7 @@ for selective cancellation of related requests and external URL interactions.
 Requests can also be cancelled internally by the executing party without receiving `$/cancel_request`:
 
 - On the Client, the user closes the IDE or switches projects, or a file becomes unavailable.
-- On the Agent, the LLM context limit is reached, an internal timeout fires, or resources run out.
+- On the Agent, an internal timeout fires or resources run out.
 
 When internal cancellation occurs, the executing party **SHOULD**:
 

@@ -301,7 +301,8 @@ Request parameters for closing an active session.
 The Agent MUST cancel any ongoing work related to the session as if `session/cancel`
 was called, then free the resources associated with the session. Unlike `session/cancel`,
 closing also stops the session's background work. After the close response, the Agent
-sends no other messages for the session on that connection.
+sends no notifications or requests for the session on that connection. It still
+answers `session/prompt` requests that were pending.
 
 Closing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD
 treat a `-32002` response as a successful close.

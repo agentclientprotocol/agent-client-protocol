@@ -10065,7 +10065,7 @@
       "x-method": "session/archive"
     },
     "UnarchiveSessionRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for unarchiving a session.\n\nOnly available if the Agent supports the `session.archive` capability.\n\nUnarchiving returns the session to default `session/list` results with the same ID and\nsaved history. It never loads or resumes the session. Clients that want to continue an\narchived session SHOULD unarchive it before calling `session/resume`.\nUnarchiving a session that is not archived succeeds. A session that does not exist\ngets `-32002`.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for unarchiving a session.\n\nOnly available if the Agent supports the `session.archive` capability.\n\nUnarchiving returns the session to default `session/list` results with the same ID and\nsaved history. It never resumes the session. Clients that want to continue an\narchived session SHOULD unarchive it before calling `session/resume`.\nUnarchiving a session that is not archived succeeds. A session that does not exist\ngets `-32002`.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -10088,7 +10088,7 @@
       "x-method": "session/unarchive"
     },
     "SessionStatusRequest": {
-      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for checking the status of a session.\n\nOnly available if the Agent supports the `session.status` capability.\n\n`session/status` MUST NOT have side effects. The Agent does not load, resume, create,\nclose, or change the session, and does not attach the requesting connection to it.\nA session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.",
+      "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nRequest parameters for checking the status of a session.\n\nOnly available if the Agent supports the `session.status` capability.\n\n`session/status` MUST NOT have side effects. The Agent does not resume, create,\nclose, or change the session, and does not attach the requesting connection to it.\nA session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -10317,7 +10317,7 @@
       }
     },
     "CloseSessionRequest": {
-      "description": "Request parameters for closing an active session.\n\nThe Agent MUST cancel any ongoing work related to the session as if `session/cancel`\nwas called, then free the resources associated with the session. Unlike `session/cancel`,\nclosing also stops the session's background work. After the close response, the Agent\nsends no other messages for the session on that connection.\n\nClosing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD\ntreat a `-32002` response as a successful close.\n\nWhen closing cancels active foreground work, the Agent MUST send the final\nupdates for that work and the idle `state_update` with `stopReason: \"cancelled\"`\nbefore responding successfully to `session/close`. Closing an idle session\ndoes not itself require another idle update.\n\nClosing also cancels pending `session/prompt` requests whose messages have not\nbeen inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the\nAgent MUST answer that request with `-32800` (Request Cancelled). If the message\nhas already been inserted, the Agent MUST respond successfully with its\n`messageId`. Prompt responses need not precede the close response.",
+      "description": "Request parameters for closing an active session.\n\nThe Agent MUST cancel any ongoing work related to the session as if `session/cancel`\nwas called, then free the resources associated with the session. Unlike `session/cancel`,\nclosing also stops the session's background work. After the close response, the Agent\nsends no notifications or requests for the session on that connection. It still\nanswers `session/prompt` requests that were pending.\n\nClosing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD\ntreat a `-32002` response as a successful close.\n\nWhen closing cancels active foreground work, the Agent MUST send the final\nupdates for that work and the idle `state_update` with `stopReason: \"cancelled\"`\nbefore responding successfully to `session/close`. Closing an idle session\ndoes not itself require another idle update.\n\nClosing also cancels pending `session/prompt` requests whose messages have not\nbeen inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the\nAgent MUST answer that request with `-32800` (Request Cancelled). If the message\nhas already been inserted, the Agent MUST respond successfully with its\n`messageId`. Prompt responses need not precede the close response.",
       "type": "object",
       "properties": {
         "sessionId": {
