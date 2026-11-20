@@ -2090,15 +2090,21 @@ pub struct UsageUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub cost: MaybeUndefined<Cost>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-    /// Implementations MUST NOT assign meaning to keys they do not recognize.
+    /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
+    /// clears it. An object patches the stored metadata by top-level key: keys it omits are
+    /// unchanged, a key set to `null` is removed, and any other value replaces that key's
+    /// stored value without merging nested objects. Beyond this patch rule, implementations
+    /// MUST NOT assign meaning to keys they do not recognize.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
-    #[serde_as(deserialize_as = "DefaultOnError")]
+    /// See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
+    #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default)]
-    #[serde(rename = "_meta")]
-    pub meta: Option<Meta>,
+    #[serde(
+        rename = "_meta",
+        default,
+        skip_serializing_if = "MaybeUndefined::is_undefined"
+    )]
+    pub meta: MaybeUndefined<Meta>,
 }
 
 impl UsageUpdate {
@@ -2109,7 +2115,7 @@ impl UsageUpdate {
             used,
             size,
             cost: MaybeUndefined::Undefined,
-            meta: None,
+            meta: MaybeUndefined::Undefined,
         }
     }
 
@@ -2120,14 +2126,13 @@ impl UsageUpdate {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
-    /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
-    /// do not recognize.
+    /// Patches, clears, or leaves unchanged usage metadata.
     ///
-    /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+    /// A concrete object patches stored metadata by top-level key. See
+    /// [`apply_meta_update`](super::apply_meta_update).
     #[must_use]
-    pub fn meta(mut self, meta: impl IntoOption<Meta>) -> Self {
-        self.meta = meta.into_option();
+    pub fn meta(mut self, meta: impl IntoMaybeUndefined<Meta>) -> Self {
+        self.meta = meta.into_maybe_undefined();
         self
     }
 }
@@ -7011,6 +7016,39 @@ mod tests {
         };
 
         assert_eq!(update.cost, MaybeUndefined::Undefined);
+    }
+
+    #[test]
+    fn usage_update_meta_is_a_patch() {
+        use serde_json::json;
+
+        let wire = |meta: Option<serde_json::Value>| {
+            let mut wire = json!({"sessionUpdate": "usage_update", "used": 1, "size": 2});
+            if let Some(meta) = meta {
+                wire["_meta"] = meta;
+            }
+            wire
+        };
+        let patch = json!({"com.example/a": 1, "com.example/b": null});
+        for (meta, expected) in [
+            (None, MaybeUndefined::Undefined),
+            (Some(json!(null)), MaybeUndefined::Null),
+            (
+                Some(patch.clone()),
+                MaybeUndefined::Value(patch.as_object().unwrap().clone()),
+            ),
+        ] {
+            let SessionUpdate::UsageUpdate(update) =
+                serde_json::from_value(wire(meta.clone())).unwrap()
+            else {
+                panic!("expected usage update");
+            };
+            assert_eq!(update.meta, expected);
+            assert_eq!(
+                serde_json::to_value(SessionUpdate::UsageUpdate(update)).unwrap(),
+                wire(meta)
+            );
+        }
     }
 
     #[test]
