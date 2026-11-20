@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.34.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.33.0...schema-v1.34.0) - 2026-11-20
+
+### Added
+
+- *(schema)* stabilize subagent sessions ([#2939](https://github.com/agentclientprotocol/agent-client-protocol/pull/2939))
+- *(schema)* stabilize plan operations ([#2898](https://github.com/agentclientprotocol/agent-client-protocol/pull/2898))
+
+### Other
+
+- *(schema)* remove the remaining text on malformed-value handling ([#2946](https://github.com/agentclientprotocol/agent-client-protocol/pull/2946))
+- write requirement keywords in capitals where a rule is meant ([#2901](https://github.com/agentclientprotocol/agent-client-protocol/pull/2901))
+- *(unstable)* describe parent work after the prompt response for subagents ([#2896](https://github.com/agentclientprotocol/agent-client-protocol/pull/2896))
+- *(unstable)* remove malformed-value handling from the spec text ([#2891](https://github.com/agentclientprotocol/agent-client-protocol/pull/2891))
+
 ## [1.33.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.32.0...schema-v1.33.0) - 2026-11-18
 
 ### Added

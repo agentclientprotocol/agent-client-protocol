@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-beta.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.17...schema-v2.0.0-beta.1) - 2026-11-20
+
+### Added
+
+- *(unstable-v2)* validate wire envelopes by method and direction ([#2932](https://github.com/agentclientprotocol/agent-client-protocol/pull/2932))
+- *(schema)* stabilize plan operations ([#2898](https://github.com/agentclientprotocol/agent-client-protocol/pull/2898))
+- *(unstable-v2)* make status a patch field on compaction_update ([#2922](https://github.com/agentclientprotocol/agent-client-protocol/pull/2922))
+
+### Fixed
+
+- *(unstable-v2)* enforce elicitation scope and item discriminators ([#2931](https://github.com/agentclientprotocol/agent-client-protocol/pull/2931))
+- *(unstable-v2)* make usage_update _meta a metadata patch ([#2933](https://github.com/agentclientprotocol/agent-client-protocol/pull/2933))
+- *(unstable-v2)* enforce two schema limits in the Rust types ([#2921](https://github.com/agentclientprotocol/agent-client-protocol/pull/2921))
+- *(unstable-v2)* require at least one block in systemPrompt content in the schema ([#2912](https://github.com/agentclientprotocol/agent-client-protocol/pull/2912))
+
+### Other
+
+- move ACP v2 to Preview ([#2961](https://github.com/agentclientprotocol/agent-client-protocol/pull/2961))
+- *(unstable-v2)* capitalize Agent and Client in the schema descriptions ([#2960](https://github.com/agentclientprotocol/agent-client-protocol/pull/2960))
+- *(unstable-v2)* sweep the pages and descriptions for consistency ([#2959](https://github.com/agentclientprotocol/agent-client-protocol/pull/2959))
+- *(unstable-v2)* fix nine small gaps and stale sentences ([#2958](https://github.com/agentclientprotocol/agent-client-protocol/pull/2958))
+- *(unstable-v2)* use the pages' requirement keywords in descriptions and restatements ([#2957](https://github.com/agentclientprotocol/agent-client-protocol/pull/2957))
+- *(unstable-v2)* scope the config option rules for child sessions and setup responses ([#2951](https://github.com/agentclientprotocol/agent-client-protocol/pull/2951))
+- *(unstable-v2)* require cancelling an abandoned elicitation in the schema description ([#2950](https://github.com/agentclientprotocol/agent-client-protocol/pull/2950))
+- *(unstable-v2)* word Icon.src as MCP does ([#2948](https://github.com/agentclientprotocol/agent-client-protocol/pull/2948))
+- *(schema)* remove the remaining text on malformed-value handling ([#2946](https://github.com/agentclientprotocol/agent-client-protocol/pull/2946))
+- *(unstable-v2)* require the unknown state for any session ([#2945](https://github.com/agentclientprotocol/agent-client-protocol/pull/2945))
+- *(unstable-v2)* let cancelled cover a child its parent cancels ([#2943](https://github.com/agentclientprotocol/agent-client-protocol/pull/2943))
+- *(unstable-v2)* add x-state and x-scope hints to the schema ([#2937](https://github.com/agentclientprotocol/agent-client-protocol/pull/2937))
+- *(unstable-v2)* make explicit permission rejection binding ([#2930](https://github.com/agentclientprotocol/agent-client-protocol/pull/2930))
+- *(unstable-v2)* scope cancellation to the foreground work it stops ([#2929](https://github.com/agentclientprotocol/agent-client-protocol/pull/2929))
+- *(unstable-v2)* clarify what replay_complete guarantees ([#2927](https://github.com/agentclientprotocol/agent-client-protocol/pull/2927))
+- *(unstable-v2)* clarify prompt retries after reconnect ([#2926](https://github.com/agentclientprotocol/agent-client-protocol/pull/2926))
+- *(unstable-v2)* fix the link of the first v2 changelog entry ([#2917](https://github.com/agentclientprotocol/agent-client-protocol/pull/2917))
+- *(unstable-v2)* name error -32000 by its code instead of auth_required ([#2915](https://github.com/agentclientprotocol/agent-client-protocol/pull/2915))
+- *(unstable-v2)* remove a Rust path from the ErrorData schema description ([#2916](https://github.com/agentclientprotocol/agent-client-protocol/pull/2916))
+- *(unstable-v2)* stop the stable text referring to usage on state snapshots ([#2909](https://github.com/agentclientprotocol/agent-client-protocol/pull/2909))
+- *(unstable-v2)* capitalize MAY in the protocol-level notification text ([#2904](https://github.com/agentclientprotocol/agent-client-protocol/pull/2904))
+- stop naming the protocol version in spec page prose ([#2903](https://github.com/agentclientprotocol/agent-client-protocol/pull/2903))
+- *(unstable-v2)* say protocol-level notifications are optional to act on ([#2893](https://github.com/agentclientprotocol/agent-client-protocol/pull/2893))
+- write requirement keywords in capitals where a rule is meant ([#2901](https://github.com/agentclientprotocol/agent-client-protocol/pull/2901))
+- *(unstable-v2)* qualify when a replay without replay_complete is truncated ([#2892](https://github.com/agentclientprotocol/agent-client-protocol/pull/2892))
+- *(unstable)* remove malformed-value handling from the spec text ([#2891](https://github.com/agentclientprotocol/agent-client-protocol/pull/2891))
+- *(unstable-v2)* align the name uniqueness rules for mcpServers and env ([#2890](https://github.com/agentclientprotocol/agent-client-protocol/pull/2890))
+- *(unstable-v2)* require unique configId and groupId values ([#2889](https://github.com/agentclientprotocol/agent-client-protocol/pull/2889))
+- *(unstable-v2)* say which display strings are plain text and which are Markdown ([#2887](https://github.com/agentclientprotocol/agent-client-protocol/pull/2887))
+- *(unstable-v2)* say a failed permission request is not approval ([#2883](https://github.com/agentclientprotocol/agent-client-protocol/pull/2883))
+- *(unstable-v2)* say which order session/list returns and that cwd stays the same ([#2882](https://github.com/agentclientprotocol/agent-client-protocol/pull/2882))
+- *(unstable-v2)* require an absolute command for stdio MCP servers ([#2878](https://github.com/agentclientprotocol/agent-client-protocol/pull/2878))
+- *(unstable-v2)* send a new session's non-idle state after the response ([#2871](https://github.com/agentclientprotocol/agent-client-protocol/pull/2871))
+
 ## [2.0.0-alpha.17](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-alpha.16...schema-v2.0.0-alpha.17) - 2026-11-18
 
 ### Added
