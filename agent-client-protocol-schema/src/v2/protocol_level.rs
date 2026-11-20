@@ -6,7 +6,7 @@ use crate::IntoOption;
 
 /// Notification to cancel an ongoing request.
 ///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
+/// See protocol docs: [Request Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -102,7 +102,7 @@ pub enum ProtocolLevelNotification {
     /// Receivers MUST ignore this notification for an unknown or already-answered request ID,
     /// and MUST NOT send a second response for it.
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
+    /// See protocol docs: [Request Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)
     CancelRequestNotification(CancelRequestNotification),
 }
 
