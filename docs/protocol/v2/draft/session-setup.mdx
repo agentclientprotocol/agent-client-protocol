@@ -45,7 +45,7 @@ sequenceDiagram
 
 ## Session lifecycle
 
-A session exists from `session/new` until the Agent discards it. Agents choose how long to keep sessions: for example, they may not store a session that was never prompted, may expire old sessions, or may remove one through [`session/delete`](/protocol/v2/draft/session-delete). `session/list` and `session/resume` only see sessions the Agent still has, and resuming one it no longer has fails with `-32002`.
+A session exists from `session/new` until the Agent discards it. Agents choose how long to keep sessions: for example, they can skip storing a session that was never prompted, expire old sessions, or remove one through [`session/delete`](/protocol/v2/draft/session-delete). `session/list` and `session/resume` only see sessions the Agent still has, and resuming one it no longer has fails with `-32002`.
 
 On a connection, a session is **active** from a successful `session/new`, `session/resume`, or, when supported, `session/fork` (for the new session) until `session/close` or the end of the connection. A forked session starts with no background work: unfinished tool calls and running terminals copied into its history are not live, and its state snapshots report `background: []` until it starts its own. Agents **SHOULD NOT** discard a session while it is active, except through `session/delete`, which closes it first.
 

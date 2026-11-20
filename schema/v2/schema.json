@@ -1628,7 +1628,7 @@
       "required": ["terminalId"]
     },
     "SessionReference": {
-      "description": "A display-only reference to another session that this tool call operates on,\nsuch as a subagent it created, delegated to, or is waiting on.\n\nThe referenced session must already be known to the Client through ordinary\nsession setup or a `subagent_update` announcement. The reference does not\nestablish ownership, grant any Client-initiated controls, or report that the\nreferenced session received or finished any work.",
+      "description": "A display-only reference to another session that this tool call operates on,\nsuch as a subagent it created, delegated to, or is waiting on.\n\nThe referenced session MUST already be known to the Client through ordinary\nsession setup or a `subagent_update` announcement. The reference does not\nestablish ownership, grant any Client-initiated controls, or report that the\nreferenced session received or finished any work.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -3213,7 +3213,7 @@
       }
     },
     "SessionAdditionalDirectoriesCapabilities": {
-      "description": "Capabilities for additional session directories support.\n\nSupplying `{}` means the agent supports the `additionalDirectories` field on\nsupported session lifecycle requests. Agents may return\n`SessionInfo.additionalDirectories` in `session/list` to report the\ncomplete ordered additional-root list associated with a listed session.",
+      "description": "Capabilities for additional session directories support.\n\nSupplying `{}` means the agent supports the `additionalDirectories` field on\nsupported session lifecycle requests. Agents MAY return\n`SessionInfo.additionalDirectories` in `session/list` to report the\ncomplete ordered additional-root list associated with a listed session.",
       "type": "object",
       "properties": {
         "_meta": {
@@ -4964,7 +4964,7 @@
           ]
         },
         {
-          "description": "Information for the user that is not part of session history.\n\nNo Client capability is required. Clients that do not understand or\npresent notices may ignore them.",
+          "description": "Information for the user that is not part of session history.\n\nNo Client capability is required. Clients that do not understand or\npresent notices MAY ignore them.",
           "type": "object",
           "properties": {
             "sessionUpdate": {
@@ -5505,7 +5505,7 @@
       "required": ["messageId"]
     },
     "BackgroundWork": {
-      "description": "One piece of work running independently of the session's foreground work.\n\nItems reference entities the Client already tracks. The Agent MUST announce each item\nbefore the first snapshot that lists it, and MUST report a terminal's `exitStatus` or a\ntool call's final status before the snapshot that removes it. Each piece of work is\nlisted once: process-backed work is listed as its terminal, not also as its tool call.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
+      "description": "One piece of work running independently of the session's foreground work.\n\nItems reference entities the Client already tracks. The Agent MUST announce each item\nbefore the first snapshot that lists it, and MUST report a terminal's `exitStatus` or a\ntool call's final status before the snapshot that removes it. Each piece of work is\nlisted once: process-backed work is listed as its terminal, and the Agent MUST NOT\nalso list a tool call whose only live work is a listed terminal.\n\nSee protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)",
       "anyOf": [
         {
           "description": "A process that keeps running after its tool call returned control to the model.\nLive until its `terminal_update` reports `exitStatus`.",
@@ -5911,7 +5911,7 @@
       }
     },
     "UnknownStateUpdate": {
-      "description": "The Agent cannot currently determine foreground activity.\n\nThe Agent MUST report this when it can no longer observe the session's\nforeground work. Silence alone is not lost observability. The Client MUST\nstop presenting the previous state as confirmed current activity, but may\nretain it as last known. A later state replaces this snapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities. If a control is no longer available,\nthe Agent updates the capabilities explicitly. Unfinished tool calls and\nterminals stay as last reported. The Agent does not invent a final status\nfor them, and Clients do not present them as confirmed live activity.",
+      "description": "The Agent cannot currently determine foreground activity.\n\nThe Agent MUST report this when it can no longer observe the session's\nforeground work. Silence alone is not lost observability. The Client MUST\nstop presenting the previous state as confirmed current activity, but MAY\nretain it as last known. A later state replaces this snapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities. If a control is no longer available,\nthe Agent updates the capabilities explicitly. Unfinished tool calls and\nterminals stay as last reported. The Agent MUST NOT invent a final status\nfor them, and Clients MUST NOT present them as confirmed live activity.",
       "type": "object",
       "properties": {
         "background": {
@@ -6733,7 +6733,7 @@
       ]
     },
     "Notice": {
-      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents must not rely on\na notice being received, displayed, or seen by the user.\nNo Client capability is required, and unsupported Clients may ignore notices.\n\nSee protocol docs: [Session Notices](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#session-notices)",
+      "description": "Fire-and-forget information for the user.\n\nNotices are live events rather than session history. Agents MUST NOT rely on\na notice being received, displayed, or seen by the user.\nNo Client capability is required, and Clients MAY ignore notices.\n\nSee protocol docs: [Session Notices](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#session-notices)",
       "type": "object",
       "properties": {
         "severity": {
@@ -6874,7 +6874,7 @@
       "required": ["compactionId", "content"]
     },
     "ReplayComplete": {
-      "description": "Marks the end of the history replay requested by `session/resume`.\n\nThe Agent sends this once on a session for each `session/resume` request\nwith a `replayFrom` cursor, after the last replayed update for that session\nand before the response, even for an empty replay. After receiving the\nrequest, the Agent MUST hold live updates for the session during replay.\nIf the session is already active on the connection, a live update the Agent\nsent earlier can still arrive after the Client sends the request. The marker\nsignals the end of the requested replay, not its start. A full replay covers\nall the history the Agent retained for that session.\n\nThe Agent does not send it when `replayFrom` is omitted or `null`, or when\nit cannot finish the replay. A replay that ends without it and without a\nsuccessful response is truncated.\n\nSee protocol docs: [Replay Complete](https://agentclientprotocol.com/protocol/v2/session-setup#replay-complete)",
+      "description": "Marks the end of the history replay requested by `session/resume`.\n\nThe Agent MUST send this exactly once on a session for each `session/resume` request\nwith a `replayFrom` cursor, after the last replayed update for that session\nand before the response, even for an empty replay. After receiving the\nrequest, the Agent MUST hold live updates for the session during replay.\nIf the session is already active on the connection, a live update the Agent\nsent earlier can still arrive after the Client sends the request. The marker\nsignals the end of the requested replay, not its start. A full replay covers\nall the history the Agent retained for that session.\n\nThe Agent MUST NOT send it when `replayFrom` is omitted or `null`, or when\nit cannot finish the replay. A replay that ends without it and without a\nsuccessful response is truncated.\n\nSee protocol docs: [Replay Complete](https://agentclientprotocol.com/protocol/v2/session-setup#replay-complete)",
       "type": "object",
       "properties": {
         "_meta": {
@@ -6922,7 +6922,7 @@
       }
     },
     "SubagentUpdate": {
-      "description": "Notification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live request or notification bearing the child's session ID,\nincluding messages naming it as sender or recipient. Child events are\ndelivered automatically. No separate child load, resume, or subscription is needed.\nUnderstanding this update, registering child sessions, and applying their\noperation restrictions are baseline requirements. No Client capability\nis required.\n\nOnly `sessionId` is required. Other fields have\npatch semantics: omitted fields leave the stored value unchanged, `null`\nclears or unsets the value, and concrete values replace it. A concrete\n`_meta` object instead patches the stored metadata by top-level key. For\n`state`, `null` removes the current state report and leaves activity\nunconfirmed. It does not report idle or cancellation. A child whose capabilities are\nunset permits no Client-initiated session mutations.\n\n`cwd` and `additionalDirectories` report where the Agent placed the child.\nWhile unset, each inherits the immediate parent's effective value.\nThe title and description provide the parent's display metadata for the\nchild. Agents SHOULD mirror known child state changes in the parent's\n`state` using the same `StateUpdate` snapshot as the\nordinary `state_update` notification on the child session. This reports\nchild state, not a separate parent-owned lifecycle. Consumers should\ntreat duplicate reports idempotently.\nCompleting or cancelling work does not end the association: the parent may\nmessage the same child again. Individual messages and their outcomes do not\nchange this association.\n\nSee protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v2/subagents)",
+      "description": "Notification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live request or notification bearing the child's session ID,\nincluding messages naming it as sender or recipient. Child events are\ndelivered automatically. No separate child load, resume, or subscription is needed.\nUnderstanding this update, registering child sessions, and applying their\noperation restrictions are baseline requirements. No Client capability\nis required.\n\nOnly `sessionId` is required. Other fields have\npatch semantics: omitted fields leave the stored value unchanged, `null`\nclears or unsets the value, and concrete values replace it. A concrete\n`_meta` object instead patches the stored metadata by top-level key. For\n`state`, `null` removes the current state report and leaves activity\nunconfirmed. It does not report idle or cancellation. A child whose capabilities are\nunset permits no Client-initiated session mutations.\n\n`cwd` and `additionalDirectories` report where the Agent placed the child.\nWhile unset, each inherits the immediate parent's effective value.\nThe title and description provide the parent's display metadata for the\nchild. Agents SHOULD mirror known child state changes in the parent's\n`state` using the same `StateUpdate` snapshot as the\nordinary `state_update` notification on the child session. This reports\nchild state, not a separate parent-owned lifecycle. Clients MUST\napply duplicate reports idempotently.\nCompleting or cancelling work does not end the association: the parent may\nmessage the same child again. Individual messages and their outcomes do not\nchange this association.\n\nSee protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v2/subagents)",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -7253,7 +7253,7 @@
                 },
                 {
                   "title": "PromptRequest",
-                  "description": "Processes a user prompt within a session.\n\nAcceptance means adding a logical user message with an ID and a position\nrelative to other messages in the ACP conversation, not receipt or queueing.\nThe Agent MUST return the inserted message's ID without waiting for\nprocessing to finish.\n\nThe Agent reports the user message with the same ID through `session/update`.\nThis notification may arrive before or after the response, but neither may\nprecede insertion. Processing state, output, tool calls, and completion are\nalso reported through session updates.\n\nAn error response means the user message was not inserted. Once it is\ninserted, the Agent MUST NOT answer with an error, even if the work fails\nbefore the response is sent. It ends that work with the `error` stop reason.\n\nA rejected submission produces no user-message updates. Foreground state\nfollows its normal lifecycle independently of the request outcome:\n`running` may precede insertion, and rejection alone does not imply `idle`.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)",
+                  "description": "Processes a user prompt within a session.\n\nAcceptance means adding a logical user message with an ID and a position\nrelative to other messages in the ACP conversation, not receipt or queueing.\nThe Agent MUST return the inserted message's ID without waiting for\nprocessing to finish.\n\nThe Agent reports the user message with the same ID through `session/update`.\nThis notification can arrive before or after the response, and MUST NOT\nprecede insertion. Processing state, output, tool calls, and completion are\nalso reported through session updates.\n\nAn error response means the user message was not inserted. Once it is\ninserted, the Agent MUST NOT answer with an error, even if the work fails\nbefore the response is sent. It ends that work with the `error` stop reason.\n\nA rejected submission produces no user-message updates. Foreground state\nfollows its normal lifecycle independently of the request outcome:\n`running` may precede insertion, and rejection alone does not imply `idle`.\n\nSee protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/PromptRequest"
@@ -7851,7 +7851,7 @@
           "x-deserialize-default-on-null": true
         },
         "replayFrom": {
-          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted and `null` are equivalent and mean the Agent should resume without\nreplaying previous conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent should replay all retained\nconversation history before responding.\n\nAgents MUST reject unsupported cursor types or malformed cursor values\nwith `-32602` (Invalid params), rather than substituting another cursor\nor resuming without replay.",
+          "description": "Inclusive cursor describing where conversation replay should begin.\n\nOptional. Omitted and `null` are equivalent, and the Agent MUST NOT replay\nprevious conversation history. Replay cursors are inclusive:\nreplay includes the position identified by the cursor. Supplying\n`{ \"type\": \"start\" }` means the Agent MUST replay all retained\nconversation history before responding.\n\nAgents MUST reject unsupported cursor types or malformed cursor values\nwith `-32602` (Invalid params), rather than substituting another cursor\nor resuming without replay.",
           "anyOf": [
             {
               "$ref": "#/$defs/ReplayFrom"

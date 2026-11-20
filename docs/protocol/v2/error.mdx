@@ -61,4 +61,4 @@ A [child session](/protocol/v2/subagents) that the Agent announced with `subagen
 
 ### Requests before initialization
 
-Agents **MUST** reject any request other than `initialize` that arrives before initialization completes with `-32600`, and ignore notifications. They also reject an `initialize` repeated after another request with `-32600`. See [Before Initialization Completes](/protocol/v2/initialization#before-initialization-completes).
+Agents **MUST** reject any request other than `initialize` that arrives before initialization completes with `-32600`, and ignore notifications. They **MUST** also reject an `initialize` repeated after another request with `-32600`. See [Before Initialization Completes](/protocol/v2/initialization#before-initialization-completes).

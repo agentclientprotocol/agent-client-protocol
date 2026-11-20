@@ -581,7 +581,7 @@ The Agent MUST return the inserted message's ID without waiting for
 processing to finish.
 
 The Agent reports the user message with the same ID through `session/update`.
-This notification may arrive before or after the response, but neither may
+This notification can arrive before or after the response, and MUST NOT
 precede insertion. Processing state, output, tool calls, and completion are
 also reported through session updates.
 
@@ -752,10 +752,10 @@ NOT restore servers from earlier requests.
 <ResponseField name="replayFrom" type={<><span><a href="#replayfrom">ReplayFrom</a></span><span> | null</span></>} >
   Inclusive cursor describing where conversation replay should begin.
 
-Optional. Omitted and `null` are equivalent and mean the Agent should resume without
-replaying previous conversation history. Replay cursors are inclusive:
+Optional. Omitted and `null` are equivalent, and the Agent MUST NOT replay
+previous conversation history. Replay cursors are inclusive:
 replay includes the position identified by the cursor. Supplying
-`\{ "type": "start" \}` means the Agent should replay all retained
+`\{ "type": "start" \}` means the Agent MUST replay all retained
 conversation history before responding.
 
 Agents MUST reject unsupported cursor types or malformed cursor values
@@ -2222,7 +2222,8 @@ One piece of work running independently of the session's foreground work.
 Items reference entities the Client already tracks. The Agent MUST announce each item
 before the first snapshot that lists it, and MUST report a terminal's `exitStatus` or a
 tool call's final status before the snapshot that removes it. Each piece of work is
-listed once: process-backed work is listed as its terminal, not also as its tool call.
+listed once: process-backed work is listed as its terminal, and the Agent MUST NOT
+also list a tool call whose only live work is a listed terminal.
 
 See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
 
@@ -5083,9 +5084,9 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 Fire-and-forget information for the user.
 
-Notices are live events rather than session history. Agents must not rely on
+Notices are live events rather than session history. Agents MUST NOT rely on
 a notice being received, displayed, or seen by the user.
-No Client capability is required, and unsupported Clients may ignore notices.
+No Client capability is required, and Clients MAY ignore notices.
 
 See protocol docs: [Session Notices](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#session-notices)
 
@@ -5684,7 +5685,7 @@ Non-breaking changes should be introduced via capabilities.
 
 Marks the end of the history replay requested by `session/resume`.
 
-The Agent sends this once on a session for each `session/resume` request
+The Agent MUST send this exactly once on a session for each `session/resume` request
 with a `replayFrom` cursor, after the last replayed update for that session
 and before the response, even for an empty replay. After receiving the
 request, the Agent MUST hold live updates for the session during replay.
@@ -5693,7 +5694,7 @@ sent earlier can still arrive after the Client sends the request. The marker
 signals the end of the requested replay, not its start. A full replay covers
 all the history the Agent retained for that session.
 
-The Agent does not send it when `replayFrom` is omitted or `null`, or when
+The Agent MUST NOT send it when `replayFrom` is omitted or `null`, or when
 it cannot finish the replay. A replay that ends without it and without a
 successful response is truncated.
 
@@ -6157,7 +6158,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 Capabilities for additional session directories support.
 
 Supplying `\{\}` means the agent supports the `additionalDirectories` field on
-supported session lifecycle requests. Agents may return
+supported session lifecycle requests. Agents MAY return
 `SessionInfo.additionalDirectories` in `session/list` to report the
 complete ordered additional-root list associated with a listed session.
 
@@ -6753,7 +6754,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 A display-only reference to another session that this tool call operates on,
 such as a subagent it created, delegated to, or is waiting on.
 
-The referenced session must already be known to the Client through ordinary
+The referenced session MUST already be known to the Client through ordinary
 session setup or a `subagent_update` announcement. The reference does not
 establish ownership, grant any Client-initiated controls, or report that the
 referenced session received or finished any work.
@@ -7711,7 +7712,7 @@ Omitted leaves the last reported cost unchanged. `null` clears it. A value repla
 Information for the user that is not part of session history.
 
 No Client capability is required. Clients that do not understand or
-present notices may ignore them.
+present notices MAY ignore them.
 
 <Expandable title="Properties">
 
@@ -8530,8 +8531,8 @@ The title and description provide the parent's display metadata for the
 child. Agents SHOULD mirror known child state changes in the parent's
 `state` using the same `StateUpdate` snapshot as the
 ordinary `state_update` notification on the child session. This reports
-child state, not a separate parent-owned lifecycle. Consumers should
-treat duplicate reports idempotently.
+child state, not a separate parent-owned lifecycle. Clients MUST
+apply duplicate reports idempotently.
 Completing or cancelling work does not end the association: the parent may
 message the same child again. Individual messages and their outcomes do not
 change this association.
@@ -9528,14 +9529,14 @@ The Agent cannot currently determine foreground activity.
 
 The Agent MUST report this when it can no longer observe the session's
 foreground work. Silence alone is not lost observability. The Client MUST
-stop presenting the previous state as confirmed current activity, but may
+stop presenting the previous state as confirmed current activity, but MAY
 retain it as last known. A later state replaces this snapshot normally.
 
 This is not a task outcome or session closure. It does not cancel work, resolve
 pending requests, or revoke capabilities. If a control is no longer available,
 the Agent updates the capabilities explicitly. Unfinished tool calls and
-terminals stay as last reported. The Agent does not invent a final status
-for them, and Clients do not present them as confirmed live activity.
+terminals stay as last reported. The Agent MUST NOT invent a final status
+for them, and Clients MUST NOT present them as confirmed live activity.
 
 **Type:** Object
 

@@ -629,7 +629,7 @@ impl From<Terminal> for ToolCallContent {
 /// A display-only reference to another session that this tool call operates on,
 /// such as a subagent it created, delegated to, or is waiting on.
 ///
-/// The referenced session must already be known to the Client through ordinary
+/// The referenced session MUST already be known to the Client through ordinary
 /// session setup or a `subagent_update` announcement. The reference does not
 /// establish ownership, grant any Client-initiated controls, or report that the
 /// referenced session received or finished any work.

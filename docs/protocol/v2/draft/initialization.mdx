@@ -87,7 +87,7 @@ The Agent **MUST** respond with the chosen [protocol version](#protocol-version)
 
 Initialization completes when the Agent responds successfully to `initialize`. Until then:
 
-- Clients **MUST NOT** send requests other than `initialize`. Agents reject them with `-32600` and ignore notifications. See [Requests Before Initialization](/protocol/v2/draft/error#requests-before-initialization).
+- Clients **MUST NOT** send requests other than `initialize`. Agents **MUST** reject them with `-32600` and ignore notifications. See [Requests Before Initialization](/protocol/v2/draft/error#requests-before-initialization).
 - Agents **MUST NOT** send requests or notifications.
 - If `initialize` fails, the connection is still uninitialized, and the Client **MAY** send `initialize` again, for example after correcting invalid params.
 

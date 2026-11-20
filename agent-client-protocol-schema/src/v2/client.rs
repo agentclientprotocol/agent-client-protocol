@@ -162,7 +162,7 @@ pub enum SessionUpdate {
     /// Information for the user that is not part of session history.
     ///
     /// No Client capability is required. Clients that do not understand or
-    /// present notices may ignore them.
+    /// present notices MAY ignore them.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {})))]
     Notice(Notice),
     /// A context compaction has been created or updated.
@@ -696,9 +696,9 @@ pub enum NoticeSeverity {
 
 /// Fire-and-forget information for the user.
 ///
-/// Notices are live events rather than session history. Agents must not rely on
+/// Notices are live events rather than session history. Agents MUST NOT rely on
 /// a notice being received, displayed, or seen by the user.
-/// No Client capability is required, and unsupported Clients may ignore notices.
+/// No Client capability is required, and Clients MAY ignore notices.
 ///
 /// See protocol docs: [Session Notices](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#session-notices)
 #[serde_as]
@@ -1496,7 +1496,7 @@ fn other_cursor_anchor_schema(schema: &mut Schema) {
 
 /// Marks the end of the history replay requested by `session/resume`.
 ///
-/// The Agent sends this once on a session for each `session/resume` request
+/// The Agent MUST send this exactly once on a session for each `session/resume` request
 /// with a `replayFrom` cursor, after the last replayed update for that session
 /// and before the response, even for an empty replay. After receiving the
 /// request, the Agent MUST hold live updates for the session during replay.
@@ -1505,7 +1505,7 @@ fn other_cursor_anchor_schema(schema: &mut Schema) {
 /// signals the end of the requested replay, not its start. A full replay covers
 /// all the history the Agent retained for that session.
 ///
-/// The Agent does not send it when `replayFrom` is omitted or `null`, or when
+/// The Agent MUST NOT send it when `replayFrom` is omitted or `null`, or when
 /// it cannot finish the replay. A replay that ends without it and without a
 /// successful response is truncated.
 ///
@@ -1570,8 +1570,8 @@ impl ReplayComplete {
 /// child. Agents SHOULD mirror known child state changes in the parent's
 /// `state` using the same `StateUpdate` snapshot as the
 /// ordinary `state_update` notification on the child session. This reports
-/// child state, not a separate parent-owned lifecycle. Consumers should
-/// treat duplicate reports idempotently.
+/// child state, not a separate parent-owned lifecycle. Clients MUST
+/// apply duplicate reports idempotently.
 /// Completing or cancelling work does not end the association: the parent may
 /// message the same child again. Individual messages and their outcomes do not
 /// change this association.
@@ -2524,14 +2524,14 @@ impl RequiresActionStateUpdate {
 ///
 /// The Agent MUST report this when it can no longer observe the session's
 /// foreground work. Silence alone is not lost observability. The Client MUST
-/// stop presenting the previous state as confirmed current activity, but may
+/// stop presenting the previous state as confirmed current activity, but MAY
 /// retain it as last known. A later state replaces this snapshot normally.
 ///
 /// This is not a task outcome or session closure. It does not cancel work, resolve
 /// pending requests, or revoke capabilities. If a control is no longer available,
 /// the Agent updates the capabilities explicitly. Unfinished tool calls and
-/// terminals stay as last reported. The Agent does not invent a final status
-/// for them, and Clients do not present them as confirmed live activity.
+/// terminals stay as last reported. The Agent MUST NOT invent a final status
+/// for them, and Clients MUST NOT present them as confirmed live activity.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2662,7 +2662,8 @@ fn other_state_update_schema(schema: &mut Schema) {
 /// Items reference entities the Client already tracks. The Agent MUST announce each item
 /// before the first snapshot that lists it, and MUST report a terminal's `exitStatus` or a
 /// tool call's final status before the snapshot that removes it. Each piece of work is
-/// listed once: process-backed work is listed as its terminal, not also as its tool call.
+/// listed once: process-backed work is listed as its terminal, and the Agent MUST NOT
+/// also list a tool call whose only live work is a listed terminal.
 ///
 /// See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#background-work)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
