@@ -10402,7 +10402,7 @@
       "x-method": "terminal/cancel"
     },
     "SetSessionConfigOptionRequest": {
-      "description": "Request parameters for setting a session configuration option.\n\nAgents MUST support this method for any session where they advertise config options.\nAgents MUST reject an unknown `configId` or invalid value with `-32602` and leave the\nconfiguration unchanged.\n\nSee protocol docs: [Session Config Options](https://agentclientprotocol.com/protocol/v2/draft/session-config-options#setting-a-config-option)",
+      "description": "Request parameters for setting a session configuration option.\n\nAgents MUST support this method for any session the Client created or resumed\nwhere they advertise config options. For a child session, the child's\ncapabilities decide whether the Client can send it, and none defined today\npermits it.\nAgents MUST reject an unknown `configId` or invalid value with `-32602` and leave the\nconfiguration unchanged.\n\nSee protocol docs: [Session Config Options](https://agentclientprotocol.com/protocol/v2/draft/session-config-options#setting-a-config-option)",
       "type": "object",
       "properties": {
         "sessionId": {

@@ -4424,7 +4424,10 @@ impl From<&str> for SessionConfigOptionValue {
 
 /// Request parameters for setting a session configuration option.
 ///
-/// Agents MUST support this method for any session where they advertise config options.
+/// Agents MUST support this method for any session the Client created or resumed
+/// where they advertise config options. For a child session, the child's
+/// capabilities decide whether the Client can send it, and none defined today
+/// permits it.
 /// Agents MUST reject an unknown `configId` or invalid value with `-32602` and leave the
 /// configuration unchanged.
 ///

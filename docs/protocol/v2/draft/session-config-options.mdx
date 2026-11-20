@@ -7,7 +7,7 @@ Agents can provide an arbitrary list of configuration options for a session, whi
 
 ## Initial state
 
-During [Session Setup](/protocol/v2/draft/session-setup) the Agent **MAY** return a list of configuration options and their current values:
+An Agent whose session has configuration options **MUST** include them, with their current values, in `configOptions` in the `session/new` and `session/resume` responses, since a [setup response](/protocol/v2/draft/session-setup#initial-session-state) replaces the Client's list:
 
 ```json
 {
@@ -246,7 +246,9 @@ Option `type` values can be custom or future variants. Custom option types **MUS
 
 The current value of a config option can be changed at any point during a session.
 
-Agents that advertise config options for a session **MUST** support `session/set_config_option` for it. Clients **MUST NOT** call it otherwise and **MUST** only send an advertised `configId`. Agents **MUST** reject an unknown `configId` or invalid value, including an unsupported value `type` or a `type` that doesn't match the option, with `-32602` and leave the configuration unchanged.
+Agents that advertise config options for a session the Client created or resumed **MUST** support `session/set_config_option` for it. Clients **MUST NOT** call it otherwise and **MUST** only send an advertised `configId`. Agents **MUST** reject an unknown `configId` or invalid value, including an unsupported value `type` or a `type` that doesn't match the option, with `-32602` and leave the configuration unchanged.
+
+For a [child session](/protocol/v2/draft/subagents#restricted-methods), the child's `capabilities` decide which requests the Client can send. No capability defined today permits `session/set_config_option`, so a child's options are read-only.
 
 Whether a change made while foreground work is active applies to that work or only to later work is up to the Agent. The response's `configOptions` is the complete list as of the response, and Clients replace their list with it. It may report a `currentValue` different from the one requested, for example when the Agent adjusted the value or another change applied concurrently. Clients apply responses and `config_option_update` notifications in the order received, each replacing the whole list.
 
