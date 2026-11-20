@@ -20,7 +20,7 @@ All paths in the protocol should be absolute
 - Add constants for the method names
 - Add variants to {Agent|Client}{Request|Response} enums
 - Add the method to the SideDocs functions in `schema-generator/src/main.rs`
-- In `v2`, add an `x-session-state` hint to every new `SessionUpdate` variant, and to a request or response that changes what a Client holds for a session. The `session_state` tests in `schema-generator/src/main.rs` describe the format and fail when a variant has no hint.
+- In `v2`, add an `x-session-state` hint to every new `SessionUpdate` variant, and to a request or response that changes what a Client holds for a session. Use `x-agent-state` for what a Client holds about the Agent as a whole. Add an `x-scope` hint to the params of every new Agent-to-Client method. The `state_and_scope` tests in `schema-generator/src/main.rs` describe the formats and fail when a required hint is missing.
 - Run `npm run generate` and fix any issues that appear
 - Run `npm run check`
 - Update the example agents and clients in tests and examples in both libraries
@@ -31,7 +31,7 @@ All paths in the protocol should be absolute
 - Use `DefaultOnError`/`VecSkipError` only when the fallback means less (no metadata, an unsupported capability, a missing display item). If the receiver acts on the value (runs, reads, connects, or applies something), keep it strict so a request fails with `-32602` instead of silently doing something else; use `DefaultOnNull` on such lists so `null` still means empty.
 - A malformed value for a known discriminator must not fall through to an untagged fallback variant.
 - `DefaultOnError`, `VecSkipError`, and the `x-deserialize-*` markers they add to the schema are SDK leniency toward non-conforming Clients and Agents. They are not protocol behavior and can change. Ignore them when you write or review the spec.
-- `x-session-state` is a hint for SDK generators. It restates what the spec pages say a message does to the session a Client holds. It adds no protocol behavior. When you change one of those rules, update the hint with the prose.
+- `x-session-state`, `x-agent-state`, and `x-scope` are hints for SDK generators and intermediaries. They restate what the spec pages say a message changes and what it belongs to. They add no protocol behavior. When you change one of those rules, update the hint with the prose.
 
 ## Updating existing methods, their params, or output
 

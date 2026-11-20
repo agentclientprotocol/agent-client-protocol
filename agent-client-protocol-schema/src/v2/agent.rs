@@ -514,6 +514,7 @@ impl AuthStatusRequest {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = AUTH_STATUS_METHOD_NAME)))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-agent-state" = [{"action": "replace", "target": "authStatus"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthStatusResponse {
@@ -589,6 +590,8 @@ impl AuthStatusResponse {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = AUTH_STATUS_UPDATE_NOTIFICATION)))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {})))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-agent-state" = [{"action": "replace", "target": "authStatus"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthStatusUpdateNotification {

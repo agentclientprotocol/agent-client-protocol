@@ -1562,15 +1562,17 @@ mod schema_annotation_tests {
         }
     }
 
-    /// Checks the `x-session-state` hint.
+    /// Checks the `x-session-state`, `x-agent-state`, and `x-scope` hints.
     ///
     /// `x-session-state` lists how a message changes what a Client holds for its
-    /// session. An empty list means no change. Each rule has an `action`
-    /// (`upsert`, `append`, `replace`, or `remove`) and names what it writes:
+    /// session. `x-agent-state` lists how it changes what a Client holds about
+    /// the Agent as a whole. An empty list means no change. Each rule has an
+    /// `action` (`upsert`, `append`, `replace`, or `remove`) and names what it
+    /// writes:
     ///
-    /// - `target` is the part of the session.
-    /// - `id` is the field holding the ID of the target. A target the session
-    ///   has only one of has no `id`.
+    /// - `target` is the part of the session, or of the Agent's state.
+    /// - `id` is the field holding the ID of the target. A target there is only
+    ///   one of has no `id`.
     /// - `field` is the field of the target to write. Without it the rule writes
     ///   the whole target.
     /// - `value` is the field of the message to write. Without it the rule
@@ -1578,23 +1580,44 @@ mod schema_annotation_tests {
     ///
     /// A field is a dotted path into the schema that has the hint.
     ///
-    /// No rule names the session, because it is always in `sessionId`. A rule
-    /// on a `session/update` variant writes to the session of its notification.
-    /// A rule on a request writes to the session in its `sessionId`. A rule on a
-    /// response writes to the session in the `sessionId` of the result, or of
-    /// the request's params when the result has none.
+    /// No `x-session-state` rule names the session, because it is always in
+    /// `sessionId`. A rule on a `session/update` variant writes to the session
+    /// of its notification. A rule on a request writes to the session in its
+    /// `sessionId`. A rule on a response writes to the session in the
+    /// `sessionId` of the result, or of the request's params when the result
+    /// has none.
+    ///
+    /// `x-scope` is on the params of every Agent-to-Client method. It maps each
+    /// kind of thing the message can belong to, such as `session` or
+    /// `elicitation`, to the fields that can hold its ID. The first field the
+    /// message has is used. An empty map means the Agent as a whole.
+    ///
+    /// The ID types cannot replace `x-scope`. `elicitationId` belongs to an
+    /// existing elicitation on `elicitation/complete`, and creates one on
+    /// `elicitation/create`, where no Client holds it yet.
     #[cfg(feature = "unstable_protocol_v2")]
-    mod session_state {
+    mod state_and_scope {
         use super::{def_schema, root_schema_value};
         use serde_json::Value;
         use std::collections::{BTreeMap, BTreeSet};
 
-        const STATE_EXTENSION: &str = "x-session-state";
+        const SESSION_STATE: &str = "x-session-state";
+        const AGENT_STATE: &str = "x-agent-state";
+        const SCOPE: &str = "x-scope";
         const RULE_KEYS: [&str; 5] = ["action", "target", "id", "field", "value"];
+        /// Each kind of thing a message can belong to, with its ID type.
+        const SCOPE_KINDS: [(&str, &str); 5] = [
+            ("session", "SessionId"),
+            ("toolCall", "ToolCallId"),
+            ("request", "RequestId"),
+            ("elicitation", "ElicitationId"),
+            ("mcpServer", "McpServerAcpId"),
+        ];
 
         #[test]
         fn every_session_update_has_state_rules() {
             let schema = root_schema_value();
+            let targets = session_targets(&schema);
             let mut checked = 0;
             for variant in update_variants(&schema) {
                 let Some(name) = variant
@@ -1602,12 +1625,12 @@ mod schema_annotation_tests {
                     .and_then(Value::as_str)
                 else {
                     // The custom or future variant has no known effect.
-                    assert!(variant.get(STATE_EXTENSION).is_none());
+                    assert!(variant.get(SESSION_STATE).is_none());
                     continue;
                 };
                 assert!(
-                    assert_state_rules(&schema, name, variant),
-                    "{name} has no {STATE_EXTENSION}"
+                    assert_state_rules(&schema, SESSION_STATE, &targets, name, variant),
+                    "{name} has no {SESSION_STATE}"
                 );
                 checked += 1;
             }
@@ -1615,35 +1638,37 @@ mod schema_annotation_tests {
         }
 
         #[test]
-        fn request_and_response_state_rules_match_the_session_updates() {
+        fn request_and_response_session_rules_match_the_session_updates() {
             let schema = root_schema_value();
-            let mut checked = update_variants(&schema)
-                .iter()
-                .filter(|variant| variant.get(STATE_EXTENSION).is_some())
-                .count();
+            let targets = session_targets(&schema);
+            let has_rules = |name: &str, def: &Value| {
+                assert_state_rules(&schema, SESSION_STATE, &targets, name, def)
+            };
             let session = |name: &str, holder: &Value| {
                 assert_eq!(id_type(&schema, name, holder, "sessionId"), "SessionId");
             };
-            for name in method_defs(&schema, &["AgentRequest", "AgentNotification"]) {
-                let def = def_schema(&schema, name);
-                if assert_state_rules(&schema, name, def) {
+            let mut checked = update_variants(&schema)
+                .iter()
+                .filter(|variant| variant.get(SESSION_STATE).is_some())
+                .count();
+            for (name, def) in method_defs(&schema, &["AgentRequest", "AgentNotification"]) {
+                if has_rules(name, def) {
                     session(name, def);
                     checked += 1;
                 }
             }
             let requests = method_defs(&schema, &["ClientRequest"]);
-            for name in method_defs(&schema, &["AgentResponse"]) {
-                let def = def_schema(&schema, name);
-                if !assert_state_rules(&schema, name, def) {
+            for (name, def) in method_defs(&schema, &["AgentResponse"]) {
+                if !has_rules(name, def) {
                     continue;
                 }
                 // The session is in the result, or else in the params of the request.
-                let request = requests
+                let (_, request) = requests
                     .iter()
-                    .find(|request| def_schema(&schema, request)["x-method"] == def["x-method"])
+                    .find(|(_, request)| request["x-method"] == def["x-method"])
                     .unwrap_or_else(|| panic!("{name} has no request"));
                 if field_schemas(&schema, def, "sessionId").is_empty() {
-                    session(name, def_schema(&schema, request));
+                    session(name, request);
                 } else {
                     session(name, def);
                 }
@@ -1651,23 +1676,80 @@ mod schema_annotation_tests {
             }
             assert_eq!(
                 checked,
-                count_key(&schema, STATE_EXTENSION),
-                "{STATE_EXTENSION} on a schema these tests do not check"
+                count_key(&schema, SESSION_STATE),
+                "{SESSION_STATE} on a schema these tests do not check"
             );
         }
 
-        /// What a target looks like, from the `session/update` variant that
-        /// writes it whole.
+        #[test]
+        fn agent_state_rules_match_the_notifications() {
+            let schema = root_schema_value();
+            let notifications = method_defs(&schema, &["AgentNotification"]);
+            let writers: Vec<&Value> = notifications.iter().map(|(_, def)| *def).collect();
+            let targets = targets(&schema, AGENT_STATE, &writers);
+            let checked = notifications
+                .into_iter()
+                .chain(method_defs(&schema, &["AgentRequest", "AgentResponse"]))
+                .filter(|(name, def)| assert_state_rules(&schema, AGENT_STATE, &targets, name, def))
+                .count();
+            assert_eq!(
+                checked,
+                count_key(&schema, AGENT_STATE),
+                "{AGENT_STATE} on a schema these tests do not check"
+            );
+        }
+
+        #[test]
+        fn every_agent_to_client_method_has_a_scope() {
+            let schema = root_schema_value();
+            let params = method_defs(&schema, &["AgentRequest", "AgentNotification"]);
+            assert!(!params.is_empty(), "expected Agent-to-Client methods");
+            for (name, def) in &params {
+                let scope = def[SCOPE]
+                    .as_object()
+                    .unwrap_or_else(|| panic!("{name} has no {SCOPE}"));
+                for (kind, fields) in scope {
+                    let (_, expected) = SCOPE_KINDS
+                        .iter()
+                        .find(|(known, _)| known == kind)
+                        .unwrap_or_else(|| panic!("{name}: unknown kind {kind}"));
+                    let fields = fields.as_array().unwrap();
+                    assert!(!fields.is_empty(), "{name}: {kind} names no field");
+                    for field in fields {
+                        let field = field.as_str().unwrap();
+                        assert_eq!(id_type(&schema, name, def, field), *expected, "{name}");
+                    }
+                }
+            }
+            assert_eq!(
+                params.len(),
+                count_key(&schema, SCOPE),
+                "{SCOPE} on a schema that is not an Agent-to-Client method"
+            );
+        }
+
+        /// What a target looks like, from the message that writes it whole.
         struct Target<'a> {
             action: &'a str,
             id_type: Option<&'a str>,
             shape: &'a Value,
         }
 
-        fn targets(schema: &Value) -> BTreeMap<&str, Target<'_>> {
+        /// The session targets, from the `session/update` variants.
+        fn session_targets(schema: &Value) -> BTreeMap<&str, Target<'_>> {
+            let variants: Vec<&Value> = update_variants(schema).iter().collect();
+            targets(schema, SESSION_STATE, &variants)
+        }
+
+        /// The targets that the `hint` rules on `writers` write whole.
+        fn targets<'a>(
+            schema: &'a Value,
+            hint: &str,
+            writers: &[&'a Value],
+        ) -> BTreeMap<&'a str, Target<'a>> {
             let mut targets = BTreeMap::new();
-            for variant in update_variants(schema) {
-                let rules = variant.get(STATE_EXTENSION).and_then(Value::as_array);
+            for &writer in writers {
+                let rules = writer.get(hint).and_then(Value::as_array);
                 for rule in rules.into_iter().flatten() {
                     let get = |key: &str| rule.get(key).and_then(Value::as_str);
                     let (Some(name), Some(action)) = (get("target"), get("action")) else {
@@ -1678,25 +1760,33 @@ mod schema_annotation_tests {
                     }
                     let target = Target {
                         action,
-                        id_type: get("id").map(|id| id_type(schema, name, variant, id)),
+                        id_type: get("id").map(|id| id_type(schema, name, writer, id)),
                         shape: get("value")
-                            .map_or(variant, |value| one_field(schema, name, variant, value)),
+                            .map_or(writer, |value| one_field(schema, name, writer, value)),
                     };
                     let known = targets.insert(name, target);
-                    assert!(known.is_none(), "two session updates write {name} whole");
+                    assert!(known.is_none(), "two messages write {name} whole");
                 }
             }
             targets
         }
 
-        /// Checks the `x-session-state` rules on `message`, the schema their
-        /// fields are read from. Returns whether it has the hint.
-        fn assert_state_rules(schema: &Value, owner: &str, message: &Value) -> bool {
-            let Some(rules) = message.get(STATE_EXTENSION) else {
+        /// Checks the `hint` rules on `message`, the schema their fields are
+        /// read from. Returns whether it has the hint.
+        fn assert_state_rules(
+            schema: &Value,
+            hint: &str,
+            targets: &BTreeMap<&str, Target<'_>>,
+            owner: &str,
+            message: &Value,
+        ) -> bool {
+            let Some(rules) = message.get(hint) else {
                 return false;
             };
-            let targets = targets(schema);
-            for rule in rules.as_array().expect("x-session-state must be a list") {
+            let rules = rules
+                .as_array()
+                .unwrap_or_else(|| panic!("{owner}: {hint} must be a list"));
+            for rule in rules {
                 let rule = rule.as_object().unwrap();
                 let get = |key: &str| rule.get(key).map(|value| value.as_str().unwrap());
                 let (Some(action), Some(name)) = (get("action"), get("target")) else {
@@ -1705,19 +1795,19 @@ mod schema_annotation_tests {
                 let (field, value) = (get("field"), get("value"));
                 assert!(
                     rule.keys().all(|key| RULE_KEYS.contains(&key.as_str())),
-                    "{owner}: unknown key in {STATE_EXTENSION}"
+                    "{owner}: unknown key in {hint}"
                 );
                 let complete = match action {
                     "upsert" | "replace" => true,
                     "append" => field.is_some() && value.is_some(),
                     "remove" => field.is_none() && value.is_none(),
-                    _ => panic!("{owner}: unknown {STATE_EXTENSION} action {action}"),
+                    _ => panic!("{owner}: unknown {hint} action {action}"),
                 };
                 assert!(complete, "{owner}: {action} has the wrong keys");
 
                 let target = targets
                     .get(name)
-                    .unwrap_or_else(|| panic!("{owner}: no session update writes {name}"));
+                    .unwrap_or_else(|| panic!("{owner}: no message writes {name} whole"));
                 let id = get("id").map(|field| id_type(schema, owner, message, field));
                 assert_eq!(id, target.id_type, "{owner}: {name} id");
 
@@ -1729,7 +1819,7 @@ mod schema_annotation_tests {
                     ),
                     None if action != "remove" => assert_eq!(
                         action, target.action,
-                        "{owner}: {name} is written with another action by its session update"
+                        "{owner}: {name} is written whole with another action elsewhere"
                     ),
                     _ => {}
                 }
@@ -1829,8 +1919,9 @@ mod schema_annotation_tests {
                 .unwrap()
         }
 
-        /// The definitions with an `x-method` that the `unions` reference.
-        fn method_defs<'a>(schema: &'a Value, unions: &[&str]) -> BTreeSet<&'a str> {
+        /// The definitions with an `x-method` that the `unions` reference, by
+        /// name.
+        fn method_defs<'a>(schema: &'a Value, unions: &[&str]) -> Vec<(&'a str, &'a Value)> {
             fn collect<'a>(node: &'a Value, refs: &mut BTreeSet<&'a str>) {
                 match node {
                     Value::Object(object) => {
@@ -1847,8 +1938,10 @@ mod schema_annotation_tests {
             for union in unions {
                 collect(def_schema(schema, union), &mut refs);
             }
-            refs.retain(|name| def_schema(schema, name).get("x-method").is_some());
-            refs
+            refs.into_iter()
+                .map(|name| (name, def_schema(schema, name)))
+                .filter(|(_, def)| def.get("x-method").is_some())
+                .collect()
         }
 
         /// How many times `key` appears anywhere in `node`.

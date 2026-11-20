@@ -42,6 +42,7 @@ use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpRequest, MessageMcpResponse}
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION)))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"session": ["sessionId"]})))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct UpdateSessionNotification {
@@ -3877,6 +3878,7 @@ impl TextCommandInput {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME)))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"session": ["sessionId"], "toolCall": ["subject.toolCall.toolCallId", "subject.toolCallId"]})))]
 #[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "upsert", "target": "toolCall", "id": "subject.toolCall.toolCallId", "value": "subject.toolCall"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
