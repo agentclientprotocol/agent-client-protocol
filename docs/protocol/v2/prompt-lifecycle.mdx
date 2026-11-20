@@ -71,6 +71,8 @@ An update or chunk for an ID the Client hasn't seen creates the entity with its 
 
 An entity's first update or chunk fixes its timeline position in receive order: it follows previously received timeline content and precedes content first received later. Later updates and chunks apply to the entity in place without moving it, including after the session reports `idle`. Most updates patch the entity. A `plan_update` replaces the whole plan. Updates for different entities may interleave, and a new ID does not end any other entity. Clients that show an entity outside the timeline, such as a plan panel, **MAY** ignore its position.
 
+A [child session](/protocol/v2/subagents#announcing-a-child-session) is also created and updated by ID, with `subagent_update` and the child's `sessionId`. The first `subagent_update` for a `sessionId` announces the child, and later ones patch its fields.
+
 ### Session-directed messages
 
 The Agent **MAY** report outgoing and incoming messages between sessions,
