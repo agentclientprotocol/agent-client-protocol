@@ -7671,10 +7671,13 @@ Context window and cost update for the session.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT assign meaning to keys they do not recognize.
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT assign meaning to keys they do not recognize.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >
@@ -9590,10 +9593,13 @@ Context window and cost update for a session.
 
 <ResponseField name="_meta" type={"object | null"} >
   The _meta property is reserved by ACP to allow clients and agents to attach additional
-metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
-Implementations MUST NOT assign meaning to keys they do not recognize.
+metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
+clears it. An object patches the stored metadata by top-level key: keys it omits are
+unchanged, a key set to `null` is removed, and any other value replaces that key's
+stored value without merging nested objects. Beyond this patch rule, implementations
+MUST NOT assign meaning to keys they do not recognize.
 
-See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
+See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v2/extensibility#metadata-patches)
 
 </ResponseField>
 <ResponseField name="cost" type={<><span><a href="#cost">Cost</a></span><span> | null</span></>} >

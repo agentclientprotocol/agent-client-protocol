@@ -882,6 +882,8 @@ The Agent **MAY** also report current session context and cumulative cost state 
 
 `used` and `size` are required and non-null token counts for the current session context. `cost` is a patch field: omitting it leaves the last reported cost unchanged, `null` clears it, and a value replaces it, including when the currency differs. A value requires `amount` and `currency`. `currency` is the unit of `amount`: an ISO 4217 currency code such as `"USD"` for money, or another unit such as `"credits"`.
 
+Top-level `_meta` on `usage_update` is a [metadata patch](/protocol/v2/extensibility#metadata-patches).
+
 When a session has [child sessions](/protocol/v2/subagents#usage-and-cost), its `cost` includes the costs of its descendants.
 
 ### 4. Report completion
