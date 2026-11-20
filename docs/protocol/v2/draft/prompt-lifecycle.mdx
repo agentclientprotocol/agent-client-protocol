@@ -328,7 +328,7 @@ The Client sends a user message with `session/prompt`:
 
 </ParamField>
 <ParamField path="idempotencyKey" type="IdempotencyKey">
-    A key the Client generates to identify this submission. With a key, the Client can send the request again without the user message being inserted twice.
+    A key the Client generates for this submission. While the Agent recognizes the key, a retry does not insert another user message.
 
     Omitted and `null` are equivalent and mean no key. When present, the value is a string of 1 to 255 characters. See [Retrying a prompt](#retrying-a-prompt).
 
@@ -397,7 +397,7 @@ Insertion is not a promise of durable storage or model consumption. Every insert
 
 A successful prompt response is not an `idle` signal. Session work and notifications continue independently of the completed prompt request. The response has no fixed order relative to other session updates: the `user_message` acknowledgment, Agent output, and even the `idle` `state_update` that ends the resulting work may arrive before or after it. Clients **MUST NOT** infer ordering between them.
 
-If the response is lost, the Client cannot learn the submission's outcome from the session, because replay may omit live-only or discarded messages. A prompt sent with an `idempotencyKey` can be sent again with the same key. Without a key, a retry can create another submission. See [Retrying a prompt](#retrying-a-prompt).
+If the response is lost, absence from replay does not mean the submission failed. Replay may omit live-only or discarded messages. A retry can insert a second message if the Client sent no `idempotencyKey` or the Agent has forgotten it. See [Retrying a prompt](#retrying-a-prompt).
 
 The same insertion boundary applies when [closing the session](/protocol/v2/draft/session-setup#closing-active-sessions) cancels a pending prompt: if closing prevents insertion, the request receives `-32800` (Request Cancelled). If the message has already been inserted, it receives a successful `messageId` response. Prompt responses need not precede the close response.
 
@@ -426,7 +426,7 @@ The [foreground lifecycle](#foreground-and-background-work) applies independentl
 
 #### Retrying a prompt
 
-A Client that never receives the response to a `session/prompt` request cannot tell whether the message was inserted. `session/prompt` is the one [keyed](/protocol/v2/draft/overview#retrying-requests) method. To be able to send the request again, the Client includes an `idempotencyKey`:
+A Client that never receives the response to a `session/prompt` request cannot tell whether the message was inserted. `session/prompt` is the one [keyed](/protocol/v2/draft/overview#retrying-requests) method. To identify retries of the same submission, the Client includes an `idempotencyKey`:
 
 ```json
 {
@@ -462,7 +462,7 @@ The Agent looks the key up in the session:
 | A message that was inserted with this key                                                             | Doesn't insert a message. Responds with that message's `messageId`.                                      |
 | A prompt with this key that is not inserted yet, such as a [held prompt](#prompts-during-active-work) | Doesn't hold a second prompt. Answers this request when it answers the first one, with the same outcome. |
 
-- **The response.** A retry gets the original `messageId` and nothing else. The Agent doesn't start a second round of work for the message. Whether it continues work that stopped before it finished is up to the Agent. The Client learns the session's current activity from live updates or from the [`session/resume` snapshot](/protocol/v2/draft/session-setup#current-state-synchronization).
+- **A recognized insertion.** The Agent returns the original `messageId` without inserting another message or starting a second round of work. Whether it continues work that stopped before it finished is up to the Agent. The Client learns the session's current activity from live updates or from the [`session/resume` snapshot](/protocol/v2/draft/session-setup#current-state-synchronization).
 - **Errors leave the key unused.** An error response to `session/prompt` means the message was not inserted. The Agent records nothing, and the Client can send the same prompt with the same key again.
 - **A reused key.** The Agent **MUST NOT** insert a second message for a key it has recorded. If a request carries a recorded key with a different prompt, the Agent either answers as for a retry or, if it notices the difference, rejects the request with `-32602`. Agents are not required to compare prompts. After such a `-32602`, the key stays recorded for the first prompt.
 - **Cancelling.** An Agent that honors [`$/cancel_request`](/protocol/v2/draft/cancellation) for any pending request with the key withdraws the prompt if it is not inserted yet. It then answers every pending request for that key with `-32800`. `session/cancel` and `session/close` answer held prompts as described in [Prompts during active work](#prompts-during-active-work).
@@ -470,15 +470,17 @@ The Agent looks the key up in the session:
 
 A key is scoped to the session named by `sessionId`. The same key string in another session names an unrelated submission. This includes a session that `session/fork` creates from this one.
 
-A key lasts as long as the message it belongs to:
+Key retention depends on whether the Agent keeps the inserted message:
 
 - For a prompt whose inserted message the Agent retains, the Agent **MUST** recognize the key for as long as it retains the message. This holds across connections and Agent restarts.
 - For a prompt whose message the Agent doesn't retain, such as a [locally handled command](/protocol/v2/draft/slash-commands#running-commands), the Agent **MUST** recognize the key while the session stays active on a connection. After that it **MAY** forget it.
-- Once the Agent no longer has the message or the session, it **MAY** forget the key. A prompt with a forgotten key is a new submission.
+- Once these retention requirements end, the Agent **MAY** forget the key. A prompt with a forgotten key is a new submission.
 
 Agents **SHOULD** store the key in the same step as the message, for example as part of the message's ID. If a restart loses a message that was never written to the stored session, the key is lost with it, and the retry inserts the message.
 
-A key is not tied to the connection that first carried it. The Agent recognizes it on any connection where the session is active. After reconnecting, the Client calls `initialize` and `session/resume`, then sends the prompt again. Clients **SHOULD** resend a pending prompt as soon as they have resumed the session. A Client that has held a prompt for a long time, such as since a previous day, **SHOULD** show it to the user instead of resending it. By then the Agent may have discarded the message.
+On a new connection, the Client calls `initialize` and `session/resume` before retrying. A successful resume, with or without replay, does not tell the Client which keys survived a close or disconnect. For example, the Agent can run a live-only command and lose the connection before its response arrives. If it forgets the key, even an immediate retry can run that command again.
+
+If a duplicate would matter and the Client cannot rule it out, the Client **SHOULD NOT** automatically resend the unanswered prompt. It **SHOULD** tell the user the prompt might already have run and let them decide whether to retry. A retry of the same submission sends the original prompt and key in a new `session/prompt` request.
 
 An intermediary that forwards `session/prompt` forwards `idempotencyKey` unchanged.
 
@@ -1279,7 +1281,7 @@ When foreground work ends because something failed, the Agent **MUST** report `i
 
 `error` belongs to the `error` stop reason. Beside any other stop reason it is an unknown field. Clients **MAY** show `message` to the user and can handle `code` as they would for an error response: for example, `-32000` (authentication required) can prompt the user to authenticate before sending another prompt.
 
-Before reporting the failure, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. Listed [background work](#background-work), and tool calls that reference a listed terminal, are not part of the failed work and keep running. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Sending the prompt again submits a new message.
+Before reporting the failure, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. Listed [background work](#background-work), and tool calls that reference a listed terminal, are not part of the failed work and keep running. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Submitting the prompt as new input can repeat those side effects. See [Retrying a prompt](#retrying-a-prompt).
 
 The `error` stop reason is only for failures that end foreground work:
 

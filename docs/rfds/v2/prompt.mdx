@@ -318,7 +318,7 @@ Once the user message is inserted, the Agent **MUST NOT** report a later failure
 
 `error` uses the same codes as JSON-RPC error responses, so Clients can handle them the same way. For example, `-32000` (authentication required) can prompt the user to authenticate before sending another prompt. More specific categories, such as rate limits, an exhausted context window, or an overloaded provider, can be added later as codes or as structured `data` without changing this shape.
 
-As with every stop reason, the idle update follows all updates for the work that ended. Before sending it, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Sending the prompt again submits a new message; see [Does returning `messageId` make retrying safe?](#does-returning-messageid-make-retrying-safe).
+As with every stop reason, the idle update follows all updates for the work that ended. Before sending it, the Agent **SHOULD** give each tool call that the failed work left unfinished a terminal status, using `failed` for calls that did not complete. A failure does not undo the insertion or any side effects the work already had, such as tools that ran. Submitting the prompt as new input can repeat those side effects. See [Does returning `messageId` make retrying safe?](#does-returning-messageid-make-retrying-safe).
 
 The `error` stop reason is only for failures that end foreground work:
 
@@ -388,7 +388,7 @@ No. It identifies the accepted user message. A prompt may contribute to work alr
 
 ### Does returning `messageId` make retrying safe?
 
-No. The ID is an acknowledgment, not a client-supplied idempotency key. A retry can be accepted as a distinct submission with a different ID, including after a lost response. This RFD does not promise automatic deduplication or exactly-once processing. The [Idempotency Keys RFD](./idempotency-keys.mdx) adds an optional `idempotencyKey` to `session/prompt` for that.
+No. The ID is an acknowledgment, not a client-supplied idempotency key. The [Idempotency Keys RFD](./idempotency-keys.mdx#how-long-a-key-lasts) adds an optional `idempotencyKey` to `session/prompt`. It prevents a second insertion while the Agent recognizes the key. It does not promise exactly-once processing.
 
 ### Do locally handled commands need persistent history?
 
