@@ -904,7 +904,7 @@ v2 also says which text is Markdown. Text content blocks may contain Markdown, a
 
 `session/new` and `session/resume` responses now carry `availableCommands` alongside `configOptions`. An Agent with commands **MUST** include them there. A setup response replaces the Client's command list, including a list from an `available_commands_update` that arrived before the response. The draft `session/fork` response also supports commands for the newly created session when forking is supported. Agents no longer need to send command notifications before the `session/new` response. See the [setup response example](/protocol/v2/session-setup#initial-session-state).
 
-In setup responses, `availableCommands` is an optional array: omission or `[]` means the session has no commands, and empty lists are omitted when serializing. `null` is not a valid outbound value.
+In setup responses, `availableCommands` is an optional array: omission or `[]` means the session has no commands, and empty lists are omitted when serializing. Agents **MUST NOT** send `null`.
 
 `available_commands_update` notifications remain supported for advertising commands later or changing them. Each notification replaces the complete list previously advertised in a response or notification. `[]` clears it.
 

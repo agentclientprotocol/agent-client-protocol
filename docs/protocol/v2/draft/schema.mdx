@@ -884,7 +884,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Initial commands the agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
@@ -892,7 +892,7 @@ Later `available_commands_update` notifications replace this list.
   Initial session configuration options.
 
 Optional. Omitted or empty means no config options are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 Later `config_option_update` notifications replace this list.
 
 </ResponseField>
@@ -1087,7 +1087,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Initial commands the agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
@@ -1095,7 +1095,7 @@ Later `available_commands_update` notifications replace this list.
   Initial session configuration options.
 
 Optional. Omitted or empty means no config options are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 Later `config_option_update` notifications replace this list.
 
 </ResponseField>
@@ -1191,7 +1191,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Commands the Agent knows the session would have.
 
 Optional. Omitted or empty means no commands are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 
 Advisory. Agents MAY return a partial list. Clients MUST use the commands from the
 `session/new` or `session/resume` response and later `available_commands_update`
@@ -1203,7 +1203,7 @@ notifications for the session itself.
 `NewSessionResponse`.
 
 Optional. Omitted or empty means no config options are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 
 </ResponseField>
 
@@ -1463,7 +1463,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Initial commands the agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
@@ -1471,7 +1471,7 @@ Later `available_commands_update` notifications replace this list.
   Initial session configuration options.
 
 Optional. Omitted or empty means no config options are advertised.
-Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+Senders MUST use an array, not `null`.
 Later `config_option_update` notifications replace this list.
 
 </ResponseField>
@@ -2395,7 +2395,7 @@ Outer ACP errors are reserved for binding and runtime failures.
 Both branches require their carrier key. An error MUST be a non-null object.
 Unknown outer fields are ignored. Inner result and error fields are preserved.
 Carrier `_meta` is optional. Omitted and `null` are equivalent.
-Senders must include exactly one outcome. Receivers prefer `result` if both are present.
+Senders MUST include exactly one outcome.
 
 **Type:** Union
 

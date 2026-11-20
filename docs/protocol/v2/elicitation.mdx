@@ -173,8 +173,7 @@ If a Client cannot render a form, it **SHOULD** respond with `-32602` (Invalid
 params), not `decline` or `cancel`, which report a user's choice. This includes
 a required property of an unknown type, a `required` entry with no matching
 property, and a property that sets both `enum` and `oneOf`. Clients **MAY** leave
-out optional properties of unknown types and render the rest. Clients **SHOULD**
-ignore a `default` that does not match its property schema.
+out optional properties of unknown types and render the rest.
 
 Clients that support schema defaults **SHOULD** pre-populate form fields with
 their declared default values.
@@ -247,7 +246,7 @@ Agents **MUST** handle an unknown action as `cancel`.
 
 The `content` field is optional on `accept`. Receivers treat omission and `null`
 equivalently. It is only meaningful for `accept`. Receivers ignore it for
-`decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD** conform to the requested schema. Receivers accept any JSON value in `content` and validate it against the schema, so an unexpected value invalidates only that property, not the whole response. For an accepted URL elicitation, clients
+`decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD** conform to the requested schema. A `content` value can be any JSON value, such as the value of a custom or future property type. For an accepted URL elicitation, clients
 normally omit `content` because the interaction happens out of band.
 
 Agents **MUST NOT** assume an elicitation succeeds. They **MUST** handle
