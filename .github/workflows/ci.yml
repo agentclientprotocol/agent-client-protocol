@@ -89,6 +89,9 @@ jobs:
       - name: Run tests
         run: cargo test --all-features
 
+      - name: Validate examples against published JSON Schemas
+        run: npm run test:json-schema
+
       # The generator builds one schema per feature set, and `--all-features`
       # only selects the unstable v2 one, so test the other published schemas too.
       - name: Run schema generator tests for each published schema

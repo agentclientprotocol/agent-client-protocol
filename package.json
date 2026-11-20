@@ -22,13 +22,15 @@
     "generate": "npm run generate:json-schema && npm run generate:json-schema:unstable && npm run generate:json-schema:v2 && npm run generate:json-schema:v2-unstable && npm run format",
     "format": "prettier --write --log-level warn . && cargo fmt",
     "format:check": "prettier --check . && cargo fmt -- --check",
+    "test:json-schema": "node --test scripts/schema-tests/*.test.mjs",
     "spellcheck": "./scripts/spellcheck.sh",
     "spellcheck:fix": "./scripts/spellcheck.sh --write-changes",
     "generate:registry": "python3 scripts/generate_registry_docs.py",
-    "check": "cargo clippy && cargo clippy -p agent-client-protocol-schema --all-targets --no-default-features --features unstable,unstable_protocol_v2,tracing && cargo clippy --all-targets --all-features && npm run format:check && npm run spellcheck && cargo test --all-features",
+    "check": "cargo clippy && cargo clippy -p agent-client-protocol-schema --all-targets --no-default-features --features unstable,unstable_protocol_v2,tracing && cargo clippy --all-targets --all-features && npm run format:check && npm run spellcheck && cargo test --all-features && npm run test:json-schema",
     "docs": "cd docs && npx mint dev"
   },
   "devDependencies": {
+    "ajv": "^8.20.0",
     "mint": "^4.3.23",
     "prettier": "^3.10.1"
   }

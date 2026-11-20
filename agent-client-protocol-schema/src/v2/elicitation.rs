@@ -659,10 +659,11 @@ impl StringMultiSelectItems {
     }
 }
 
-/// Items definition for titled multi-select enum properties.
+/// Titled multi-select items use `anyOf` and omit `type`.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schemars", schemars(extend("not" = {"required": ["type"]})))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
@@ -782,7 +783,7 @@ fn other_multi_select_items_schema(schema: &mut Schema) {
 
 /// Items for a multi-select (array) property schema.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum MultiSelectItems {
@@ -796,6 +797,21 @@ pub enum MultiSelectItems {
     /// As in MCP, titled items omit `type` and are identified by `anyOf`.
     #[serde(untagged)]
     Titled(TitledMultiSelectItems),
+}
+
+impl<'de> Deserialize<'de> for MultiSelectItems {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        match value.get("type") {
+            Some(tag) if tag == "string" => serde_json::from_value(value).map(Self::String),
+            Some(_) => serde_json::from_value(value).map(Self::Other),
+            None => serde_json::from_value(value).map(Self::Titled),
+        }
+        .map_err(serde::de::Error::custom)
+    }
 }
 
 /// Schema for multi-select (array) properties in an elicitation form.
@@ -1464,6 +1480,11 @@ impl<'de> Deserialize<'de> for ElicitationScope {
                 serde_json::from_value(scope.into()).map(Self::Session)
             }
             (None, Some(request_id)) => {
+                if fields.contains_key("toolCallId") {
+                    return Err(serde::de::Error::custom(
+                        "`toolCallId` requires `sessionId`",
+                    ));
+                }
                 serde_json::from_value(serde_json::json!({ "requestId": request_id }))
                     .map(Self::Request)
             }
@@ -1492,6 +1513,7 @@ fn elicitation_scope_schema(schema: &mut Schema) {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schemars", schemars(extend("not" = {"required": ["requestId"]})))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1529,6 +1551,7 @@ impl ElicitationSessionScope {
 /// Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
 /// (e.g., during auth/configuration phases before any session is started).
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schemars", schemars(extend("not" = {"anyOf": [{"required": ["sessionId"]}, {"required": ["toolCallId"]}]})))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -2407,6 +2430,10 @@ mod tests {
         };
 
         assert!(request(json!({ "sessionId": "sess_1", "requestId": 42 })).is_err());
+        assert!(request(json!({ "sessionId": "sess_1", "requestId": null })).is_err());
+        assert!(request(json!({ "sessionId": null, "requestId": 42 })).is_err());
+        assert!(request(json!({ "requestId": 42, "toolCallId": null })).is_err());
+        assert!(request(json!({ "requestId": 42, "toolCallId": "call_1" })).is_err());
         assert!(request(json!({})).is_err());
         assert!(request(json!({ "sessionId": 42, "requestId": 42 })).is_err());
         assert!(request(json!({ "sessionId": 42 })).is_err());
@@ -2781,6 +2808,20 @@ mod tests {
 
     #[test]
     fn multi_select_items_unknown_does_not_hide_malformed_string_type() {
+        for tag in [json!("string"), json!(null), json!(42)] {
+            let items = json!({
+                "type": tag, "enum": 7,
+                "anyOf": [{"const": "red", "title": "Red"}]
+            });
+            assert!(serde_json::from_value::<MultiSelectItems>(items.clone()).is_err());
+            let form = json!({
+                "mode": "form", "sessionId": "s", "message": "Choose",
+                "requestedSchema": {"type": "object", "properties": {
+                    "colors": {"type": "array", "items": items}
+                }}
+            });
+            assert!(serde_json::from_value::<CreateElicitationRequest>(form).is_err());
+        }
         assert!(
             serde_json::from_value::<MultiSelectItems>(json!({
                 "type": "string"
