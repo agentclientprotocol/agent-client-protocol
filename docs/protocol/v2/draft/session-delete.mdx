@@ -91,5 +91,6 @@ On success, the Agent returns an empty result:
 - Deleting an already-deleted session, or a session that never existed, **SHOULD** succeed silently.
 - Clients **SHOULD** treat a `-32002` response to `session/delete` as a successful delete.
 - Agents **MAY** implement soft delete or hard delete.
-- Later requests for a deleted session, including `session/resume`, fail with `-32002`. See [Unknown Sessions](/protocol/v2/draft/error#unknown-sessions).
-- If the session is active on any connection, the Agent **MUST** cancel its ongoing work and free its resources as if [`session/close`](/protocol/v2/draft/session-setup#closing-active-sessions) had been called, then delete it.
+- Later requests for a deleted session, including `session/resume`, fail with `-32002`, apart from `session/delete` and `session/close`. See [Unknown Sessions](/protocol/v2/draft/error#unknown-sessions).
+- The Agent **MUST** cancel the session's ongoing work and free its resources before it deletes the session. If the session is active on any connection, it does so as if [`session/close`](/protocol/v2/draft/session-setup#closing-active-sessions) had been called.
+- A [child session](/protocol/v2/draft/subagents#restricted-methods) cannot be deleted on its own. Agents **SHOULD** reject a `session/delete` that names one with `-32602`.
