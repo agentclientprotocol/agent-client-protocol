@@ -42,7 +42,6 @@ use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpRequest, MessageMcpResponse}
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = SESSION_UPDATE_NOTIFICATION)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"session": ["sessionId"]})))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct UpdateSessionNotification {
@@ -96,68 +95,68 @@ impl UpdateSessionNotification {
 #[non_exhaustive]
 pub enum SessionUpdate {
     /// A chunk of the user's message being streamed.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "entity": "userMessage", "id": "messageId", "field": "content", "value": "content"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "target": "userMessage", "id": "messageId", "field": "content", "value": "content"}])))]
     UserMessageChunk(ContentChunk),
     /// A user message has been created or updated.
     ///
     /// Agents can send this when they accept or replay a user message. When a
     /// client receives another `user_message` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "userMessage", "id": "messageId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "userMessage", "id": "messageId"}])))]
     UserMessage(UserMessage),
     /// A chunk of the agent's response being streamed.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "entity": "agentMessage", "id": "messageId", "field": "content", "value": "content"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "target": "agentMessage", "id": "messageId", "field": "content", "value": "content"}])))]
     AgentMessageChunk(ContentChunk),
     /// An agent message has been created or updated.
     ///
     /// Agents can send this in addition to streamed chunks. When a client
     /// receives another `agent_message` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "agentMessage", "id": "messageId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "agentMessage", "id": "messageId"}])))]
     AgentMessage(AgentMessage),
     /// A chunk of the agent's internal reasoning being streamed.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "entity": "agentThought", "id": "messageId", "field": "content", "value": "content"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "target": "agentThought", "id": "messageId", "field": "content", "value": "content"}])))]
     AgentThoughtChunk(ContentChunk),
     /// An agent thought or reasoning message has been created or updated.
     ///
     /// Agents can send this in addition to streamed chunks. When a client
     /// receives another `agent_thought` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "agentThought", "id": "messageId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "agentThought", "id": "messageId"}])))]
     AgentThought(AgentThought),
     /// A snapshot of the session's aggregate foreground activity.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "entity": "state"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "target": "state"}])))]
     StateUpdate(StateUpdate),
     /// A chunk of tool-call content being streamed.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "entity": "toolCall", "id": "toolCallId", "field": "content", "value": "content"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "target": "toolCall", "id": "toolCallId", "field": "content", "value": "content"}])))]
     ToolCallContentChunk(ToolCallContentChunk),
     /// A tool call has been created or updated.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "toolCall", "id": "toolCallId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "toolCall", "id": "toolCallId"}])))]
     ToolCallUpdate(ToolCallUpdate),
     /// An agent-owned terminal has been created or updated.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "terminal", "id": "terminalId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "terminal", "id": "terminalId"}])))]
     TerminalUpdate(TerminalUpdate),
     /// A chunk of bytes appended to an agent-owned terminal's output.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "entity": "terminal", "id": "terminalId", "field": "output.data", "value": "data"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "target": "terminal", "id": "terminalId", "field": "output.data", "value": "data"}])))]
     TerminalOutputChunk(TerminalOutputChunk),
     /// A content update for a plan identified by ID.
     /// See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agent-plan)
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "entity": "plan", "id": "plan.planId", "value": "plan"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "target": "plan", "id": "plan.planId", "value": "plan"}])))]
     PlanUpdate(PlanUpdate),
     /// Removal notice for a plan identified by ID.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "remove", "entity": "plan", "id": "planId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "remove", "target": "plan", "id": "planId"}])))]
     PlanRemoved(PlanRemoved),
     /// Available commands are ready or have changed
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "entity": "availableCommands", "value": "availableCommands"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "target": "availableCommands", "value": "availableCommands"}])))]
     AvailableCommandsUpdate(AvailableCommandsUpdate),
     /// Session configuration options have been updated.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "entity": "configOptions", "value": "configOptions"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "target": "configOptions", "value": "configOptions"}])))]
     ConfigOptionUpdate(ConfigOptionUpdate),
     /// Session metadata has been updated (title, timestamps, custom metadata)
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "sessionInfo"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "sessionInfo"}])))]
     SessionInfoUpdate(SessionInfoUpdate),
     /// Context window and cost update for the session.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "usage"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "usage"}])))]
     UsageUpdate(UsageUpdate),
     /// Information for the user that is not part of session history.
     ///
@@ -166,10 +165,10 @@ pub enum SessionUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [])))]
     Notice(Notice),
     /// A context compaction has been created or updated.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "compaction", "id": "compactionId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "compaction", "id": "compactionId"}])))]
     CompactionUpdate(CompactionUpdate),
     /// A content block appended to a context compaction's retained summary.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "entity": "compaction", "id": "compactionId", "field": "summary", "value": "content"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "target": "compaction", "id": "compactionId", "field": "summary", "value": "content"}])))]
     CompactionSummaryChunk(CompactionSummaryChunk),
     /// The history replay requested by `session/resume` is complete for this session.
     ///
@@ -186,7 +185,7 @@ pub enum SessionUpdate {
     /// Agents MUST only send this update when the Client advertised
     /// the `session.promptSuggestions` Client capability.
     #[cfg(feature = "unstable_prompt_suggestions")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "target": "promptSuggestions", "value": "suggestions"}])))]
     PromptSuggestionsUpdate(PromptSuggestionsUpdate),
     /// **UNSTABLE**
     ///
@@ -197,18 +196,18 @@ pub enum SessionUpdate {
     /// No Client capability is required. Clients that do not understand
     /// cursors may ignore this update.
     #[cfg(feature = "unstable_session_cursors")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "cursor", "id": "cursorId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "cursor", "id": "cursorId"}])))]
     CursorUpdate(CursorUpdate),
     /// Announces a child session created and owned by this session, or updates
     /// that ownership association's metadata.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "subagent", "id": "sessionId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "subagent", "id": "sessionId"}])))]
     SubagentUpdate(SubagentUpdate),
     /// A message upsert observed in this session's transcript, sent to or
     /// received from another session.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "entity": "sessionMessage", "id": "messageId"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "target": "sessionMessage", "id": "messageId"}])))]
     SessionMessage(SessionMessage),
     /// One content block appended to a sent or received session message.
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "entity": "sessionMessage", "id": "messageId", "field": "content", "value": "content"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "append", "target": "sessionMessage", "id": "messageId", "field": "content", "value": "content"}])))]
     SessionMessageChunk(SessionMessageChunk),
     /// Custom or future session update.
     ///
@@ -3878,8 +3877,7 @@ impl TextCommandInput {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = SESSION_REQUEST_PERMISSION_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"session": ["sessionId"], "toolCall": ["subject.toolCall.toolCallId", "subject.toolCallId"]})))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "session": "sessionId", "entity": "toolCall", "id": "subject.toolCall.toolCallId", "value": "subject.toolCall"}])))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "upsert", "session": "sessionId", "target": "toolCall", "id": "subject.toolCall.toolCallId", "value": "subject.toolCall"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct RequestPermissionRequest {

@@ -1581,7 +1581,6 @@ impl From<ElicitationRequestScope> for ElicitationScope {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = ELICITATION_CREATE_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"request": ["requestId"], "session": ["sessionId"], "toolCall": ["toolCallId"]})))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CreateElicitationRequest {
@@ -2112,7 +2111,6 @@ impl Default for ElicitationAcceptAction {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = ELICITATION_COMPLETE_NOTIFICATION)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"elicitation": ["elicitationId"]})))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CompleteElicitationNotification {

@@ -1562,23 +1562,19 @@ mod schema_annotation_tests {
         }
     }
 
-    /// Checks the `x-state` and `x-scope` hints.
+    /// Checks the `x-state` hint.
     ///
-    /// `x-state` lists how a message changes the state of its session. An empty
-    /// list means no change. Each rule has an `action` (`upsert`, `append`,
-    /// `replace`, or `remove`) and names what it writes:
+    /// `x-state` lists how a message changes what a Client holds for its
+    /// session. An empty list means no change. Each rule has an `action`
+    /// (`upsert`, `append`, `replace`, or `remove`) and names what it writes:
     ///
-    /// - `entity` is the part of the session state. A `remove` without one
-    ///   removes the session.
-    /// - `id` is the field holding the ID of the entity. An entity the session
+    /// - `target` is the part of the session.
+    /// - `id` is the field holding the ID of the target. A target the session
     ///   has only one of has no `id`.
-    /// - `field` is the field of the entity to write. Without it the rule writes
-    ///   the whole entity.
+    /// - `field` is the field of the target to write. Without it the rule writes
+    ///   the whole target.
     /// - `value` is the field of the message to write. Without it the rule
     ///   writes the whole update, params, or result.
-    ///
-    /// `x-scope` maps each kind of thing an Agent-to-Client message can be about
-    /// to the fields that can hold its ID. The first one the message has is used.
     ///
     /// A field is a dotted path into the schema that has the hint. On a response
     /// it starts with `result.`, or with `params.` to read the params of the
@@ -1586,16 +1582,13 @@ mod schema_annotation_tests {
     /// `session` ID. A rule on a `session/update` variant writes to the session
     /// of its notification.
     #[cfg(feature = "unstable_protocol_v2")]
-    mod state_and_scope {
+    mod session_state {
         use super::{def_schema, root_schema_value};
         use serde_json::{Value, json};
         use std::collections::{BTreeMap, BTreeSet};
 
         const STATE_EXTENSION: &str = "x-state";
-        const SCOPE_EXTENSION: &str = "x-scope";
-        const RULE_KEYS: [&str; 6] = ["action", "session", "entity", "id", "field", "value"];
-        const SCOPE_KINDS: [&str; 5] =
-            ["session", "toolCall", "request", "elicitation", "mcpServer"];
+        const RULE_KEYS: [&str; 6] = ["action", "session", "target", "id", "field", "value"];
 
         #[test]
         fn every_session_update_has_state_rules() {
@@ -1620,32 +1613,17 @@ mod schema_annotation_tests {
         }
 
         #[test]
-        fn every_agent_to_client_method_has_a_scope() {
+        fn request_and_response_state_rules_match_the_session_updates() {
             let schema = root_schema_value();
-            let params = method_defs(&schema, &["AgentRequest", "AgentNotification"]);
-            assert!(!params.is_empty(), "expected Agent-to-Client methods");
-            for name in params {
+            let mut checked = update_variants(&schema)
+                .iter()
+                .filter(|variant| variant.get(STATE_EXTENSION).is_some())
+                .count();
+            for name in method_defs(&schema, &["AgentRequest", "AgentNotification"]) {
                 let def = def_schema(&schema, name);
-                let scope = def[SCOPE_EXTENSION]
-                    .as_object()
-                    .unwrap_or_else(|| panic!("{name} has no {SCOPE_EXTENSION}"));
-                for (kind, fields) in scope {
-                    assert!(SCOPE_KINDS.contains(&kind.as_str()), "{name}: {kind}");
-                    let fields = fields.as_array().unwrap();
-                    assert!(!fields.is_empty(), "{name}: {kind} names no field");
-                    for field in fields {
-                        assert_id_field(&schema, name, def, field.as_str().unwrap());
-                    }
-                }
-                assert_state_rules(&schema, name, def, def, true);
+                checked += usize::from(assert_state_rules(&schema, name, def, def, true));
             }
-        }
-
-        #[test]
-        fn response_state_rules_name_existing_fields() {
-            let schema = root_schema_value();
             let requests = method_defs(&schema, &["ClientRequest"]);
-            let mut checked = 0;
             for name in method_defs(&schema, &["AgentResponse"]) {
                 let def = def_schema(&schema, name);
                 let request = requests
@@ -1658,29 +1636,44 @@ mod schema_annotation_tests {
                 }});
                 checked += usize::from(assert_state_rules(&schema, name, def, &message, true));
             }
-            assert!(checked > 0, "expected at least one response state rule");
+            assert_eq!(
+                checked,
+                count_key(&schema, STATE_EXTENSION),
+                "{STATE_EXTENSION} on a schema these tests do not check"
+            );
         }
 
-        #[test]
-        fn state_and_scope_only_annotate_checked_schemas() {
-            let schema = root_schema_value();
-            let defs = |unions: &[&str]| {
-                method_defs(&schema, unions)
-                    .into_iter()
-                    .map(|name| def_schema(&schema, name))
-                    .collect::<Vec<_>>()
-            };
-            let to_client = defs(&["AgentRequest", "AgentNotification"]);
-            let with_state = update_variants(&schema)
-                .iter()
-                .chain(to_client.iter().copied())
-                .chain(defs(&["AgentResponse"]))
-                .filter(|checked| checked.get(STATE_EXTENSION).is_some());
-            let with_scope = to_client
-                .iter()
-                .filter(|checked| checked.get(SCOPE_EXTENSION).is_some());
-            assert_eq!(count_key(&schema, STATE_EXTENSION), with_state.count());
-            assert_eq!(count_key(&schema, SCOPE_EXTENSION), with_scope.count());
+        /// What a target looks like, from the `session/update` variant that
+        /// writes it whole.
+        struct Target<'a> {
+            action: &'a str,
+            id_type: Option<&'a str>,
+            shape: &'a Value,
+        }
+
+        fn targets(schema: &Value) -> BTreeMap<&str, Target<'_>> {
+            let mut targets = BTreeMap::new();
+            for variant in update_variants(schema) {
+                let rules = variant.get(STATE_EXTENSION).and_then(Value::as_array);
+                for rule in rules.into_iter().flatten() {
+                    let get = |key: &str| rule.get(key).and_then(Value::as_str);
+                    let (Some(name), Some(action)) = (get("target"), get("action")) else {
+                        panic!("a rule needs an action and a target: {rule}");
+                    };
+                    if action == "remove" || get("field").is_some() {
+                        continue;
+                    }
+                    let target = Target {
+                        action,
+                        id_type: get("id").map(|id| id_type(schema, name, variant, id)),
+                        shape: get("value")
+                            .map_or(variant, |value| one_field(schema, name, variant, value)),
+                    };
+                    let known = targets.insert(name, target);
+                    assert!(known.is_none(), "two session updates write {name} whole");
+                }
+            }
+            targets
         }
 
         /// Checks the `x-state` rules on `annotated` against `message`, the
@@ -1695,76 +1688,60 @@ mod schema_annotation_tests {
             let Some(rules) = annotated.get(STATE_EXTENSION) else {
                 return false;
             };
-            let entities = entities(schema);
+            let targets = targets(schema);
             for rule in rules.as_array().expect("x-state must be a list") {
                 let rule = rule.as_object().unwrap();
                 let get = |key: &str| rule.get(key).map(|value| value.as_str().unwrap());
-                let (action, entity) = (get("action").unwrap(), get("entity"));
-                let (id, field, value) = (get("id"), get("field"), get("value"));
+                let (Some(action), Some(name)) = (get("action"), get("target")) else {
+                    panic!("{owner}: a rule needs an action and a target");
+                };
+                let (field, value) = (get("field"), get("value"));
                 assert!(
                     rule.keys().all(|key| RULE_KEYS.contains(&key.as_str())),
                     "{owner}: unknown key in {STATE_EXTENSION}"
                 );
                 let complete = match action {
-                    "upsert" | "replace" => entity.is_some(),
-                    "append" => entity.is_some() && field.is_some() && value.is_some(),
+                    "upsert" | "replace" => true,
+                    "append" => field.is_some() && value.is_some(),
                     "remove" => field.is_none() && value.is_none(),
                     _ => panic!("{owner}: unknown {STATE_EXTENSION} action {action}"),
                 };
                 assert!(complete, "{owner}: {action} has the wrong keys");
-                assert_eq!(get("session").is_some(), names_session, "{owner}: session");
-                for id_field in [get("session"), id].into_iter().flatten() {
-                    assert_id_field(schema, owner, message, id_field);
-                }
+
+                let session = get("session").map(|field| id_type(schema, owner, message, field));
+                let expected = names_session.then_some("SessionId");
+                assert_eq!(session, expected, "{owner}: session");
+
+                let target = targets
+                    .get(name)
+                    .unwrap_or_else(|| panic!("{owner}: no session update writes {name}"));
+                let id = get("id").map(|field| id_type(schema, owner, message, field));
+                assert_eq!(id, target.id_type, "{owner}: {name} id");
+
                 let value = value.map(|value| one_field(schema, owner, message, value));
-                let Some(entity) = entity else {
-                    assert!(id.is_none(), "{owner}: an id needs an entity");
-                    continue;
-                };
-                let (shape, has_id) = entities
-                    .get(entity)
-                    .unwrap_or_else(|| panic!("{owner}: no session update writes {entity}"));
-                assert_eq!(id.is_some(), *has_id, "{owner}: {entity} id");
-                let target = field.map(|field| one_field(schema, owner, shape, field));
-                if action == "append" {
-                    assert!(
-                        appends_to(target.unwrap(), value.unwrap()),
+                match field.map(|field| one_field(schema, owner, target.shape, field)) {
+                    Some(field) if action == "append" => assert!(
+                        appends_to(field, value.unwrap()),
                         "{owner}: the value cannot be appended to the field"
-                    );
+                    ),
+                    None if action != "remove" => assert_eq!(
+                        action, target.action,
+                        "{owner}: {name} is written with another action by its session update"
+                    ),
+                    _ => {}
                 }
             }
             true
         }
 
-        /// What each entity looks like: the payload of the `session/update`
-        /// variant that writes it whole, and whether it has an ID.
-        fn entities(schema: &Value) -> BTreeMap<&str, (&Value, bool)> {
-            let mut entities = BTreeMap::new();
-            for variant in update_variants(schema) {
-                let rules = variant.get(STATE_EXTENSION).and_then(Value::as_array);
-                for rule in rules.into_iter().flatten() {
-                    if rule["action"] == "remove" || rule.get("field").is_some() {
-                        continue;
-                    }
-                    let name = rule["entity"].as_str().unwrap();
-                    let shape = match rule.get("value").and_then(Value::as_str) {
-                        Some(value) => one_field(schema, name, variant, value),
-                        None => variant,
-                    };
-                    let known = entities.insert(name, (shape, rule.get("id").is_some()));
-                    assert!(known.is_none(), "two session updates write {name} whole");
-                }
-            }
-            entities
-        }
-
         /// Whether a `chunk` can be added to `target`: as one item of a list of
         /// its type, or as a string in the same encoding.
         fn appends_to(target: &Value, chunk: &Value) -> bool {
-            let type_ref =
-                |node: &Value| node.pointer("/allOf/0/$ref").or(node.get("$ref")).cloned();
             match target.get("items") {
-                Some(items) => type_ref(chunk).is_some() && type_ref(items) == type_ref(chunk),
+                Some(items) => {
+                    let (items, chunk) = (type_refs(items), type_refs(chunk));
+                    !chunk.is_empty() && items == chunk
+                }
                 None => {
                     target["type"] == "string"
                         && chunk["type"] == "string"
@@ -1773,16 +1750,29 @@ mod schema_annotation_tests {
             }
         }
 
-        /// Checks that the dotted `field` of `message` holds a string or a number.
-        fn assert_id_field(schema: &Value, owner: &str, message: &Value, field: &str) {
+        /// The one ID type, such as `ToolCallId`, of the dotted `field` of
+        /// `message`.
+        fn id_type<'a>(schema: &'a Value, owner: &str, message: &'a Value, field: &str) -> &'a str {
             let fields = field_schemas(schema, message, field);
             assert!(!fields.is_empty(), "{owner}: no field {field}");
-            assert!(
-                fields
-                    .iter()
-                    .all(|field| is_string_or_number(schema, field)),
-                "{owner}: {field} must be a string or a number"
-            );
+            let types: BTreeSet<&str> = fields.into_iter().flat_map(type_refs).collect();
+            match types.into_iter().collect::<Vec<_>>()[..] {
+                [id_type] if id_type.ends_with("Id") => id_type,
+                ref types => panic!("{owner}: {field} must have one ID type, not {types:?}"),
+            }
+        }
+
+        /// The definitions `node` refers to directly, apart from `null`.
+        fn type_refs(node: &Value) -> BTreeSet<&str> {
+            let members = ["allOf", "anyOf", "oneOf"]
+                .into_iter()
+                .filter_map(|key| node.get(key).and_then(Value::as_array))
+                .flatten();
+            std::iter::once(node)
+                .chain(members)
+                .filter_map(|node| node.get("$ref").and_then(Value::as_str))
+                .map(|target| target.trim_start_matches("#/$defs/"))
+                .collect()
         }
 
         /// The schema of the dotted `field` of `message`, which must have it on
@@ -1800,8 +1790,7 @@ mod schema_annotation_tests {
         }
 
         /// The schemas of the dotted `field` on `message`. A field can exist on
-        /// only some branches of a union, such as `requestId` on
-        /// `elicitation/create`.
+        /// several branches of a union, such as `plan.planId` on `plan_update`.
         fn field_schemas<'a>(schema: &'a Value, message: &'a Value, field: &str) -> Vec<&'a Value> {
             field.split('.').fold(vec![message], |nodes, name| {
                 nodes
@@ -1817,36 +1806,6 @@ mod schema_annotation_tests {
                 .and_then(|properties| properties.get(name))
                 .into_iter()
                 .collect();
-            for branch in branches(schema, node) {
-                found.extend(property_schemas(schema, branch, name));
-            }
-            found
-        }
-
-        /// Whether `node` accepts only strings and numbers, apart from `null`.
-        fn is_string_or_number(schema: &Value, node: &Value) -> bool {
-            let is_allowed = |name: &Value| {
-                matches!(
-                    name.as_str(),
-                    Some("string" | "integer" | "number" | "null")
-                )
-            };
-            match node.get("type") {
-                Some(Value::Array(types)) => types.iter().all(is_allowed),
-                Some(name) => is_allowed(name),
-                None => {
-                    let branches = branches(schema, node);
-                    !branches.is_empty()
-                        && branches
-                            .into_iter()
-                            .all(|branch| is_string_or_number(schema, branch))
-                }
-            }
-        }
-
-        /// The schemas `node` is composed from: its `$ref` target and the
-        /// members of its `allOf`, `anyOf`, and `oneOf`.
-        fn branches<'a>(schema: &'a Value, node: &'a Value) -> Vec<&'a Value> {
             let target = node
                 .get("$ref")
                 .and_then(Value::as_str)
@@ -1855,7 +1814,10 @@ mod schema_annotation_tests {
                 .into_iter()
                 .filter_map(|key| node.get(key).and_then(Value::as_array))
                 .flatten();
-            target.into_iter().chain(members).collect()
+            for branch in target.into_iter().chain(members) {
+                found.extend(property_schemas(schema, branch, name));
+            }
+            found
         }
 
         fn update_variants(schema: &Value) -> &Vec<Value> {

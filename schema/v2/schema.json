@@ -245,15 +245,11 @@
       "required": ["sessionId", "title", "options"],
       "x-side": "client",
       "x-method": "session/request_permission",
-      "x-scope": {
-        "session": ["sessionId"],
-        "toolCall": ["subject.toolCall.toolCallId", "subject.toolCallId"]
-      },
       "x-state": [
         {
           "action": "upsert",
           "session": "sessionId",
-          "entity": "toolCall",
+          "target": "toolCall",
           "id": "subject.toolCall.toolCallId",
           "value": "subject.toolCall"
         }
@@ -1956,12 +1952,7 @@
       ],
       "required": ["message"],
       "x-side": "client",
-      "x-method": "elicitation/create",
-      "x-scope": {
-        "request": ["requestId"],
-        "session": ["sessionId"],
-        "toolCall": ["toolCallId"]
-      }
+      "x-method": "elicitation/create"
     },
     "ElicitationSessionScope": {
       "description": "Session-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `toolCallId` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
@@ -3539,13 +3530,13 @@
         {
           "action": "replace",
           "session": "result.sessionId",
-          "entity": "configOptions",
+          "target": "configOptions",
           "value": "result.configOptions"
         },
         {
           "action": "replace",
           "session": "result.sessionId",
-          "entity": "availableCommands",
+          "target": "availableCommands",
           "value": "result.availableCommands"
         }
       ]
@@ -4080,13 +4071,7 @@
         }
       },
       "x-side": "agent",
-      "x-method": "session/delete",
-      "x-state": [
-        {
-          "action": "remove",
-          "session": "params.sessionId"
-        }
-      ]
+      "x-method": "session/delete"
     },
     "ResumeSessionResponse": {
       "description": "Response from resuming an existing session.\n\nThe agent MUST send a current `state_update` after any requested history\nreplay and before this response, even without replay. The update reports\nforeground state after resuming. The response alone does not imply `idle`.\n\nSee protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/v2/session-setup#current-state-synchronization)",
@@ -4123,13 +4108,13 @@
         {
           "action": "replace",
           "session": "params.sessionId",
-          "entity": "configOptions",
+          "target": "configOptions",
           "value": "result.configOptions"
         },
         {
           "action": "replace",
           "session": "params.sessionId",
-          "entity": "availableCommands",
+          "target": "availableCommands",
           "value": "result.availableCommands"
         }
       ]
@@ -4202,7 +4187,7 @@
         {
           "action": "replace",
           "session": "params.sessionId",
-          "entity": "configOptions",
+          "target": "configOptions",
           "value": "result.configOptions"
         }
       ]
@@ -4496,10 +4481,7 @@
       },
       "required": ["sessionId", "update"],
       "x-side": "client",
-      "x-method": "session/update",
-      "x-scope": {
-        "session": ["sessionId"]
-      }
+      "x-method": "session/update"
     },
     "SessionUpdate": {
       "description": "Different types of updates that can be sent while a session exists.\n\nThese updates report messages, progress, and other session activity.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
@@ -4516,7 +4498,7 @@
           "x-state": [
             {
               "action": "append",
-              "entity": "userMessage",
+              "target": "userMessage",
               "id": "messageId",
               "field": "content",
               "value": "content"
@@ -4541,7 +4523,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "userMessage",
+              "target": "userMessage",
               "id": "messageId"
             }
           ],
@@ -4564,7 +4546,7 @@
           "x-state": [
             {
               "action": "append",
-              "entity": "agentMessage",
+              "target": "agentMessage",
               "id": "messageId",
               "field": "content",
               "value": "content"
@@ -4589,7 +4571,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "agentMessage",
+              "target": "agentMessage",
               "id": "messageId"
             }
           ],
@@ -4612,7 +4594,7 @@
           "x-state": [
             {
               "action": "append",
-              "entity": "agentThought",
+              "target": "agentThought",
               "id": "messageId",
               "field": "content",
               "value": "content"
@@ -4637,7 +4619,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "agentThought",
+              "target": "agentThought",
               "id": "messageId"
             }
           ],
@@ -4660,7 +4642,7 @@
           "x-state": [
             {
               "action": "replace",
-              "entity": "state"
+              "target": "state"
             }
           ],
           "required": ["sessionUpdate"],
@@ -4682,7 +4664,7 @@
           "x-state": [
             {
               "action": "append",
-              "entity": "toolCall",
+              "target": "toolCall",
               "id": "toolCallId",
               "field": "content",
               "value": "content"
@@ -4707,7 +4689,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "toolCall",
+              "target": "toolCall",
               "id": "toolCallId"
             }
           ],
@@ -4730,7 +4712,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "terminal",
+              "target": "terminal",
               "id": "terminalId"
             }
           ],
@@ -4753,7 +4735,7 @@
           "x-state": [
             {
               "action": "append",
-              "entity": "terminal",
+              "target": "terminal",
               "id": "terminalId",
               "field": "output.data",
               "value": "data"
@@ -4778,7 +4760,7 @@
           "x-state": [
             {
               "action": "replace",
-              "entity": "plan",
+              "target": "plan",
               "id": "plan.planId",
               "value": "plan"
             }
@@ -4802,7 +4784,7 @@
           "x-state": [
             {
               "action": "remove",
-              "entity": "plan",
+              "target": "plan",
               "id": "planId"
             }
           ],
@@ -4825,7 +4807,7 @@
           "x-state": [
             {
               "action": "replace",
-              "entity": "availableCommands",
+              "target": "availableCommands",
               "value": "availableCommands"
             }
           ],
@@ -4848,7 +4830,7 @@
           "x-state": [
             {
               "action": "replace",
-              "entity": "configOptions",
+              "target": "configOptions",
               "value": "configOptions"
             }
           ],
@@ -4871,7 +4853,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "sessionInfo"
+              "target": "sessionInfo"
             }
           ],
           "required": ["sessionUpdate"],
@@ -4893,7 +4875,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "usage"
+              "target": "usage"
             }
           ],
           "required": ["sessionUpdate"],
@@ -4932,7 +4914,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "compaction",
+              "target": "compaction",
               "id": "compactionId"
             }
           ],
@@ -4955,7 +4937,7 @@
           "x-state": [
             {
               "action": "append",
-              "entity": "compaction",
+              "target": "compaction",
               "id": "compactionId",
               "field": "summary",
               "value": "content"
@@ -4997,7 +4979,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "subagent",
+              "target": "subagent",
               "id": "sessionId"
             }
           ],
@@ -5020,7 +5002,7 @@
           "x-state": [
             {
               "action": "upsert",
-              "entity": "sessionMessage",
+              "target": "sessionMessage",
               "id": "messageId"
             }
           ],
@@ -5043,7 +5025,7 @@
           "x-state": [
             {
               "action": "append",
-              "entity": "sessionMessage",
+              "target": "sessionMessage",
               "id": "messageId",
               "field": "content",
               "value": "content"
@@ -7052,10 +7034,7 @@
       },
       "required": ["elicitationId"],
       "x-side": "client",
-      "x-method": "elicitation/complete",
-      "x-scope": {
-        "elicitation": ["elicitationId"]
-      }
+      "x-method": "elicitation/complete"
     },
     "ExtNotification": {
       "description": "Allows either side to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
