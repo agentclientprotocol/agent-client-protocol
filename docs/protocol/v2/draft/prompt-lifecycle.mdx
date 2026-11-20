@@ -1462,7 +1462,7 @@ may carry a previous stop reason without creating another completion.
 | Two requests block all foreground work                         | `running` → `requires_action`. Answering one leaves `requires_action` if still blocked. Report `running` only when progress resumes     |
 | A pending request while other foreground work progresses       | Remain `running` and display the request independently                                                                                  |
 | A local command finishes while other foreground work continues | Remain active with no idle boundary for the individual command                                                                          |
-| Cancellation while blocked                                     | `requires_action` → cancellation cleanup → `idle(cancelled)`. After completion, late answers should not resume that work                |
+| Cancellation while blocked                                     | `requires_action` → cancellation cleanup → `idle(cancelled)`. After completion, late answers **SHOULD NOT** resume that work            |
 | A listed tool call finishes after foreground cancellation      | `session/cancel` → `idle(cancelled)` with the call still listed → `tool_call_update(completed)` → `idle` with `background: []`          |
 | A new prompt B arrives while foreground work A is stopping     | `session/cancel` → receive B → final updates for A → `idle(cancelled)` → `running` for B. B may already have its `messageId`.           |
 | Repeated snapshot                                              | `running, running` or `idle, idle` has one logical state, not two work intervals or completions                                         |

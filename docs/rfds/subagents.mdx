@@ -1196,11 +1196,11 @@ the corresponding cancellation response. Idle alone is not a cancellation of
 unrelated background requests. Requests remain attributed to their original
 child session and **MUST NOT** move to the parent or a later operation.
 
-A late response still resolves its original request, but the Agent **MUST NOT**
-use it to restart cancelled or otherwise abandoned work, or to authorize a new
-assignment to the same child. A request **MUST NOT** receive more than one
-response. There is no new child-termination barrier that requires every
-outstanding request in a reusable session to resolve before reporting work
+A late response still resolves its original request. The Agent **SHOULD NOT**
+use it to restart cancelled or otherwise abandoned work, and **MUST NOT** use it
+to authorize a new assignment to the same child. A request **MUST NOT** receive
+more than one response. There is no new child-termination barrier that requires
+every outstanding request in a reusable session to resolve before reporting work
 state.
 
 ### Cost covers descendant sessions
@@ -1716,6 +1716,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-20: A late response **SHOULD NOT** restart cancelled or abandoned work. This was **MUST NOT**. The cancellation rules for a session in general say SHOULD, and a child session now has the same keyword. A late response still **MUST NOT** authorize a new assignment to the same child.
 - 2026-11-20: Moved to Completed. Subagent sessions are part of the default v1 and v2 schemas, and the v1 rules are on the stable v1 [Subagents](/protocol/v1/subagents) page. v1 keeps the Client's `subagents` capability. Added the Zed, Claude Agent adapter, and Codex adapter implementations.
 - 2026-11-19: Deleting an active session closes it first, as the session delete page says. The RFD no longer says that deletion is not a substitute for closing.
 - 2026-11-19: In v2, `session` tool call content is part of the baseline. It is no longer described as unknown content that receivers preserve.
