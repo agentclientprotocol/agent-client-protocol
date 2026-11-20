@@ -48,8 +48,8 @@ Agents advertise authentication options in the `authMethods` field of the
 ID to `auth/login` only for a method whose type defines that protocol-driven
 flow.
 
-Returning a non-empty `authMethods` list advertises `auth/login` and `auth/logout`. Each `methodId` **MUST** be unique within the list. An Agent that does so **MUST** implement both
-`auth/login` and `auth/logout`. If `authMethods` is omitted or empty, the Agent
+Returning a non-empty `authMethods` list advertises `auth/login` and `auth/logout`. An Agent that does so **MUST** implement both
+`auth/login` and `auth/logout`. Each `methodId` **MUST** be unique within the list. If `authMethods` is omitted or empty, the Agent
 does not advertise these methods and Clients **MUST NOT** call either one.
 
 `capabilities.auth` is orthogonal to this requirement. It advertises
@@ -206,7 +206,7 @@ For a `terminal` method, the Client:
 3. Presents the terminal to the user and waits for the process to exit. Exit
    status zero signals success. A non-zero status, termination without an exit
    status, or cancellation signals failure.
-4. On success, retries an operation rejected for requiring authentication. The Client **SHOULD** first close the existing ACP connection, start and initialize a new one, and resume with `session/resume` any sessions it wants to keep, since the running Agent may not pick up the new credentials. It **MAY** instead retry on the existing connection first, and reconnect only if the retry still fails with `-32000`. For an already-inserted prompt, see
+4. On success, retries an operation rejected for requiring authentication. The Client **SHOULD** first close the existing ACP connection, start and initialize a new one, and resume with `session/resume` any sessions it wants to keep, since the running Agent might not pick up the new credentials. It **MAY** instead retry on the existing connection first, and reconnect only if the retry still fails with `-32000`. For an already-inserted prompt, see
    [Authentication failures during session work](#authentication-failures-during-session-work).
 
 The descriptor cannot provide a command. The Client derives the command from its
@@ -244,7 +244,7 @@ an inserted prompt as though it had been rejected. See
 ## Logging out
 
 The `auth/logout` method allows Clients to end the current authenticated state.
-Clients **MAY** call it only when the Agent advertised one or more authentication methods during initialization. There is no separate logout
+Clients **MUST NOT** call it unless the Agent advertised one or more authentication methods during initialization. There is no separate logout
 capability marker.
 
 ```json

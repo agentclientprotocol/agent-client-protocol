@@ -1,6 +1,6 @@
 ---
 title: "Session Config Options"
-description: "Flexible configuration selectors for agent sessions"
+description: "Configuration selectors for Agent sessions"
 ---
 
 Agents can provide an arbitrary list of configuration options for a session, which Clients show to users as selectors. Options can cover modes, models, model parameters, reasoning levels, and more.
@@ -221,7 +221,7 @@ Clients **SHOULD**:
 
 ## Default values and graceful degradation
 
-Every configuration option's `currentValue` is the value the Agent is using. It changes only through a `session/set_config_option` response or a `config_option_update` notification. Agents **MUST** be able to operate with it, even if:
+Every configuration option's `currentValue` is the value the Agent is using. It changes only through a setup response, a `session/set_config_option` response, or a `config_option_update` notification. Agents **MUST** be able to operate with it, even if:
 
 - The Client doesn't support configuration options
 - The Client chooses not to display certain options

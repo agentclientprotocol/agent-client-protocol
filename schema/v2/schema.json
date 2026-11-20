@@ -99,7 +99,7 @@
               "anyOf": [
                 {
                   "title": "CancelRequestNotification",
-                  "description": "Cancels an ongoing request.\n\nThis is a notification sent by the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MAY cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST still send a response for the original request. If the request already finished\n   or is not cancelled, that is its normal response. If it is cancelled, it is either the\n   method's defined cancellation result (for example an inserted `session/prompt`, or a\n   `cancelled` permission outcome) or an error with code `-32800` (Request Cancelled).\n\nReceivers MUST ignore this notification for an unknown or already-answered request ID,\nand MUST NOT send a second response for it.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)",
+                  "description": "Cancels an ongoing request.\n\nThis is a notification sent by the side that sent a request to cancel that request.\n\nUpon receiving this notification, the receiver:\n\n1. MAY cancel the corresponding request activity and all nested activities\n2. MAY send any pending notifications.\n3. MUST still send a response for the original request. If the request already finished\n   or is not cancelled, that is its normal response. If it is cancelled, it is either the\n   method's defined cancellation result (for example an inserted `session/prompt`, or a\n   `cancelled` permission outcome) or an error with code `-32800` (Request cancelled).\n\nReceivers MUST ignore this notification for an unknown or already-answered request ID,\nand MUST NOT send a second response for it.\n\nSee protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/cancellation)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/CancelRequestNotification"
@@ -161,7 +161,7 @@
                 },
                 {
                   "title": "ExtMethodRequest",
-                  "description": "Handles extension method requests from the agent.\n\nAllows the Agent to send an arbitrary request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+                  "description": "Handles extension method requests from the agent.\n\nAllows the Agent to send an arbitrary request that is not part of the ACP spec.\nExtension methods are custom methods that are not part of the ACP spec.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ExtRequest"
@@ -2684,7 +2684,7 @@
       "required": ["elicitationId", "url"]
     },
     "ExtRequest": {
-      "description": "Allows for sending an arbitrary request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
+      "description": "Allows for sending an arbitrary request that is not part of the ACP spec.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
     },
     "AgentResponse": {
       "description": "A JSON-RPC response object.",
@@ -2985,7 +2985,7 @@
       }
     },
     "SessionCapabilities": {
-      "description": "Session capabilities supported by the agent.\n\nSupplying `{}` means the agent supports the baseline session methods:\n`session/new`, `session/list`, `session/resume`, `session/close`,\n`session/prompt`, `session/cancel`, and `session/update`.\n\nAgents that support sessions **MAY** support additional session methods,\nprompt content types, and MCP transports by specifying additional\ncapabilities.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-capabilities)",
+      "description": "Session capabilities supported by the agent.\n\nSupplying `{}` means the agent supports the baseline session methods:\n`session/new`, `session/list`, `session/resume`, `session/close`,\n`session/prompt`, `session/cancel`, and `session/update`.\n\nAgents that support sessions MAY support additional session methods,\nprompt content types, and MCP transports by specifying additional\ncapabilities.\n\nSee protocol docs: [Session Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-capabilities)",
       "type": "object",
       "properties": {
         "prompt": {
@@ -4103,7 +4103,7 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.\nLater `config_option_update` notifications replace this list.",
+          "description": "Current session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4112,7 +4112,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Current commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -4246,7 +4246,7 @@
       "type": "string"
     },
     "ExtResponse": {
-      "description": "Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
+      "description": "Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
     },
     "Error": {
       "description": "JSON-RPC error object.\n\nRepresents an error that occurred during method execution, following the\nJSON-RPC 2.0 error object specification with optional additional data.\n\nSee protocol docs: [JSON-RPC Error Object](https://www.jsonrpc.org/specification#error_object)",
@@ -4475,7 +4475,7 @@
                 },
                 {
                   "title": "ExtNotification",
-                  "description": "Handles extension notifications from the agent.\n\nAllows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+                  "description": "Handles extension notifications from the agent.\n\nAllows the Agent to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications are custom one-way messages that are not part of the ACP spec.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ExtNotification"
@@ -6424,17 +6424,17 @@
       "description": "Priority levels for plan entries.\n\nUsed to indicate the relative importance or urgency of different\ntasks in the execution plan.\nSee protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v2/agent-plan#plan-entries)",
       "anyOf": [
         {
-          "description": "High priority task - critical to the overall goal.",
+          "description": "High priority task. Critical to the overall goal.",
           "type": "string",
           "const": "high"
         },
         {
-          "description": "Medium priority task - important but not critical.",
+          "description": "Medium priority task. Important but not critical.",
           "type": "string",
           "const": "medium"
         },
         {
-          "description": "Low priority task - nice to have but not essential.",
+          "description": "Low priority task. Nice to have but not essential.",
           "type": "string",
           "const": "low"
         },
@@ -7128,7 +7128,7 @@
       }
     },
     "ExtNotification": {
-      "description": "Allows either side to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
+      "description": "Allows either side to send an arbitrary notification that is not part of the ACP spec.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
     },
     "ClientRequest": {
       "description": "A JSON-RPC request object.",
@@ -7163,7 +7163,7 @@
                 },
                 {
                   "title": "LoginAuthRequest",
-                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving a `-32000` (Authentication required) error.\n\nSee protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)",
+                  "description": "Authenticates the client using the specified authentication method.\n\nAgents MUST support this method when their `initialize` response included\na non-empty `authMethods` list. Clients MUST call this method only\nwith a method whose type defines a protocol-driven login flow, and MUST NOT\ncall it when `authMethods` was omitted or empty.\n\nCalled when the agent requires authentication before allowing session creation.\nThe client provides the authentication method ID that was advertised during initialization.\n\nAfter successful authentication, the client can proceed to create sessions with\n`session/new` without receiving a `-32000` (Authentication required) error.\n\nSee protocol docs: [Authentication](https://agentclientprotocol.com/protocol/v2/authentication)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/LoginAuthRequest"
@@ -7208,7 +7208,7 @@
                 },
                 {
                   "title": "ResumeSessionRequest",
-                  "description": "Resumes an existing session.\n\nThe agent should resume the session context, allowing the conversation\nto continue. If `replayFrom` is set, the agent should replay\nretained conversation history before responding.",
+                  "description": "Resumes an existing session.\n\nThe agent should resume the session context so that the conversation\ncan continue. If `replayFrom` is set, the agent should replay\nretained conversation history before responding.",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ResumeSessionRequest"
@@ -7262,7 +7262,7 @@
                 },
                 {
                   "title": "ExtMethodRequest",
-                  "description": "Handles extension method requests from the client.\n\nExtension methods provide a way to add custom functionality while maintaining\nprotocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+                  "description": "Handles extension method requests from the client.\n\nExtension methods are custom methods that are not part of the ACP spec.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ExtRequest"
@@ -7362,7 +7362,7 @@
       "type": "object",
       "properties": {
         "terminal": {
-          "description": "Whether the client supports `terminal` authentication methods.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support.\nThe client SHOULD supply `{}` only when it can reproduce the configured\nagent invocation in an interactive terminal. Supplying `{}` means the\nagent MAY include `terminal` entries in its authentication methods.",
+          "description": "Whether the client supports `terminal` authentication methods.\n\nOptional. Omitted and `null` are equivalent and mean the client does not advertise support.\nSupplying `{}` means the client can reproduce the configured agent\ninvocation in an interactive terminal, and the agent MAY include\n`terminal` entries in its authentication methods.",
           "anyOf": [
             {
               "$ref": "#/$defs/TerminalAuthCapabilities"
@@ -7944,7 +7944,7 @@
       }
     },
     "CloseSessionRequest": {
-      "description": "Request parameters for closing an active session.\n\nThe Agent MUST cancel any ongoing work related to the session as if `session/cancel`\nwas called, then free the resources associated with the session. Unlike `session/cancel`,\nclosing also stops the session's background work. After the close response, the Agent\nsends no notifications or requests for the session on that connection. It still\nanswers `session/prompt` requests that were pending.\n\nClosing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD\ntreat a `-32002` response as a successful close.\n\nWhen closing cancels active foreground work, the Agent MUST send the final\nupdates for that work and the idle `state_update` with `stopReason: \"cancelled\"`\nbefore responding successfully to `session/close`. Closing an idle session\ndoes not itself require another idle update.\n\nClosing also cancels pending `session/prompt` requests whose messages have not\nbeen inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the\nAgent MUST answer that request with `-32800` (Request Cancelled). If the message\nhas already been inserted, the Agent MUST respond successfully with its\n`messageId`. Prompt responses need not precede the close response.",
+      "description": "Request parameters for closing an active session.\n\nThe Agent MUST cancel any ongoing work related to the session as if `session/cancel`\nwas called, then free the resources associated with the session. Unlike `session/cancel`,\nclosing also stops the session's background work. After the close response, the Agent\nsends no notifications or requests for the session on that connection. It still\nanswers `session/prompt` requests that were pending.\n\nClosing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD\ntreat a `-32002` response as a successful close.\n\nWhen closing cancels active foreground work, the Agent MUST send the final\nupdates for that work and the idle `state_update` with `stopReason: \"cancelled\"`\nbefore responding successfully to `session/close`. Closing an idle session\ndoes not itself require another idle update.\n\nClosing also cancels pending `session/prompt` requests whose messages have not\nbeen inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the\nAgent MUST answer that request with `-32800` (Request cancelled). If the message\nhas already been inserted, the Agent MUST respond successfully with its\n`messageId`. Prompt responses need not precede the close response.",
       "type": "object",
       "properties": {
         "sessionId": {
@@ -8148,7 +8148,7 @@
           ]
         },
         "prompt": {
-          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support `text` and `resource_link` content blocks,\nwhile other variants are optionally enabled via `PromptCapabilities`.\n\nThe Client MUST adapt its interface according to `PromptCapabilities`.\n\nThe client MAY include referenced pieces of context as either\n`resource` or `resource_link` content blocks.\n\nWhen available, `resource` is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent may not have access to.\n\nClients MUST NOT send an empty array. Agents MAY reject one with `-32602` without\ninserting it.",
+          "description": "The blocks of content that compose the user's message.\n\nAs a baseline, the Agent MUST support `text` and `resource_link` content blocks,\nwhile other variants are optionally enabled via `PromptCapabilities`.\n\nThe Client MUST adapt its interface according to `PromptCapabilities`.\n\nThe client MAY include referenced pieces of context as either\n`resource` or `resource_link` content blocks.\n\nWhen available, `resource` is preferred\nas it avoids extra round-trips and allows the message to include\npieces of context from sources the agent might not have access to.\n\nClients MUST NOT send an empty array. Agents MAY reject one with `-32602` without\ninserting it.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/ContentBlock"
@@ -8580,7 +8580,7 @@
                 },
                 {
                   "title": "ExtNotification",
-                  "description": "Handles extension notifications from the client.\n\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
+                  "description": "Handles extension notifications from the client.\n\nExtension notifications are custom one-way messages that are not part of the ACP spec.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/ExtNotification"

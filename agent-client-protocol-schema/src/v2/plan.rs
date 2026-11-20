@@ -434,11 +434,11 @@ impl PlanEntry {
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum PlanEntryPriority {
-    /// High priority task - critical to the overall goal.
+    /// High priority task. Critical to the overall goal.
     High,
-    /// Medium priority task - important but not critical.
+    /// Medium priority task. Important but not critical.
     Medium,
-    /// Low priority task - nice to have but not essential.
+    /// Low priority task. Nice to have but not essential.
     Low,
     /// Custom or future plan entry priority.
     ///

@@ -97,7 +97,7 @@ pub enum ProtocolLevelNotification {
     /// 3. MUST still send a response for the original request. If the request already finished
     ///    or is not cancelled, that is its normal response. If it is cancelled, it is either the
     ///    method's defined cancellation result (for example an inserted `session/prompt`, or a
-    ///    `cancelled` permission outcome) or an error with code `-32800` (Request Cancelled).
+    ///    `cancelled` permission outcome) or an error with code `-32800` (Request cancelled).
     ///
     /// Receivers MUST ignore this notification for an unknown or already-answered request ID,
     /// and MUST NOT send a second response for it.

@@ -4834,7 +4834,7 @@ impl CommandsCapabilities {
 ///
 /// Client support for `skill` command entries.
 ///
-/// Supplying `{}` means the agent may send `skill` entries in
+/// Supplying `{}` means the agent MAY send `skill` entries in
 /// `availableCommands`. The client invokes them with `skill` content blocks.
 #[cfg(feature = "unstable_agent_skills")]
 #[serde_as]
@@ -5128,9 +5128,9 @@ pub struct ClientAuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// The client SHOULD supply `{}` only when it can reproduce the configured
-    /// agent invocation in an interactive terminal. Supplying `{}` means the
-    /// agent MAY include `terminal` entries in its authentication methods.
+    /// Supplying `{}` means the client can reproduce the configured agent
+    /// invocation in an interactive terminal, and the agent MAY include
+    /// `terminal` entries in its authentication methods.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -5157,10 +5157,9 @@ impl ClientAuthCapabilities {
     /// Whether the client supports `terminal` authentication methods.
     ///
     /// Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// The client SHOULD supply `{}` only when it can reproduce the configured
-    /// agent invocation in an interactive terminal. Supplying `{}` means the
-    /// agent MAY include `AuthMethod::Terminal` entries in its authentication
-    /// methods.
+    /// Supplying `{}` means the client can reproduce the configured agent
+    /// invocation in an interactive terminal, and the agent MAY include
+    /// `AuthMethod::Terminal` entries in its authentication methods.
     #[must_use]
     pub fn terminal(mut self, terminal: impl IntoOption<TerminalAuthCapabilities>) -> Self {
         self.terminal = terminal.into_option();
@@ -5313,8 +5312,7 @@ pub enum AgentRequest {
     /// Handles extension method requests from the agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
-    /// Extension methods provide a way to add custom functionality while maintaining
-    /// protocol compatibility.
+    /// Extension methods are custom methods that are not part of the ACP spec.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtMethodRequest(Box<ExtRequest>),
@@ -5333,7 +5331,7 @@ impl_request_dispatch! {
 /// All possible responses that a client can send to an agent.
 ///
 /// This enum is used internally for routing RPC responses. You typically won't need
-/// to use this directly - the responses are handled automatically by the connection.
+/// to use this directly. The connection handles the responses automatically.
 ///
 /// These are responses to the corresponding `AgentRequest` variants.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -5393,8 +5391,7 @@ pub enum AgentNotification {
     /// Handles extension notifications from the agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
-    /// Extension notifications provide a way to send one-way messages for custom functionality
-    /// while maintaining protocol compatibility.
+    /// Extension notifications are custom one-way messages that are not part of the ACP spec.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtNotification(Box<ExtNotification>),

@@ -100,7 +100,7 @@ The Agent **MUST** respond with a unique [Session ID](#session-id) that identifi
 New sessions default to `idle` until a `state_update` reports otherwise. Updates
 may arrive before or after the `session/new` response. Clients **MUST NOT**
 overwrite an already-reported state when the response arrives. An optional
-initial idle notification is a snapshot, not a completed turn.
+initial idle notification is a snapshot, not completed work.
 
 Agents **SHOULD** put initial state in the `session/new` response rather than sending notifications before it. For `configOptions` and `availableCommands`, the response is required, as described below. Agents **SHOULD NOT** send session-scoped requests, such as permission requests or elicitations, before the response, because the Client cannot yet show them for that session. While a `session/new` is pending, Clients **MAY** buffer notifications for a `sessionId` they don't recognize and apply them in order once the response arrives, or drop them. Agents cannot rely on such notifications being seen. An Agent whose new session is not `idle`, for example because it started work when the session was created, **MUST** send the session's `state_update` after the response.
 
@@ -135,7 +135,7 @@ The `session/new` and `session/resume` responses carry the session's [configurat
 }
 ```
 
-`configOptions` and `availableCommands` are optional. Each is the complete current list for the session: omission or `[]` means none, and empty lists are omitted when serializing. Agents **MUST NOT** send `null` for these fields.
+`configOptions` and `availableCommands` are optional. Each is the complete current list for the session: omission or `[]` means none. Agents **MUST NOT** send `null` for these fields.
 
 When a `session/new` or `session/resume` response arrives, Clients replace the lists they hold for the session with the response's lists, including lists from updates received before the response. Later `config_option_update` and `available_commands_update` notifications each replace the complete list, including `[]` to clear it.
 
@@ -261,7 +261,7 @@ For example, a user message from the conversation history:
 }
 ```
 
-Followed by the agent's response:
+Followed by the Agent's response:
 
 ```json
 {
@@ -290,7 +290,7 @@ inserted by `session/prompt` **MUST** use the ID returned in that prompt
 response, including after reconnecting or restarting the Agent. Replaying a command reports its message. It does not
 execute the command again.
 
-Agents **SHOULD** preserve the IDs of all other replayed [entities](/protocol/v2/prompt-lifecycle#entity-ids), such as agent and thought message IDs, `toolCallId`, `terminalId`, `planId`, and `compactionId`, across replay when possible, but these IDs are not
+Agents **SHOULD** preserve the IDs of all other replayed [entities](/protocol/v2/prompt-lifecycle#entity-ids), such as Agent and thought message IDs, `toolCallId`, `terminalId`, `planId`, and `compactionId`, across replay when possible, but these IDs are not
 guaranteed to remain stable across reconnects or Agent restarts. Clients **MUST
 NOT** rely on them to deduplicate replay against previously received history.
 A Client attaching to a session can rebuild its transcript from a full replay.
@@ -465,7 +465,7 @@ The Agent **MUST** cancel any ongoing work for that session as if [`session/canc
 
 When closing cancels active foreground work, the Agent **MUST** send the final updates for that work and the idle `state_update` with `stopReason: "cancelled"` before responding successfully to `session/close`. Closing an idle session does not itself require another idle update.
 
-Closing also cancels pending `session/prompt` requests whose messages have not been inserted, including [held prompts](/protocol/v2/prompt-lifecycle#prompts-during-active-work). If closing prevents a prompt's user message from being inserted, the Agent **MUST** answer that request with `-32800` (Request Cancelled). If the message has already been inserted, the Agent **MUST** respond successfully with its `messageId`, as described in [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted). Prompt responses need not precede the close response. After the close response, the Agent sends no notifications or requests for the session on that connection. It still answers `session/prompt` requests that were pending.
+Closing also cancels pending `session/prompt` requests whose messages have not been inserted, including [held prompts](/protocol/v2/prompt-lifecycle#prompts-during-active-work). If closing prevents a prompt's user message from being inserted, the Agent **MUST** answer that request with `-32800` (Request cancelled). If the message has already been inserted, the Agent **MUST** respond successfully with its `messageId`, as described in [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted). Prompt responses need not precede the close response. After the close response, the Agent sends no notifications or requests for the session on that connection. It still answers `session/prompt` requests that were pending.
 
 On success, the Agent responds with an empty result object:
 
@@ -644,7 +644,7 @@ When the Agent supports `session.mcp.stdio`, Clients can specify MCP servers con
   reject a request with a relative `command` with `-32602`.
 </ParamField>
 
-<ParamField path="args" type="array">
+<ParamField path="args" type="string[]">
   Command-line arguments to pass to the server. Omitted and empty values are
   equivalent.
 </ParamField>

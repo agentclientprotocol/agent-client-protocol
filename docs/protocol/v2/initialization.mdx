@@ -95,7 +95,7 @@ After initialization completes, the Client can repeat `initialize` only as descr
 
 ## Protocol version
 
-The protocol versions that appear in the `initialize` requests and responses are a single integer that identifies a **MAJOR** protocol version. This version is only incremented when breaking changes are introduced.
+The protocol versions that appear in the `initialize` requests and responses are a single integer that identifies a major protocol version. This version is only incremented when breaking changes are introduced.
 
 Clients and Agents **MUST** agree on a protocol version and act according to its specification.
 
@@ -138,7 +138,7 @@ When the Agent selects a lower version than requested, it may have ignored parts
 
 The Client **MAY** repeat `initialize` any number of times before its first other request, waiting for each response before sending the next. The Agent handles each one like the first and treats the latest successful `initialize` as authoritative. A repeat that fails leaves the previous successful initialization in effect. `initialize` **MUST NOT** be repeated after any other request.
 
-Agents that implement only an earlier protocol version may not accept a repeated `initialize`. To change its parameters with such an Agent, the Client opens a new connection.
+Agents that implement only an earlier protocol version might not accept a repeated `initialize`. To change its parameters with such an Agent, the Client opens a new connection.
 
 ## Capabilities
 
@@ -146,7 +146,7 @@ Capabilities describe features supported by the Client and the Agent.
 
 All capabilities included in the `initialize` request or response are **OPTIONAL**. Clients and Agents **SHOULD** support all possible combinations of their peer's capabilities.
 
-The introduction of new capabilities is not considered a breaking change. Therefore, Clients and Agents **MUST** treat all capabilities omitted in the `initialize` request or response as **UNSUPPORTED**.
+The introduction of new capabilities is not considered a breaking change. Therefore, Clients and Agents **MUST** treat all capabilities omitted in the `initialize` request or response as unsupported.
 
 A capability may advertise a group of methods, such as the `session/*` methods,
 or a nested feature that only applies when its parent capability is supported.
@@ -266,7 +266,7 @@ session the Client created or resumed **MUST** also support
 
 As a baseline, Agents that advertise `session` **MUST** support `text` and `resource_link` content blocks in `session/prompt` requests.
 
-Optionally, they **MAY** support richer types of [content](/protocol/v2/content) by specifying the following capabilities:
+Optionally, they **MAY** support more types of [content](/protocol/v2/content) by specifying the following capabilities:
 
 <ResponseField name="image" type="PromptImageCapabilities Object">
   The prompt may include `image` content blocks. Omitted or `null` means the

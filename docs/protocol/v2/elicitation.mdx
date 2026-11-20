@@ -169,7 +169,7 @@ In multi-select `items`, the titled `anyOf` form omits `type`. When `type` is `"
 Clients **SHOULD** validate submitted values before responding, and Agents
 **SHOULD** validate them again.
 
-If a Client cannot render a form, it **SHOULD** respond with `-32602` (Invalid
+If a Client cannot render a form, it **MUST** respond with `-32602` (Invalid
 params), not `decline` or `cancel`, which report a user's choice. This includes
 a required property of an unknown type, a `required` entry with no matching
 property, and a property that sets both `enum` and `oneOf`. Clients **MAY** leave
@@ -246,7 +246,7 @@ Agents **MUST** handle an unknown action as `cancel`.
 
 The `content` field is optional on `accept`. Receivers treat omission and `null`
 equivalently. It is only meaningful for `accept`. Receivers ignore it for
-`decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD** conform to the requested schema. A `content` value can be any JSON value, such as the value of a custom or future property type. For an accepted URL elicitation, clients
+`decline` and `cancel`. For an accepted form elicitation, `content` **SHOULD** conform to the requested schema. A `content` value can be any JSON value, such as the value of a custom or future property type. For an accepted URL elicitation, Clients
 normally omit `content` because the interaction happens out of band.
 
 Agents **MUST NOT** assume an elicitation succeeds. They **MUST** handle
@@ -309,7 +309,7 @@ complete independently. Cancellation can finish without waiting for it.
 
 ## URL security
 
-Agents and Clients implementing URL mode **MUST** follow these requirements:
+Agents and Clients implementing URL mode follow these requirements:
 
 These requirements adapt MCP's
 [Safe URL Handling](https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation#safe-url-handling)
