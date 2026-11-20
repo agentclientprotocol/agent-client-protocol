@@ -623,6 +623,7 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/dr
 
 Cancels the named session's active foreground work and earlier prompts not yet inserted.
 It does not cancel later submissions or work in the session's latest `background` list.
+Explicit steers and queued prompts are not covered by this cancellation.
 
 See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/draft/prompt-lifecycle#cancellation)
 
@@ -1251,6 +1252,11 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
+</ResponseField>
+<ResponseField name="delivery" type={<><span><a href="#promptdelivery">PromptDelivery</a></span><span> | null</span></>} >
+  How to insert the prompt while foreground work is active.
+Omitted and `null` are equivalent and select the ordinary prompt behavior.
+Clients MUST NOT send a mode that the Agent did not advertise.
 </ResponseField>
 <ResponseField name="idempotencyKey" type={<><span><a href="#idempotencykey">IdempotencyKey</a></span><span> | null</span></>} >
   Identifies one prompt submission within this session.
@@ -7863,6 +7869,10 @@ Optional. Omitted and `null` are equivalent and mean the agent does not advertis
 Supplying `\{\}` means the agent supports audio content in prompts.
 
 </ResponseField>
+<ResponseField name="delivery" type={<><span><a href="#promptdeliverycapabilities">PromptDeliveryCapabilities</a></span><span> | null</span></>} >
+  Delivery modes supported by the Agent for `session/prompt`.
+Omitted and `null` are equivalent and mean neither mode is supported.
+</ResponseField>
 <ResponseField name="embeddedContext" type={<><span><a href="#promptembeddedcontextcapabilities">PromptEmbeddedContextCapabilities</a></span><span> | null</span></>} >
   Agent supports embedded context in `session/prompt` requests.
 
@@ -7892,6 +7902,42 @@ Supplying `\{\}` means a prompt may contain one `skill` content block, as its fi
 An agent that sends `skill` entries in `availableCommands` MUST advertise this capability.
 
 </ResponseField>
+
+## <span class="font-mono">PromptDelivery</span>
+
+How to insert a prompt received during foreground work.
+
+**Type:** Union
+
+<ResponseField name="steer" type="string">
+  Insert at the next safe point in the current turn, or start the next turn if
+  it ends first.
+</ResponseField>
+
+<ResponseField name="queue" type="string">
+  Wait until the current turn ends, then start a new turn with the prompt.
+</ResponseField>
+
+## <span class="font-mono">PromptDeliveryCapabilities</span>
+
+Delivery modes supported by the Agent for `session/prompt`.
+
+**Type:** Object
+
+**Properties:**
+
+<ResponseField name="queue" type={<><span><a href="#promptdeliverymodecapabilities">PromptDeliveryModeCapabilities</a></span><span> | null</span></>} >
+  Supplying `\{\}` advertises `queue`. Omitted and `null` mean unsupported.
+</ResponseField>
+<ResponseField name="steer" type={<><span><a href="#promptdeliverymodecapabilities">PromptDeliveryModeCapabilities</a></span><span> | null</span></>} >
+  Supplying `\{\}` advertises `steer`. Omitted and `null` mean unsupported.
+</ResponseField>
+
+## <span class="font-mono">PromptDeliveryModeCapabilities</span>
+
+An advertised prompt delivery mode. An empty object indicates support.
+
+**Type:** `object`
 
 ## <span class="font-mono">PromptEmbeddedContextCapabilities</span>
 

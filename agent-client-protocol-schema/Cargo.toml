@@ -31,6 +31,7 @@ unstable = [
     "unstable_auth_status",
     "unstable_llm_providers",
     "unstable_mcp_over_acp",
+    "unstable_prompt_delivery",
     "unstable_prompt_suggestions",
     "unstable_proxy_chains",
     "unstable_session_archive",
@@ -50,6 +51,7 @@ unstable_agent_skills = []
 unstable_auth_status = []
 unstable_llm_providers = []
 unstable_mcp_over_acp = []
+unstable_prompt_delivery = []
 unstable_prompt_suggestions = []
 unstable_proxy_chains = []
 unstable_session_archive = []
