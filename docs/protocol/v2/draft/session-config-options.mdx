@@ -479,7 +479,7 @@ This notification also contains the complete configuration state. Common reasons
 
 ## Options before a session exists (unstable)
 
-Agents that advertise `session.options` support `session/options`, which returns the config options a session would start with without creating or resuming it. They also accept initial values in `configOptions` on `session/new` and `session/resume`. Clients **MUST NOT** call `session/options` or send `configOptions` on session setup requests unless the Agent advertises the capability. See the [RFD](/rfds/session-options).
+Agents that advertise `session.options` support `session/options`, which returns the config options a session would start with without creating or resuming it. They also accept initial values in `configOptions` on each setup method they support: `session/new`, `session/resume`, and `session/fork`. Clients **MUST NOT** call `session/options` or send `configOptions` on session setup requests unless the Agent advertises the capability. See the [RFD](/rfds/session-options).
 
 ### Querying options
 
