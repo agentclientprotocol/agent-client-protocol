@@ -24,9 +24,9 @@ Several harnesses offer a faster way to run the same model, usually at a higher 
 | [Factory Droid](https://docs.factory.com/changelog/release-notes)                                                          | A single toggle that enables fast-mode model variants (CLI v0.109.1)                                     | boolean                                    |
 | [GitHub Copilot](https://github.blog/changelog/2026-06-29-claude-opus-4-8-fast-mode-is-now-in-preview-for-github-copilot/) | A separate fast mode entry in the model picker                                                           | a `model` value, not a separate option     |
 
-Two ACP adapters already expose fast mode as a session config option. [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) and [`codex-acp`](https://github.com/agentclientprotocol/codex-acp) both send a `boolean` option named "Fast mode" with `"category": "model_config"`. For v1 Clients that don't advertise `session.configOptions.boolean`, both fall back to an on/off `select`.
+Before this proposal, [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) and [`codex-acp`](https://github.com/agentclientprotocol/codex-acp) both tagged their "Fast mode" option with `"category": "model_config"`. They sent a `boolean`, or an on/off `select` to v1 Clients that didn't advertise `session.configOptions.boolean`.
 
-This works, but a Client can't tell that the two options are the same setting:
+With `model_config`, a Client can't tell that the two options are the same setting:
 
 - `model_config` tells a Client where to put an option, not what the option does. A fast mode toggle and a context size selector look the same.
 - The option ids differ (`fast` in `claude-agent-acp`, `fast-mode` in `codex-acp`), and ids are Agent-defined, so a Client can't match on them.
@@ -98,15 +98,13 @@ A speed selector:
 
 ### Schema
 
-- Add `Speed` to `SessionConfigOptionCategory` in v1 and v2 behind the `unstable_speed_config_category` feature. Without the feature, `"speed"` deserializes to `Other("speed")`.
-- Document the category in the draft session config options pages for v1 and v2.
-- No capability negotiation is needed, as with other category values.
+`SessionConfigOptionCategory::Speed` remains behind `unstable_speed_config_category` during Preview. Without the feature, `"speed"` deserializes to `Other("speed")`. The [v1](/protocol/v1/draft/session-config-options#speed-options-unstable) and [v2](/protocol/v2/draft/session-config-options#speed-options-unstable) draft guides describe the category. Like other category values, `speed` needs no capability negotiation.
 
-### Plan
+### Implementations
 
-1. Land the unstable variant and draft docs.
-2. Switch the fast mode option in `claude-agent-acp` and `codex-acp` from `model_config` to `speed`, with the `select` fallback listing off before on. Use the category in at least one Client.
-3. Stabilize after Agents and Clients confirm it works for them.
+- The [Rust SDK 5.3.0](https://github.com/agentclientprotocol/rust-sdk/releases/tag/v5.3.0) and [TypeScript SDK 2.7.0](https://github.com/agentclientprotocol/typescript-sdk/releases/tag/v2.7.0) include the unstable category for both protocol versions.
+- [`claude-agent-acp` 0.109.0](https://github.com/agentclientprotocol/claude-agent-acp/releases/tag/v0.109.0) tags `fast` with `speed`. [`codex-acp` 2.8.0](https://github.com/agentclientprotocol/codex-acp/releases/tag/v2.8.0) does the same for `fast-mode`.
+- [Zed](https://github.com/zed-industries/zed/pull/67190) and [Delta](https://delta.dev) use the category to find an Agent's fast mode toggle.
 
 ## Frequently asked questions
 
@@ -136,7 +134,7 @@ No. `thought_level` has the same shape (a few values on a scale) and no ordering
 
 ### What about v1 Clients without boolean support?
 
-Agents can keep sending an on/off `select` fallback, as `claude-agent-acp` and `codex-acp` do today. With the ordering rule, off comes before on. `codex-acp` already lists them that way, and `claude-agent-acp` lists on first. A Client that knows the `speed` category is new enough to advertise `session.configOptions.boolean`, so it gets the `boolean` form. In v2, `boolean` options need no capability.
+When fast mode is available, `claude-agent-acp` and `codex-acp` send a `select` with `off` before `on` to v1 Clients that don't advertise `session.configOptions.boolean`. Clients that advertise it get a `boolean`. In v2, `boolean` options need no capability.
 
 ### What if turning on fast mode also changes the model?
 
@@ -149,3 +147,4 @@ Some Agents offer one control that changes the model, the reasoning effort, and 
 ## Revision history
 
 - 2026-11-13: Initial draft
+- 2026-11-20: Moved to Preview with implementations in the Claude and Codex adapters, Zed, and Delta

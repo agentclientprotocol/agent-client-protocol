@@ -232,7 +232,6 @@
               "rfds/session-set-title",
               "rfds/session-archive",
               "rfds/session-options",
-              "rfds/speed-config-category",
               "rfds/prompt-suggestions",
               "rfds/agent-skills",
               "rfds/session-cursors"
@@ -240,7 +239,7 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/subagents"]
+            "pages": ["rfds/subagents", "rfds/speed-config-category"]
           },
           {
             "group": "Completed",
