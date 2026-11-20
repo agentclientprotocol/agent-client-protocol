@@ -1561,6 +1561,296 @@ mod schema_annotation_tests {
             _ => false,
         }
     }
+
+    /// Checks the `x-state` and `x-scope` hints.
+    ///
+    /// `x-state` says how a message changes the stored state of its session.
+    /// `x-scope` lists what an Agent-to-Client message is about, most specific
+    /// path first. Both name things with paths such as
+    /// `/sessions/{sessionId}/toolCalls/{update.toolCallId}`, where a `{field}`
+    /// segment is read from the message. In a response rule, `result.` reads
+    /// from the result and any other field reads from the request params.
+    #[cfg(feature = "unstable_protocol_v2")]
+    mod state_and_scope {
+        use super::{def_schema, root_schema_value};
+        use serde_json::{Value, json};
+        use std::collections::BTreeSet;
+
+        const STATE_EXTENSION: &str = "x-state";
+        const SCOPE_EXTENSION: &str = "x-scope";
+
+        #[test]
+        fn every_session_update_has_a_state_rule() {
+            let schema = root_schema_value();
+            let session_id =
+                &def_schema(&schema, "UpdateSessionNotification")["properties"]["sessionId"];
+            let variants = def_schema(&schema, "SessionUpdate")["anyOf"]
+                .as_array()
+                .unwrap();
+            let mut checked = 0;
+            for variant in variants {
+                let Some(name) = variant
+                    .pointer("/properties/sessionUpdate/const")
+                    .and_then(Value::as_str)
+                else {
+                    // The custom or future variant has no known effect.
+                    assert!(variant.get(STATE_EXTENSION).is_none());
+                    continue;
+                };
+                let params = json!({"properties": {"sessionId": session_id, "update": variant}});
+                assert!(
+                    assert_state_rules(&schema, name, variant, &params),
+                    "{name} has no {STATE_EXTENSION}"
+                );
+                checked += 1;
+            }
+            assert!(checked > 0, "expected at least one session update variant");
+        }
+
+        #[test]
+        fn every_agent_to_client_method_has_a_scope() {
+            let schema = root_schema_value();
+            let params = method_defs(&schema, &["AgentRequest", "AgentNotification"]);
+            assert!(!params.is_empty(), "expected Agent-to-Client methods");
+            for name in params {
+                let def = def_schema(&schema, name);
+                let paths = def[SCOPE_EXTENSION]
+                    .as_array()
+                    .unwrap_or_else(|| panic!("{name} has no {SCOPE_EXTENSION}"));
+                assert!(!paths.is_empty(), "{name} has an empty {SCOPE_EXTENSION}");
+                for path in paths {
+                    assert_path(&schema, name, def, path.as_str().unwrap());
+                }
+                assert_state_rules(&schema, name, def, def);
+            }
+        }
+
+        #[test]
+        fn response_state_rules_name_existing_fields() {
+            let schema = root_schema_value();
+            let requests = method_defs(&schema, &["ClientRequest"]);
+            let mut checked = 0;
+            for name in method_defs(&schema, &["AgentResponse"]) {
+                let def = def_schema(&schema, name);
+                let request = requests
+                    .iter()
+                    .find(|request| def_schema(&schema, request)["x-method"] == def["x-method"])
+                    .unwrap_or_else(|| panic!("{name} has no request"));
+                let message = json!({
+                    "allOf": [{"$ref": format!("#/$defs/{request}")}],
+                    "properties": {"result": {"$ref": format!("#/$defs/{name}")}}
+                });
+                checked += usize::from(assert_state_rules(&schema, name, def, &message));
+            }
+            assert!(checked > 0, "expected at least one response state rule");
+        }
+
+        #[test]
+        fn state_and_scope_only_annotate_checked_schemas() {
+            let schema = root_schema_value();
+            let defs = |unions: &[&str]| {
+                method_defs(&schema, unions)
+                    .into_iter()
+                    .map(|name| def_schema(&schema, name))
+                    .collect::<Vec<_>>()
+            };
+            let to_client = defs(&["AgentRequest", "AgentNotification"]);
+            let with_state = def_schema(&schema, "SessionUpdate")["anyOf"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .chain(to_client.iter().copied())
+                .chain(defs(&["AgentResponse"]))
+                .filter(|checked| checked.get(STATE_EXTENSION).is_some());
+            let with_scope = to_client
+                .iter()
+                .filter(|checked| checked.get(SCOPE_EXTENSION).is_some());
+            assert_eq!(count_key(&schema, STATE_EXTENSION), with_state.count());
+            assert_eq!(count_key(&schema, SCOPE_EXTENSION), with_scope.count());
+        }
+
+        /// Checks the `x-state` rules on `annotated` against `message`, the
+        /// schema its fields are read from. Returns whether it has any.
+        fn assert_state_rules(
+            schema: &Value,
+            owner: &str,
+            annotated: &Value,
+            message: &Value,
+        ) -> bool {
+            let rules = match annotated.get(STATE_EXTENSION) {
+                Some(Value::Array(rules)) => rules.iter().collect(),
+                Some(rule) => vec![rule],
+                None => return false,
+            };
+            assert!(!rules.is_empty(), "{owner} has an empty {STATE_EXTENSION}");
+            for rule in rules {
+                let rule = rule.as_object().unwrap();
+                let action = rule["action"].as_str().unwrap();
+                let path = rule.get("path").map(|path| path.as_str().unwrap());
+                let value = rule.get("value").map(|value| value.as_str().unwrap());
+                assert!(
+                    rule.keys()
+                        .all(|key| ["action", "path", "value"].contains(&key.as_str())),
+                    "{owner}: unknown key in {STATE_EXTENSION}"
+                );
+                let (needs_path, needs_value, allows_value) = match action {
+                    "upsert" | "replace" => (true, false, true),
+                    "append" => (true, true, true),
+                    "remove" => (true, false, false),
+                    "none" => (false, false, false),
+                    _ => panic!("{owner}: unknown {STATE_EXTENSION} action {action}"),
+                };
+                assert_eq!(path.is_some(), needs_path, "{owner}: {action} path");
+                assert!(
+                    value.is_some() || !needs_value,
+                    "{owner}: {action} needs a value"
+                );
+                assert!(
+                    value.is_none() || allows_value,
+                    "{owner}: {action} takes no value"
+                );
+                if let Some(path) = path {
+                    assert!(path.starts_with("/sessions/{"), "{owner}: {path}");
+                    assert_path(schema, owner, message, path);
+                }
+                if let Some(value) = value {
+                    assert!(
+                        !field_schemas(schema, message, value).is_empty(),
+                        "{owner}: no field {value}"
+                    );
+                }
+            }
+            true
+        }
+
+        /// Checks that every `{field}` segment of `path` is a string or number
+        /// field of `message`.
+        fn assert_path(schema: &Value, owner: &str, message: &Value, path: &str) {
+            let segments = path
+                .strip_prefix('/')
+                .unwrap_or_else(|| panic!("{owner}: {path} must start with /"));
+            if segments.is_empty() {
+                // `/` on its own is the Agent.
+                return;
+            }
+            for segment in segments.split('/') {
+                let Some(field) = segment
+                    .strip_prefix('{')
+                    .and_then(|field| field.strip_suffix('}'))
+                else {
+                    assert!(
+                        !segment.is_empty()
+                            && segment
+                                .chars()
+                                .all(|c| c.is_ascii_alphanumeric() || c == '_'),
+                        "{owner}: bad segment in {path}"
+                    );
+                    continue;
+                };
+                let fields = field_schemas(schema, message, field);
+                assert!(!fields.is_empty(), "{owner}: {path} has no field {field}");
+                assert!(
+                    fields
+                        .iter()
+                        .all(|field| is_string_or_number(schema, field)),
+                    "{owner}: {field} in {path} must be a string or a number"
+                );
+            }
+        }
+
+        /// The schemas of the dotted `field` on `message`. A field can exist on
+        /// only some branches of a union, such as `requestId` on
+        /// `elicitation/create`.
+        fn field_schemas<'a>(schema: &'a Value, message: &'a Value, field: &str) -> Vec<&'a Value> {
+            field.split('.').fold(vec![message], |nodes, name| {
+                nodes
+                    .into_iter()
+                    .flat_map(|node| property_schemas(schema, node, name))
+                    .collect()
+            })
+        }
+
+        fn property_schemas<'a>(schema: &'a Value, node: &'a Value, name: &str) -> Vec<&'a Value> {
+            let mut found: Vec<&Value> = node
+                .get("properties")
+                .and_then(|properties| properties.get(name))
+                .into_iter()
+                .collect();
+            for branch in branches(schema, node) {
+                found.extend(property_schemas(schema, branch, name));
+            }
+            found
+        }
+
+        /// Whether `node` accepts only strings and numbers, apart from `null`.
+        fn is_string_or_number(schema: &Value, node: &Value) -> bool {
+            let is_allowed = |name: &Value| {
+                matches!(
+                    name.as_str(),
+                    Some("string" | "integer" | "number" | "null")
+                )
+            };
+            match node.get("type") {
+                Some(Value::Array(types)) => types.iter().all(is_allowed),
+                Some(name) => is_allowed(name),
+                None => {
+                    let branches = branches(schema, node);
+                    !branches.is_empty()
+                        && branches
+                            .into_iter()
+                            .all(|branch| is_string_or_number(schema, branch))
+                }
+            }
+        }
+
+        /// The schemas `node` is composed from: its `$ref` target and the
+        /// members of its `allOf`, `anyOf`, and `oneOf`.
+        fn branches<'a>(schema: &'a Value, node: &'a Value) -> Vec<&'a Value> {
+            let target = node
+                .get("$ref")
+                .and_then(Value::as_str)
+                .map(|target| schema.pointer(target.trim_start_matches('#')).unwrap());
+            let members = ["allOf", "anyOf", "oneOf"]
+                .into_iter()
+                .filter_map(|key| node.get(key).and_then(Value::as_array))
+                .flatten();
+            target.into_iter().chain(members).collect()
+        }
+
+        /// The definitions with an `x-method` that the `unions` reference.
+        fn method_defs<'a>(schema: &'a Value, unions: &[&str]) -> BTreeSet<&'a str> {
+            fn collect<'a>(node: &'a Value, refs: &mut BTreeSet<&'a str>) {
+                match node {
+                    Value::Object(object) => {
+                        if let Some(target) = object.get("$ref").and_then(Value::as_str) {
+                            refs.insert(target.trim_start_matches("#/$defs/"));
+                        }
+                        object.values().for_each(|value| collect(value, refs));
+                    }
+                    Value::Array(array) => array.iter().for_each(|value| collect(value, refs)),
+                    _ => {}
+                }
+            }
+            let mut refs = BTreeSet::new();
+            for union in unions {
+                collect(def_schema(schema, union), &mut refs);
+            }
+            refs.retain(|name| def_schema(schema, name).get("x-method").is_some());
+            refs
+        }
+
+        /// How many times `key` appears anywhere in `node`.
+        fn count_key(node: &Value, key: &str) -> usize {
+            match node {
+                Value::Object(object) => object
+                    .iter()
+                    .map(|(name, value)| usize::from(name == key) + count_key(value, key))
+                    .sum(),
+                Value::Array(array) => array.iter().map(|value| count_key(value, key)).sum(),
+                _ => 0,
+            }
+        }
+    }
 }
 
 mod markdown_generator {

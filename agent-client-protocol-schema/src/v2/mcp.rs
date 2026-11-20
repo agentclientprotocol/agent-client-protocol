@@ -161,6 +161,7 @@ impl McpRequestId {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = ["/mcpServers/{serverId}"])))]
 #[non_exhaustive]
 pub struct MessageMcpRequest {
     /// The declared ACP MCP server receiving this request.
