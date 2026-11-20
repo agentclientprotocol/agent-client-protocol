@@ -34,6 +34,9 @@ use std::{
 
 use markdown_generator::MarkdownGenerator;
 
+#[cfg(feature = "unstable_protocol_v2")]
+mod wire;
+
 const PROTOCOL_DOC_BASE: &str = "https://agentclientprotocol.com/protocol";
 
 /// Protocol version directory the schema's doc links point into.
@@ -256,6 +259,8 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
 
 fn schema_value_for_publication(schema_value: &serde_json::Value) -> serde_json::Value {
     let mut schema_value = schema_value.clone();
+    #[cfg(feature = "unstable_protocol_v2")]
+    wire::add_contract(&mut schema_value);
     replace_string_values(&mut schema_value);
     schema_value
 }
@@ -1607,9 +1612,14 @@ mod markdown_generator {
             let download_file = schema_file.rsplit('/').next().unwrap_or(schema_file);
             if schema_file.starts_with("v2/") {
                 // `releases/latest` resolves to the v1 schema release, so link the v2 releases.
+                let guide = if cfg!(feature = "unstable") {
+                    "draft/"
+                } else {
+                    ""
+                };
                 writeln!(
                     &mut self.output,
-                    "<Note>This schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). Each [`schema-v2` release](https://github.com/agentclientprotocol/agent-client-protocol/releases?q=schema-v2) has it as the `{download_file}` download.</Note>"
+                    "<Note>This schema file is generated in this repository at [`schema/{schema_file}`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/{schema_file}). Each [`schema-v2` release](https://github.com/agentclientprotocol/agent-client-protocol/releases?q=schema-v2) has it as the `{download_file}` download. See [Validating messages](/protocol/v2/{guide}overview#validating-messages) for whole messages and method-specific results.</Note>"
                 )
                 .unwrap();
             } else {

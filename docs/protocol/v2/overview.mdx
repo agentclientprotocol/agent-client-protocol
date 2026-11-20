@@ -23,6 +23,14 @@ Both sides send requests, and each side chooses IDs for its own requests indepen
 
 Unlike base JSON-RPC, ACP does not use batches. See [Transports](/protocol/v2/transports#no-batches).
 
+### Validating messages
+
+Use a Draft 2020-12 JSON Schema validator on `schema.json` to check a complete message. Use `#clientToAgent` or `#agentToClient` when the sender is known. Both directions include protocol-level notifications. Known methods select their own `params` schema. An `_`-prefixed extension uses its own contract. If a method takes no required arguments, such as `auth/logout`, `params` can be omitted. If present, JSON-RPC `params` is an object or array, not `null`.
+
+A success response has no `method`. Keep the method with each outstanding request ID and validate `result` separately. The schema's `x-methods` index is keyed by **the recipient of the original method**, then by method name. For example, `x-methods.agent["session/prompt"].result` points to `#/$defs/PromptResponse`. Its `request` entry points to `#/$defs/PromptRequest`. A `notification` entry points to notification parameters and has no corresponding result.
+
+The root checks messages defined by this publication. A receiver can validate the JSON-RPC envelope alone with `#rpcEnvelope` before looking up the method. An unknown method is not a malformed JSON-RPC envelope. Use the [error rules](/protocol/v2/error) to distinguish an unknown method from bad params. Validate `initialize` according to [version negotiation](/protocol/v2/initialization#version-negotiation), not by requiring a peer offering another version to use this schema. Capability, session-state, and request-ID checks still need connection state.
+
 ## Message flow
 
 A typical flow follows this pattern:
