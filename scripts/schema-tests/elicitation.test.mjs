@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { publications, validators } from "./v2.mjs";
+import { schemaFiles, validators } from "./publications.mjs";
 
-for (const file of publications) {
-  const { at } = validators(file);
+for (const file of schemaFiles) {
+  const { at } = validators("v2", file);
   const validate = at("/$defs/CreateElicitationRequest");
   const form = {
     mode: "form",

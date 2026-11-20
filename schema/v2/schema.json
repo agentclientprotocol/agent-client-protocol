@@ -1971,8 +1971,10 @@
         }
       },
       "required": ["sessionId"],
-      "not": {
-        "required": ["requestId"]
+      "propertyNames": {
+        "not": {
+          "const": "requestId"
+        }
       }
     },
     "ElicitationRequestScope": {
@@ -1989,15 +1991,10 @@
         }
       },
       "required": ["requestId"],
-      "not": {
-        "anyOf": [
-          {
-            "required": ["sessionId"]
-          },
-          {
-            "required": ["toolCallId"]
-          }
-        ]
+      "propertyNames": {
+        "not": {
+          "enum": ["sessionId", "toolCallId"]
+        }
       }
     },
     "ElicitationSchema": {
@@ -2530,8 +2527,10 @@
         }
       },
       "required": ["anyOf"],
-      "not": {
-        "required": ["type"]
+      "propertyNames": {
+        "not": {
+          "const": "type"
+        }
       }
     },
     "MultiSelectPropertySchema": {

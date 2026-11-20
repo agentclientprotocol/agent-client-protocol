@@ -663,7 +663,7 @@ impl StringMultiSelectItems {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "schemars", schemars(extend("not" = {"required": ["type"]})))]
+#[cfg_attr(feature = "schemars", schemars(extend("propertyNames" = {"not": {"const": "type"}})))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct TitledMultiSelectItems {
@@ -1513,7 +1513,7 @@ fn elicitation_scope_schema(schema: &mut Schema) {
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "schemars", schemars(extend("not" = {"required": ["requestId"]})))]
+#[cfg_attr(feature = "schemars", schemars(extend("propertyNames" = {"not": {"const": "requestId"}})))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -1551,7 +1551,7 @@ impl ElicitationSessionScope {
 /// Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session
 /// (e.g., during auth/configuration phases before any session is started).
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "schemars", schemars(extend("not" = {"anyOf": [{"required": ["sessionId"]}, {"required": ["toolCallId"]}]})))]
+#[cfg_attr(feature = "schemars", schemars(extend("propertyNames" = {"not": {"enum": ["sessionId", "toolCallId"]}})))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
