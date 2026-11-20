@@ -47,6 +47,24 @@ their built-in default instructions.
 
 </Update>
 
+<Update label="October 9, 2026" tags={["Protocol"]}>
+## Session notices are stabilized
+
+Agents can send a `notice` session update to tell the user something that is not part of the conversation, such as an MCP server being unavailable. The Client decides how to present and dismiss it. V1 Clients opt in. No Client capability is needed in v2.
+
+[Read the full announcement](/announcements/session-notices-stabilized).
+
+</Update>
+
+<Update label="October 9, 2026" tags={["Protocol"]}>
+## Session compaction is stabilized
+
+Agents can report context compaction as an entry in the session timeline, with its status and the summary it retained. V1 Clients opt in. No Client capability is needed in v2.
+
+[Read the full announcement](/announcements/session-compaction-stabilized).
+
+</Update>
+
 <Update label="September 17, 2026" tags={["Protocol"]}>
 ## Tool Call Names are Stabilized
 
@@ -57,6 +75,15 @@ Agents can identify the invoked tool separately from its human-readable title
 without introducing capability or authorization semantics.
 
 [Read the full announcement](/announcements/tool-call-name-stabilized).
+
+</Update>
+
+<Update label="August 20, 2026" tags={["Protocol"]}>
+## Terminal authentication is stabilized
+
+Agents can advertise a `terminal` authentication method for a login flow that needs their terminal UI. The Client runs the configured Agent program in an interactive terminal and reconnects after the login succeeds. Clients opt in with the `auth.terminal` capability.
+
+[Read the full announcement](/announcements/auth-methods-stabilized).
 
 </Update>
 
