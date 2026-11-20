@@ -208,7 +208,7 @@ Cursors are part of the history that v1 `session/load` and v2 `session/resume` w
 - When an Agent replays history, it **SHOULD** send a `cursor_update` for each cursor in that history that it still accepts. A replayed update carries the cursor's `capabilities` and `anchor`, like a first update, and follows the replayed entity it is anchored to.
 - In v2, replayed `cursor_update` notifications are replayed history and come before [`replay_complete`](/protocol/v2/session-setup#replay-complete).
 - Agents **SHOULD** use the same `cursorId` for the same position in every replay. An Agent that issues a new `cursorId` still accepts or rejects the old one as [Passing a cursor to a method](#passing-a-cursor-to-a-method) requires.
-- A full replay rebuilds the session's cursors, like its other entities. The Client **SHOULD** discard the cursors it held for the session and build them again from the replayed `cursor_update` notifications. A replayed cursor can carry a different anchor than it had before, for example when a `messageId` changed across the replay.
+- On a full replay, the Client **SHOULD** discard the cursors it held for the session and build them again from the replayed `cursor_update` notifications. A replayed cursor can carry a different anchor than it had before, for example when a `messageId` changed across the replay.
 - A resume without replay announces no cursors for earlier history. The cursors the Client already holds stay usable under the [lifetime](#lifetime) rules.
 
 ### Client and Agent capabilities

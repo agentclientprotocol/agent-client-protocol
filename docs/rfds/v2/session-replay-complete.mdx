@@ -9,11 +9,11 @@ title: "v2 Replay Complete Signal"
 
 > What are you proposing to change?
 
-Add a `replay_complete` session update to ACP v2. When a Client calls `session/resume` with a `replayFrom` cursor, the Agent sends it once, after the last replayed update and before the response. Every update before it is replayed history. Every update after it is not. A child session that the Agent announces during the request gets its own marker on its own `sessionId`.
+Add a `replay_complete` session update to ACP v2. When a Client calls `session/resume` with a `replayFrom` cursor, the Agent sends it once, after the last replayed update and before the response. The marker identifies the end of the requested replay, not its start. A child session that the Agent announces during the request gets its own marker on its own `sessionId`.
 
 With it, a Client can:
 
-- Know that it has the full history as soon as the replay ends, not when the Agent finishes its setup.
+- Know when the Agent has finished sending the requested retained history, without waiting for the Agent to finish setup.
 - Tell a complete replay from a truncated one when the resume fails, is cancelled, or the connection drops.
 
 The response keeps its meaning: the session is active and its current state is synchronized. This RFD does not say when or how a Client renders history.
@@ -64,7 +64,7 @@ The variant has no required fields. It accepts `_meta` like every other update.
 Rules:
 
 - The Agent **MUST** send `replay_complete` exactly once on the session named in each `session/resume` request with a `replayFrom` cursor, after the last replayed update and before the response. Child sessions get their own markers. See [Subagent sessions](#subagent-sessions).
-- The Agent **MUST** send it for an empty history too. Then it is the first `session/update` for the session after the request.
+- The Agent **MUST** send it for an empty replay too. It is then the first `session/update` the Agent sends for that session after it receives the request.
 - The Agent **MUST NOT** send it for a request that does not replay history: `session/resume` with `replayFrom` omitted or `null`, and `session/new`.
 - The Agent **MUST NOT** send it when it cannot finish the replay.
 
@@ -72,9 +72,11 @@ The marker does not make the session [active](/protocol/v2/session-setup#session
 
 ### Only history before the marker
 
-Every `session/update` that the Agent sends for the session between the request and `replay_complete` **MUST** be replayed history, as [Replay Contents](/protocol/v2/session-setup#replay-contents) defines it.
+From the time the Agent receives the replay request until it sends `replay_complete`, each `session/update` it sends for that session **MUST** be [replayed history](/protocol/v2/session-setup#replay-contents).
 
-The Agent holds every other update for the session in this window and sends it after the marker. Examples are the chunks of a message that is still streaming, `notice`, `available_commands_update`, `config_option_update`, and `state_update`. One JSON-RPC connection is ordered, so the buffer is local to the Agent.
+The Agent holds every other update for the session in this window and sends it after the marker. Examples are the chunks of a message that is still streaming, `notice`, `available_commands_update`, `config_option_update`, and `state_update`.
+
+On an already-active session, a live update the Agent sent before it received the request can still be in flight. The Client cannot use the time it sent `session/resume` to distinguish that update from replay. For example, a live-only `user_message` can arrive just before the marker for an empty replay.
 
 [Current-state synchronization](/protocol/v2/session-setup#current-state-synchronization) already follows any requested replay, so it follows the marker. This RFD does not change it.
 
@@ -84,13 +86,13 @@ Agent requests such as `session/request_permission` and `elicitation/create` are
 
 ### Outcomes
 
-| What the Client received                                         | Meaning                                                                                          |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `replay_complete`, then a success response                       | Complete history. The resume succeeded.                                                          |
-| `replay_complete`, then an error response or the connection ends | Complete history. The resume failed.                                                             |
-| No `replay_complete`, then an error response                     | Truncated replay. The Client **MUST NOT** use the updates as the full history.                   |
-| No `replay_complete`, then the connection ends                   | Truncated replay, as above.                                                                      |
-| No `replay_complete`, then a success response                    | Protocol violation. The success response still certifies the history. The Client **MAY** log it. |
+| What the Client received                                         | Meaning                                                                                                           |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `replay_complete`, then a success response                       | Requested replay complete. The resume succeeded.                                                                  |
+| `replay_complete`, then an error response or the connection ends | Requested replay complete. The resume failed.                                                                     |
+| No `replay_complete`, then an error response                     | Truncated replay. The Client **MUST NOT** treat the updates as a complete replay.                                 |
+| No `replay_complete`, then the connection ends                   | Truncated replay, as above.                                                                                       |
+| No `replay_complete`, then a success response                    | Protocol violation. The success response still confirms the requested replay finished. The Client **MAY** log it. |
 
 A `session/resume` that the Client cancels with `$/cancel_request` still gets a response. If the Agent cancels it, that is an error response with `-32800`, and the table applies to it like any other error.
 
@@ -109,19 +111,19 @@ A required update has to be in v2 before v2 is stable. After that, it would need
 A replaying resume of a parent session can also replay child sessions, at any depth. See the [Subagent Sessions RFD](../subagents.mdx#reconnection-and-replay). Each session has its own marker on its own `sessionId`, and the rules of this RFD apply to each session separately:
 
 - The Agent **MUST** send `replay_complete` exactly once on each child session that it announces with `subagent_update` between the request and the response. It sends the marker after the announcement and after the last replayed update for that child. An announced child with no replayed history gets a marker too, like the session named in the request. A child that the Agent does not announce gets no marker.
-- Every update for a session before that session's marker is replayed history, as [Only history before the marker](#only-history-before-the-marker) requires. Updates and Agent requests that are not history follow that session's marker. They do not wait for the replay of any other session.
+- After receiving the resume request, the Agent holds live updates and requests for each announced child until that child's marker. They do not wait for the replay of any other session.
 - The markers of different sessions have no required order. A parent's marker says nothing about its children.
 - The [outcome table](#outcomes) applies to each session, with that session's marker and the response to the request.
 
 That RFD already lets live child traffic proceed during a replay when later replay cannot overwrite or duplicate it. A child's marker is the point where that holds for the child.
 
-No marker means that the replay of every session is complete. The successful response does, because the Agent sends all history selected for the replay before it.
+Each marker covers only its own session. The successful `session/resume` response confirms that the Agent finished the replay for the requested session and all the children it included.
 
 A `subagent_update` is an update for the parent session, so the parent's marker is the freshness boundary for a child's work state and capabilities. Those in a replayed `subagent_update` are historical. Those in a `subagent_update` after the parent's marker are current. The Client still waits for the successful response before it sends `session/cancel` for a child. In v1 the response stays the boundary, as that RFD defines.
 
 ### Replay cursors
 
-`replay_complete` means that all entries selected by the `replayFrom` cursor were sent. For `{ "type": "start" }`, that is all retained history. If a cursor selects no entries, the marker is the first update.
+`replay_complete` means that all entries selected by the `replayFrom` cursor were sent. For `{ "type": "start" }`, that is all retained history. If a cursor selects no entries, the marker is the first update the Agent sends for the session after receiving the request.
 
 An Agent that rejects the cursor with `-32602` replays nothing and sends no marker.
 
@@ -129,9 +131,9 @@ An Agent that rejects the cursor with `-32602` replays nothing and sends no mark
 
 > How will things play out once this feature exists?
 
-A Client resumes a saved session with replay. When `replay_complete` arrives, it knows that it has the full history, while the Agent is still finishing its setup. It needs no timer. This holds for a Client that renders updates as they arrive and for one that waits for the full history.
+A Client resumes a saved session with replay. When `replay_complete` arrives, it knows that the Agent finished sending the retained history requested, even if setup is still in progress. It needs no timer.
 
-When the Agent crashes during a resume, the Client knows that the replay was cut short. A Client that persists replayed history keeps its earlier copy.
+If the Agent crashes before sending the marker, the Client knows that the replay was cut short. A Client that persists replayed history keeps its earlier copy.
 
 ## Implementation details and plan
 
@@ -159,7 +161,7 @@ Status on 2026-11-18:
 - It works for an empty history.
 - The Agent does not need to know which entry is last. A paged producer sends the marker after its last page.
 - It adds one small notification per resume.
-- It cannot separate live updates from history alone. The ordering rule fixes this.
+- It tells the Client where the replay ends. It does not distinguish an earlier live update already in flight from the first replayed update.
 
 **(b) Replay metadata on each replayed notification:** a position on each, and an end flag on the last.
 
@@ -168,11 +170,11 @@ Status on 2026-11-18:
 - An empty history has no notification for the flag, so it needs design (a) too.
 - Positions add bytes to every update, and one JSON-RPC connection is ordered already.
 
-The ordering rule of (a) gives the benefit of (b) without its costs.
+The Client needs to know whether the requested replay finished. It does not need a start marker or a tag on every update for that.
 
 **(c) The response first, then the history.**
 
-- A success response no longer certifies the history, so the Client still needs an end marker. This is (a) with a reordered response.
+- A success response would no longer confirm that the requested replay finished, so the Client would still need an end marker. This is (a) with a reordered response.
 - It broke the freshness boundary that the [Subagent Sessions RFD](../subagents.mdx#reconnection-and-replay) defined at the time, which was the response.
 - A prompt could interleave with the history in one stream.
 - The slow Agent work still comes before the session is usable.
@@ -201,7 +203,7 @@ They are not replay. The Client applies them as it does after a resume without r
 
 ### Why does each child session get its own marker?
 
-One marker on the parent would have to speak for every session in the tree. The Agent would then hold all live child updates and requests until the whole replay ends, which the [Subagent Sessions RFD](../subagents.mdx#reconnection-and-replay) does not require. With a marker on each `sessionId`, the rule is the same for every session: the updates before a session's marker are its history.
+One marker on the parent would have to speak for every session in the tree. The Agent would then hold all live child updates and requests until the whole replay ends, which the [Subagent Sessions RFD](../subagents.mdx#reconnection-and-replay) does not require. With a marker on each `sessionId`, a session can resume live delivery as soon as its own replay finishes.
 
 v2 already reports a child's `state_update` on the child's own stream. A Client that handles updates per session finds the end of each history in that session's stream, without walking the session tree.
 
@@ -231,6 +233,7 @@ These were open while the RFD was a draft. They are closed for the v2 Preview.
 
 ## Revision history
 
+- 2026-11-20: Clarified that the marker confirms completion of the requested replay, not retention of every live update. On an already-active session, a live update can cross the resume request without violating the Agent's ordering rule.
 - 2026-11-18: Recorded the status of the implementation plan.
 - 2026-11-17: Closed the open questions for the v2 Preview. The update keeps the name `replay_complete` and stays required with no capability. The marker carries no request identifier, cursor, or known-gaps flag. Each can be added later as an optional field. The rule against two pending replaying resumes for one session is on the [Session Setup](/protocol/v2/session-setup#replay-complete) page.
 - 2026-11-17: In v2, the parent's marker is the freshness boundary for a child's work state and capabilities. Before, it was the response. `subagent_update` is in the stable v2 schema, so the child session rules are on the stable [Session Setup](/protocol/v2/session-setup#child-sessions) and [Subagents](/protocol/v2/subagents#resuming) pages.

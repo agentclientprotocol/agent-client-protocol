@@ -295,9 +295,9 @@ execute the command again.
 
 Agents **SHOULD** preserve the IDs of all other replayed [entities](/protocol/v2/draft/prompt-lifecycle#entity-ids), such as agent and thought message IDs, `toolCallId`, `terminalId`, `planId`, and `compactionId`, across replay when possible, but these IDs are not
 guaranteed to remain stable across reconnects or Agent restarts. Clients **MUST
-NOT** rely on them to deduplicate replay against previously received history. A
-full replay is authoritative: Clients **SHOULD** rebuild all of the session's entities, such as messages, tool calls, terminals, plans, and compactions, from it rather than merging it into
-existing state by ID.
+NOT** rely on them to deduplicate replay against previously received history.
+A Client attaching to a session can rebuild its transcript from a full replay.
+It contains the history the Agent retained, not necessarily everything the Client saw live.
 
 `user_message`, `agent_message`, `agent_thought`, and `session_message` updates
 are upserts keyed by `messageId`. Their `content` arrays replace the whole
@@ -337,7 +337,7 @@ Replay also reports unstable [session cursors](/protocol/v2/draft/prompt-lifecyc
 
 - When an Agent replays history, it **SHOULD** send a `cursor_update` for each cursor in that history that it still accepts. A replayed update carries the cursor's `capabilities` and `anchor`, like a first update, and follows the replayed entity it is anchored to.
 - Agents **SHOULD** use the same `cursorId` for the same position in every replay.
-- A full replay rebuilds the session's cursors, like its other entities. The Client **SHOULD** discard the cursors it held for the session and build them again from the replayed `cursor_update` notifications. A replayed cursor can carry a different anchor than it had before, for example when a `messageId` changed across the replay.
+- On a full replay, the Client **SHOULD** discard the cursors it held for the session and build them again from the replayed `cursor_update` notifications. A replayed cursor can carry a different anchor than it had before, for example when a `messageId` changed across the replay.
 - A resume without replay announces no cursors for earlier history. The cursors the Client already holds stay usable.
 
 When all requested replay entries have been reported to the Client, the Agent
@@ -376,11 +376,13 @@ For each `session/resume` request with a `replayFrom` cursor, the Agent marks th
 The update has no required fields.
 
 - The Agent **MUST** send `replay_complete` exactly once on the session named in the request, after the last replayed update and before the response.
-- The Agent **MUST** send it for an empty history too. Then it is the first `session/update` for the session after the request.
+- The Agent **MUST** send it for an empty replay too. It is then the first `session/update` the Agent sends for that session after it receives the request.
 - The Agent **MUST NOT** send it when `replayFrom` is omitted or `null`, or for `session/new`.
 - The Agent **MUST NOT** send it when it cannot finish the replay.
 
-Every `session/update` that the Agent sends for the session between the request and `replay_complete` **MUST** be replayed history, as [Replay Contents](#replay-contents) defines it. The Agent holds every other update for the session and sends it after `replay_complete`. Examples are the chunks of a message that is still streaming, `notice`, `available_commands_update`, `config_option_update`, and the updates of [current-state synchronization](#current-state-synchronization).
+From the time the Agent receives the replay request until it sends `replay_complete`, each `session/update` it sends for that session **MUST** be [replayed history](#replay-contents). The Agent holds every other update for the session and sends it after `replay_complete`. Examples are the chunks of a message that is still streaming, `notice`, `available_commands_update`, `config_option_update`, and the updates of [current-state synchronization](#current-state-synchronization).
+
+Sending `session/resume` does not mark the start of replay for the Client. If that session is already active on the connection, a live `user_message` the Agent sent before it received the request can arrive after the Client sent it. The Client can therefore receive that message just before `replay_complete` even if the replay was empty.
 
 Foreground work that is still running during a resume is split at a cut point. The updates up to the cut are history and come before `replay_complete`. The rest comes after it. Chunks are keyed by `messageId`, so the later chunks append to the replayed message.
 
@@ -392,13 +394,13 @@ Agent requests such as `session/request_permission` and `elicitation/create` are
 
 Together with the response, `replay_complete` tells the Client whether the replay was complete:
 
-| What the Client received                                         | Meaning                                                                                          |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `replay_complete`, then a success response                       | Complete history. The resume succeeded.                                                          |
-| `replay_complete`, then an error response or the connection ends | Complete history. The resume failed.                                                             |
-| No `replay_complete`, then an error response                     | Truncated replay. The Client **MUST NOT** use the updates as the full history.                   |
-| No `replay_complete`, then the connection ends                   | Truncated replay, as above.                                                                      |
-| No `replay_complete`, then a success response                    | Protocol violation. The success response still certifies the history. The Client **MAY** log it. |
+| What the Client received                                         | Meaning                                                                                                           |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `replay_complete`, then a success response                       | Requested replay complete. The resume succeeded.                                                                  |
+| `replay_complete`, then an error response or the connection ends | Requested replay complete. The resume failed.                                                                     |
+| No `replay_complete`, then an error response                     | Truncated replay. The Client **MUST NOT** treat the updates as a complete replay.                                 |
+| No `replay_complete`, then the connection ends                   | Truncated replay, as above.                                                                                       |
+| No `replay_complete`, then a success response                    | Protocol violation. The success response still confirms the requested replay finished. The Client **MAY** log it. |
 
 A `session/resume` that is cancelled with [`$/cancel_request`](/protocol/v2/draft/cancellation) still gets a response. A `-32800` response is an error response in this table.
 
@@ -411,12 +413,12 @@ Clients **SHOULD NOT** send a second `session/resume` with a `replayFrom` cursor
 A resume with replay can also replay the history of [child sessions](/protocol/v2/draft/subagents#replayed-child-history), at any depth. Each session has its own `replay_complete` on its own `sessionId`, and the rules above apply to each session separately:
 
 - The Agent **MUST** send `replay_complete` exactly once on each child session that it announces with `subagent_update` between the request and the response. It sends it after the announcement and after the last replayed update for that child. An announced child with no replayed history gets one too, like the session named in the request. A child that the Agent does not announce gets none.
-- Every update for a session before that session's `replay_complete` is replayed history. Updates and Agent requests that are not history follow it. They do not wait for the replay of any other session.
+- After receiving the resume request, the Agent holds live updates and requests for each announced child until that child's `replay_complete`. They do not wait for the replay of any other session.
 - A `subagent_update` is an update for the parent session, so the parent's `replay_complete` separates replayed associations from current ones. The `capabilities` and `state` in a replayed `subagent_update` are historical. See [Resuming](/protocol/v2/draft/subagents#resuming).
 - The `replay_complete` updates of different sessions have no required order. A parent's `replay_complete` says nothing about its children.
 - The table above applies to each session, with that session's `replay_complete` and the response to the request.
 
-No `replay_complete` means that the replay of every session is complete. The successful response does, because the Agent sends all history selected for the replay before it.
+Each marker covers only its own session. The successful `session/resume` response confirms that the Agent finished the replay for the requested session and all the children it included.
 
 ### Current-state synchronization
 
