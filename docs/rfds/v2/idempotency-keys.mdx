@@ -125,7 +125,7 @@ There is no fixed retry window. Key retention depends on whether the Agent keeps
 - **Live-only messages.** For a prompt whose message the Agent doesn't retain, such as a locally handled command, the Agent **MUST** recognize the key while the session stays active on a connection. After that it **MAY** forget it.
 - Once these retention requirements end, the Agent **MAY** forget the key. A prompt with a forgotten key is a new submission.
 
-Agents **SHOULD** store the key in the same step as the message, for example as part of the message's ID. The two then can't be stored or lost separately. If a restart loses a message that was never written to the stored session, the key is lost with it, and the retry inserts the message.
+Agents **SHOULD** store the key in the same step as the message, for example by deriving the message's ID from the key with a one-way function such as UUIDv5. The two then can't be stored or lost separately. If a restart loses a message that was never written to the stored session, the key is lost with it, and the retry inserts the message.
 
 On a new connection, the Client calls `initialize` and `session/resume` before retrying. Neither resume nor replay reports which keys the Agent still holds. If a duplicate would matter and the Client cannot rule it out, the Client **SHOULD NOT** automatically resend an unanswered prompt. It **SHOULD** tell the user the prompt might already have run and let them decide whether to retry. A retry of the same submission sends the original prompt and key in a new `session/prompt` request. Proxies and conductors forward the key unchanged.
 
@@ -345,6 +345,7 @@ This RFD doesn't change v1. A v1 `session/prompt` response arrives at the end of
 
 ## Revision history
 
+- 2026-11-20: The example of storing the key with the message now says to derive the message's ID from the key with a one-way function. "As part of the message's ID" could be read as putting the key in an ID that the Agent sends back.
 - 2026-11-20: Clarified that reconnecting does not guarantee a key survived. Clients should not automatically retry unanswered prompts when duplicate work would matter and cannot be ruled out.
 - 2026-11-18: Recorded the status of the implementation plan.
 - 2026-11-17: The retry classes and the class of each method are documented in one table on the overview page, not on each method's page.
