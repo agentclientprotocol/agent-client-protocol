@@ -17,7 +17,13 @@ export function createAjv(version) {
     "x-deserialize-default-on-null",
     "x-deserialize-skip-invalid-items",
   ]);
-  if (version === "v1") ajv.addKeyword("discriminator"); // Codegen hint, not an assertion.
+  if (version === "v1") {
+    ajv.addKeyword("discriminator"); // Codegen hint, not an assertion.
+  } else {
+    ajv.addKeyword("x-methods"); // Lookup for validators that know the originating method.
+    // Ajv 8 resolves 2020-12 anchors, but strict schema compilation needs the name registered.
+    ajv.addKeyword("$anchor");
+  }
 
   addFormats(ajv, ["uri", "date-time"]);
   // Rust numeric type hints. Wire limits belong in minimum/maximum, not here.

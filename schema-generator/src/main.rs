@@ -34,6 +34,9 @@ use std::{
 
 use markdown_generator::MarkdownGenerator;
 
+#[cfg(feature = "unstable_protocol_v2")]
+mod wire;
+
 const PROTOCOL_DOC_BASE: &str = "https://agentclientprotocol.com/protocol";
 
 /// Protocol version directory the schema's doc links point into.
@@ -256,6 +259,8 @@ fn write_schema(schema_value: &serde_json::Value, schema_dir: &Path, docs_protoc
 
 fn schema_value_for_publication(schema_value: &serde_json::Value) -> serde_json::Value {
     let mut schema_value = schema_value.clone();
+    #[cfg(feature = "unstable_protocol_v2")]
+    wire::add_contract(&mut schema_value);
     replace_string_values(&mut schema_value);
     schema_value
 }

@@ -5328,7 +5328,22 @@
           "x-deserialize-default-on-error": true
         }
       },
-      "required": ["code", "message"]
+      "required": ["code", "message"],
+      "if": {
+        "properties": {
+          "code": {
+            "const": -32022
+          }
+        }
+      },
+      "then": {
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/UnsupportedProtocolVersionErrorData"
+          }
+        }
+      }
     },
     "ErrorCode": {
       "description": "Predefined error codes for common JSON-RPC and ACP-specific errors.\n\nStandard errors use the JSON-RPC 2.0 codes. ACP-specific errors use the JSON-RPC\nserver-error range (-32000 to -32099), and request cancellation uses -32800 from the\nrange LSP reserves (-32899 to -32800).",
@@ -11024,5 +11039,754 @@
       "x-side": "proxy",
       "x-method": "proxy/successor"
     }
-  }
+  },
+  "x-methods": {
+    "agent": {
+      "auth/login": {
+        "request": "#/$defs/LoginAuthRequest",
+        "result": "#/$defs/LoginAuthResponse"
+      },
+      "auth/logout": {
+        "request": "#/$defs/LogoutAuthRequest",
+        "result": "#/$defs/LogoutAuthResponse"
+      },
+      "auth/status": {
+        "request": "#/$defs/AuthStatusRequest",
+        "result": "#/$defs/AuthStatusResponse"
+      },
+      "initialize": {
+        "request": "#/$defs/InitializeRequest",
+        "result": "#/$defs/InitializeResponse"
+      },
+      "mcp/message": {
+        "notification": "#/$defs/MessageMcpNotification"
+      },
+      "providers/disable": {
+        "request": "#/$defs/DisableProviderRequest",
+        "result": "#/$defs/DisableProviderResponse"
+      },
+      "providers/list": {
+        "request": "#/$defs/ListProvidersRequest",
+        "result": "#/$defs/ListProvidersResponse"
+      },
+      "providers/set": {
+        "request": "#/$defs/SetProviderRequest",
+        "result": "#/$defs/SetProviderResponse"
+      },
+      "session/archive": {
+        "request": "#/$defs/ArchiveSessionRequest",
+        "result": "#/$defs/ArchiveSessionResponse"
+      },
+      "session/cancel": {
+        "notification": "#/$defs/CancelSessionNotification"
+      },
+      "session/close": {
+        "request": "#/$defs/CloseSessionRequest",
+        "result": "#/$defs/CloseSessionResponse"
+      },
+      "session/delete": {
+        "request": "#/$defs/DeleteSessionRequest",
+        "result": "#/$defs/DeleteSessionResponse"
+      },
+      "session/fork": {
+        "request": "#/$defs/ForkSessionRequest",
+        "result": "#/$defs/ForkSessionResponse"
+      },
+      "session/list": {
+        "request": "#/$defs/ListSessionsRequest",
+        "result": "#/$defs/ListSessionsResponse"
+      },
+      "session/new": {
+        "request": "#/$defs/NewSessionRequest",
+        "result": "#/$defs/NewSessionResponse"
+      },
+      "session/options": {
+        "request": "#/$defs/SessionOptionsRequest",
+        "result": "#/$defs/SessionOptionsResponse"
+      },
+      "session/prompt": {
+        "request": "#/$defs/PromptRequest",
+        "result": "#/$defs/PromptResponse"
+      },
+      "session/resume": {
+        "request": "#/$defs/ResumeSessionRequest",
+        "result": "#/$defs/ResumeSessionResponse"
+      },
+      "session/set_config_option": {
+        "request": "#/$defs/SetSessionConfigOptionRequest",
+        "result": "#/$defs/SetSessionConfigOptionResponse"
+      },
+      "session/set_title": {
+        "request": "#/$defs/SetSessionTitleRequest",
+        "result": "#/$defs/SetSessionTitleResponse"
+      },
+      "session/status": {
+        "request": "#/$defs/SessionStatusRequest",
+        "result": "#/$defs/SessionStatusResponse"
+      },
+      "session/unarchive": {
+        "request": "#/$defs/UnarchiveSessionRequest",
+        "result": "#/$defs/UnarchiveSessionResponse"
+      },
+      "terminal/cancel": {
+        "request": "#/$defs/CancelTerminalRequest",
+        "result": "#/$defs/CancelTerminalResponse"
+      },
+      "tool_call/cancel": {
+        "request": "#/$defs/CancelToolCallRequest",
+        "result": "#/$defs/CancelToolCallResponse"
+      }
+    },
+    "client": {
+      "auth/status_update": {
+        "notification": "#/$defs/AuthStatusUpdateNotification"
+      },
+      "elicitation/complete": {
+        "notification": "#/$defs/CompleteElicitationNotification"
+      },
+      "elicitation/create": {
+        "request": "#/$defs/CreateElicitationRequest",
+        "result": "#/$defs/CreateElicitationResponse"
+      },
+      "mcp/message": {
+        "request": "#/$defs/MessageMcpRequest",
+        "result": "#/$defs/MessageMcpResponse"
+      },
+      "session/request_permission": {
+        "request": "#/$defs/RequestPermissionRequest",
+        "result": "#/$defs/RequestPermissionResponse"
+      },
+      "session/update": {
+        "notification": "#/$defs/UpdateSessionNotification"
+      }
+    },
+    "protocol": {
+      "$/cancel_request": {
+        "notification": "#/$defs/CancelRequestNotification"
+      }
+    },
+    "proxy": {
+      "proxy/initialize": {
+        "request": "#/$defs/InitializeProxyRequest",
+        "result": "#/$defs/InitializeProxyResponse"
+      },
+      "proxy/successor": {
+        "notification": "#/$defs/ProxySuccessorNotification",
+        "request": "#/$defs/ProxySuccessorRequest",
+        "result": "#/$defs/ProxySuccessorResponse"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$defs": {
+        "Envelope": {
+          "$anchor": "rpcEnvelope",
+          "type": "object",
+          "required": ["jsonrpc"],
+          "properties": {
+            "jsonrpc": {
+              "const": "2.0"
+            }
+          },
+          "oneOf": [
+            {
+              "required": ["method", "id"],
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "id": {
+                  "$ref": "#/$defs/RequestId"
+                },
+                "params": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    }
+                  ]
+                },
+                "result": false,
+                "error": false
+              }
+            },
+            {
+              "required": ["method"],
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "id": false,
+                "params": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    }
+                  ]
+                },
+                "result": false,
+                "error": false
+              }
+            },
+            {
+              "required": ["id", "result"],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/RequestId"
+                },
+                "result": true,
+                "method": false,
+                "error": false
+              }
+            },
+            {
+              "required": ["id", "error"],
+              "properties": {
+                "id": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/RequestId"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "error": {
+                  "$ref": "#/$defs/Error"
+                },
+                "method": false,
+                "result": false
+              }
+            }
+          ]
+        }
+      },
+      "anyOf": [
+        {
+          "$anchor": "clientToAgent",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#rpcEnvelope"
+            }
+          ],
+          "if": {
+            "required": ["method"],
+            "properties": {
+              "method": true
+            }
+          },
+          "then": {
+            "if": {
+              "required": ["id"],
+              "properties": {
+                "id": true
+              }
+            },
+            "then": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "method": {
+                      "const": "auth/login"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/LoginAuthRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "auth/logout"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/LogoutAuthRequest"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "auth/status"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/AuthStatusRequest"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "initialize"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/InitializeRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "providers/disable"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/DisableProviderRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "providers/list"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/ListProvidersRequest"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "providers/set"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/SetProviderRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/archive"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/ArchiveSessionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/close"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CloseSessionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/delete"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/DeleteSessionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/fork"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/ForkSessionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/list"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/ListSessionsRequest"
+                    }
+                  }
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/new"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/NewSessionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/options"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/SessionOptionsRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/prompt"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/PromptRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/resume"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/ResumeSessionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/set_config_option"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/SetSessionConfigOptionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/set_title"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/SetSessionTitleRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/status"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/SessionStatusRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/unarchive"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/UnarchiveSessionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "terminal/cancel"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CancelTerminalRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "tool_call/cancel"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CancelToolCallRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "type": "string",
+                      "pattern": "^_"
+                    }
+                  }
+                }
+              ]
+            },
+            "else": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "method": {
+                      "const": "mcp/message"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/MessageMcpNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/cancel"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CancelSessionNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "$/cancel_request"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "type": "string",
+                      "pattern": "^_"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$anchor": "agentToClient",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#rpcEnvelope"
+            }
+          ],
+          "if": {
+            "required": ["method"],
+            "properties": {
+              "method": true
+            }
+          },
+          "then": {
+            "if": {
+              "required": ["id"],
+              "properties": {
+                "id": true
+              }
+            },
+            "then": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "method": {
+                      "const": "elicitation/create"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CreateElicitationRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "mcp/message"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/MessageMcpRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/request_permission"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/RequestPermissionRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "type": "string",
+                      "pattern": "^_"
+                    }
+                  }
+                }
+              ]
+            },
+            "else": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "method": {
+                      "const": "auth/status_update"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/AuthStatusUpdateNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "elicitation/complete"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CompleteElicitationNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "session/update"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/UpdateSessionNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "$/cancel_request"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "type": "string",
+                      "pattern": "^_"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "$anchor": "proxyExchange",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#rpcEnvelope"
+            }
+          ],
+          "if": {
+            "required": ["method"],
+            "properties": {
+              "method": true
+            }
+          },
+          "then": {
+            "if": {
+              "required": ["id"],
+              "properties": {
+                "id": true
+              }
+            },
+            "then": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "method": {
+                      "const": "proxy/initialize"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/InitializeProxyRequest"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "proxy/successor"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/ProxySuccessorRequest"
+                    }
+                  },
+                  "required": ["params"]
+                }
+              ]
+            },
+            "else": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "method": {
+                      "const": "proxy/successor"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/ProxySuccessorNotification"
+                    }
+                  },
+                  "required": ["params"]
+                },
+                {
+                  "properties": {
+                    "method": {
+                      "const": "$/cancel_request"
+                    },
+                    "params": {
+                      "$ref": "#/$defs/CancelRequestNotification"
+                    }
+                  },
+                  "required": ["params"]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
 }
