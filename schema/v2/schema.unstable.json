@@ -1737,11 +1737,10 @@
           ]
         },
         "line": {
-          "description": "Optional 1-based line number within the file, from 1 to 4294967295 inclusive.\nOmitted and `null` are equivalent and mean no specific line.",
+          "description": "Optional 1-based line number within the file. Omitted and `null` are equivalent and\nmean no specific line. `0` is invalid.",
           "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 1,
-          "maximum": 4294967295,
           "x-deserialize-default-on-error": true
         },
         "_meta": {

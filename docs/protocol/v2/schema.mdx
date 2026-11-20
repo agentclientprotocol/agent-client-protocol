@@ -8,9 +8,7 @@ description: "Schema definitions for the Agent Client Protocol"
   [`schema/v2/schema.json`](https://github.com/agentclientprotocol/agent-client-protocol/blob/main/schema/v2/schema.json).
   Each [`schema-v2`
   release](https://github.com/agentclientprotocol/agent-client-protocol/releases?q=schema-v2)
-  has it as the `schema.json` download. See [Validating
-  messages](/protocol/v2/overview#validating-messages) for whole messages and
-  method-specific results.
+  has it as the `schema.json` download.
 </Note>
 
 ## Agent
@@ -9286,13 +9284,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="line" type={"integer | null"} >
-  Optional 1-based line number within the file, from 1 to 4294967295 inclusive.
-Omitted and `null` are equivalent and mean no specific line.
+  Optional 1-based line number within the file. Omitted and `null` are equivalent and
+mean no specific line. `0` is invalid.
 
-    | Constraint | Value |
-    | ---------- | ----- |
-    | Minimum | `1` |
-    | Maximum | `4294967295` |
+    - Minimum: `1`
 
 </ResponseField>
 <ResponseField name="path" type={<a href="#absolutepath">AbsolutePath</a>} required>

@@ -1170,11 +1170,10 @@ fn other_diff_change_schema(schema: &mut Schema) {
 pub struct ToolCallLocation {
     /// The absolute file path being accessed or modified.
     pub path: AbsolutePath,
-    /// Optional 1-based line number within the file, from 1 to 4294967295 inclusive.
-    /// Omitted and `null` are equivalent and mean no specific line.
+    /// Optional 1-based line number within the file. Omitted and `null` are equivalent and
+    /// mean no specific line. `0` is invalid.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[cfg_attr(feature = "schemars", schemars(range(max = u32::MAX)))]
     #[serde(default)]
     pub line: Option<std::num::NonZeroU32>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional

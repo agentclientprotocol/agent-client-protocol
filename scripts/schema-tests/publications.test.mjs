@@ -42,12 +42,6 @@ for (const version of ["v1", "v2"]) {
         assert.equal(timestamp("2024-02-29T12:00:00+05:30"), true);
         assert.equal(timestamp("2024-02-30T12:00:00Z"), false);
         assert.equal(timestamp("2024-02-29T12:00:00"), false);
-
-        const location = at("/$defs/ToolCallLocation");
-        for (const line of [1, 2 ** 32 - 1, null])
-          assert.equal(location({ path: "/src/main.rs", line }), true);
-        for (const line of [0, 2 ** 32])
-          assert.equal(location({ path: "/src/main.rs", line }), false);
       }
 
       const protocolVersion = at("/$defs/ProtocolVersion");

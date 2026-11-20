@@ -808,8 +808,8 @@ Tool calls can report the file locations they're working with. Clients can use t
 </ParamField>
 
 <ParamField path="line" type="integer | null">
-  Optional 1-based line number within the file, from 1 to 4294967295 inclusive
-  (an unsigned 32-bit integer). Omission and `null` are equivalent and mean no
+  Optional 1-based line number within the file, represented as an unsigned
+  32-bit integer. `0` is invalid. Omission and `null` are equivalent and mean no
   specific line was provided.
 </ParamField>
 
