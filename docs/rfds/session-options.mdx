@@ -207,14 +207,13 @@ A Client opens a "new session" screen and calls `session/options` with the works
 
 A Client can also call `session/options` with a `sessionId` from its session list to show which model a past session uses. The user can change it before resuming, and the Client passes the new value on `session/resume` (or `session/load` in v1).
 
-## Implementation details and plan
+## Implementations
 
-> Tell me more about your implementation. What is your detailed implementation plan?
+The v1 and v2 schemas keep `session/options` and initial `configOptions` behind `unstable_session_options` during Preview. The [v1 guide](/protocol/v1/draft/session-config-options#options-before-a-session-exists-unstable) and [v2 guide](/protocol/v2/draft/session-config-options#options-before-a-session-exists-unstable) show the wire requests and responses.
 
-1. Add `SessionOptionsRequest` and `SessionOptionsResponse`, the `session/options` method constant, and the `options` session capability to the v1 and v2 schemas behind an `unstable_session_options` feature.
-2. Add the optional `configOptions` field to the session setup requests for each version behind the same feature, including `session/fork`.
-3. Document the method and the initial values on the `session-setup` and `session-config-options` pages in `docs/protocol/v1` and `docs/protocol/v2`, following the version differences above.
-4. Update the example Agents and Clients.
+- The [Rust SDK 5.3.0](https://github.com/agentclientprotocol/rust-sdk/releases/tag/v5.3.0) and [TypeScript SDK 2.7.0](https://github.com/agentclientprotocol/typescript-sdk/releases/tag/v2.7.0) expose the method and the `configOptions` field on setup requests, including `session/fork`, in both protocol versions. The TypeScript wire tests exercise `session/options` and `session/new` together in [v1](https://github.com/agentclientprotocol/typescript-sdk/blob/v2.7.0/src/v1/acp.test.ts#L4671) and [v2](https://github.com/agentclientprotocol/typescript-sdk/blob/v2.7.0/src/v2/acp.test.ts#L2725).
+- To try both versions with the [Claude Agent adapter](https://github.com/agentclientprotocol/claude-agent-acp/pull/1592), use `npx -y @agentclientprotocol/claude-agent-acp@0.109.1-preview.5` as the Agent command. This build includes [initial values on fork](https://github.com/agentclientprotocol/claude-agent-acp/pull/1629) and [the v1 fix for querying a held session with different workspace roots](https://github.com/agentclientprotocol/claude-agent-acp/pull/1679).
+- [Delta](https://delta.dev) uses `session/options` to show config options and slash commands before the first prompt. It sends the user's choices on `session/new`. [Zed](https://github.com/zed-industries/zed/pull/66832) sends saved defaults on `session/new` behind its `acp-beta` flag without calling `session/options`.
 
 ## Frequently asked questions
 
@@ -285,3 +284,4 @@ Commands are not settings. The Client runs a command by sending it in a prompt a
 
 - 2026-11-03: Initial draft
 - 2026-11-10: Accept `configOptions` on `session/fork`. Hold back other `session/update` notifications for initial values until the `session/new` or `session/fork` response. In v2, send `config_option_update` on other connections where a resumed session is active. A value the runtime refuses is ignored. An Agent may start its runtime to answer `session/options`, and Clients should not poll it.
+- 2026-11-20: Moved to Preview. The feature remains unstable.
