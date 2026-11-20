@@ -1840,10 +1840,10 @@ pub struct ResumeSessionRequest {
     pub mcp_servers: Vec<McpServer>,
     /// Inclusive cursor describing where conversation replay should begin.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the Agent should resume without
-    /// replaying previous conversation history. Replay cursors are inclusive:
+    /// Optional. Omitted and `null` are equivalent, and the Agent MUST NOT replay
+    /// previous conversation history. Replay cursors are inclusive:
     /// replay includes the position identified by the cursor. Supplying
-    /// `{ "type": "start" }` means the Agent should replay all retained
+    /// `{ "type": "start" }` means the Agent MUST replay all retained
     /// conversation history before responding.
     ///
     /// Agents MUST reject unsupported cursor types or malformed cursor values
@@ -6663,7 +6663,7 @@ impl SessionDeleteCapabilities {
 /// Capabilities for additional session directories support.
 ///
 /// Supplying `{}` means the agent supports the `additionalDirectories` field on
-/// supported session lifecycle requests. Agents may return
+/// supported session lifecycle requests. Agents MAY return
 /// `SessionInfo.additionalDirectories` in `session/list` to report the
 /// complete ordered additional-root list associated with a listed session.
 #[serde_as]
@@ -8120,7 +8120,7 @@ pub enum ClientRequest {
     /// processing to finish.
     ///
     /// The Agent reports the user message with the same ID through `session/update`.
-    /// This notification may arrive before or after the response, but neither may
+    /// This notification can arrive before or after the response, and MUST NOT
     /// precede insertion. Processing state, output, tool calls, and completion are
     /// also reported through session updates.
     ///
