@@ -683,6 +683,8 @@ Clients MUST return standard JSON-RPC errors for common failure cases:
 
 - When the agent sends an `elicitation/create` request with a mode not declared in client capabilities: `-32602` (Invalid params)
 
+ACP v2 changes this for a Client that declares no `elicitation` capability at all: it responds with `-32601` (Method not found). See the [v2 migration guide](/protocol/v2/migration#elicitation).
+
 ACP has no separate URL-required error. Agents request URL mode directly
 through `elicitation/create`.
 
@@ -932,6 +934,7 @@ For v1, we recommend starting with JSON Schema validation only. If more complex 
 
 ## Revision history
 
+- 2026-11-20: Noted that in ACP v2 a Client with no `elicitation` capability answers `elicitation/create` with `-32601`.
 - 2026-11-19: Noted that in ACP v2 an Agent handles an unknown `action` as `cancel`. Removed the statement about readers that tolerate a missing or malformed `type` and `properties` in `requestedSchema`. How an SDK handles a malformed value is not part of the protocol.
 - 2026-11-17: Noted that ACP v2 removes `pattern` from string properties, to match MCP's string schema.
 - 2026-10-29: Agents translate, rather than pass through, elicitation capabilities for MCP servers, since `{}` means no modes in ACP but form support in MCP.
