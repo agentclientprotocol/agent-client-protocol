@@ -12604,10 +12604,10 @@ future ACP variants. Clients display an unrecognized kind as `other`.
 
 The Agent cannot currently determine foreground activity.
 
-Report this when activity becomes unobservable, not merely because the session
-has been quiet. The Client MUST stop presenting the previous state as confirmed
-current activity, but may retain it as last known. A later state replaces this
-snapshot normally.
+The Agent MUST report this when it can no longer observe the session's
+foreground work. Silence alone is not lost observability. The Client MUST
+stop presenting the previous state as confirmed current activity, but may
+retain it as last known. A later state replaces this snapshot normally.
 
 This is not a task outcome or session closure. It does not cancel work, resolve
 pending requests, or revoke capabilities. If a control is no longer available,

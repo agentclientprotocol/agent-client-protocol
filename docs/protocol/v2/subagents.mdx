@@ -357,7 +357,7 @@ Neither the parent's `session/prompt` response nor the parent's `idle` state mea
 
 ### Unknown state
 
-When the Agent can no longer observe a child's foreground work, it **MUST** report the [`unknown`](/protocol/v2/prompt-lifecycle#session-states) state: a `state_update` with `"state": "unknown"` on the child, mirrored in the parent's `subagent_update`. Silence alone is not lost observability. Observability is also lost when the Agent itself stops tracking a child that may still be working, for example when its runtime starts a new conversation and drops the association.
+When the Agent can no longer observe a child's foreground work, it **MUST** report the [`unknown`](/protocol/v2/prompt-lifecycle#session-states) state: a `state_update` with `"state": "unknown"` on the child. It **SHOULD** mirror the state in the parent's `subagent_update`. Silence alone is not lost observability. Observability is also lost when the Agent itself stops tracking a child that may still be working, for example when its runtime starts a new conversation and drops the association.
 
 - The Client **MUST NOT** keep presenting an earlier `running` or `requires_action` as confirmed activity. It can keep the last known state for context.
 - A later `running`, `requires_action`, or `idle` replaces `unknown` for the same child.

@@ -1329,10 +1329,11 @@ do not represent additional work or usage.
   remote child feed may be lost while ACP remains connected.
 </ResponseField>
 
-Agents report `unknown` on actual loss of observability, not merely after
-silence. Clients **MUST** stop presenting a prior `running` or `requires_action`
-as confirmed live activity, though they **MAY** retain the last-known state for
-context. A subsequent `running`, `requires_action`, or `idle` replaces
+When the Agent can no longer observe a session's foreground work, it **MUST**
+report `unknown`. Silence alone is not lost observability. Clients **MUST** stop
+presenting a prior `running` or `requires_action` as confirmed live activity,
+though they **MAY** retain the last-known state for context. A subsequent
+`running`, `requires_action`, or `idle` replaces
 `unknown` for the same session. `unknown` is neither a work outcome nor a
 closure or cancellation, and does not resolve pending requests or automatically
 revoke child mutation capabilities. The Agent updates those capabilities
