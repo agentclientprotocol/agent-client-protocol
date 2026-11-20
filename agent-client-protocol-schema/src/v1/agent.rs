@@ -7343,7 +7343,7 @@ mod test_serialization {
             .count()
     }
 
-    /// v1 reports prompt failures as JSON-RPC errors. Only the unstable subagent
+    /// v1 reports prompt failures as JSON-RPC errors. Only the subagent
     /// snapshot has an `error` stop reason, because a child has no prompt response.
     #[test]
     fn prompt_response_has_no_error_stop_reason() {

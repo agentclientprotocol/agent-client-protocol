@@ -54,6 +54,8 @@ If a session-scoped request names a session that does not exist or is not active
 
 This applies to `session/prompt`, `session/set_mode` and `session/set_config_option`, and to `session/load` or `session/resume` of a session that does not exist. Closing or deleting a session that does not exist still succeeds. See [Closing Active Sessions](/protocol/v1/session-setup#closing-active-sessions) and [Deleting Sessions](/protocol/v1/session-delete).
 
+A [child session](/protocol/v1/subagents) that the Agent announced with `subagent_update` is not an unknown session, although the Client did not create, load, or resume it. `session/cancel` can name a child as [Restricted methods](/protocol/v1/subagents#restricted-methods) describes. Agents **SHOULD** reject any other request that names a child with `-32602`.
+
 Clients **SHOULD** respond with `-32002` when `fs/read_text_file` names a file that does not exist, or a `terminal/*` method names an unknown terminal.
 
 ### Requests before initialization

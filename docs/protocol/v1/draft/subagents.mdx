@@ -3,8 +3,6 @@ title: "Subagents"
 description: "How Agents expose the child sessions they delegate work to"
 ---
 
-**Draft only.** Subagent sessions are unstable and may change or be removed.
-
 An [Agent](/protocol/v1/draft/overview#agent) can delegate work to subagents. It can expose a subagent to the [Client](/protocol/v1/draft/overview#client) as a **child session**: a session with its own `sessionId` that the Agent creates and owns. The child's messages, thoughts, plans, and tool calls arrive as ordinary `session/update` notifications with the child's `sessionId`, so the Client can show them apart from the parent session.
 
 Exposing subagents is optional for Agents. An Agent can use subagents without exposing them and report their results through the parent session.
@@ -56,9 +54,9 @@ The field is optional and nullable. Omitted or `null` means the Client does not 
 - understands `subagent_update` and registers the child session it announces
 - attributes requests and notifications that carry a child's `sessionId` to that child
 - applies the [restrictions](#restricted-methods) on what it sends for a child
-- understands [`session_message` and `session_message_chunk`](/protocol/v1/draft/prompt-turn#session-directed-messages-unstable)
+- understands [`session_message` and `session_message_chunk`](/protocol/v1/draft/prompt-turn#session-directed-messages)
 
-The Agent **MUST NOT** send `subagent_update`, `session_message`, or `session_message_chunk` unless the Client advertised `subagents`. It sends [`session` tool call content](/protocol/v1/draft/tool-calls#sessions-unstable) only to a Client that advertised it.
+The Agent **MUST NOT** send `subagent_update`, `session_message`, or `session_message_chunk` unless the Client advertised `subagents`. It sends [`session` tool call content](/protocol/v1/draft/tool-calls#sessions) only to a Client that advertised it.
 
 There is no Agent capability. A Client learns that an Agent exposes subagents when it receives the first `subagent_update`.
 
@@ -91,7 +89,7 @@ The Agent **MUST** send the announcing `subagent_update` before any request or n
 
 - `session/update` notifications for the child
 - a `session_message` that names the child as sender or recipient
-- a [`session` content item](/protocol/v1/draft/tool-calls#sessions-unstable) that references the child
+- a [`session` content item](/protocol/v1/draft/tool-calls#sessions) that references the child
 - `session/request_permission`, `elicitation/create`, `fs/read_text_file`, `fs/write_text_file`, and `terminal/*` requests for the child
 
 The rule also applies to short-lived work.
@@ -275,7 +273,7 @@ Agents **SHOULD** report a child's configuration, when it is available, with [`c
 
 ## Messages between sessions
 
-Sessions exchange [session-directed messages](/protocol/v1/draft/prompt-turn#session-directed-messages-unstable), which the Agent reports with `session_message` and `session_message_chunk`. A message can go from a parent to a child, from a child back to its parent, or between other known sessions. It does not change which session owns a child. The Agent delivers these messages itself. The Client does not forward their content or send `session/prompt` because it received one.
+Sessions exchange [session-directed messages](/protocol/v1/draft/prompt-turn#session-directed-messages), which the Agent reports with `session_message` and `session_message_chunk`. A message can go from a parent to a child, from a child back to its parent, or between other known sessions. It does not change which session owns a child. The Agent delivers these messages itself. The Client does not forward their content or send `session/prompt` because it received one.
 
 ### Messages from a parent to a child
 
@@ -315,7 +313,7 @@ The `description` on `subagent_update` describes the child's role and does not r
 
 ### Session references in tool calls
 
-A tool call that spawns, waits on, or otherwise operates on a session can link to it with a [`session` content item](/protocol/v1/draft/tool-calls#sessions-unstable). The reference is for display. It does not establish ownership, permit the Client to send anything for the referenced session, or report that session's state.
+A tool call that spawns, waits on, or otherwise operates on a session can link to it with a [`session` content item](/protocol/v1/draft/tool-calls#sessions). The reference is for display. It does not establish ownership, permit the Client to send anything for the referenced session, or report that session's state.
 
 ### Session IDs in an update
 

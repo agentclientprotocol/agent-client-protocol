@@ -333,9 +333,9 @@ When a terminal is embedded in a tool call, the Client displays live output as i
   Learn more about Terminals
 </Card>
 
-### Sessions (unstable)
+### Sessions
 
-**Draft only.** A session content item links the tool call to another session
+A session content item links the tool call to another session
 it operates on, such as a [subagent](/protocol/v1/draft/subagents) it spawned or waits on:
 
 ```json
@@ -356,7 +356,7 @@ sessions. The reference is display-only. It does not establish ownership,
 enable Client-initiated controls on the referenced session, or report that
 session's work state. Agents send it only when the Client advertises the `subagents` capability. The reference does not
 report a message a parent sends a child. The Agent reports that message as a
-[session-directed message](/protocol/v1/draft/prompt-turn#session-directed-messages-unstable).
+[session-directed message](/protocol/v1/draft/prompt-turn#session-directed-messages).
 
 `content` on `tool_call_update` replaces the whole array, so an Agent that
 sends new content includes the session references again. When a tool addresses
