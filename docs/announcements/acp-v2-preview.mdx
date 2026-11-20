@@ -1,0 +1,112 @@
+---
+title: ACP v2 is available in Preview
+sidebarTitle: ACP v2 Preview
+description: ACP v2 moves from Draft to Preview, with background work, subagents, and replay and retry rules added since the Draft.
+---
+
+import { Author } from "/snippets/author.jsx";
+
+**Published:** November 20, 2026
+
+Four months ago we published the [first Draft of ACP v2](/announcements/acp-v2-draft) and asked you to try it and tell us what did and didn't work. You did. Today **v2 moves to Preview**.
+
+Since July, the Zed and JetBrains teams have been working hard to build ACP v2 into their products, and we have built end-to-end experiences on top of it with the Claude and Codex adapters. We learned a lot doing it. That work drove many of the changes since the Draft, across 17 alpha releases of the v2 schema, and the Rust, TypeScript, Kotlin, and Python SDKs gained v2 APIs along the way. A big thank you to both teams and to the SDK maintainers.
+
+Preview is the same stage our [RFDs](/rfds/about) go through before we complete them. The work is implemented and ready for broad review. For v2, that means we think the design is settled enough to build on. If you were waiting for the Draft to stop moving before you started, this is the time to start.
+
+## What changed since the Draft
+
+The themes of the Draft all still stand: prompts that don't own the turn, updates patched by ID, structured diffs, flexible permission requests, and extensible enums. Everything below is new since then.
+
+### The prompt lifecycle, filled in
+
+The Draft said that a `session/prompt` response acknowledges the prompt and doesn't end the turn. Implementing that raised questions the Draft didn't answer.
+
+The response now returns the `messageId` of the user message the Agent inserted into the conversation. If you get a response, the message is in. If you get a JSON-RPC error, it isn't.
+
+Clients can send a prompt in any state, and an Agent can't reject one only because it is busy. It inserts the prompt right away, or holds it and inserts it later in the order received. The response to a held prompt stays pending until the Agent inserts it. Whether a prompt inserted during active work steers that work or starts the next round is up to the Agent, for now. Steering and queueing definitions are coming!
+
+When work fails after the prompt was inserted, the Agent ends it with an idle `state_update` whose stop reason is `error`. The update can carry a JSON-RPC error object, so a Client can react to the code as it would for an error response.
+
+The [prompt lifecycle page](/protocol/v2/prompt-lifecycle) now defines every state transition too.
+
+### Background work
+
+Once a session can be `idle` while work continues, a Client needs to know what is still running. State updates now carry a `background` list that names the terminals, tool calls, and subagents running independently of the foreground work. A Client uses it to tell whether a session is quiet, and what closing the session would stop.
+
+Tool calls gain a `paused` status for suspended work. A tool call or terminal can also advertise `capabilities.cancel`, and then the Client can stop that one item with `tool_call/cancel` or `terminal/cancel`, while `session/cancel` still stops the foreground work as a whole.
+
+You can read more about this in the [Background Work RFD](/rfds/v2/background-work).
+
+### Subagents in the baseline
+
+Agents can expose the subagents they delegate work to as child sessions. Each child has its own `sessionId`, and its messages, plans, and tool calls arrive as ordinary session updates. The Agent announces a child with `subagent_update` on the parent session, and reports messages between sessions with `session_message`.
+
+Subagents are stable in v1 too, where Clients opt in with a capability. In v2 there is no capability. Every Client handles child sessions, even if it chooses not to show them in a view of their own.
+
+### Reconnecting without guessing
+
+Connections drop, and they will drop more often once remote transports arrive. A Client that reconnects can now tell whether a replay was complete and whether its last prompt went through.
+
+- [`replay_complete`](/protocol/v2/session-setup#replay-complete) marks the end of the history replay a Client requests with `session/resume`. Everything the Agent sends for the session between the request and the marker is history, and live updates wait until after it. If the resume fails before the marker arrives, the Client knows the replay was truncated.
+- [`idempotencyKey`](/protocol/v2/prompt-lifecycle#retrying-a-prompt) on `session/prompt` identifies retries of one submission. A Client that never got a response sends the prompt again with the same key. While the Agent retains the key, it returns the original `messageId` and doesn't insert a second message.
+- [Retry classes](/protocol/v2/overview#retrying-requests) say, for every method, whether it is safe to send again and what a second copy does.
+
+### A stricter wire format
+
+v2 is also stricter about what goes on the wire, so that two implementations written from the spec agree.
+
+- JSON-RPC batches are gone, as in MCP. A request ID is a string or an integer, never `null`.
+- Three error rules that v1 only recommended are now required: `-32601` for a method the receiver doesn't implement or didn't advertise, `-32002` for a session that doesn't exist or isn't active on the connection, and `-32600` for a request sent before initialization completes. A new `-32022` rejects `initialize` when the Agent supports no version at or below the one requested, and lists the versions it does support.
+- The top-level `_meta` of an upsert is a [patch](/rfds/v2/meta-patches), like every other field. Omitted leaves the stored metadata unchanged, `null` clears it, and an object updates it key by key. `status` on `compaction_update` became a patch field too, so every upsert keyed by an ID requires only that ID.
+
+### Features in both versions
+
+New features kept shipping through the [RFD process](/rfds) while v2 was in Draft. Since July we have stabilized eight of them in both v1 and v2: elicitation, terminal authentication, tool call names, session notices, session compaction, client-provided system prompts, plan operations, and subagent sessions.
+
+Where a v1 Client opts in to one of these with a capability, v2 often needs none. Notices, compaction updates, plan operations, and subagents are all part of the v2 baseline.
+
+### If you implemented the Draft
+
+If you built against the July Draft, these are the changes most likely to break you:
+
+- The `session/prompt` response has a required `messageId`.
+- An Agent no longer rejects a prompt because work is active. It inserts the prompt or holds it.
+- The `session/new` and `session/resume` responses carry the session's `availableCommands` next to its `configOptions`.
+- A `session/resume` with replay ends with `replay_complete`.
+- Every Client handles `subagent_update` and child sessions.
+- `_meta` on an upsert is a patch, batches are gone, and request IDs can't be `null`.
+- Each command has a `type` discriminator, and elicitation string properties no longer have `pattern`.
+
+The [migration guide](/protocol/v2/migration) is current with all of these. The [v2 change list](/rfds/v2/overview#v2-changes) tracks every breaking change, including the smaller ones not covered here.
+
+## Preview status
+
+**v2 is a Preview.** We think v2 is ready to build on, and we will aim to avoid large breaking changes from here, but it is not frozen. If your implementation finds a problem, I would rather fix it now than carry it into the stable release.
+
+Agents can serve v2 to any Client that asks for it. Version negotiation still decides what each connection speaks, so a v1 Client sees no difference. Clients choose when to ask, and we suggest keeping that choice opt-in for your users while Preview feedback comes in.
+
+Adding v2 support still should not mean dropping v1. v1-only Agents and Clients will be common for some time. The Rust and TypeScript SDKs now have protocol routers that negotiate the version and send each connection to your v1 or v2 implementation, and the migration guide shows how to [support both side by side](/protocol/v2/migration#supporting-v1-and-v2-side-by-side).
+
+Not everything you may be waiting for is in this Preview. [Remote transports](/rfds/streamable-http-websocket-transport) aren't, and neither is steering and queueing of prompts. We designed v2 with both in mind, but we didn't tie them to this release. They add methods and capabilities without changing existing messages, so they can land later without another breaking change.
+
+## Where to start
+
+- Read the [v2 protocol docs](/protocol/v2/overview) and the [migration guide](/protocol/v2/migration), which has before and after examples and checklists for Agents, Clients, and SDKs.
+- Pick an SDK. [Rust](https://github.com/agentclientprotocol/rust-sdk/blob/main/md/protocol-v2-quickstart.md) has v2 behind the `unstable_protocol_v2` feature, and [TypeScript](https://github.com/agentclientprotocol/typescript-sdk#experimental-acp-v2) has it under `@agentclientprotocol/sdk/experimental/v2`. Both are updated with each schema release. [Kotlin](https://github.com/agentclientprotocol/kotlin-sdk) and [Python](https://github.com/agentclientprotocol/python-sdk/blob/main/docs/experimental-v2.md) have v2 APIs too, and we are working on bringing them up to the latest schema.
+- Read a working implementation. The [Claude](https://github.com/agentclientprotocol/claude-agent-acp) and [Codex](https://github.com/agentclientprotocol/codex-acp) adapters both serve v2 next to v1.
+- Test your Agent with the [TCK](/libraries/testing), which has an opt-in v2 suite.
+- SDK authors can generate from the v2 JSON schemas, published in the repository releases tagged `schema-v2.0.0-beta.N`.
+- The [v2 RFD collection](/rfds/v2/overview) records the decisions behind the larger changes.
+
+## We want your feedback
+
+Preview is the last stage before v2 is stable, so this is when feedback counts most. If something in v2 doesn't work for your implementation, tell us. Open an issue or discussion on [GitHub](https://github.com/agentclientprotocol/agent-client-protocol), or comment on the individual RFDs through the [RFD process](/rfds).
+
+Thank you as well to everyone who tried the Draft and told us what they found. I am excited to see what you build on v2.
+
+<Author
+  name="Ben Brandt"
+  role="Zed Industries / ACP Lead Maintainer"
+  github="https://github.com/benbrandt"
+/>
