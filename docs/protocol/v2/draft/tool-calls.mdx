@@ -106,7 +106,7 @@ unchanged when omitted, reset the field to its default when `null`, and
 replace the previous value when concrete values are sent. A new `toolCallId`
 starts with every field at its default: `status` is `pending`, `kind` is
 `other`, `content` and `locations` are empty, and `title`, `name`, `rawInput`,
-and `rawOutput` are unset. Clients can show a generic title when `title` is
+`rawOutput`, and `capabilities` are unset. Clients can show a generic title when `title` is
 unset. `content` and `locations` are
 replaced as whole arrays. Send `[]` or `null` to clear them. For `_meta`, omit
 the field to leave it unchanged or set it to `null` to clear it. An object
@@ -203,7 +203,7 @@ a `toolCallId` the Client hasn't seen creates the tool call with its
 An Agent can stream a tool's text output the way it streams message text, by
 sending each piece as a text content item in its own
 `tool_call_content_chunk`. As in a message,
-[adjacent text items](/protocol/v2/content#text-content) form one continuous
+[adjacent text items](/protocol/v2/draft/content#text-content) form one continuous
 text.
 
 ## Requesting permission
@@ -428,7 +428,7 @@ Clients **SHOULD** show `in_progress` as active, `pending` as waiting or schedul
 
 ### Cancelling tool calls
 
-A tool call can advertise that the Client may cancel it on its own, without cancelling the rest of the session's work. `tool_call_update` carries an optional `capabilities` field:
+A tool call can advertise that the Client can cancel it on its own, without cancelling the rest of the session's work. `tool_call_update` carries an optional `capabilities` field:
 
 ```json
 {
@@ -547,8 +547,8 @@ empty.
 - A concrete `exitStatus` marks the terminal as exited. Its optional nullable
   `exitCode` and `signal` report known exit information. Its optional nullable
   `_meta` is scoped to that exit information. For all three fields, omission
-  and `null` both mean the value was not provided. Conventional POSIX signal
-  names include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use
+  and `null` both mean the value was not provided. Agents **SHOULD** use the
+  conventional platform signal name. POSIX examples include `SIGTERM`, `SIGKILL`, and `SIGINT`. Other platforms may use
   platform-specific names. Terminal exit and tool call status are independent.
 - The top-level `_meta` is terminal-scoped and follows the same patch semantics,
   except that an object patches the stored metadata by top-level key. See
@@ -790,7 +790,7 @@ can resolve the handle to a known session.
 
 ## Following the Agent
 
-Tool calls can report the file locations they're working with. Clients can use this to follow along, showing which files the Agent is reading or modifying as it works.
+Tool calls can report the file locations they're working with. Clients can use this to show which files the Agent is reading or modifying as it works.
 
 ```json
 {

@@ -34,7 +34,7 @@ The client provides the authentication method ID that was advertised during init
 After successful authentication, the client can proceed to create sessions with
 `session/new` without receiving a `-32000` (Authentication required) error.
 
-See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/draft/initialization)
+See protocol docs: [Authentication](https://agentclientprotocol.com/protocol/v2/draft/authentication)
 
 #### <span class="font-mono">LoginAuthRequest</span>
 
@@ -670,7 +670,7 @@ does not itself require another idle update.
 
 Closing also cancels pending `session/prompt` requests whose messages have not
 been inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the
-Agent MUST answer that request with `-32800` (Request Cancelled). If the message
+Agent MUST answer that request with `-32800` (Request cancelled). If the message
 has already been inserted, the Agent MUST respond successfully with its
 `messageId`. Prompt responses need not precede the close response.
 
@@ -765,8 +765,8 @@ Forks an existing session to create a new independent session.
 This method is only available if the agent advertises the `session.fork` capability.
 
 The agent should create a new session with the same conversation context as the
-original, allowing operations like generating summaries without affecting the
-original session's history.
+original. The fork can be used for operations like generating summaries without
+affecting the original session's history.
 
 As with `session/new`, the forked session is active once the agent responds,
 set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
@@ -780,8 +780,8 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Request parameters for forking an existing session.
 
-Creates a new session based on the context of an existing one, allowing
-operations like generating summaries without affecting the original session's history.
+Creates a new session based on the context of an existing one. The fork can be used
+for operations like generating summaries without affecting the original session's history.
 
 Only available if the Agent supports the `session.fork` capability.
 
@@ -1290,7 +1290,7 @@ The client MAY include referenced pieces of context as either
 
 When available, `resource` is preferred
 as it avoids extra round-trips and allows the message to include
-pieces of context from sources the agent may not have access to.
+pieces of context from sources the agent might not have access to.
 
 Clients MUST NOT send an empty array. Agents MAY reject one with `-32602` without
 inserting it.
@@ -1341,8 +1341,8 @@ not required to retain it. If retained and replayed, the message keeps this iden
 
 Resumes an existing session.
 
-The agent should resume the session context, allowing the conversation
-to continue. If `replayFrom` is set, the agent should replay
+The agent should resume the session context so that the conversation
+can continue. If `replayFrom` is set, the agent should replay
 retained conversation history before responding.
 
 #### <span class="font-mono">ResumeSessionRequest</span>
@@ -1461,7 +1461,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} >
-  Initial commands the agent can execute in this session.
+  Current commands the agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
 Senders MUST use an array, not `null`.
@@ -1469,7 +1469,7 @@ Later `available_commands_update` notifications replace this list.
 
 </ResponseField>
 <ResponseField name="configOptions" type={<a href="#sessionconfigoption">SessionConfigOption[]</a>} >
-  Initial session configuration options.
+  Current session configuration options.
 
 Optional. Omitted or empty means no config options are advertised.
 Senders MUST use an array, not `null`.
@@ -2732,7 +2732,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Result of a `proxy/successor` request: the wrapped request's result, forwarded unchanged.
 
-## Protocol Level
+## Protocol level
 
 Defines the notifications that both Agents and Clients can send.
 
@@ -2755,7 +2755,7 @@ Upon receiving this notification, the receiver:
 3. MUST still send a response for the original request. If the request already finished
    or is not cancelled, that is its normal response. If it is cancelled, it is either the
    method's defined cancellation result (for example an inserted `session/prompt`, or a
-   `cancelled` permission outcome) or an error with code `-32800` (Request Cancelled).
+   `cancelled` permission outcome) or an error with code `-32800` (Request cancelled).
 
 Receivers MUST ignore this notification for an unknown or already-answered request ID,
 and MUST NOT send a second response for it.
@@ -3823,9 +3823,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
   Whether the client supports `terminal` authentication methods.
 
 Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-The client SHOULD supply `\{\}` only when it can reproduce the configured
-agent invocation in an interactive terminal. Supplying `\{\}` means the
-agent MAY include `terminal` entries in its authentication methods.
+Supplying `\{\}` means the client can reproduce the configured agent
+invocation in an interactive terminal, and the agent MAY include
+`terminal` entries in its authentication methods.
 
 </ResponseField>
 
@@ -4024,7 +4024,7 @@ This capability is not part of the spec yet, and may be removed or changed at an
 
 Client support for `skill` command entries.
 
-Supplying `\{\}` means the agent may send `skill` entries in
+Supplying `\{\}` means the agent MAY send `skill` entries in
 `availableCommands`. The client invokes them with `skill` content blocks.
 
 **Type:** Object
@@ -6220,24 +6220,18 @@ Agents SHOULD include it.
 ## <span class="font-mono">ExtNotification</span>
 
 Allows either side to send an arbitrary notification that is not part of the ACP spec.
-Extension notifications provide a way to send one-way messages for custom functionality
-while maintaining protocol compatibility.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 ## <span class="font-mono">ExtRequest</span>
 
 Allows for sending an arbitrary request that is not part of the ACP spec.
-Extension methods provide a way to add custom functionality while maintaining
-protocol compatibility.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 ## <span class="font-mono">ExtResponse</span>
 
 Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
-Extension methods provide a way to add custom functionality while maintaining
-protocol compatibility.
 
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
@@ -7562,15 +7556,15 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v2/dr
 **Type:** Union
 
 <ResponseField name="high" type="string">
-  High priority task - critical to the overall goal.
+  High priority task. Critical to the overall goal.
 </ResponseField>
 
 <ResponseField name="medium" type="string">
-  Medium priority task - important but not critical.
+  Medium priority task. Important but not critical.
 </ResponseField>
 
 <ResponseField name="low" type="string">
-  Low priority task - nice to have but not essential.
+  Low priority task. Nice to have but not essential.
 </ResponseField>
 
 <ResponseField name="other" type="string">
@@ -8879,7 +8873,7 @@ Supplying `\{\}` means the agent supports the baseline session methods:
 `session/new`, `session/list`, `session/resume`, `session/close`,
 `session/prompt`, `session/cancel`, and `session/update`.
 
-Agents that support sessions **MAY** support additional session methods,
+Agents that support sessions MAY support additional session methods,
 prompt content types, and MCP transports by specifying additional
 capabilities.
 

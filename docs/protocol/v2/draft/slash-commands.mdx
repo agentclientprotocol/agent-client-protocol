@@ -3,7 +3,7 @@ title: "Slash Commands"
 description: "Advertise available slash commands to clients"
 ---
 
-Agents can advertise a set of slash commands that users can invoke. These commands provide quick access to specific agent capabilities and workflows. Commands are run as part of regular [prompt](/protocol/v2/draft/prompt-lifecycle) requests where the Client includes the command text in the prompt.
+Agents can advertise a set of slash commands that users can invoke. Commands are run as part of regular [prompt](/protocol/v2/draft/prompt-lifecycle) requests where the Client includes the command text in the prompt.
 
 ## Advertising commands
 
@@ -36,8 +36,7 @@ For example, a `session/new` response can advertise a command with text input:
 
 <ResponseField name="availableCommands" type="AvailableCommand[]">
   Optional complete list of commands available in this session. Omission or `[]`
-  means none, and Clients replace any list they hold with it. Empty lists are
-  omitted when serializing setup responses.
+  means none, and Clients replace any list they hold with it.
 </ResponseField>
 
 Agents **MUST NOT** send `null` for this field.
@@ -147,7 +146,7 @@ Commands are included as regular user messages in prompt requests:
 }
 ```
 
-A prompt invokes a `command` entry when its first text block starts with `/` followed by the command `name`. The Agent decides how to interpret the prompt. Clients recognizing a command for highlighting or completion **SHOULD** require the name to be followed by whitespace or the end of the text block, so `/web foo` matches `web`, `/webfoo` does not, and `/web-search foo` matches `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands may be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
+A prompt invokes a `command` entry when its first text block starts with `/` followed by the command `name`. The Agent decides how to interpret the prompt. Clients recognizing a command for highlighting or completion **SHOULD** require the name to be followed by whitespace or the end of the text block, so `/web foo` matches `web`, `/webfoo` does not, and `/web-search foo` matches `web-search`, not `web`. The rest of that text block, after the name and the whitespace following it, is the command's input. Text naming a command the Agent did not advertise is an ordinary prompt. Commands can be accompanied by any other user message content types (images, audio, etc.) in the same prompt array.
 
 The same [prompt insertion contract](/protocol/v2/draft/prompt-lifecycle#2-prompt-accepted) applies to commands: the successful response returns the inserted user message's `messageId`, and the Agent reports that message through a `user_message` update or `user_message_chunk` updates with the same ID.
 
@@ -251,7 +250,7 @@ The Agent's `session.prompt.skill` capability says where the block may appear:
 The same rules apply at both levels:
 
 - `name` is the `name` of a `skill` entry in the session's current command list. The block carries no input.
-- The Agent **MUST** treat each block as the user explicitly invoking that skill for this prompt, and applies the skill to the prompt as a whole. How it does that is up to the Agent. It can, for example, load the skill's instructions for the turn, or run the skill with the rest of the prompt as its input.
+- The Agent **MUST** treat each block as the user explicitly invoking that skill for this prompt, and applies the skill to the prompt as a whole. How it does that is up to the Agent. It can, for example, load the skill's instructions for that prompt, or run the skill with the rest of the prompt as its input.
 - Clients **MUST NOT** send a `skill` block that the Agent's capability doesn't allow. The Agent **MUST** reject a prompt that contains one, or one whose `name` it can't resolve to a skill the user can invoke, with `-32602` and without inserting it.
 - The block is part of the inserted user message, so the Agent reports it in `user_message` and replays it. When replaying to a Client that didn't advertise `session.commands.skill`, the Agent **MAY** replace it with text.
 - A `resource_link` or embedded resource that points at a skill's file is ordinary context. It does not invoke the skill.

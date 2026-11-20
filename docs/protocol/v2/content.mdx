@@ -128,7 +128,7 @@ Complete resource contents embedded directly in the message.
 
 This is the preferred way to include context in prompts, such as when using @-mentions to reference files or other resources.
 
-By embedding the content directly in the request, Clients can include context from sources that the Agent may not have direct access to.
+By embedding the content directly in the request, Clients can include context from sources that the Agent might not have direct access to.
 
 <Icon icon="asterisk" size="14" /> Requires the `embeddedContext` [prompt
 capability](/protocol/v2/initialization#session-prompt-capabilities) when
@@ -137,7 +137,7 @@ included in prompts.
 <ParamField path="resource" type="EmbeddedResourceResource" required>
   The embedded resource contents, which can be either:
 
-  <Expandable title="Text Resource">
+  <Expandable title="Text resource">
     <ParamField path="uri" type="string" required>
       The URI identifying the resource
     </ParamField>
@@ -152,7 +152,7 @@ included in prompts.
 
   </Expandable>
 
-  <Expandable title="Blob Resource">
+  <Expandable title="Blob resource">
     <ParamField path="uri" type="string" required>
       The URI identifying the resource
     </ParamField>

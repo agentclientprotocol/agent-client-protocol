@@ -7,7 +7,7 @@ The Agent Client Protocol allows [Agents](#agent) and [Clients](#client) to comm
 
 The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**, **MAY**, and **OPTIONAL** in the protocol pages and schema descriptions are to be interpreted as described in [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC 8174](https://datatracker.ietf.org/doc/html/rfc8174) when, and only when, they appear in all capitals, as shown here.
 
-## Communication Model
+## Communication model
 
 The protocol follows the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) specification with two types of messages:
 
@@ -28,7 +28,7 @@ Unlike base JSON-RPC, ACP does not use batches. See [Transports](/protocol/v2/dr
 A typical flow follows this pattern:
 
 <Steps>
-<Step title="Initialization Phase">
+<Step title="Initialization phase">
 
 - Client → Agent: `initialize` to establish connection
 - Client: completes an advertised authentication flow if required. For example,
@@ -37,14 +37,14 @@ A typical flow follows this pattern:
 
 </Step>
 
-<Step title="Session Setup - either:">
+<Step title="Session setup, either:">
 
 - Client → Agent: `session/new` to create a new session
 - Client → Agent: `session/resume` to resume an existing session
 
 </Step>
 
-<Step title="Prompt Lifecycle">
+<Step title="Prompt lifecycle">
    - Client → Agent: `session/prompt` to send user message
    - Agent → Client: `session/prompt` response once the prompt is accepted
    - Agent → Client: `session/update` notifications for accepted messages, state updates, progress updates, and user-facing notices
@@ -175,7 +175,7 @@ Some baseline methods are optional as a group. An Agent that returns a non-empty
 
 ## Client
 
-Clients provide the interface between users and agents. They are typically code editors (IDEs, text editors) but can also be other UIs for interacting with agents. Clients manage the environment, handle user interactions, and control access to resources.
+Clients provide the interface between users and Agents. They are typically code editors (IDEs, text editors) but can also be other UIs for interacting with Agents. Clients manage the environment, handle user interactions, and control access to resources.
 
 ### Baseline methods
 

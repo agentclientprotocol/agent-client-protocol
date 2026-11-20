@@ -54,8 +54,6 @@ pub fn apply_meta_update(stored: &mut MaybeUndefined<Meta>, update: MaybeUndefin
 }
 
 /// Allows for sending an arbitrary request that is not part of the ACP spec.
-/// Extension methods provide a way to add custom functionality while maintaining
-/// protocol compatibility.
 ///
 /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -85,8 +83,6 @@ impl ExtRequest {
 }
 
 /// Allows for sending an arbitrary response to an extension request that is not part of the ACP spec.
-/// Extension methods provide a way to add custom functionality while maintaining
-/// protocol compatibility.
 ///
 /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -106,8 +102,6 @@ impl ExtResponse {
 }
 
 /// Allows either side to send an arbitrary notification that is not part of the ACP spec.
-/// Extension notifications provide a way to send one-way messages for custom functionality
-/// while maintaining protocol compatibility.
 ///
 /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

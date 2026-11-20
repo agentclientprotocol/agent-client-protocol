@@ -1523,8 +1523,8 @@ impl NewSessionResponse {
 ///
 /// Request parameters for forking an existing session.
 ///
-/// Creates a new session based on the context of an existing one, allowing
-/// operations like generating summaries without affecting the original session's history.
+/// Creates a new session based on the context of an existing one. The fork can be used
+/// for operations like generating summaries without affecting the original session's history.
 ///
 /// Only available if the Agent supports the `session.fork` capability.
 #[cfg(feature = "unstable_session_fork")]
@@ -1934,10 +1934,10 @@ impl ResumeSessionRequest {
 
     /// Inclusive cursor describing where conversation replay should begin.
     ///
-    /// Omitted and `null` are equivalent and mean the Agent should resume without replaying
+    /// Omitted and `null` are equivalent, and the Agent MUST NOT replay
     /// previous conversation history. Replay cursors are inclusive: replay
     /// includes the position identified by the cursor. Supplying
-    /// `{ "type": "start" }` means the Agent should replay all retained
+    /// `{ "type": "start" }` means the Agent MUST replay all retained
     /// conversation history before responding.
     #[must_use]
     pub fn replay_from(mut self, replay_from: impl IntoOption<ReplayFrom>) -> Self {
@@ -2141,7 +2141,7 @@ crate::serde_util::default_on_null! {
     #[serde(rename_all = "camelCase")]
     #[non_exhaustive]
     pub struct ResumeSessionResponse {
-        /// Initial session configuration options.
+        /// Current session configuration options.
         ///
         /// Optional. Omitted or empty means no config options are advertised.
         /// Senders MUST use an array, not `null`.
@@ -2150,7 +2150,7 @@ crate::serde_util::default_on_null! {
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub config_options: Vec<SessionConfigOption>,
-        /// Initial commands the agent can execute in this session.
+        /// Current commands the agent can execute in this session.
         ///
         /// Optional. Omitted or empty means no initial commands are advertised.
         /// Senders MUST use an array, not `null`.
@@ -2179,7 +2179,7 @@ impl ResumeSessionResponse {
         Self::default()
     }
 
-    /// Initial session configuration options.
+    /// Current session configuration options.
     ///
     /// Optional. Omitted or empty means no config options are advertised.
     /// Senders MUST use an array, not `null`.
@@ -2190,7 +2190,7 @@ impl ResumeSessionResponse {
         self
     }
 
-    /// Initial commands the agent can execute in this session.
+    /// Current commands the agent can execute in this session.
     #[must_use]
     pub fn available_commands(mut self, available_commands: Vec<AvailableCommand>) -> Self {
         self.available_commands = available_commands;
@@ -2229,7 +2229,7 @@ impl ResumeSessionResponse {
 ///
 /// Closing also cancels pending `session/prompt` requests whose messages have not
 /// been inserted, including held prompts. If closing prevents a prompt's user message from being inserted, the
-/// Agent MUST answer that request with `-32800` (Request Cancelled). If the message
+/// Agent MUST answer that request with `-32800` (Request cancelled). If the message
 /// has already been inserted, the Agent MUST respond successfully with its
 /// `messageId`. Prompt responses need not precede the close response.
 #[serde_as]
@@ -5248,7 +5248,7 @@ pub struct PromptRequest {
     ///
     /// When available, `resource` is preferred
     /// as it avoids extra round-trips and allows the message to include
-    /// pieces of context from sources the agent may not have access to.
+    /// pieces of context from sources the agent might not have access to.
     ///
     /// Clients MUST NOT send an empty array. Agents MAY reject one with `-32602` without
     /// inserting it.
@@ -6326,7 +6326,7 @@ impl ProvidersCapabilities {
 /// `session/new`, `session/list`, `session/resume`, `session/close`,
 /// `session/prompt`, `session/cancel`, and `session/update`.
 ///
-/// Agents that support sessions **MAY** support additional session methods,
+/// Agents that support sessions MAY support additional session methods,
 /// prompt content types, and MCP transports by specifying additional
 /// capabilities.
 ///
@@ -7959,7 +7959,7 @@ pub enum ClientRequest {
     /// After successful authentication, the client can proceed to create sessions with
     /// `session/new` without receiving a `-32000` (Authentication required) error.
     ///
-    /// See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
+    /// See protocol docs: [Authentication](https://agentclientprotocol.com/protocol/v2/authentication)
     LoginAuthRequest(Box<LoginAuthRequest>),
     /// **UNSTABLE**
     ///
@@ -8033,8 +8033,8 @@ pub enum ClientRequest {
     /// This method is only available if the agent advertises the `session.fork` capability.
     ///
     /// The agent should create a new session with the same conversation context as the
-    /// original, allowing operations like generating summaries without affecting the
-    /// original session's history.
+    /// original. The fork can be used for operations like generating summaries without
+    /// affecting the original session's history.
     ///
     /// As with `session/new`, the forked session is active once the agent responds,
     /// set up with the request's `cwd`, `additionalDirectories`, and `mcpServers`.
@@ -8090,8 +8090,8 @@ pub enum ClientRequest {
     SetSessionTitleRequest(Box<SetSessionTitleRequest>),
     /// Resumes an existing session.
     ///
-    /// The agent should resume the session context, allowing the conversation
-    /// to continue. If `replayFrom` is set, the agent should replay
+    /// The agent should resume the session context so that the conversation
+    /// can continue. If `replayFrom` is set, the agent should replay
     /// retained conversation history before responding.
     ResumeSessionRequest(Box<ResumeSessionRequest>),
     /// Closes an active session and frees up any resources associated with it.
@@ -8137,8 +8137,7 @@ pub enum ClientRequest {
     PromptRequest(Box<PromptRequest>),
     /// Handles extension method requests from the client.
     ///
-    /// Extension methods provide a way to add custom functionality while maintaining
-    /// protocol compatibility.
+    /// Extension methods are custom methods that are not part of the ACP spec.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtMethodRequest(Box<ExtRequest>),
@@ -8185,7 +8184,7 @@ impl_request_dispatch! {
 /// All possible responses that an agent can send to a client.
 ///
 /// This enum is used internally for routing RPC responses. You typically won't need
-/// to use this directly - the responses are handled automatically by the connection.
+/// to use this directly. The connection handles the responses automatically.
 ///
 /// These are responses to the corresponding `ClientRequest` variants.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -8303,8 +8302,7 @@ pub enum ClientNotification {
     MessageMcpNotification(Box<MessageMcpNotification>),
     /// Handles extension notifications from the client.
     ///
-    /// Extension notifications provide a way to send one-way messages for custom functionality
-    /// while maintaining protocol compatibility.
+    /// Extension notifications are custom one-way messages that are not part of the ACP spec.
     ///
     /// See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)
     ExtNotification(Box<ExtNotification>),

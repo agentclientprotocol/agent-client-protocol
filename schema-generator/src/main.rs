@@ -2210,7 +2210,7 @@ Ordinary clients and agents never send or receive these messages. A conductor se
                 }
             }
             {
-                writeln!(&mut self.output, "## Protocol Level").unwrap();
+                writeln!(&mut self.output, "## Protocol level").unwrap();
                 writeln!(&mut self.output).unwrap();
                 #[cfg(not(feature = "unstable_protocol_v2"))]
                 writeln!(

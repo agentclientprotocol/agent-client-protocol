@@ -199,7 +199,7 @@ This means checks like `promptCapabilities.image === true` become presence check
 ### Capability reorganization
 
 - All session-scoped capability groups now live under `capabilities.session`. What was `agentCapabilities.promptCapabilities` is now `capabilities.session.prompt`, and `agentCapabilities.mcpCapabilities` is now `capabilities.session.mcp`.
-- `capabilities.session` itself is **optional**, so agents that don't do session-based prompting (for example, agents that only serve extension methods) can omit it entirely. Currently there isn't protocol support for this, but several experiments are in flight and we are making sure non-session components can be expressed via capabilities.
+- `capabilities.session` itself is **optional**, so Agents that don't do session-based prompting (for example, Agents that only serve extension methods) can omit it entirely. Currently there isn't protocol support for this, but several experiments are in flight and we are making sure non-session components can be expressed via capabilities.
 - `loadSession` is gone along with `session/load` (see [Session setup](#session-setup-and-lifecycle)).
 - The individual `list`, `resume`, and `close` markers are gone: advertising `capabilities.session` at all now **requires** supporting the baseline methods `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`. Optional extras such as `session.delete`, `session.additionalDirectories`, `session.prompt`, and `session.mcp` keep their own markers.
 - The v1 Client capabilities `fs` and `terminal` are removed entirely (see [Client file system and terminal execution](#client-file-system-and-terminal-execution-removed)). Stable v2 defines Client `auth` and `elicitation` capability groups. Agent-owned terminal display is baseline behavior, not a Client execution capability.
@@ -362,7 +362,7 @@ In v2, acceptance means insertion of the user message into the ACP conversation.
 
 Insertion adds a logical user message with an ID and a position relative to other messages. See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted) for adapter examples.
 
-Clients may send `session/prompt` while foreground work is active. Unlike many v1 Agents, a v2 Agent **MUST NOT** reject a prompt only because work is active: it inserts it right away or holds it and inserts it later, in the order received. A held prompt's response stays pending until insertion. Only `session/cancel` and `session/close` are guaranteed to drop it. See [Prompts During Active Work](/protocol/v2/prompt-lifecycle#prompts-during-active-work).
+Clients **MAY** send `session/prompt` while foreground work is active. Unlike many v1 Agents, a v2 Agent **MUST NOT** reject a prompt only because work is active: it inserts it right away or holds it and inserts it later, in the order received. A held prompt's response stays pending until insertion. Only `session/cancel` and `session/close` are guaranteed to drop it. See [Prompts During Active Work](/protocol/v2/prompt-lifecycle#prompts-during-active-work).
 
 Everything else happens through `session/update` notifications:
 
@@ -604,7 +604,7 @@ For efficient live output, the Agent sends append updates:
 
 Each chunk's `data` is independently base64-encoded. Decode each chunk separately, then append the resulting bytes in received order for that terminal. Do not concatenate encoded strings before decoding. Chunk boundaries may split UTF-8 code points and ANSI escape sequences, so text and terminal parsers retain state between chunks. A later `terminal_update.output` snapshot replaces all bytes accumulated so far, and subsequent chunks append to that replacement.
 
-A Client may use an isolated terminal emulator, but it only needs to provide a safe sanitized transcript fallback. The terminal is display-only: it has no input, resize, interrupt, wait, release, or execution semantics. The one control is opt-in cancellation, where an Agent lets the Client stop the process with [`terminal/cancel`](/protocol/v2/tool-calls#cancelling-terminals).
+A Client can use an isolated terminal emulator, but it only needs to provide a safe sanitized transcript fallback. The terminal is display-only: it has no input, resize, interrupt, wait, release, or execution semantics. The one control is opt-in cancellation, where an Agent lets the Client stop the process with [`terminal/cancel`](/protocol/v2/tool-calls#cancelling-terminals).
 
 ### Background work and cancel controls
 
@@ -617,7 +617,7 @@ v1 had no way to say that work goes on after the turn that started it. v2 report
 
 ## Diff content
 
-The v1 diff shape (a single `path` with `oldText`/`newText`) could not distinguish a deleted file from an emptied one, had no way to express renames, copies, or binary changes, and forced clients to compute renderable diffs themselves. v2 replaces it with structured changes plus optional renderable patch text:
+The v1 diff shape (a single `path` with `oldText`/`newText`) could not distinguish a deleted file from an emptied one, had no way to express renames, copies, or binary changes, and forced Clients to compute renderable diffs themselves. v2 replaces it with structured changes plus optional renderable patch text:
 
 ```json
 {
@@ -655,7 +655,7 @@ A deleted file is now simply:
 }
 ```
 
-There is no mechanical mapping from v2 diffs back to `oldText`/`newText`. When migrating a v1 client, render `patch.text` according to `patch.format`, using `changes` for headers, file trees, and non-text cases.
+There is no mechanical mapping from v2 diffs back to `oldText`/`newText`. When migrating a v1 Client, render `patch.text` according to `patch.format`, using `changes` for headers, file trees, and non-text cases.
 
 ### Edits known only as a snippet
 
@@ -702,7 +702,7 @@ Read the file somewhere the tool waits on, so it still holds its contents from b
 - `description` is optional supporting copy.
 - `subject` is an optional tagged union describing _what_ needs permission. Stable v2 defines `type: "tool_call"`, whose `toolCall` payload is the same `ToolCallUpdate` upsert shape used in session updates, and `type: "command"`, which describes an Agent-executed command. Requests may omit `subject` entirely for approvals without structured context, and unknown subject types **SHOULD** be preserved when proxying and either rendered generically or declined by policy.
 
-In v1, agents routinely stuffed permission prompt text into the tool call's `title`, mutating displayed tool state as a side effect. In v2, put prompt copy in `title`/`description` and let `subject.toolCall` carry only genuine tool-call state.
+In v1, Agents routinely stuffed permission prompt text into the tool call's `title`, mutating displayed tool state as a side effect. In v2, put prompt copy in `title`/`description` and let `subject.toolCall` carry only genuine tool-call state.
 
 A command permission subject is self-contained rather than a patch:
 
@@ -803,7 +803,7 @@ v1 had no signal for the end of a `session/load` replay other than the response.
 
 The cursor is a tagged union so future versions can add replay-from-a-point variants without new methods. The schema accepts custom and future cursor types for preservation by intermediaries, but Agents **MUST** reject unsupported types or malformed cursors with `-32602` (Invalid params), not silently fall back to another replay mode.
 
-Retained user messages **MUST** preserve the ID returned by `session/prompt`. Agents **SHOULD** preserve agent and thought message IDs when possible, but Clients cannot assume those IDs remain stable across reconnects or restarts. The same applies to `toolCallId`, `terminalId`, and `planId`. A Client attaching to a session can rebuild its transcript from a full replay of the retained history. If you replay messages as chunks, as many v1 Agents do, start each one with a message update carrying `content: []` so the chunks don't append to content the Client already holds, or send the message as one whole-message update instead. The same applies if you replay session-directed messages, tool-call content, terminal output, or compaction summaries as chunks: first send the entity's update with that field emptied. This empty-content primer resets only the ID used in that replay. It cannot clear a message previously delivered under another ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
+Retained user messages **MUST** preserve the ID returned by `session/prompt`. Agents **SHOULD** preserve Agent and thought message IDs when possible, but Clients cannot assume those IDs remain stable across reconnects or restarts. The same applies to `toolCallId`, `terminalId`, and `planId`. A Client attaching to a session can rebuild its transcript from a full replay of the retained history. If you replay messages as chunks, as many v1 Agents do, start each one with a message update carrying `content: []` so the chunks don't append to content the Client already holds, or send the message as one whole-message update instead. The same applies if you replay session-directed messages, tool-call content, terminal output, or compaction summaries as chunks: first send the entity's update with that field emptied. This empty-content primer resets only the ID used in that replay. It cannot clear a message previously delivered under another ID. See [Resuming Sessions](/protocol/v2/session-setup#resuming-sessions).
 
 ### Consistent lifecycle requests
 
@@ -862,7 +862,7 @@ v2 removes all of the v1 Client-provided file and terminal methods:
 - `clientCapabilities.fs` and the `fs/read_text_file` / `fs/write_text_file` methods
 - `clientCapabilities.terminal` and the `terminal/create`, `terminal/output`, `terminal/release`, `terminal/wait_for_exit`, `terminal/kill` methods
 
-In practice these methods were inconsistently implemented outside of a few IDEs, and agents already needed their own file and execution handling for clients that didn't offer it. Clients that want to expose file access, unsaved editor state, or command execution to agents should do so by providing an **MCP server** to the session (via `mcpServers` on `session/new` / `session/resume`), which puts those tools on the same footing as every other tool the Agent uses. Agent-side, drop the capability checks and the dual execution paths. Report file changes through [diff content](#diff-content). When byte-faithful command display matters, report output through the new Agent-owned terminal stream.
+In practice these methods were inconsistently implemented outside of a few IDEs, and Agents already needed their own file and execution handling for Clients that didn't offer it. Clients that want to expose file access, unsaved editor state, or command execution to Agents can do so by providing an **MCP server** to the session (via `mcpServers` on `session/new` / `session/resume`), which puts those tools on the same footing as every other tool the Agent uses. Agent-side, drop the capability checks and the dual execution paths. Report file changes through [diff content](#diff-content). When byte-faithful command display matters, report output through the new Agent-owned terminal stream.
 
 The v2 `terminal` content reference does not restore Client-side execution. It only anchors display state supplied by the Agent.
 
@@ -872,7 +872,7 @@ MCP transport configuration is aligned with the current MCP transport model:
 
 - Every server config **MUST** carry a `type` discriminator. In v1, stdio configs had no `type` field. In v2 they are `"type": "stdio"`. Unknown transport types can then be carried as extension variants instead of failing to parse.
 - The deprecated HTTP+SSE transport (`"type": "sse"`) is **removed**.
-- Support is advertised per transport under `capabilities.session.mcp`: `stdio` is now an explicit capability (`session.mcp.stdio`), so agents that cannot launch subprocesses can opt out, and `session.mcp.http` covers remote servers.
+- Support is advertised per transport under `capabilities.session.mcp`: `stdio` is now an explicit capability (`session.mcp.stdio`), so Agents that cannot launch subprocesses can opt out, and `session.mcp.http` covers remote servers.
 - Each server `name` **MUST** be unique within `mcpServers`, and Agents reject duplicates with `-32602`.
 - A stdio `command` **MUST** be an absolute path, and Agents reject a relative one with `-32602`. v1 described the field as an absolute path but did not require it.
 - On `session/resume`, `mcpServers` is the complete set of Client-provided servers, like `additionalDirectories`. Servers from earlier requests are not restored.
@@ -902,7 +902,7 @@ The five content block types are unchanged: `text`, `image`, `audio`, `resource_
 
 Agents **MUST** reject a prompt that contains a content type that is neither baseline (`text`, `resource_link`) nor advertised with `-32602`, without inserting it. v1 put the restriction only on Clients.
 
-If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, `SessionInfo.updatedAt` and `SessionInfoUpdate.updatedAt` are marked `format: "date-time"`, `annotations.priority` is bounded to the inclusive range 0–1, multi-select elicitation `items` need at least one option, `session/prompt` `prompt` and `systemPrompt` `content` each need at least one content block, permission `options`, config `select` options, each config option group's `options`, and single-select elicitation `enum` and `oneOf` each need at least one entry, a tool call location's `line` starts at 1, `resource_link` `size` is unsigned, form-mode `requestedSchema` requires `type: "object"` and `properties`, and setup-response `configOptions` is no longer nullable: omit it rather than sending `null`. Two details are looser: a value in an accepted elicitation's `content` can be any JSON value, for custom or future property types, and `TerminalExitStatus.exitCode` is signed, so it can be negative.
+If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, `SessionInfo.updatedAt` and `SessionInfoUpdate.updatedAt` are marked `format: "date-time"`, `annotations.priority` is bounded to the inclusive range 0 to 1, multi-select elicitation `items` need at least one option, `session/prompt` `prompt` and `systemPrompt` `content` each need at least one content block, permission `options`, config `select` options, each config option group's `options`, and single-select elicitation `enum` and `oneOf` each need at least one entry, a tool call location's `line` starts at 1, `resource_link` `size` is unsigned, form-mode `requestedSchema` requires `type: "object"` and `properties`, and setup-response `configOptions` is no longer nullable: omit it rather than sending `null`. Two details are looser: a value in an accepted elicitation's `content` can be any JSON value, for custom or future property types, and `TerminalExitStatus.exitCode` is signed, so it can be negative.
 
 v2 also says which text is Markdown. Text content blocks may contain Markdown, as in v1. A plan entry `content` may contain Markdown too. Other strings shown to users, such as a tool call `title`, are plain text, and Clients do not render them as Markdown. v1 did not state a format for either.
 
@@ -910,7 +910,7 @@ v2 also says which text is Markdown. Text content blocks may contain Markdown, a
 
 `session/new` and `session/resume` responses now carry `availableCommands` alongside `configOptions`. An Agent with commands **MUST** include them there. A setup response replaces the Client's command list, including a list from an `available_commands_update` that arrived before the response. The draft `session/fork` response also supports commands for the newly created session when forking is supported. Agents no longer need to send command notifications before the `session/new` response. See the [setup response example](/protocol/v2/session-setup#initial-session-state).
 
-In setup responses, `availableCommands` is an optional array: omission or `[]` means the session has no commands, and empty lists are omitted when serializing. Agents **MUST NOT** send `null`.
+In setup responses, `availableCommands` is an optional array: omission or `[]` means the session has no commands. Agents **MUST NOT** send `null`.
 
 `available_commands_update` notifications remain supported for advertising commands later or changing them. Each notification replaces the complete list previously advertised in a response or notification. `[]` clears it.
 
@@ -937,7 +937,7 @@ A command still carries `name` and `description`, but each command and its optio
 
 </CodeGroup>
 
-As with other extensible unions, unknown command and input types **SHOULD** be preserved when proxying. Each command type defines how its entries are invoked, so a client that doesn't understand a command type ignores it and **MUST NOT** display it as a slash command. A client that can't render an input type can fall back to plain text input or hide the command's input hint.
+As with other extensible unions, unknown command and input types **SHOULD** be preserved when proxying. Each command type defines how its entries are invoked, so a Client that doesn't understand a command type ignores it and **MUST NOT** display it as a slash command. A Client that can't render an input type can fall back to plain text input or hide the command's input hint.
 
 ## Consistent ID naming
 
@@ -1006,7 +1006,7 @@ These rules are new or stricter than in v1:
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics, including key-level `_meta` patches.
 7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, size, snapshots, and exit state. Send independently base64-encoded `terminal_output_chunk` values for live bytes. The Client's only control is `terminal/cancel`, which you opt into for each terminal with `capabilities.cancel`.
 8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible. If a tool's input describes an edit only as a snippet, read the file somewhere the tool waits on, before it can run, or send no diff until the change is done (see [Edits known only as a snippet](#edits-known-only-as-a-snippet)).
-9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations. Check the selected option in this request. A rejection or `cancelled` outcome means "don't proceed with this operation", not that the turn must end. On `session/cancel`, cancel the pending permission requests of the cancelled work with `$/cancel_request`. On `session/close`, cancel every pending permission request and elicitation of the session the same way. In v1 the Client answered them.
+9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations. Check the selected option in this request. A rejection or `cancelled` outcome means "don't proceed with this operation", not that foreground work must end. On `session/cancel`, cancel the pending permission requests of the cancelled work with `$/cancel_request`. On `session/close`, cancel every pending permission request and elicitation of the session the same way. In v1 the Client answered them.
 10. **Plans.** Send `plan_update` with the complete `items` or `markdown` plan, and `plan_removed` to remove it. Neither requires a Client capability.
 11. **Modes and config options.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`. Return the session's `configOptions` in every `session/new` and `session/resume` response. Rename option `id` to `configId` and group `group` to `groupId`, and require the `type` discriminator (`"id"` or `"boolean"`) on `session/set_config_option`. List the values of a `select` `thought_level` option from lowest to highest.
 12. **Replay.** Handle `replayFrom` on `session/resume`, and send a current `state_update` before every resume response, with or without replay. Replay history as ordinary `session/update` notifications when asked, current-state snapshots such as terminal `output` are fine. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Start each entity that you replay as chunks with an update that empties the chunked field. Send `replay_complete` after the last replayed update, also for an empty history, and hold every other update for the session until after it. Remove `session/load`.
@@ -1067,7 +1067,7 @@ For an Agent supporting both v1 and v2, a v1 request selects v1, a v2 request se
 
 Keep initialization separate from session setup. Prepare handlers for both versions before connecting, but dispatch subsequent traffic through only the selected version's handlers. Inspect the selected version before sending `session/new` or interpreting capabilities. The request uses the Client's requested-version initialization shape, while the response uses the Agent's selected-version shape. For example, a v2 request carries `info` and `capabilities`, while a v1 response carries `agentInfo` and `agentCapabilities`.
 
-A version-specific SDK Client API is not necessarily a dual-stack Client: it may reject a response selecting the other version. Use the SDK's negotiation support where available. If falling back requires a new SDK connection, close the first connection and initialize the replacement with the selected version's API. An Agent implementing v2 also accepts a [repeated `initialize`](/protocol/v2/initialization#repeating-initialization) before any other request. A legacy v1-only Agent may not.
+A version-specific SDK Client API is not necessarily a dual-stack Client: it may reject a response selecting the other version. Use the SDK's negotiation support where available. If falling back requires a new SDK connection, close the first connection and initialize the replacement with the selected version's API. An Agent implementing v2 also accepts a [repeated `initialize`](/protocol/v2/initialization#repeating-initialization) before any other request. A legacy v1-only Agent might not.
 
 ### Agent routing in the SDKs
 
@@ -1095,7 +1095,7 @@ let agent = Agent
     .with_v2(v2_agent);
 ```
 
-See the Rust SDK's [protocol v2 guide](https://agentclientprotocol.github.io/rust-sdk/protocol-v2.html#version-routing) for agent routing and Client-side fallback.
+See the Rust SDK's [protocol v2 guide](https://agentclientprotocol.github.io/rust-sdk/protocol-v2.html#version-routing) for Agent routing and Client-side fallback.
 
 These routers select a version-specific implementation and normalize initialization parameters for it. They do not translate later requests, notifications, or responses. A standalone v2 Agent API can negotiate v2 with a Client requesting a newer version, but it does not provide a v1 implementation. Register both implementations to serve v1 Clients.
 
@@ -1103,7 +1103,7 @@ These routers select a version-specific implementation and normalize initializat
 
 A v2-only endpoint rejects a v1 request with `-32022` and `data: { "requested": 1, "supported": [2] }`. It does not need to invoke the v2 initialization handler or require v2's Client identity just to report this mismatch. The connection is not initialized, and the Client **SHOULD** close it. A v2-aware Client can display the supported versions, while an existing v1 Client can report the initialization error generically.
 
-A request for a newer version can still select v2. A v1-only endpoint can select v1 for a v2 request. In either case, the Client must check whether it supports the selected version before proceeding. The latest-version integer does not advertise a complete set of supported versions.
+A request for a newer version can still select v2. A v1-only endpoint can select v1 for a v2 request. In either case, the Client **MUST** check whether it supports the selected version before proceeding. The latest-version integer does not advertise a complete set of supported versions.
 
 Do not confuse version mismatch with malformed initialization parameters. A missing, non-integer, or out-of-range `protocolVersion`, or malformed parameters for a supported version, remains `-32602` (`Invalid params`). Agents read `protocolVersion` first, so a version mismatch is never reported as `-32602`, and parameters written for a newer version are not rejected. Use the SDK routers to negotiate before dispatching to a version-specific implementation.
 
