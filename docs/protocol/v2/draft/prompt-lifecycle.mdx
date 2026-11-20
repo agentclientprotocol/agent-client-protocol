@@ -197,7 +197,7 @@ Background work is session-owned work running independently of foreground work. 
 
 Work without a process stays on the tool call that started it. When the Agent knows that a tool call's work continues after the call returns control to the model, it **SHOULD** keep that tool call `pending`, `in_progress`, or `paused` and list it, instead of giving it a final status. Some background work has no such tool call. No tool call started it, such as a task that a hook started, or the Agent learned of the work only after its tool call reached a final status. The Agent **MAY** start a tool call of its own for such work, with a title that describes the work, and list it. It sends that tool call like any other, before the first list that names it, even while the session is `idle`. The Agent does not reopen a tool call that has a final status. It starts a new one instead.
 
-Background work is work the user can reason about: something the user or the model started, which the user may want to stop or leave to finish. The Agent **SHOULD NOT** list housekeeping it starts on its own, such as memory consolidation. If housekeeping needs to be visible, the Agent represents it as a tool call.
+Background work is work the user can reason about: something the user or the model started, which the user may want to stop or leave to finish. The Agent **SHOULD NOT** list housekeeping it starts on its own, such as memory consolidation. If housekeeping needs to be visible, the Agent represents it as a tool call and lists it like any other work.
 
 `running`, `requires_action`, `idle`, and `unknown` state updates carry an optional `background` list of the work currently running independently of foreground work:
 
@@ -485,7 +485,7 @@ Key retention depends on whether the Agent keeps the inserted message:
 - For a prompt whose message the Agent doesn't retain, such as a [locally handled command](/protocol/v2/draft/slash-commands#running-commands), the Agent **MUST** recognize the key while the session stays active on a connection. After that it **MAY** forget it.
 - Once these retention requirements end, the Agent **MAY** forget the key. A prompt with a forgotten key is a new submission.
 
-Agents **SHOULD** store the key in the same step as the message, for example as part of the message's ID. If a restart loses a message that was never written to the stored session, the key is lost with it, and the retry inserts the message.
+Agents **SHOULD** store the key in the same step as the message, for example by deriving the message's ID from the key with a one-way function such as UUIDv5. If a restart loses a message that was never written to the stored session, the key is lost with it, and the retry inserts the message.
 
 On a new connection, the Client calls `initialize` and `session/resume` before retrying. A successful resume, with or without replay, does not tell the Client which keys survived a close or disconnect. For example, the Agent can run a live-only command and lose the connection before its response arrives. If it forgets the key, even an immediate retry can run that command again.
 
