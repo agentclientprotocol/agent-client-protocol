@@ -577,10 +577,8 @@ sequences, so decoders retain parser state across chunks. Optional nullable
 provided. A chunk for a `terminalId` the Client hasn't seen creates the terminal
 with unknown fields and empty output, then appends to it.
 
-Clients **SHOULD** ignore a chunk, or the `output` snapshot of a `terminal_update`,
-whose `data` isn't valid base64, keeping the bytes they already have. The other
-fields of that `terminal_update` still apply. Agents **SHOULD** send all output before a
-concrete `exitStatus`, but Clients still append output that arrives after it.
+Agents **SHOULD** send all output before a concrete `exitStatus`, but Clients
+still append output that arrives after it.
 Clients **MAY** bound how much output they keep, for example by dropping the
 oldest bytes. A later `output` snapshot replaces whatever they kept.
 
@@ -685,10 +683,8 @@ repository root prepended, with Git's quoting applied to the full path. On Windo
 
 Many diff parsers strip one leading path component by default to remove Git's
 `a/` and `b/` prefixes. Don't strip anything from an absolute path, which has no
-such prefix. A Client can still strip a leading `a/` or `b/` from a relative
-path to tolerate Agents that send Git's default output, as long as `changes`
-decides which file a patch belongs to. Take paths from `changes`, or from the
-`---`, `+++`, rename, and copy lines, rather than by splitting the `diff --git`
+such prefix. Take paths from `changes`, or from the `---`, `+++`, rename, and
+copy lines, rather than by splitting the `diff --git`
 header, which is ambiguous when paths contain spaces.
 
 </ParamField>

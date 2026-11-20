@@ -3524,7 +3524,7 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -3533,7 +3533,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -4103,7 +4103,7 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4112,7 +4112,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"

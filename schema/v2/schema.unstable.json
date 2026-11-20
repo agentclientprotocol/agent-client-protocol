@@ -4267,7 +4267,7 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4276,7 +4276,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -4923,7 +4923,7 @@
           ]
         },
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -4932,7 +4932,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -5862,7 +5862,7 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "The config options the session would start with, with the same rules as on\n`NewSessionResponse`.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.",
+          "description": "The config options the session would start with, with the same rules as on\n`NewSessionResponse`.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -5871,7 +5871,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Commands the Agent knows the session would have.\n\nOptional. Omitted or empty means no commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\n\nAdvisory. Agents MAY return a partial list. Clients MUST use the commands from the\n`session/new` or `session/resume` response and later `available_commands_update`\nnotifications for the session itself.",
+          "description": "Commands the Agent knows the session would have.\n\nOptional. Omitted or empty means no commands are advertised.\nSenders MUST use an array, not `null`.\n\nAdvisory. Agents MAY return a partial list. Clients MUST use the commands from the\n`session/new` or `session/resume` response and later `available_commands_update`\nnotifications for the session itself.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -5923,7 +5923,7 @@
       "type": "object",
       "properties": {
         "configOptions": {
-          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `config_option_update` notifications replace this list.",
+          "description": "Initial session configuration options.\n\nOptional. Omitted or empty means no config options are advertised.\nSenders MUST use an array, not `null`.\nLater `config_option_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SessionConfigOption"
@@ -5932,7 +5932,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "availableCommands": {
-          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`. Receivers treat `null` like omission.\nLater `available_commands_update` notifications replace this list.",
+          "description": "Initial commands the agent can execute in this session.\n\nOptional. Omitted or empty means no initial commands are advertised.\nSenders MUST use an array, not `null`.\nLater `available_commands_update` notifications replace this list.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/AvailableCommand"
@@ -10938,7 +10938,7 @@
       }
     },
     "MessageMcpResponse": {
-      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error MUST be a non-null object.\nUnknown outer fields are ignored. Inner result and error fields are preserved.\nCarrier `_meta` is optional. Omitted and `null` are equivalent.\nSenders must include exactly one outcome. Receivers prefer `result` if both are present.",
+      "description": "**UNSTABLE**\n\nThe successful outer ACP `mcp/message` response carries exactly one\ninner MCP outcome: an opaque result (including JSON null), or an MCP error.\nOuter ACP errors are reserved for binding and runtime failures.\n\nBoth branches require their carrier key. An error MUST be a non-null object.\nUnknown outer fields are ignored. Inner result and error fields are preserved.\nCarrier `_meta` is optional. Omitted and `null` are equivalent.\nSenders MUST include exactly one outcome.",
       "anyOf": [
         {
           "title": "Result",

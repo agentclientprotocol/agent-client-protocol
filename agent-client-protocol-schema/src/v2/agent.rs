@@ -1446,7 +1446,7 @@ pub struct NewSessionResponse {
     /// Initial session configuration options.
     ///
     /// Optional. Omitted or empty means no config options are advertised.
-    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`.
     /// Later `config_option_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -1455,7 +1455,7 @@ pub struct NewSessionResponse {
     /// Initial commands the agent can execute in this session.
     ///
     /// Optional. Omitted or empty means no initial commands are advertised.
-    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`.
     /// Later `available_commands_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -1488,7 +1488,7 @@ impl NewSessionResponse {
     /// Initial session configuration options.
     ///
     /// Optional. Omitted or empty means no config options are advertised.
-    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`.
     /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
@@ -1729,7 +1729,7 @@ pub struct ForkSessionResponse {
     /// Initial session configuration options.
     ///
     /// Optional. Omitted or empty means no config options are advertised.
-    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`.
     /// Later `config_option_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -1738,7 +1738,7 @@ pub struct ForkSessionResponse {
     /// Initial commands the agent can execute in this session.
     ///
     /// Optional. Omitted or empty means no initial commands are advertised.
-    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`.
     /// Later `available_commands_update` notifications replace this list.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -1772,7 +1772,7 @@ impl ForkSessionResponse {
     /// Initial session configuration options.
     ///
     /// Optional. Omitted or empty means no config options are advertised.
-    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`.
     /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
@@ -2144,7 +2144,7 @@ crate::serde_util::default_on_null! {
         /// Initial session configuration options.
         ///
         /// Optional. Omitted or empty means no config options are advertised.
-        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+        /// Senders MUST use an array, not `null`.
         /// Later `config_option_update` notifications replace this list.
         #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -2153,7 +2153,7 @@ crate::serde_util::default_on_null! {
         /// Initial commands the agent can execute in this session.
         ///
         /// Optional. Omitted or empty means no initial commands are advertised.
-        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+        /// Senders MUST use an array, not `null`.
         /// Later `available_commands_update` notifications replace this list.
         #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
@@ -2182,7 +2182,7 @@ impl ResumeSessionResponse {
     /// Initial session configuration options.
     ///
     /// Optional. Omitted or empty means no config options are advertised.
-    /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+    /// Senders MUST use an array, not `null`.
     /// Later `config_option_update` notifications replace this list.
     #[must_use]
     pub fn config_options(mut self, config_options: Vec<SessionConfigOption>) -> Self {
@@ -2600,7 +2600,7 @@ crate::serde_util::default_on_null! {
         /// `NewSessionResponse`.
         ///
         /// Optional. Omitted or empty means no config options are advertised.
-        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+        /// Senders MUST use an array, not `null`.
         #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
         #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -2608,7 +2608,7 @@ crate::serde_util::default_on_null! {
         /// Commands the Agent knows the session would have.
         ///
         /// Optional. Omitted or empty means no commands are advertised.
-        /// Senders MUST use an array, not `null`. Receivers treat `null` like omission.
+        /// Senders MUST use an array, not `null`.
         ///
         /// Advisory. Agents MAY return a partial list. Clients MUST use the commands from the
         /// `session/new` or `session/resume` response and later `available_commands_update`
