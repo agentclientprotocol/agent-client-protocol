@@ -126,16 +126,17 @@ fn direction(schema: &Value, methods: &Methods, side: &str, anchor: &str) -> Val
             }
         }
         if side != "proxy" {
-            choices.push(json!({"properties": {"method": {"pattern": "^_"}}}));
+            choices.push(json!({"properties": {"method": {"type": "string", "pattern": "^_"}}}));
         }
         json!({"oneOf": choices})
     };
     json!({
         "$anchor": anchor,
+        "type": "object",
         "allOf": [{"$ref": "#rpcEnvelope"}],
-        "if": {"required": ["method"]},
+        "if": {"required": ["method"], "properties": {"method": true}},
         "then": {
-            "if": {"required": ["id"]},
+            "if": {"required": ["id"], "properties": {"id": true}},
             "then": branches("request"),
             "else": branches("notification")
         }
@@ -143,21 +144,22 @@ fn direction(schema: &Value, methods: &Methods, side: &str, anchor: &str) -> Val
 }
 
 fn envelope() -> Value {
+    let params = json!({"anyOf": [{"type": "object"}, {"type": "array"}]});
     json!({
         "$anchor": "rpcEnvelope",
         "type": "object",
         "required": ["jsonrpc"],
-        "properties": {"jsonrpc": {"const": "2.0"}, "method": {"type": "string"}},
+        "properties": {"jsonrpc": {"const": "2.0"}},
         "oneOf": [
             {"required": ["method", "id"], "properties": {
-                "id": {"$ref": "#/$defs/RequestId"}, "params": {"type": ["object", "array"]},
-                "result": false, "error": false
+                "method": {"type": "string"}, "id": {"$ref": "#/$defs/RequestId"},
+                "params": params, "result": false, "error": false
             }},
             {"required": ["method"], "properties": {
-                "id": false, "params": {"type": ["object", "array"]}, "result": false, "error": false
+                "method": {"type": "string"}, "id": false, "params": params, "result": false, "error": false
             }},
             {"required": ["id", "result"], "properties": {
-                "id": {"$ref": "#/$defs/RequestId"}, "method": false, "error": false
+                "id": {"$ref": "#/$defs/RequestId"}, "result": true, "method": false, "error": false
             }},
             {"required": ["id", "error"], "properties": {
                 "id": {"anyOf": [{"$ref": "#/$defs/RequestId"}, {"type": "null"}]},

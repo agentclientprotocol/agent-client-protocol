@@ -12364,10 +12364,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="line" type={"integer | null"} >
-  Optional 1-based line number within the file. Omitted and `null` are equivalent and
-mean no specific line. `0` is invalid.
+  Optional 1-based line number within the file, from 1 to 4294967295 inclusive.
+Omitted and `null` are equivalent and mean no specific line.
 
-    - Minimum: `1`
+    | Constraint | Value |
+    | ---------- | ----- |
+    | Minimum | `1` |
+    | Maximum | `4294967295` |
 
 </ResponseField>
 <ResponseField name="path" type={<a href="#absolutepath">AbsolutePath</a>} required>

@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { publications, validators } from "./v2.mjs";
+import { schemaFiles, validators } from "./publications.mjs";
 
 const frame = (members) => ({ jsonrpc: "2.0", ...members });
 const prompt = { sessionId: "s", prompt: [{ type: "text", text: "Hello" }] };
 const cancel = { method: "session/cancel", params: { sessionId: "s" } };
 const protocol = { method: "$/cancel_request", params: { requestId: 0 } };
 
-for (const file of publications) {
-  const { at, schema } = validators(file);
+for (const file of schemaFiles) {
+  const { at, schema } = validators("v2", file);
   const root = at();
   const envelope = at("rpcEnvelope");
   const client = at("clientToAgent");

@@ -27,7 +27,9 @@ The schema files in the `/schema` directory are generated from the Rust code in 
 
 Spellchecking is done via `npm run spellcheck`.
 
-Tests are run via `cargo test`.
+Run `cargo test` for the Rust tests and `npm run test:json-schema` to check the published JSON Schemas. The latter compiles the root and definitions for both protocol versions, with and without Draft features, and validates complete JSON-RPC examples in the corresponding guides.
+
+The schema tests run Ajv in strict mode. Register new generator annotations or formats explicitly in `scripts/schema-tests/publications.mjs`. `uri` and `date-time` are checked as values. Numeric format names are type hints: use JSON Schema `minimum` and `maximum` for wire limits. JavaScript numbers cannot distinguish adjacent integers outside the safe integer range, so do not rely on Ajv to check exact 64-bit endpoints.
 
 Unreleased features will be behind an `unstable` feature flag in the Rust crate.
 

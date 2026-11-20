@@ -1647,10 +1647,11 @@
           ]
         },
         "line": {
-          "description": "Optional 1-based line number within the file. Omitted and `null` are equivalent and\nmean no specific line. `0` is invalid.",
+          "description": "Optional 1-based line number within the file, from 1 to 4294967295 inclusive.\nOmitted and `null` are equivalent and mean no specific line.",
           "type": ["integer", "null"],
           "format": "uint32",
           "minimum": 1,
+          "maximum": 4294967295,
           "x-deserialize-default-on-error": true
         },
         "_meta": {
@@ -1971,8 +1972,10 @@
         }
       },
       "required": ["sessionId"],
-      "not": {
-        "required": ["requestId"]
+      "propertyNames": {
+        "not": {
+          "const": "requestId"
+        }
       }
     },
     "ElicitationRequestScope": {
@@ -1989,15 +1992,10 @@
         }
       },
       "required": ["requestId"],
-      "not": {
-        "anyOf": [
-          {
-            "required": ["sessionId"]
-          },
-          {
-            "required": ["toolCallId"]
-          }
-        ]
+      "propertyNames": {
+        "not": {
+          "enum": ["sessionId", "toolCallId"]
+        }
       }
     },
     "ElicitationSchema": {
@@ -2530,8 +2528,10 @@
         }
       },
       "required": ["anyOf"],
-      "not": {
-        "required": ["type"]
+      "propertyNames": {
+        "not": {
+          "const": "type"
+        }
       }
     },
     "MultiSelectPropertySchema": {
@@ -8458,20 +8458,27 @@
           "properties": {
             "jsonrpc": {
               "const": "2.0"
-            },
-            "method": {
-              "type": "string"
             }
           },
           "oneOf": [
             {
               "required": ["method", "id"],
               "properties": {
+                "method": {
+                  "type": "string"
+                },
                 "id": {
                   "$ref": "#/$defs/RequestId"
                 },
                 "params": {
-                  "type": ["object", "array"]
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    }
+                  ]
                 },
                 "result": false,
                 "error": false
@@ -8480,9 +8487,19 @@
             {
               "required": ["method"],
               "properties": {
+                "method": {
+                  "type": "string"
+                },
                 "id": false,
                 "params": {
-                  "type": ["object", "array"]
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    }
+                  ]
                 },
                 "result": false,
                 "error": false
@@ -8494,6 +8511,7 @@
                 "id": {
                   "$ref": "#/$defs/RequestId"
                 },
+                "result": true,
                 "method": false,
                 "error": false
               }
@@ -8524,17 +8542,24 @@
       "anyOf": [
         {
           "$anchor": "clientToAgent",
+          "type": "object",
           "allOf": [
             {
               "$ref": "#rpcEnvelope"
             }
           ],
           "if": {
-            "required": ["method"]
+            "required": ["method"],
+            "properties": {
+              "method": true
+            }
           },
           "then": {
             "if": {
-              "required": ["id"]
+              "required": ["id"],
+              "properties": {
+                "id": true
+              }
             },
             "then": {
               "oneOf": [
@@ -8671,6 +8696,7 @@
                 {
                   "properties": {
                     "method": {
+                      "type": "string",
                       "pattern": "^_"
                     }
                   }
@@ -8704,6 +8730,7 @@
                 {
                   "properties": {
                     "method": {
+                      "type": "string",
                       "pattern": "^_"
                     }
                   }
@@ -8714,17 +8741,24 @@
         },
         {
           "$anchor": "agentToClient",
+          "type": "object",
           "allOf": [
             {
               "$ref": "#rpcEnvelope"
             }
           ],
           "if": {
-            "required": ["method"]
+            "required": ["method"],
+            "properties": {
+              "method": true
+            }
           },
           "then": {
             "if": {
-              "required": ["id"]
+              "required": ["id"],
+              "properties": {
+                "id": true
+              }
             },
             "then": {
               "oneOf": [
@@ -8753,6 +8787,7 @@
                 {
                   "properties": {
                     "method": {
+                      "type": "string",
                       "pattern": "^_"
                     }
                   }
@@ -8797,6 +8832,7 @@
                 {
                   "properties": {
                     "method": {
+                      "type": "string",
                       "pattern": "^_"
                     }
                   }
