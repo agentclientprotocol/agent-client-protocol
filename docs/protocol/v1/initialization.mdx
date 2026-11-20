@@ -232,6 +232,20 @@ The Client **SHOULD** specify whether it supports the following capabilities:
   Learn more about Session Notices
 </Card>
 
+#### Subagents
+
+<ParamField path="subagents" type="SubagentCapabilities Object">
+  The Client handles `subagent_update`, `session_message`, and
+  `session_message_chunk` session updates, and applies the restrictions on what
+  it sends for a child session. This field is optional and nullable. Omitted or
+  `null` means unsupported. Supplying `{}` means supported. Agents **MUST NOT**
+  send these updates without this capability.
+</ParamField>
+
+<Card icon="sitemap" horizontal href="/protocol/v1/subagents">
+  Learn more about Subagents
+</Card>
+
 ### Agent capabilities
 
 The Agent **SHOULD** specify whether it supports the following capabilities:

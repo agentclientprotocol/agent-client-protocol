@@ -1,0 +1,11 @@
+---
+title: Subagent sessions are stabilized
+sidebarTitle: Subagent sessions stabilized
+description: Agents can expose the subagents they delegate work to as child sessions in ACP v1 and the v2 baseline.
+---
+
+**Published:** November 20, 2026
+
+The [Subagent Sessions RFD](/rfds/subagents) has moved to Completed. An Agent can expose a subagent as a child session with its own `sessionId`. It announces the child with `subagent_update` on the parent session and sends the child's messages, plans, and tool calls as ordinary session updates. It reports messages between sessions with `session_message` and `session_message_chunk`, and a tool call can link to a session with `session` content. A Client can cancel a child's work with `session/cancel` when the child advertises `cancel`.
+
+In [ACP v1](/protocol/v1/subagents), Clients opt in with `clientCapabilities.subagents: {}`, and the Agent reports a child's work state on the parent's `subagent_update`. In [ACP v2](/protocol/v2/subagents), every Client handles child sessions, and no Client capability is needed.

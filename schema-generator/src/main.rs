@@ -309,6 +309,43 @@ mod schema_annotation_tests {
     }
 
     #[test]
+    fn generated_subagent_schema_keeps_version_specific_negotiation() {
+        let schema = root_schema_value();
+        let updates = def_schema(&schema, "SessionUpdate");
+        for target in ["SubagentUpdate", "SessionMessage", "SessionMessageChunk"] {
+            assert!(schema_contains_ref(updates, &format!("#/$defs/{target}")));
+        }
+        assert!(schema_contains_ref(
+            def_schema(&schema, "ToolCallContent"),
+            "#/$defs/SessionReference"
+        ));
+        assert!(schema_contains_ref(
+            def_schema(&schema, "SubagentUpdate"),
+            "#/$defs/StateUpdate"
+        ));
+        assert_eq!(
+            def_schema(&schema, "SubagentUpdate")["required"],
+            serde_json::json!(["sessionId"])
+        );
+        for name in [
+            "SubagentUpdate",
+            "SubagentSessionCapabilities",
+            "SessionMessage",
+            "SessionMessageChunk",
+            "SessionReference",
+        ] {
+            let description = def_schema(&schema, name)["description"]
+                .as_str()
+                .unwrap_or_else(|| panic!("`{name}` has no description"));
+            assert!(!description.contains("UNSTABLE"), "{name}");
+        }
+        // v1 Clients opt in. v2 Clients handle subagents without a capability.
+        let v1 = !cfg!(feature = "unstable_protocol_v2");
+        let capabilities = def_schema(&schema, "ClientCapabilities");
+        assert_eq!(capabilities["properties"].get("subagents").is_some(), v1);
+    }
+
+    #[test]
     fn generated_notice_schema_is_available_without_unstable_features() {
         let schema = root_schema_value();
         let notice = def_schema(&schema, "Notice");
@@ -1066,8 +1103,7 @@ mod schema_annotation_tests {
         assert_bool_extension(auth_methods, SKIP_INVALID_ITEMS_EXTENSION);
     }
 
-    /// v1 has the idle snapshot only for unstable subagents; it matches v2's shape.
-    #[cfg(any(feature = "unstable_protocol_v2", feature = "unstable"))]
+    /// v1 has the idle snapshot for subagents. It matches v2's shape.
     #[test]
     fn generated_idle_state_update_ties_error_to_error_stop_reason() {
         let schema = root_schema_value();

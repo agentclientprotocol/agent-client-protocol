@@ -12,7 +12,6 @@ use serde_with::{DefaultOnError, VecSkipError, serde_as, skip_serializing_none};
 
 use crate::IntoOption;
 
-#[cfg(feature = "unstable_subagents")]
 use super::SessionId;
 use super::{ContentBlock, Error, Meta, TerminalId};
 
@@ -556,12 +555,12 @@ pub enum ToolCallContent {
     ///
     /// See protocol docs: [Terminal](https://agentclientprotocol.com/protocol/v1/terminals)
     Terminal(Terminal),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A display-only reference to another session, such as a subagent.
-    #[cfg(feature = "unstable_subagents")]
+    ///
+    /// Agents send it only when the Client advertised the `subagents` Client
+    /// capability.
+    ///
+    /// See protocol docs: [Sessions](https://agentclientprotocol.com/protocol/v1/tool-calls#sessions)
     Session(SessionReference),
 }
 
@@ -577,10 +576,6 @@ impl From<Diff> for ToolCallContent {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A display-only reference to another session that this tool call operates on,
 /// such as a subagent it created, delegated to, or is waiting on.
 ///
@@ -588,7 +583,6 @@ impl From<Diff> for ToolCallContent {
 /// session setup or a `subagent_update` announcement. The reference does not
 /// establish ownership, grant any Client-initiated controls, or report that the
 /// referenced session received or finished any work.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -610,7 +604,6 @@ pub struct SessionReference {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionReference {
     /// Builds [`SessionReference`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -630,7 +623,6 @@ impl SessionReference {
     }
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl From<SessionReference> for ToolCallContent {
     fn from(session: SessionReference) -> Self {
         ToolCallContent::Session(session)
@@ -858,7 +850,6 @@ impl ToolCallLocation {
 #[cfg(test)]
 mod tests {
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn session_reference_tool_call_content_round_trips() {
         use serde_json::json;

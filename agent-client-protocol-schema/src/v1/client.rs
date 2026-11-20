@@ -6,26 +6,17 @@
 use std::{path::PathBuf, sync::Arc};
 
 use derive_more::{Display, From};
-#[cfg(any(feature = "unstable_subagents", feature = "unstable_session_cursors"))]
 use indexmap::IndexMap;
-#[cfg(all(
-    feature = "schemars",
-    any(feature = "unstable_subagents", feature = "unstable_session_cursors")
-))]
+#[cfg(feature = "schemars")]
 use schemars::Schema;
 use serde::{Deserialize, Serialize};
 use serde_with::{DefaultOnError, DefaultOnNull, VecSkipError, serde_as, skip_serializing_none};
 
 #[cfg(feature = "unstable_auth_status")]
 use super::AuthStatusUpdateNotification;
-#[cfg(feature = "unstable_subagents")]
-use super::Error;
 #[cfg(feature = "unstable_session_cursors")]
 use super::ToolCallId;
-#[cfg(all(
-    feature = "unstable_subagents",
-    feature = "unstable_end_turn_token_usage"
-))]
+#[cfg(feature = "unstable_end_turn_token_usage")]
 use super::Usage;
 use super::{
     CompleteElicitationNotification, CreateElicitationRequest, CreateElicitationResponse,
@@ -34,7 +25,7 @@ use super::{
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
 use super::{
-    ContentBlock, EnvVariable, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
+    ContentBlock, EnvVariable, Error, ExtNotification, ExtRequest, ExtResponse, Meta, Plan,
     PlanCapabilities, PlanRemoved, PlanUpdate, SessionConfigOption, SessionId, SessionModeId,
     ToolCall, ToolCallUpdate,
 };
@@ -173,40 +164,35 @@ pub enum SessionUpdate {
     /// the `session.cursors` Client capability.
     #[cfg(feature = "unstable_session_cursors")]
     CursorUpdate(CursorUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Announces a child session created and owned by this session, or updates
     /// that ownership association's metadata.
-    #[cfg(feature = "unstable_subagents")]
+    ///
+    /// Agents MUST only send this update when the Client advertised
+    /// the `subagents` Client capability.
+    ///
+    /// See protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v1/subagents)
     SubagentUpdate(SubagentUpdate),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// A message upsert observed in this session's transcript, sent to or
     /// received from another session.
-    #[cfg(feature = "unstable_subagents")]
+    ///
+    /// Agents MUST only send this update when the Client advertised
+    /// the `subagents` Client capability.
+    ///
+    /// See protocol docs: [Session-directed messages](https://agentclientprotocol.com/protocol/v1/prompt-turn#session-directed-messages)
     SessionMessage(SessionMessage),
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// One content block appended to a sent or received session message.
-    #[cfg(feature = "unstable_subagents")]
+    ///
+    /// Agents MUST only send this update when the Client advertised
+    /// the `subagents` Client capability.
+    ///
+    /// See protocol docs: [Session-directed messages](https://agentclientprotocol.com/protocol/v1/prompt-turn#session-directed-messages)
     SessionMessageChunk(SessionMessageChunk),
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// A streamed content block of an inter-session message.
 ///
 /// A chunk carries only content. The message's participants and references come from
 /// `session_message` upserts, which can arrive before, between, or after its chunks.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -227,7 +213,6 @@ pub struct SessionMessageChunk {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionMessageChunk {
     /// Builds a single streamed content block without chunk metadata.
     #[must_use]
@@ -247,12 +232,7 @@ impl SessionMessageChunk {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// An upsert for an inter-session message.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -313,7 +293,6 @@ pub struct SessionMessage {
     pub meta: MaybeUndefined<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionMessage {
     /// Builds a message upsert with its transcript-local ID.
     #[must_use]
@@ -384,7 +363,7 @@ impl SessionMessage {
     }
 }
 
-#[cfg(all(test, feature = "unstable_subagents"))]
+#[cfg(test)]
 mod session_message_tests {
     use super::*;
     use serde_json::{Value, json};
@@ -683,26 +662,6 @@ mod session_message_tests {
             wire,
             "null clears a reference and a malformed one is not supplied"
         );
-    }
-}
-
-#[cfg(all(test, not(feature = "unstable_subagents")))]
-mod disabled_session_message_tests {
-    use super::*;
-    use serde_json::json;
-
-    #[test]
-    fn message_updates_require_subagents_gate() {
-        for (kind, content) in [
-            ("session_message", json!([])),
-            (
-                "session_message_chunk",
-                json!({"type": "text", "text": "hello"}),
-            ),
-        ] {
-            let wire = json!({"sessionUpdate": kind, "messageId": "m1", "content": content});
-            assert!(serde_json::from_value::<SessionUpdate>(wire).is_err());
-        }
     }
 }
 
@@ -1204,7 +1163,6 @@ pub enum CursorAnchor {
     /// The cursor is next to an agent thought.
     AgentThought(CursorMessageAnchor),
     /// The cursor is next to a session-directed message.
-    #[cfg(feature = "unstable_subagents")]
     SessionMessage(CursorMessageAnchor),
     /// The cursor is next to a tool call.
     ToolCall(CursorToolCallAnchor),
@@ -1478,7 +1436,6 @@ const KNOWN_CURSOR_ANCHOR_TYPES: &[&str] = &[
     "user_message",
     "agent_message",
     "agent_thought",
-    #[cfg(feature = "unstable_subagents")]
     "session_message",
     "tool_call",
     "compaction",
@@ -1499,10 +1456,6 @@ fn other_cursor_anchor_schema(schema: &mut Schema) {
     schema.insert("not".into(), serde_json::json!({ "anyOf": known }));
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Notification that the enclosing parent session created and owns a child session.
 ///
 /// Later updates modify the existing association's metadata, not its ownership.
@@ -1524,7 +1477,6 @@ fn other_cursor_anchor_schema(schema: &mut Schema) {
 /// child. They do not replace the content of individual messages or operations.
 /// `cwd` and `additionalDirectories` report where the Agent placed the child.
 /// While unset, each inherits the immediate parent's effective value.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1604,7 +1556,6 @@ pub struct SubagentUpdate {
     pub meta: MaybeUndefined<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SubagentUpdate {
     /// Builds a subagent upsert with only its required session ID set.
     #[must_use]
@@ -1683,15 +1634,10 @@ impl SubagentUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Client-initiated session mutations permitted for a specific subagent session.
 ///
 /// A mutation requires an explicit per-child capability. Support for the method
 /// on ordinary sessions does not grant support on a child.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1716,7 +1662,6 @@ pub struct SubagentSessionCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SubagentSessionCapabilities {
     /// Builds an empty capability set. Cancellation is disabled.
     #[must_use]
@@ -1741,14 +1686,9 @@ impl SubagentSessionCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capability to cancel work in a subagent session without ending that session.
 ///
 /// Supplying `{}` advertises support. An omitted or `null` `cancel` does not.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1767,7 +1707,6 @@ pub struct SessionCancelCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SessionCancelCapabilities {
     /// Builds an empty capability object advertising cancellation support.
     #[must_use]
@@ -1787,16 +1726,11 @@ impl SessionCancelCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Current foreground-work state of a reusable child session.
 ///
 /// Each update is a whole-object snapshot. Idle does not terminate the child.
 /// The parent can message it again, transitioning it back to running.
 /// Background activity may still emit other session updates while idle.
-#[cfg(feature = "unstable_subagents")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "state", rename_all = "snake_case")]
@@ -1821,7 +1755,6 @@ pub enum StateUpdate {
 }
 
 /// Foreground work is in progress.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1838,7 +1771,6 @@ pub struct RunningStateUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl RunningStateUpdate {
     /// Builds an empty running state.
     #[must_use]
@@ -1857,7 +1789,6 @@ impl RunningStateUpdate {
 /// Foreground work is not in progress. The parent can give the child more work.
 ///
 /// An omitted or `null` `stopReason` means not reported.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -1886,7 +1817,6 @@ pub struct IdleStateUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl IdleStateUpdate {
     /// Builds an empty idle state.
     #[must_use]
@@ -1925,7 +1855,7 @@ impl IdleStateUpdate {
 /// also removes the `stopReason` property that carried
 /// `x-deserialize-default-on-error`, which SDKs generated from the schema rely on
 /// to tolerate a malformed value, so this adds it back as a shared property.
-#[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+#[cfg(feature = "schemars")]
 fn idle_state_update_schema(schema: &mut Schema) {
     if let Some(properties) = schema
         .get_mut("properties")
@@ -1960,10 +1890,6 @@ fn idle_state_update_schema(schema: &mut Schema) {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Reason a child's foreground work stopped, reported on its idle state snapshot.
 ///
 /// Tagged by `stopReason` and flattened into [`IdleStateUpdate`].
@@ -1971,7 +1897,6 @@ fn idle_state_update_schema(schema: &mut Schema) {
 /// A child has no prompt response of its own, so this snapshot is the only place
 /// to report that its work failed. The prompt response keeps
 /// [`StopReason`](super::StopReason) and reports failures as JSON-RPC errors.
-#[cfg(feature = "unstable_subagents")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "stopReason", rename_all = "snake_case")]
@@ -1998,19 +1923,13 @@ pub enum IdleStopReason {
     Other(OtherStopReason),
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl From<ErrorStopReason> for IdleStopReason {
     fn from(value: ErrorStopReason) -> Self {
         Self::Error(value)
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Details of a failure that ended a child's foreground work.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2028,7 +1947,6 @@ pub struct ErrorStopReason {
     pub error: Option<Box<Error>>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl ErrorStopReason {
     /// Builds [`ErrorStopReason`] with the required fields set. Optional fields start unset or empty.
     #[must_use]
@@ -2044,12 +1962,7 @@ impl ErrorStopReason {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Custom or future stop reason payload, preserving its discriminator and fields.
-#[cfg(feature = "unstable_subagents")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
@@ -2064,7 +1977,6 @@ pub struct OtherStopReason {
     pub fields: IndexMap<String, serde_json::Value>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl OtherStopReason {
     /// Builds a custom stop reason, preserving its extension fields.
     #[must_use]
@@ -2080,7 +1992,6 @@ impl OtherStopReason {
     }
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl<'de> Deserialize<'de> for OtherStopReason {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -2106,7 +2017,6 @@ impl<'de> Deserialize<'de> for OtherStopReason {
     }
 }
 
-#[cfg(feature = "unstable_subagents")]
 const KNOWN_STOP_REASONS: &[&str] = &[
     "end_turn",
     "max_tokens",
@@ -2117,14 +2027,13 @@ const KNOWN_STOP_REASONS: &[&str] = &[
 ];
 
 /// Keeps the idle snapshot's own fields out of an unknown stop reason's payload.
-#[cfg(feature = "unstable_subagents")]
 fn remove_idle_state_update_fields(fields: &mut IndexMap<String, serde_json::Value>) {
     fields.shift_remove("stopReason");
     fields.shift_remove("usage");
     fields.shift_remove("_meta");
 }
 
-#[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+#[cfg(feature = "schemars")]
 fn other_stop_reason_schema(schema: &mut Schema) {
     let known = KNOWN_STOP_REASONS
         .iter()
@@ -2140,7 +2049,6 @@ fn other_stop_reason_schema(schema: &mut Schema) {
 }
 
 /// Foreground work is blocked on user action.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2157,7 +2065,6 @@ pub struct RequiresActionStateUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl RequiresActionStateUpdate {
     /// Builds an empty requires-action state.
     #[must_use]
@@ -2173,10 +2080,6 @@ impl RequiresActionStateUpdate {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// The Agent cannot currently determine foreground activity.
 ///
 /// Report this when activity becomes unobservable, not merely because the child
@@ -2189,7 +2092,6 @@ impl RequiresActionStateUpdate {
 /// the Agent updates the capabilities explicitly. Unfinished tool calls and
 /// terminals stay as last reported. The Agent does not invent a final status
 /// for them, and Clients do not present them as confirmed live activity.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -2206,7 +2108,6 @@ pub struct UnknownStateUpdate {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl UnknownStateUpdate {
     /// Builds an unknown-activity state.
     #[must_use]
@@ -2223,7 +2124,6 @@ impl UnknownStateUpdate {
 }
 
 /// Custom or future state payload, preserving its discriminator and fields.
-#[cfg(feature = "unstable_subagents")]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
@@ -2238,7 +2138,6 @@ pub struct OtherStateUpdate {
     pub fields: IndexMap<String, serde_json::Value>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl OtherStateUpdate {
     /// Builds a custom state, preserving its extension fields.
     #[must_use]
@@ -2251,7 +2150,6 @@ impl OtherStateUpdate {
     }
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl<'de> Deserialize<'de> for OtherStateUpdate {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -2273,15 +2171,13 @@ impl<'de> Deserialize<'de> for OtherStateUpdate {
     }
 }
 
-#[cfg(feature = "unstable_subagents")]
 const KNOWN_STATE_UPDATE_STATES: &[&str] = &["running", "idle", "requires_action", "unknown"];
 
-#[cfg(feature = "unstable_subagents")]
 fn is_known_state_update(state: &str) -> bool {
     KNOWN_STATE_UPDATE_STATES.contains(&state)
 }
 
-#[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+#[cfg(feature = "schemars")]
 fn other_state_update_schema(schema: &mut Schema) {
     let known = KNOWN_STATE_UPDATE_STATES
         .iter()
@@ -4067,17 +3963,14 @@ pub struct ClientCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub session: Option<ClientSessionCapabilities>,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the client understands exposed subagent sessions.
     ///
     /// Optional and nullable. Omitted or `null` both mean the client does not
     /// advertise support.
     /// Supplying `{}` means the client understands child associations, work-state
     /// snapshots, session-directed messages, and restricted-session semantics.
-    #[cfg(feature = "unstable_subagents")]
+    ///
+    /// See protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v1/subagents)
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -4147,12 +4040,7 @@ impl ClientCapabilities {
         self
     }
 
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Whether the client understands exposed subagent sessions.
-    #[cfg(feature = "unstable_subagents")]
     #[must_use]
     pub fn subagents(mut self, subagents: impl IntoOption<SubagentCapabilities>) -> Self {
         self.subagents = subagents.into_option();
@@ -4198,17 +4086,12 @@ impl ClientCapabilities {
     }
 }
 
-/// **UNSTABLE**
-///
-/// This capability is not part of the spec yet, and may be removed or changed at any point.
-///
 /// Capability marker for exposing reusable child sessions as restricted ACP sessions.
 ///
 /// Supplying `{}` advertises support for child association and state updates,
 /// session-directed messages, and restricted-session semantics. The client
 /// must advertise this capability before the agent sends subagent updates or
 /// session-directed messages.
-#[cfg(feature = "unstable_subagents")]
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4225,7 +4108,6 @@ pub struct SubagentCapabilities {
     pub meta: Option<Meta>,
 }
 
-#[cfg(feature = "unstable_subagents")]
 impl SubagentCapabilities {
     /// Builds an empty capability marker.
     #[must_use]
@@ -5700,7 +5582,6 @@ mod tests {
         assert!(null.compaction.is_none());
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn test_subagent_updates_serialization() {
         use serde_json::json;
@@ -5747,7 +5628,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn test_subagent_display_metadata() {
         use serde_json::json;
@@ -5798,7 +5678,6 @@ mod tests {
         assert!(title_only.description.is_undefined());
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_directories_use_strict_patch_semantics() {
         use serde_json::json;
@@ -5842,7 +5721,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_patch_fields_preserve_omitted_null_and_concrete() {
         use serde_json::json;
@@ -5883,7 +5761,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn test_subagent_notification_keeps_parent_and_child_ids_nested() {
         use serde_json::json;
@@ -5913,7 +5790,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn test_subagent_states_round_trip() {
         use serde_json::json;
@@ -6007,7 +5883,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_idle_snapshot_reports_child_failure() {
         use serde_json::json;
@@ -6098,7 +5973,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_known_stop_reasons_are_never_read_as_other() {
         use serde_json::json;
@@ -6142,7 +6016,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn subagent_unknown_stop_reason_leaves_usage_on_the_snapshot() {
         use serde_json::json;
@@ -6168,7 +6041,6 @@ mod tests {
         assert!(serde_json::to_value(&idle).unwrap().get("usage").is_none());
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn test_subagent_unknown_activity_metadata_and_capabilities() {
         use serde_json::json;
@@ -6211,7 +6083,6 @@ mod tests {
         assert!(serde_json::from_value::<OtherStateUpdate>(json!({"state": "unknown"})).is_err());
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn test_subagent_malformed_optional_state() {
         use serde_json::json;
@@ -6232,7 +6103,7 @@ mod tests {
         assert_eq!(null_reason, StateUpdate::Idle(IdleStateUpdate::new()));
     }
 
-    #[cfg(all(feature = "unstable_subagents", feature = "unstable_protocol_v2"))]
+    #[cfg(feature = "unstable_protocol_v2")]
     #[test]
     fn test_subagent_state_v2_wire_parity() {
         use serde_json::json;
@@ -6252,7 +6123,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "unstable_subagents")]
     #[test]
     fn test_subagent_capability_semantics() {
         use serde_json::json;
@@ -6314,7 +6184,7 @@ mod tests {
         );
     }
 
-    #[cfg(all(feature = "unstable_subagents", feature = "schemars"))]
+    #[cfg(feature = "schemars")]
     #[test]
     fn test_subagent_capability_schema_is_optional_and_nullable() {
         use serde_json::json;
@@ -6971,7 +6841,6 @@ mod tests {
                 )),
                 json!({ "type": "agent_thought", "messageId": "msg_agent_1", "position": "after" }),
             ),
-            #[cfg(feature = "unstable_subagents")]
             (
                 CursorAnchor::SessionMessage(CursorMessageAnchor::new(
                     "msg_session_1",

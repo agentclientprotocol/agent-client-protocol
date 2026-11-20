@@ -590,6 +590,22 @@
               "$ref": "#/$defs/Terminal"
             }
           ]
+        },
+        {
+          "description": "A display-only reference to another session, such as a subagent.\n\nAgents send it only when the Client advertised the `subagents` Client\ncapability.\n\nSee protocol docs: [Sessions](https://agentclientprotocol.com/protocol/v1/tool-calls#sessions)",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "session"
+            }
+          },
+          "required": ["type"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionReference"
+            }
+          ]
         }
       ],
       "discriminator": {
@@ -1064,6 +1080,27 @@
         }
       },
       "required": ["terminalId"]
+    },
+    "SessionReference": {
+      "description": "A display-only reference to another session that this tool call operates on,\nsuch as a subagent it created, delegated to, or is waiting on.\n\nThe referenced session must already be known to the Client through ordinary\nsession setup or a `subagent_update` announcement. The reference does not\nestablish ownership, grant any Client-initiated controls, or report that the\nreferenced session received or finished any work.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The referenced session.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"]
     },
     "ToolCallLocation": {
       "description": "A file location being accessed or modified by a tool.\n\nEnables clients to implement \"follow-along\" features that track\nwhich files the agent is working with in real-time.\n\nSee protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/v1/tool-calls#following-the-agent)",
@@ -3973,6 +4010,54 @@
               "$ref": "#/$defs/CompactionSummaryChunk"
             }
           ]
+        },
+        {
+          "description": "Announces a child session created and owned by this session, or updates\nthat ownership association's metadata.\n\nAgents MUST only send this update when the Client advertised\nthe `subagents` Client capability.\n\nSee protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v1/subagents)",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "subagent_update"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SubagentUpdate"
+            }
+          ]
+        },
+        {
+          "description": "A message upsert observed in this session's transcript, sent to or\nreceived from another session.\n\nAgents MUST only send this update when the Client advertised\nthe `subagents` Client capability.\n\nSee protocol docs: [Session-directed messages](https://agentclientprotocol.com/protocol/v1/prompt-turn#session-directed-messages)",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "session_message"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionMessage"
+            }
+          ]
+        },
+        {
+          "description": "One content block appended to a sent or received session message.\n\nAgents MUST only send this update when the Client advertised\nthe `subagents` Client capability.\n\nSee protocol docs: [Session-directed messages](https://agentclientprotocol.com/protocol/v1/prompt-turn#session-directed-messages)",
+          "type": "object",
+          "properties": {
+            "sessionUpdate": {
+              "type": "string",
+              "const": "session_message_chunk"
+            }
+          },
+          "required": ["sessionUpdate"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionMessageChunk"
+            }
+          ]
         }
       ],
       "discriminator": {
@@ -4703,6 +4788,572 @@
       },
       "required": ["compactionId", "content"]
     },
+    "SubagentSessionCapabilities": {
+      "description": "Client-initiated session mutations permitted for a specific subagent session.\n\nA mutation requires an explicit per-child capability. Support for the method\non ordinary sessions does not grant support on a child.",
+      "type": "object",
+      "properties": {
+        "cancel": {
+          "description": "Permits the client to cancel this child's current work without ending\nthe session. Omitted or `null` means unsupported. An object (including\n`{}`) means supported.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionCancelCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SessionCancelCapabilities": {
+      "description": "Capability to cancel work in a subagent session without ending that session.\n\nSupplying `{}` advertises support. An omitted or `null` `cancel` does not.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "StateUpdate": {
+      "description": "Current foreground-work state of a reusable child session.\n\nEach update is a whole-object snapshot. Idle does not terminate the child.\nThe parent can message it again, transitioning it back to running.\nBackground activity may still emit other session updates while idle.",
+      "anyOf": [
+        {
+          "description": "Foreground work is in progress.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "running"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/RunningStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "Foreground work is not in progress. The parent can give the child more work.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "idle"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/IdleStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "Foreground work is blocked on user action.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "requires_action"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/RequiresActionStateUpdate"
+            }
+          ]
+        },
+        {
+          "description": "The Agent cannot currently determine foreground activity.\n\nThis replaces previously confirmed activity without ending the work or session.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "const": "unknown"
+            }
+          },
+          "required": ["state"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/UnknownStateUpdate"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future state.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP variants.",
+          "type": "object",
+          "properties": {
+            "state": {
+              "description": "Unrecognized state discriminator.",
+              "type": "string"
+            }
+          },
+          "required": ["state"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "running"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "idle"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "requires_action"
+                  }
+                },
+                "required": ["state"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "const": "unknown"
+                  }
+                },
+                "required": ["state"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "RunningStateUpdate": {
+      "description": "Foreground work is in progress.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "ErrorStopReason": {
+      "description": "Details of a failure that ended a child's foreground work.",
+      "type": "object",
+      "properties": {
+        "error": {
+          "description": "The failure, as a JSON-RPC error object.\n\nOptional. Omitted or `null` both mean the agent is not reporting failure details.\nAgents SHOULD include it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        }
+      }
+    },
+    "IdleStateUpdate": {
+      "description": "Foreground work is not in progress. The parent can give the child more work.\n\nAn omitted or `null` `stopReason` means not reported.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        },
+        "stopReason": {
+          "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted or `null` both mean the agent is not reporting a stop reason.\n\nSee protocol docs: [Work state](https://agentclientprotocol.com/protocol/v1/subagents#work-state)",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        }
+      },
+      "anyOf": [
+        {
+          "description": "The work ended successfully.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "end_turn"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because the agent reached the maximum number of tokens.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_tokens"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because the agent reached the maximum number of allowed\nagent requests.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "max_turn_requests"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because the agent refused to continue.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "refusal"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work was cancelled.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "cancelled"
+            }
+          },
+          "required": ["stopReason"]
+        },
+        {
+          "description": "The work ended because something failed.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "string",
+              "const": "error"
+            }
+          },
+          "required": ["stopReason"],
+          "allOf": [
+            {
+              "$ref": "#/$defs/ErrorStopReason"
+            }
+          ]
+        },
+        {
+          "title": "other",
+          "description": "Custom or future stop reason.\n\nValues beginning with `_` are reserved for implementation-specific\nextensions. Other unknown values are reserved for future ACP variants.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "description": "Unrecognized stop reason.",
+              "type": "string"
+            }
+          },
+          "required": ["stopReason"],
+          "not": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "end_turn"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_tokens"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "max_turn_requests"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "refusal"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "cancelled"
+                  }
+                },
+                "required": ["stopReason"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "stopReason": {
+                    "type": "string",
+                    "const": "error"
+                  }
+                },
+                "required": ["stopReason"]
+              }
+            ]
+          },
+          "additionalProperties": true
+        },
+        {
+          "title": "none",
+          "description": "No stop reason: `stopReason` is omitted or `null`.",
+          "type": "object",
+          "properties": {
+            "stopReason": {
+              "type": "null"
+            }
+          }
+        }
+      ]
+    },
+    "RequiresActionStateUpdate": {
+      "description": "Foreground work is blocked on user action.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "UnknownStateUpdate": {
+      "description": "The Agent cannot currently determine foreground activity.\n\nReport this when activity becomes unobservable, not merely because the child\nhas been quiet. The Client MUST stop presenting the previous state as confirmed\ncurrent activity, but may retain it as last known. A later state replaces this\nsnapshot normally.\n\nThis is not a task outcome or session closure. It does not cancel work, resolve\npending requests, or revoke capabilities. If a control is no longer available,\nthe Agent updates the capabilities explicitly. Unfinished tool calls and\nterminals stay as last reported. The Agent does not invent a final status\nfor them, and Clients do not present them as confirmed live activity.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP for additional metadata.\nImplementations MUST NOT make assumptions about values at these keys.\nOptional. Omitted and `null` mean no metadata for this state snapshot.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
+    },
+    "SubagentUpdate": {
+      "description": "Notification that the enclosing parent session created and owns a child session.\n\nLater updates modify the existing association's metadata, not its ownership.\n\nSent on the immediate parent session. The first update for an unknown\n`sessionId` announces the child and MUST be sent\nbefore any live child traffic or live message naming the child as sender\nor recipient. Parents may message and reuse an announced child across\nmultiple operations.\nChild events are delivered automatically on the same connection. No child\nload, resume, or subscription is needed.\n\nOnly the subagent session ID is required. Omitted patch fields keep their\nprevious values. `null` clears them. Clearing capabilities disables child\nmutations. Clearing state leaves current activity unset/unconfirmed: it does\nnot imply idle, stop work, or create an `unknown` state snapshot. A concrete\nstate replaces the entire previous state object, not the session.\nThe title and description provide the parent's display metadata for the\nchild. They do not replace the content of individual messages or operations.\n`cwd` and `additionalDirectories` report where the Agent placed the child.\nWhile unset, each inherits the immediate parent's effective value.",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "description": "The opaque session ID identifying the child in all ACP messages.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            }
+          ]
+        },
+        "title": {
+          "description": "The parent's human-readable display title for this child. It need not be unique.\n\nOmitted means unchanged. `null` clears it. If unset, the Client chooses\na fallback presentation.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "description": {
+          "description": "The parent's human-readable description of the child's role or purpose.\n\nOmitted means unchanged. `null` clears it. If unset, the Client chooses\na fallback presentation. This is current display metadata, not the\nhistory of instructions sent to the child.",
+          "type": ["string", "null"],
+          "x-deserialize-default-on-error": true
+        },
+        "capabilities": {
+          "description": "Client-initiated session mutations permitted for this subagent session.\n\nOmitted means unchanged. `null` clears the capability set and disables\nchild mutations. If never supplied, no session mutations are permitted.\nRead-only operations retain their normal protocol semantics and capability\nrequirements. A concrete object replaces the whole capability set.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubagentSessionCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "state": {
+          "description": "Current state snapshot for the child session.\n\nOmitted means unchanged. `null` clears the current activity without\nasserting idle or sending an `unknown` snapshot. A concrete state\nreplaces the previous state object wholesale. If never supplied, the\ncurrent activity is unset/unconfirmed.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateUpdate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "cwd": {
+          "description": "The child's working directory. Must be an absolute path.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective working directory. Clients use this value for the child's\nroot set and as the default terminal working directory.",
+          "type": ["string", "null"]
+        },
+        "additionalDirectories": {
+          "description": "Additional workspace roots for the child. Each path MUST be absolute.\n\nOptional and nullable. Omitted means unchanged. `null` clears the\nreported value. While unset, the child inherits its immediate parent's\neffective additional directories, independently of `cwd`. A concrete\narray replaces the whole list. `[]` reports no additional directories.\nClients use these values for the child's root set.",
+          "type": ["array", "null"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/extensibility)\nOmitted means unchanged. `null` removes the metadata.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["sessionId"]
+    },
+    "SessionMessage": {
+      "description": "An upsert for an inter-session message.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "Identifier of this message within the enclosing session's transcript.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "senderSessionId": {
+          "description": "The sending session.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "recipientSessionId": {
+          "description": "The receiving session.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "senderMessageId": {
+          "description": "On an incoming view, the `messageId` of the same message's outgoing view in the\nsender's transcript.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive\nafter the message starts streaming.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "recipientMessageId": {
+          "description": "On an outgoing view, the `messageId` of the same message's incoming view in the\nrecipient's transcript.\n\nOmitted leaves the stored value unchanged. `null` clears it. A value replaces it. It can arrive\nafter the message starts streaming.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
+        "content": {
+          "description": "Omitted leaves content unchanged. `null` or `[]` clears it.\nA non-empty array replaces all content.",
+          "type": ["array", "null"],
+          "items": {
+            "$ref": "#/$defs/ContentBlock"
+          },
+          "x-deserialize-default-on-error": true,
+          "x-deserialize-skip-invalid-items": true
+        },
+        "_meta": {
+          "description": "Omitted leaves metadata unchanged. `null` removes it.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId"]
+    },
+    "SessionMessageChunk": {
+      "description": "A streamed content block of an inter-session message.\n\nA chunk carries only content. The message's participants and references come from\n`session_message` upserts, which can arrive before, between, or after its chunks.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "description": "Identifier of this message within the enclosing session's transcript.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            }
+          ]
+        },
+        "content": {
+          "description": "A single content block appended to the message.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/ContentBlock"
+            }
+          ]
+        },
+        "_meta": {
+          "description": "Optional and nullable chunk-scoped metadata. Omitted or `null` means none.\n\nImplementations MUST NOT make assumptions about values in `_meta`.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      },
+      "required": ["messageId", "content"]
+    },
     "CompleteElicitationNotification": {
       "description": "Notification sent by the agent when a URL-based elicitation is complete.",
       "type": "object",
@@ -4968,6 +5619,18 @@
           ],
           "x-deserialize-default-on-error": true
         },
+        "subagents": {
+          "description": "Whether the client understands exposed subagent sessions.\n\nOptional and nullable. Omitted or `null` both mean the client does not\nadvertise support.\nSupplying `{}` means the client understands child associations, work-state\nsnapshots, session-directed messages, and restricted-session semantics.\n\nSee protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v1/subagents)",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubagentCapabilities"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "plan": {
           "description": "Whether the Client supports `plan_update` and `plan_removed` session updates.\n\nOptional. Omitted or `null` both mean the Client does not advertise support.\nSupplying `{}` means the Client can receive both update types.",
           "anyOf": [
@@ -5127,6 +5790,18 @@
     "NoticeCapabilities": {
       "description": "Client support for presenting live notices to the user.",
       "type": "object"
+    },
+    "SubagentCapabilities": {
+      "description": "Capability marker for exposing reusable child sessions as restricted ACP sessions.\n\nSupplying `{}` advertises support for child association and state updates,\nsession-directed messages, and restricted-session semantics. The client\nmust advertise this capability before the agent sends subagent updates or\nsession-directed messages.",
+      "type": "object",
+      "properties": {
+        "_meta": {
+          "description": "The _meta property is reserved by ACP to allow clients and agents to attach additional\nmetadata to their interactions. Implementations MUST NOT make assumptions about values at\nthese keys.",
+          "type": ["object", "null"],
+          "x-deserialize-default-on-error": true,
+          "additionalProperties": true
+        }
+      }
     },
     "PlanCapabilities": {
       "description": "Capabilities for receiving `plan_update` and `plan_removed` session updates.",

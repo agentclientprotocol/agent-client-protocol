@@ -298,7 +298,7 @@ prompt; see
 `subagent_update` has two optional, nullable directory fields:
 
 - `cwd`: the child's working directory, with the same meaning as `cwd` in
-  ordinary [session setup](/protocol/v1/draft/session-setup#working-directory).
+  ordinary [session setup](/protocol/v1/session-setup#working-directory).
   It **MUST** be an absolute path.
 - `additionalDirectories`: further directories the child works in, with the
   same meaning as `additionalDirectories` in ordinary session setup. Each
@@ -362,7 +362,7 @@ child terminal requests.
 
 ##### A child's root set
 
-In v1, the [root-set checks](/protocol/v1/draft/session-setup#workspace-root-security)
+In v1, the [root-set checks](/protocol/v1/session-setup#workspace-root-security)
 that filesystem and terminal requests apply to "the session's root set" use,
 for a child, the child's effective `[cwd, ...additionalDirectories]`.
 
@@ -394,7 +394,7 @@ the existing `config_option_update` notification with the child's session ID.
 Send an initial snapshot after announcing the child and a fresh snapshot when
 its configuration changes, including changes between assignments to the same
 child. Each notification contains the complete reported configuration, using
-the existing [v1](/protocol/v1/draft/session-config-options#from-the-agent) or
+the existing [v1](/protocol/v1/session-config-options#from-the-agent) or
 [v2](/protocol/v2/session-config-options#from-the-agent) config option
 shapes. No configuration fields are added to the parent association.
 
@@ -1302,6 +1302,28 @@ summarizing their output in the parent session.
 
 > Tell me more about your implementation. What is your detailed implementation plan?
 
+### Protocol implementation
+
+Subagent sessions are part of the default schemas for both versions. See the
+[v1 Subagents guide](/protocol/v1/subagents) for the Client opt-in and the work
+state on the parent's `subagent_update`, and the
+[v2 Subagents guide](/protocol/v2/subagents) for the v2 rules. The
+`session/fork` rules and the `usage` field on the idle state stay unstable with
+their own RFDs.
+
+### Agent and Client implementations
+
+The behavior below was checked on 2026-11-19 against Zed `07278eddc4a`, Claude
+Agent adapter v0.109.0, and Codex adapter v2.8.0.
+
+| Implementation       | Reference                                                                                                                                                                                                                                      | Behavior                                                                                                                                                                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zed                  | [PR #66078](https://github.com/zed-industries/zed/pull/66078), with load ordering in [PR #66064](https://github.com/zed-industries/zed/pull/66064) and working directories in [PR #66440](https://github.com/zed-industries/zed/pull/66440)    | Client. Advertises `subagents` on v1 behind its `acp-beta` feature flag. Handles `subagent_update`, child session updates and requests, session-directed messages, and `session` tool call content on v1 and v2.                                        |
+| Claude Agent adapter | [PR #1320](https://github.com/agentclientprotocol/claude-agent-acp/pull/1320) and the [subagent sessions guide](https://github.com/agentclientprotocol/claude-agent-acp/blob/v0.109.0/docs/subagent-sessions.md) in v0.109.0                   | Agent. Announces Claude Code subagents as child sessions to v1 Clients that advertise `subagents` and to v2 Clients. Reports each delegated task as linked session messages in the parent and the child, and reports child work state from task events. |
+| Codex adapter        | [PR #682](https://github.com/agentclientprotocol/codex-acp/pull/682) and [PR #760](https://github.com/agentclientprotocol/codex-acp/pull/760), both included in [v2.8.0](https://github.com/agentclientprotocol/codex-acp/releases/tag/v2.8.0) | Agent. Announces Codex subagents as child sessions to v1 Clients that advertise `subagents` and to v2 Clients. Reports delegated tasks as session messages and references children from collaboration tool calls with `session` content.                |
+
+### Rollout plan
+
 This is a project rollout and validation plan, not a requirement for every
 implementation to use the named SDKs, providers, or integration techniques.
 
@@ -1316,9 +1338,9 @@ implementation to use the named SDKs, providers, or integration techniques.
 3. Mirror the v2 `StateUpdate` payload in v1 and embed it in the v1 association
    update. In v2, mirror ordinary child-session state notifications in the
    parent association as well.
-4. Keep the v1 additions behind `unstable_subagents` and regenerate schemas
-   and reference documentation. The v2 additions are part of the v2 schema
-   and need only `unstable_protocol_v2`.
+4. Regenerate schemas and reference documentation. The v1 additions were
+   behind `unstable_subagents` until this RFD moved to Completed. The v2
+   additions are part of the v2 schema and need only `unstable_protocol_v2`.
 5. Ship SDK releases that carry the draft `subagents` capability and update
    types — or at minimum preserve them when deserializing and re-serializing —
    before adapter rollout. SDKs that strip the draft fields force temporary
@@ -1351,8 +1373,7 @@ implementation to use the named SDKs, providers, or integration techniques.
 ### Provider integration notes
 
 The following inspected versions provide concrete inputs for adapters; they
-are not a claim that all versions or runtime modes have equivalent behavior,
-or that the existing adapters already implement this revision.
+are not a claim that all versions or runtime modes have equivalent behavior.
 
 - **Claude Agent SDK 0.3.280:** the [published declarations](https://unpkg.com/@anthropic-ai/claude-agent-sdk@0.3.280/sdk.d.ts)
   expose forwarded child messages through `forwardSubagentText` and
@@ -1695,6 +1716,7 @@ important difference from a user-facing session.
 
 ## Revision history
 
+- 2026-11-20: Moved to Completed. Subagent sessions are part of the default v1 and v2 schemas, and the v1 rules are on the stable v1 [Subagents](/protocol/v1/subagents) page. v1 keeps the Client's `subagents` capability. Added the Zed, Claude Agent adapter, and Codex adapter implementations.
 - 2026-11-19: Deleting an active session closes it first, as the session delete page says. The RFD no longer says that deletion is not a substitute for closing.
 - 2026-11-19: In v2, `session` tool call content is part of the baseline. It is no longer described as unknown content that receivers preserve.
 - 2026-11-19: The v1 draft page says that a parent can work outside a prompt turn when a child reports back, and that `session/cancel` for the parent cancels that work. It also says that a child's `config_option_update` that arrives before the `session/load` response is historical.

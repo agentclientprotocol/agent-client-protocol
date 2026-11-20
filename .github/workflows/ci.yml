@@ -105,7 +105,6 @@ jobs:
       - name: Run schema tests without every unstable feature
         run: |
           cargo test -p agent-client-protocol-schema --features unstable_protocol_v2
-          cargo test -p agent-client-protocol-schema --features unstable_subagents
 
       - name: Check generated files are up to date
         run: |
