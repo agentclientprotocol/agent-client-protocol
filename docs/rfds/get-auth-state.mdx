@@ -314,6 +314,12 @@ interface AuthStatusUpdateNotification {
 
 10. **Re-checking cached outcomes**: A Client MAY treat a change between two snapshots as a reason to re-check an outcome it cached for the earlier snapshot, such as an `auth_required` error. A change does not identify an account or prove that the credentials are valid. An unchanged snapshot does not prove that the credentials are unchanged.
 
+### Implementations
+
+- The [Rust SDK](https://github.com/agentclientprotocol/rust-sdk/pull/480) and [TypeScript SDK](https://github.com/agentclientprotocol/typescript-sdk/pull/330) expose `auth/status` and `auth/status_update` in their unstable APIs for ACP v1 and v2.
+- To try the query and notification on either protocol version, use [`claude-agent-acp` 0.109.1-preview.4](https://www.npmjs.com/package/@agentclientprotocol/claude-agent-acp/v/0.109.1-preview.4) or [`codex-acp` 2.8.1-preview.1](https://www.npmjs.com/package/@agentclientprotocol/codex-acp/v/2.8.1-preview.1).
+- [Delta](https://delta.dev) queries agents that advertise `auth.status` and follows their updates. The [Zed client PR](https://github.com/zed-industries/zed/pull/67243) adds support behind `acp-beta`.
+
 ## Frequently asked questions
 
 > What questions have arisen over the course of authoring this document?
@@ -374,6 +380,7 @@ For agents where the credential in use depends on the session's model or provide
 
 ## Revision history
 
+- 2026-11-20: Moved to Preview. The capability, request, and notification remain unstable.
 - 2026-11-10: Add an optional account `description`, and let Clients re-check cached outcomes when the snapshot changes
 - 2026-10-29: Replace `authenticated` and `message` with `state` and a minimal `accounts` list (`label`, `active`, `name`, `email`, `organization`), based on a survey of agent auth models; add the `auth/status_update` notification
 - 2026-10-29: Advertise `auth.status` as a capability object (`{}`) instead of a boolean, matching other method capabilities
