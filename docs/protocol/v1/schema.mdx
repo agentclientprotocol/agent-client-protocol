@@ -10,10 +10,10 @@ description: "Schema definitions for the Agent Client Protocol"
 
 ## Agent
 
-Defines the interface that all ACP-compliant agents must implement.
+Defines the requests and notifications that Clients send to Agents. Some are optional.
 
 Agents are programs that use generative AI to autonomously modify code. They handle
-requests from clients and execute tasks using language models and tools.
+requests from Clients and execute tasks using language models and tools.
 
 ### <span class="font-mono">authenticate</span>
 
@@ -892,7 +892,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 ## Client
 
-Defines the interface that ACP-compliant clients must implement.
+Defines the requests and notifications that Agents send to Clients. Some are optional.
 
 Clients are typically code editors (IDEs, text editors) that provide the interface
 between users and AI agents. They manage the environment, handle user interactions,
@@ -1769,7 +1769,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v1/e
 
 ## Protocol Level
 
-Defines the interface that ACP-compliant agents and clients must both implement.
+Defines the notifications that both agents and clients can send.
 
 Notifications whose methods start with '$/' are messages which are protocol
 implementation dependent and might not be implementable in all clients or

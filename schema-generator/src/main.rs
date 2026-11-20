@@ -2151,10 +2151,10 @@ mod markdown_generator {
             writeln!(&mut self.output).unwrap();
             writeln!(
                 &mut self.output,
-                "Defines the interface that all ACP-compliant agents must implement.
+                "Defines the requests and notifications that Clients send to Agents. Some are optional.
 
 Agents are programs that use generative AI to autonomously modify code. They handle
-requests from clients and execute tasks using language models and tools."
+requests from Clients and execute tasks using language models and tools."
             )
             .unwrap();
             writeln!(&mut self.output).unwrap();
@@ -2173,7 +2173,7 @@ requests from clients and execute tasks using language models and tools."
             writeln!(&mut self.output).unwrap();
             writeln!(
                 &mut self.output,
-                "Defines the interface that ACP-compliant clients must implement.
+                "Defines the requests and notifications that Agents send to Clients. Some are optional.
 
 Clients are typically code editors (IDEs, text editors) that provide the interface
 between users and AI agents. They manage the environment, handle user interactions,
@@ -2214,8 +2214,8 @@ Ordinary clients and agents never send or receive these messages. A conductor se
                 writeln!(&mut self.output).unwrap();
                 #[cfg(not(feature = "unstable_protocol_v2"))]
                 writeln!(
-            &mut self.output,
-            "Defines the interface that ACP-compliant agents and clients must both implement.
+                    &mut self.output,
+                    "Defines the notifications that both agents and clients can send.
 
 Notifications whose methods start with '$/' are messages which are protocol
 implementation dependent and might not be implementable in all clients or
@@ -2223,7 +2223,7 @@ agents. For example if the implementation uses a single threaded synchronous
 programming language then there is little it can do to react to a
 `$/cancel_request` notification. If an agent or client receives notifications
 starting with '$/' it is free to ignore the notification."
-        )
+                )
                 .unwrap();
                 #[cfg(feature = "unstable_protocol_v2")]
                 writeln!(
