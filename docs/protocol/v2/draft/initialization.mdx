@@ -103,7 +103,7 @@ See [Capabilities](#capabilities) to learn how non-breaking features are introdu
 
 ### Version negotiation
 
-The `initialize` request **MUST** include the latest protocol version the Client supports. After the Agent selects a lower version, the Client **MAY** send that version instead when it [repeats `initialize`](#repeating-initialization) or opens a new connection.
+The `initialize` request **MUST** include the latest protocol version the Client supports. After the Agent selects a lower version, the Client **MAY** send that version, or a lower version it supports, instead when it [repeats `initialize`](#repeating-initialization) or opens a new connection.
 
 The Agent **MUST** read `protocolVersion` before validating any other parameter. Missing, non-integer, or out-of-range values are malformed parameters and **MUST** receive `-32602` (`Invalid params`).
 
@@ -130,11 +130,11 @@ A version-mismatch error does not initialize the connection. The Agent **MUST NO
 
 The Agent validates the remaining parameters against the selected version. If the requested version is newer than the selected one, the request was written for a version the Agent doesn't know, so the Agent **MUST** ignore parameters it can't parse under the selected version instead of rejecting the request.
 
-The Client **MUST** check that it supports the version in a successful response. Advertising a latest version does not imply support for every earlier version. If the Client does not support the selected version, it **SHOULD** close the connection and inform the user.
+The Client **MUST** check that it supports the version in a successful response. Advertising a latest version does not imply support for every earlier version. If the Client does not support the selected version, it **MAY** [repeat `initialize`](#repeating-initialization) with a lower version it supports. Otherwise it **SHOULD** close the connection and inform the user.
 
 #### Repeating initialization
 
-When the Agent selects a lower version than requested, it may have ignored parts of the Client's request, such as capabilities. The Client **MAY** then send `initialize` again with the selected version and that version's parameters.
+When the Agent selects a lower version than requested, it may have ignored parts of the Client's request, such as capabilities. The Client **MAY** then send `initialize` again with the selected version, or a lower version it supports, and that version's parameters.
 
 The Client **MAY** repeat `initialize` any number of times before its first other request, waiting for each response before sending the next. The Agent handles each one like the first and treats the latest successful `initialize` as authoritative. A repeat that fails leaves the previous successful initialization in effect. `initialize` **MUST NOT** be repeated after any other request.
 
