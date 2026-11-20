@@ -308,7 +308,7 @@ provided. The IDs only associate the permission with displayed state and may be
 unavailable before execution starts. Selecting an allow option authorizes the
 Agent to execute the command. It does not ask the Client to execute anything.
 
-The Client responds with the user's decision:
+The Client returns `selected` when the user chooses an offered option, including a rejection. For example, if the user chooses "Reject" for the file edit above, the Client responds:
 
 ```json
 {
@@ -317,7 +317,7 @@ The Client responds with the user's decision:
   "result": {
     "outcome": {
       "outcome": "selected",
-      "optionId": "allow-once"
+      "optionId": "reject-once"
     }
   }
 }
@@ -344,13 +344,12 @@ Clients also send `cancelled` when the user dismisses the prompt or the Client d
 The Agent **MUST NOT** treat an error response as approval. The same holds when the connection ends before the Client answers. The Agent can then [reestablish the request](/protocol/v2/draft/session-setup#current-state-synchronization) once the Client resumes the session.
 
 <ResponseField name="outcome" type="RequestPermissionOutcome" required>
-  The user's decision. Known outcomes are `cancelled` when the [active work was
-  cancelled](/protocol/v2/draft/prompt-lifecycle#cancellation), the user
-  dismissed the prompt, or the Client declined it, and `selected` with an
-  `optionId` for the selected permission option. If `optionId` doesn't match an
-  offered option, the Agent **MUST** treat the request as not approved. Custom
-  or future outcomes may appear. Agents that do not understand the outcome
-  **MUST NOT** treat it as approval.
+  `selected` identifies a choice. It is not approval by itself. The Agent
+  **MUST** match `optionId` against the options it offered in this request. If
+  the selected option's `kind` is `reject_once` or `reject_always`, the Agent
+  **MUST NOT** perform the requested operation. If no option matches, or the
+  Agent does not understand the selected kind or the outcome, it **MUST NOT**
+  treat the response as approval. `cancelled` means no option was selected.
 </ResponseField>
 
 ### Permission options
@@ -366,17 +365,18 @@ Each permission option provided to the Client contains:
 </ParamField>
 
 <ParamField path="kind" type="PermissionOptionKind" required>
-  A hint to help Clients choose appropriate icons and UI treatment for each option.
+  What selecting this option means. Clients can also use it to choose an icon or other UI treatment.
 
 - `allow_once` - Allow this operation only this time
 - `allow_always` - Allow this operation and remember the choice
 - `reject_once` - Reject this operation only this time
 - `reject_always` - Reject this operation and remember the choice
 
-Custom or future permission option kinds can be used as UI hints. Custom kinds **MUST** begin with `_`. Unknown non-underscore kinds are reserved for future ACP variants. Clients that do not understand a kind **SHOULD** preserve the value and use a generic permission option treatment.
+Custom kinds **MUST** begin with `_`. Unknown non-underscore kinds are reserved for future ACP variants. Clients that do not understand a kind **SHOULD** preserve the value and use a generic permission option treatment. A Client can return the selected ID without interpreting the kind. A custom or future kind grants permission only if the Agent understands it to authorize the operation.
 
 </ParamField>
 
+Both reject kinds deny the current operation. Remembering the choice affects later requests.
 The Agent owns remembered decisions. When the user selects an `allow_always` or
 `reject_always` option, the Agent stores the decision, decides its scope (for
 example a tool, a command, or a directory) and how long it lasts, and applies
@@ -386,7 +386,7 @@ option `name` describes it.
 ### Security
 
 - Clients **SHOULD** describe the operation from `subject`, present `title` as Agent-authored text, and show commands and paths in full.
-- Agents **SHOULD NOT** give an option a `name` that contradicts its `kind`, and **SHOULD** act on a selected option according to its known `kind`.
+- Agents **SHOULD NOT** give an option a `name` that contradicts its `kind`. Neither the display name nor the spelling of `optionId` overrides a rejection.
 - Automatic approval **SHOULD NOT** rely only on `title`, `description`, or option `name`. Unless the user's policy allows all requests, it **SHOULD NOT** allow a request with an absent or unknown subject.
 - Agents **SHOULD** perform only the operation the approved request described, and **SHOULD** request again if the command or resolved target changes.
 - Agents **SHOULD** state the scope of a remembered decision (`allow_always`, `reject_always`) in the option `name` and **SHOULD NOT** apply it beyond that scope.

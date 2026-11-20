@@ -4188,7 +4188,7 @@ pub struct PermissionOption {
     pub option_id: PermissionOptionId,
     /// Human-readable label to display to the user.
     pub name: String,
-    /// Hint about the nature of this permission option.
+    /// What selecting this option means. Clients can also use it to choose how to display the option.
     pub kind: PermissionOptionKind,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -4248,7 +4248,9 @@ impl PermissionOptionId {
 
 /// The type of permission option being presented to the user.
 ///
-/// Helps clients choose appropriate icons and UI treatment.
+/// If the user selects a `reject_once` or `reject_always` option, the Agent MUST NOT
+/// perform the requested operation. For `reject_always`, the Agent also remembers
+/// the rejection for later operations within its scope.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -4333,10 +4335,12 @@ pub enum RequestPermissionOutcome {
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
     Cancelled(CancelledPermissionOutcome),
-    /// The user selected one of the provided options.
+    /// The user selected an option. Selection is not approval by itself.
     ///
-    /// If `optionId` doesn't match an offered option, the agent MUST treat the request as not
-    /// approved.
+    /// The Agent MUST match `optionId` against the options it offered in this request.
+    /// For `reject_once` or `reject_always`, the Agent MUST NOT perform the requested
+    /// operation. If no option matches or the Agent does not understand its `kind`,
+    /// the Agent MUST NOT treat the response as approval.
     #[serde(rename_all = "camelCase")]
     Selected(SelectedPermissionOutcome),
     /// Custom or future permission outcome.
@@ -4472,7 +4476,7 @@ impl From<CancelledPermissionOutcome> for RequestPermissionOutcome {
     }
 }
 
-/// The user selected one of the provided options.
+/// Identifies the option the user chose, whether it allows or rejects the operation.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -4480,7 +4484,7 @@ impl From<CancelledPermissionOutcome> for RequestPermissionOutcome {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SelectedPermissionOutcome {
-    /// The ID of the option the user selected.
+    /// The ID of the option the user selected from this request's `options`.
     pub option_id: PermissionOptionId,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -5252,8 +5256,11 @@ pub enum AgentRequest {
     /// foreground work and MUST cancel them with `$/cancel_request`. The client
     /// answers a cancelled request with the `cancelled` outcome.
     ///
+    /// If the selected option has kind `reject_once` or `reject_always`, the Agent MUST NOT
+    /// perform the requested operation.
+    ///
     /// An error response is not approval, and neither is a connection that ends
-    /// before the client answers. The agent MUST NOT treat either as approval.
+    /// before the Client answers. The Agent MUST NOT treat either as approval.
     ///
     /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
     RequestPermissionRequest(Box<RequestPermissionRequest>),

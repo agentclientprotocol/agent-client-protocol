@@ -9,7 +9,7 @@ This page describes ACP's trust model and security guidance that spans features.
 
 - The Agent runs with whatever permissions its process is given. ACP itself does not sandbox it.
 - Files, web pages, tool results, and MCP servers can influence Agent output. Treat every Agent-authored string, URI, and path as untrusted, including replayed content.
-- Permission requests are advisory: the Agent performs operations and is responsible for honoring the user's decision. A Client cannot prevent an operation the Agent performs without asking.
+- The Agent enforces [permission decisions](/protocol/v2/tool-calls#requesting-permission). If the user selects a `reject_once` or `reject_always` option, the Agent **MUST NOT** perform the requested operation. A Client cannot prevent a malicious Agent from acting without permission.
 - `info` in `initialize` is self-reported. Implementations **SHOULD NOT** use it for security decisions, and Clients **SHOULD** identify the Agent from their own launch configuration.
 
 Out of scope: a malicious Agent binary, detecting prompt injection, and operating-system sandboxing.
