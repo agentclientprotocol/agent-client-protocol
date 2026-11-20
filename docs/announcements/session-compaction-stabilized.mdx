@@ -1,0 +1,11 @@
+---
+title: Session compaction is stabilized
+sidebarTitle: Session compaction stabilized
+description: Agents can report context compaction and the summary it retained in ACP v1 and the v2 baseline.
+---
+
+**Published:** October 9, 2026
+
+The [Session Compaction RFD](/rfds/session-compaction) has moved to Completed. Agents can report context compaction with `compaction_update`, which carries a `compactionId` and a status of `in_progress`, `completed`, `failed`, or `cancelled`. Reporting progress is optional. A single update with `status: "completed"` is enough. An Agent can send the user-displayable summary that the compaction retained in the `summary` field, or stream it with `compaction_summary_chunk`. A compaction keeps its position in the session timeline and is part of replay. It does not tell the Client to discard earlier messages.
+
+In [ACP v1](/protocol/v1/prompt-turn#session-compaction), Clients opt in with `clientCapabilities.session.compaction: {}`. In [ACP v2](/protocol/v2/prompt-lifecycle#session-compaction), no Client capability is needed.

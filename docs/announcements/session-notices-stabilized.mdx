@@ -1,0 +1,11 @@
+---
+title: Session notices are stabilized
+sidebarTitle: Session notices stabilized
+description: Agents can send user-facing notices that are not part of the conversation history in ACP v1 and the v2 baseline.
+---
+
+**Published:** October 9, 2026
+
+The [Session Notices RFD](/rfds/session-notices) has moved to Completed. Agents can send a `notice` session update to tell the user something that is not a message or a tool call, such as an MCP server being unavailable. A notice has a `severity` of `info`, `warning`, or `error`, a `title`, and an optional `description`. The Client decides how to present and dismiss it. A notice is a live event. It has no ID and is not part of the conversation history. An `error` notice does not fail a request or stop the Agent's work, and Agents cannot rely on a notice being seen.
+
+In [ACP v1](/protocol/v1/prompt-turn#session-notices), Clients opt in with `clientCapabilities.session.notices: {}`. In [ACP v2](/protocol/v2/prompt-lifecycle#session-notices), no Client capability is needed.

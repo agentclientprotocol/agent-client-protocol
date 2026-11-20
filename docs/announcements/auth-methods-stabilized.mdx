@@ -1,0 +1,11 @@
+---
+title: Terminal authentication is stabilized
+sidebarTitle: Terminal authentication stabilized
+description: Clients can run an Agent's interactive login flow in a terminal in ACP v1 and the v2 baseline.
+---
+
+**Published:** August 20, 2026
+
+The [Terminal Authentication RFD](/rfds/auth-methods) has moved to Completed. An Agent can advertise an authentication method with `type: "terminal"` for a login flow that needs its terminal UI. The Client launches the Agent program it already has configured in an interactive terminal, with the `args` and `env` the method supplies, and the user logs in there. The method cannot supply a command. Exit status zero means the login succeeded. The terminal process is separate from the ACP connection, so the Client does not call `authenticate` or `auth/login` for a `terminal` method.
+
+In [ACP v1](/protocol/v1/authentication#terminal-authentication), Clients opt in with `clientCapabilities.auth.terminal: true` and reconnect to the Agent after a successful login. In [ACP v2](/protocol/v2/authentication#terminal-authentication), Clients opt in with `capabilities.auth.terminal: {}`. After a successful login they reconnect and resume their sessions with `session/resume`, or first retry on the existing connection.
