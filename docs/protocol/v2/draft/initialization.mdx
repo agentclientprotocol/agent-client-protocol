@@ -105,7 +105,7 @@ See [Capabilities](#capabilities) to learn how non-breaking features are introdu
 
 The `initialize` request **MUST** include the latest protocol version the Client supports. After the Agent selects a lower version, the Client **MAY** send that version instead when it [repeats `initialize`](#repeating-initialization) or opens a new connection.
 
-The Agent **MUST** read `protocolVersion` before validating any other parameter. Missing, non-integer, or out-of-range values are malformed parameters and **MUST** receive `-32602` (`Invalid params`).
+The Agent **MUST** read `protocolVersion` before validating any other parameter. Missing, non-integer, or out-of-range values are malformed parameters and **MUST** receive `-32602` (`Invalid params`). The range is 0 to 65535.
 
 The Agent **MUST** select the highest protocol version it supports that is less than or equal to the requested version. If it supports the requested version, this selects that version. A successful `initialize` response **MUST NOT** select a version higher than the requested version and **MUST** use the selected version's initialization response shape.
 

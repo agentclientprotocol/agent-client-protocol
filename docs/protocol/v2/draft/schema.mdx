@@ -657,7 +657,8 @@ Request parameters for closing an active session.
 The Agent MUST cancel any ongoing work related to the session as if `session/cancel`
 was called, then free the resources associated with the session. Unlike `session/cancel`,
 closing also stops the session's background work. After the close response, the Agent
-sends no other messages for the session on that connection.
+sends no notifications or requests for the session on that connection. It still
+answers `session/prompt` requests that were pending.
 
 Closing a session that does not exist or is not active SHOULD succeed, and Clients SHOULD
 treat a `-32002` response as a successful close.
@@ -1697,7 +1698,7 @@ Request parameters for checking the status of a session.
 
 Only available if the Agent supports the `session.status` capability.
 
-`session/status` MUST NOT have side effects. The Agent does not load, resume, create,
+`session/status` MUST NOT have side effects. The Agent does not resume, create,
 close, or change the session, and does not attach the requesting connection to it.
 A session the Agent does not know gets `-32002` with the requested `sessionId` in `data`.
 
@@ -1779,7 +1780,7 @@ Request parameters for unarchiving a session.
 Only available if the Agent supports the `session.archive` capability.
 
 Unarchiving returns the session to default `session/list` results with the same ID and
-saved history. It never loads or resumes the session. Clients that want to continue an
+saved history. It never resumes the session. Clients that want to continue an
 archived session SHOULD unarchive it before calling `session/resume`.
 Unarchiving a session that is not archived succeeds. A session that does not exist
 gets `-32002`.

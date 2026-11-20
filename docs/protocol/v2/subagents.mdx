@@ -70,7 +70,7 @@ The first `subagent_update` for a child `sessionId` announces that the parent cr
 The Agent **MUST** send the announcing `subagent_update` before any request or notification that carries the child's `sessionId`. This covers:
 
 - `session/update` notifications for the child
-- a `session_message` that names the child as sender or recipient
+- a `session_message` that names the child as sender or recipient, except a replayed message whose other participant is unavailable. See [Replayed child history](#replayed-child-history)
 - a [`session` content item](/protocol/v2/tool-calls#sessions) that references the child
 - a [`background`](/protocol/v2/prompt-lifecycle#background-work) list that names the child
 - `session/request_permission` and `elicitation/create` requests for the child
@@ -347,7 +347,7 @@ Agents **SHOULD** also mirror each reported child state in the `state` field of 
 }
 ```
 
-- The two reports describe one state. Clients apply them idempotently: a second copy is not more work, another completion, or more usage.
+- The two reports describe one state. Clients apply them idempotently: a second copy is not more work or another completion.
 - The Agent sends both copies of a transition before a later transition on either path, so a late mirror cannot overwrite newer state.
 - `subagent_update.state` is replaced as a whole. For example, `{ "state": "running" }` replaces an earlier idle snapshot together with its stop reason. A `subagent_update` that omits `state` leaves the snapshot as it was.
 - If no state was reported, or the snapshot was cleared, the Client has no confirmed state for the child. Neither the announcement nor clearing the field means `running`, `idle`, or cancelled.
