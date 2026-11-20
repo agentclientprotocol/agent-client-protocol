@@ -1113,7 +1113,8 @@ resumes, or `idle` if work ends without resuming. Independent background request
 and request-scoped elicitations do not themselves change session state.
 Accepting a URL does not mean the external interaction completed.
 
-Agents SHOULD cancel pending elicitations no longer needed by cancelled work.
+When an Agent stops waiting for an elicitation because its work was cancelled,
+it MUST cancel the request with `$/cancel_request`.
 The request's scope alone does not establish that dependency.
 
 See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/elicitation)
