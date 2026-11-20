@@ -7,7 +7,7 @@ use super::{Meta, RequestId};
 
 /// Notification to cancel an ongoing request.
 ///
-/// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
+/// See protocol docs: [Request Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -101,7 +101,7 @@ pub enum ProtocolLevelNotification {
     ///   - Valid response with appropriate data (partial results or cancellation marker)
     ///   - Error response with code `-32800` (Cancelled)
     ///
-    /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
+    /// See protocol docs: [Request Cancellation](https://agentclientprotocol.com/protocol/v1/cancellation)
     CancelRequestNotification(CancelRequestNotification),
 }
 
