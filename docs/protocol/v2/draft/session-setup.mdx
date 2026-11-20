@@ -495,6 +495,8 @@ example because it was already closed, the Agent **SHOULD** respond with the
 same empty result. Clients **SHOULD** treat a `-32002` response to
 `session/close` as a successful close. See [Unknown Sessions](/protocol/v2/draft/error#unknown-sessions).
 
+A [child session](/protocol/v2/draft/subagents#restricted-methods) is the exception. Agents **SHOULD** reject a `session/close` that names one with `-32602`.
+
 ## Additional workspace roots
 
 Agents that advertise `session.additionalDirectories` allow Clients
