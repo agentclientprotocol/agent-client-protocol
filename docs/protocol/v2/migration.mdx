@@ -69,10 +69,10 @@ v2 keeps the underlying JSON-RPC framing, except that request IDs can no longer 
 | `agent_thought_chunk`                           | Kept. `messageId` now required                                                                                                                                                                                         |
 | -                                               | **New:** `user_message`, `agent_message`, `agent_thought` whole-message upserts                                                                                                                                        |
 | -                                               | **New:** foreground `state_update` (`running`, `idle`, `requires_action`, `unknown`) with stop reasons and an optional `background` list                                                                               |
-| -                                               | **New:** `subagent_update` announces a [child session](/protocol/v2/subagents). Every Client **MUST** handle it                                                                                                        |
-| -                                               | **New:** `session_message`, `session_message_chunk` for [messages between sessions](#subagents)                                                                                                                        |
+| `subagent_update`                               | Kept. Announces a [child session](/protocol/v2/subagents). No Client capability required, so every Client **MUST** handle it                                                                                           |
+| `session_message`, `session_message_chunk`      | Kept. Report [messages between sessions](#subagents). No Client capability required                                                                                                                                    |
 | `tool_call`                                     | **Removed**. The first `tool_call_update` for a `toolCallId` creates the tool call                                                                                                                                     |
-| `tool_call_update`                              | Kept. Now an explicit upsert with omit/`null`/value patch semantics. Gains the `paused` status and an optional `capabilities` field                                                                                    |
+| `tool_call_update`                              | Kept. Now an explicit upsert with omit/`null`/value patch semantics. Gains the `cancelled` and `paused` statuses and an optional `capabilities` field                                                                  |
 | -                                               | **New:** `tool_call_content_chunk` for streaming individual content items                                                                                                                                              |
 | -                                               | **New:** `terminal_update` for Agent-owned display terminal state and replay                                                                                                                                           |
 | -                                               | **New:** `terminal_output_chunk` for appending display terminal bytes                                                                                                                                                  |
@@ -358,7 +358,7 @@ In v2, acceptance means insertion of the user message into the ACP conversation.
 { "jsonrpc": "2.0", "id": 2, "result": { "messageId": "msg_user_8f7a1" } }
 ```
 
-`messageId` is a required, non-null string identifying the inserted user message. The request is unchanged. Clients do not generate this ID. The unstable v1 `usage` field on the prompt response has moved: in the unstable v2 schema, end-turn usage is an optional `usage` on the idle `state_update`.
+`messageId` is a required, non-null string identifying the inserted user message. The request gains only the optional `idempotencyKey`. Clients do not generate this ID. The unstable v1 `usage` field on the prompt response has moved: in the unstable v2 schema, end-turn usage is an optional `usage` on the idle `state_update`.
 
 Insertion adds a logical user message with an ID and a position relative to other messages. See [Prompt Accepted](/protocol/v2/prompt-lifecycle#2-prompt-accepted) for adapter examples.
 
@@ -414,7 +414,7 @@ Pre-insertion rejection receives a JSON-RPC error response with no user-message 
 
 ### Session states
 
-`state_update` is new in v2 and reports foreground work, whether or not a prompt started it, using one of four stable states (extensible like all v2 enums):
+`state_update` is new in v2 and reports foreground work, whether or not a prompt started it, using one of four stable states (extensible like most v2 enums):
 
 - `running`: Foreground work is in progress.
 - `idle`: No foreground work is active. Background activity may continue. Agents **SHOULD** include a `stopReason` when the transition ends foreground work.
@@ -439,6 +439,8 @@ model work. A command with no user-action wait uses `running` → `idle`.
 
 New sessions default to idle until a state update reports otherwise. Updates
 may arrive before the new-session response, which does not overwrite them.
+An Agent whose new session is not `idle` **MUST** send the session's
+`state_update` after the response.
 Every successful `session/resume` **MUST** be preceded by a current-state
 snapshot, after any requested replay. Resume does not imply idle, and Agents
 **MUST NOT** replay historical state updates as current activity.
@@ -549,7 +551,7 @@ v2 adds `tool_call_content_chunk`, which **appends** a single `ToolCallContent` 
 
 Chunks and updates compose exactly like message chunks and updates: a `tool_call_update` that includes `content` replaces the accumulated content. Later chunks append to it.
 
-v2 also adds a `session` `ToolCallContent` item, which links a tool call to another session it operates on, such as a subagent it spawned. It is for display only. See [Sessions](/protocol/v2/tool-calls#sessions).
+The `session` `ToolCallContent` item is kept, and needs no Client capability in v2. It links a tool call to another session it operates on, such as a subagent it spawned, and is for display only. See [Sessions](/protocol/v2/tool-calls#sessions).
 
 ### Agent-owned terminal display
 
@@ -724,7 +726,7 @@ While foreground work as a whole is blocked on a permission response, the Agent 
 
 ## Elicitation
 
-`elicitation/create` and `elicitation/complete` keep their shape, with one removal and one changed rule. A string property in a form's `requestedSchema` no longer takes `pattern`.
+`elicitation/create` and `elicitation/complete` keep their shape, with one removal, one changed rule, and one changed error code. A string property in a form's `requestedSchema` no longer takes `pattern`.
 
 v1 added `pattern` on top of MCP's string schema. v2 has the same string keywords as MCP: `minLength`, `maxLength`, `format`, and `default`.
 
@@ -732,6 +734,8 @@ v1 added `pattern` on top of MCP's string schema. v2 has the same string keyword
 - Clients stop evaluating `pattern`.
 
 One rule also changes. An Agent **MUST** handle a response `action` it does not understand as `cancel`. In v1 it could not treat it as a known action.
+
+One error code changes too. A Client with no `elicitation` capability answers `elicitation/create` with `-32601`. v1 used `-32602` for any mode the Client did not advertise, which is still the code for a Client that advertised `elicitation` but not the requested mode.
 
 ## Plans
 
@@ -813,16 +817,16 @@ As covered under [Initialization](#capability-reorganization), advertising `capa
 
 ## Subagents
 
-Subagents are new in stable v2. An Agent can expose a subagent as a child session with its own `sessionId`. It announces the child with `subagent_update` on the parent session and then sends the child's messages, tool calls, plans, and state with the child's `sessionId`.
+An Agent can expose a subagent as a child session with its own `sessionId`. It announces the child with `subagent_update` on the parent session and then sends the child's messages, tool calls, plans, and state with the child's `sessionId`.
 
-v1 has these updates only as a draft feature that the Client opts in to with the `subagents` capability. In v2 they need no capability, so every Client handles them:
+In v1 the Client opts in to these updates with the `subagents` capability. In v2 they need no capability, so every Client handles them:
 
 - Register the child that a `subagent_update` announces, and attribute later updates and requests with that `sessionId` to it. Do not drop them as traffic for an unknown session.
-- Do not send `session/prompt`, `session/resume`, `session/close`, or any other request for a child. Send `session/cancel` for a child only while its `subagent_update` advertises `capabilities.cancel`.
+- Do not send `session/prompt`, `session/resume`, or `session/close` for a child. Apart from responses to its requests, send only `session/cancel` while its `subagent_update` advertises `capabilities.cancel`, and `tool_call/cancel` or `terminal/cancel` for an item that advertises its own.
 - Show `session_message` and `session_message_chunk` as messages between sessions, not as user messages or answers to the user.
 - After `session/resume`, discard the child state and capabilities held from before, and wait for current ones.
 
-The draft v1 feature reports a child's state only on the parent's `subagent_update`. In v2, a child sends ordinary `state_update` notifications on its own `sessionId`, and Agents **SHOULD** mirror the same snapshot in the parent's `subagent_update.state`. Exposing subagents stays optional for Agents.
+v1 reports a child's state only on the parent's `subagent_update`. In v2, a child sends ordinary `state_update` notifications on its own `sessionId`, and Agents **SHOULD** mirror the same snapshot in the parent's `subagent_update.state`. Exposing subagents stays optional for Agents.
 
 See [Subagents](/protocol/v2/subagents).
 
@@ -894,9 +898,11 @@ MCP transport configuration is aligned with the current MCP transport model:
 
 ## Content blocks
 
-The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock). Notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`), and the `type` discriminator is extensible like every other v2 enum, so unknown block types no longer break deserialization for receivers that have a fallback. `IconTheme` and annotation `Role` values are extensible too, and icons and annotations accept `_meta`.
+The five content block types are unchanged: `text`, `image`, `audio`, `resource_link`, and `resource`. v2 realigns their fields with [MCP 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/schema#contentblock). Notably, `resource_link` gains an optional `icons` array (each icon has a required `src` URI plus optional `mimeType`, `sizes`, and `theme` of `light`/`dark`), and the `type` discriminator is extensible like most v2 enums, so unknown block types no longer break deserialization for receivers that have a fallback. `IconTheme` and annotation `Role` values are extensible too, and icons and annotations accept `_meta`.
 
-If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, `SessionInfo.updatedAt` is marked `format: "date-time"`, `annotations.priority` is bounded to the inclusive range 0–1, multi-select elicitation `items` need at least one option, `session/prompt` `prompt` and `systemPrompt` `content` each need at least one content block, permission `options`, config `select` options, each config option group's `options`, and single-select elicitation `enum` and `oneOf` each need at least one entry, a tool call location's `line` starts at 1, `resource_link` `size` is unsigned, form-mode `requestedSchema` requires `type: "object"` and `properties`, and setup-response `configOptions` is no longer nullable: omit it rather than sending `null`. One detail is looser: a value in an accepted elicitation's `content` can be any JSON value, for custom or future property types.
+Agents **MUST** reject a prompt that contains a content type that is neither baseline (`text`, `resource_link`) nor advertised with `-32602`, without inserting it. v1 put the restriction only on Clients.
+
+If you maintain a validator or generated models, v2 also tightens schema-level details that v1 left loose: base64 payloads (image/audio and terminal `data`, resource `blob`) are marked with `contentEncoding: "base64"`, URI fields are marked `format: "uri"`, `SessionInfo.updatedAt` and `SessionInfoUpdate.updatedAt` are marked `format: "date-time"`, `annotations.priority` is bounded to the inclusive range 0–1, multi-select elicitation `items` need at least one option, `session/prompt` `prompt` and `systemPrompt` `content` each need at least one content block, permission `options`, config `select` options, each config option group's `options`, and single-select elicitation `enum` and `oneOf` each need at least one entry, a tool call location's `line` starts at 1, `resource_link` `size` is unsigned, form-mode `requestedSchema` requires `type: "object"` and `properties`, and setup-response `configOptions` is no longer nullable: omit it rather than sending `null`. Two details are looser: a value in an accepted elicitation's `content` can be any JSON value, for custom or future property types, and `TerminalExitStatus.exitCode` is signed, so it can be negative.
 
 v2 also says which text is Markdown. Text content blocks may contain Markdown, as in v1. A plan entry `content` may contain Markdown too. Other strings shown to users, such as a tool call `title`, are plain text, and Clients do not render them as Markdown. v1 did not state a format for either.
 
@@ -978,25 +984,34 @@ Agents **MUST**:
 - respond with `-32002`, with `data.sessionId`, to a session-scoped request for a session that doesn't exist or isn't active on the connection
 - reject a request other than `initialize` that arrives before initialization completes with `-32600`, and also an `initialize` repeated after another request
 - reject a `systemPrompt` with an unadvertised mode, an unsupported content block type, or content that exceeds the Agent's limits with `-32602`
+- return `-32602` for an invalid `session/list` cursor
 
 See [Errors](/protocol/v2/error).
 
+## Smaller rule changes
+
+These rules are new or stricter than in v1:
+
+- **Unique identifiers.** Command names in `availableCommands`, each `methodId` in `authMethods`, each `optionId` in a permission request, and each config option's `configId`, values, and `groupId`s **MUST** be unique within their list. v1 did not require it.
+- **Late cancellation.** Receivers **MUST** ignore a `$/cancel_request` for a request ID that is unknown or already answered, and **MUST NOT** send a second response for it.
+- **Adjacent text blocks.** Adjacent text blocks form one continuous text, and Clients **SHOULD** join them without a separator before rendering.
+
 ## Migration checklist: Agents
 
-1. **Initialization.** Read `params.capabilities` / `params.info`. Return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers.
+1. **Initialization.** Read `params.capabilities` / `params.info`. Return `capabilities` and a required `info`. Restructure your capability object: nest prompt and MCP capabilities under `session`, convert boolean markers to `{}` objects, drop `loadSession` and the `list`/`resume`/`close` markers. Select the highest version you support at or below the requested `protocolVersion`, and reject `initialize` with `-32022` when there is none.
 2. **Implement the baseline.** If you advertise `session`, implement `session/new`, `session/list`, `session/resume`, `session/close`, `session/prompt`, `session/cancel`, and `session/update`. On `session/close`, finish cancelled foreground work (final updates and the idle `cancelled` state) before responding.
 3. **Auth.** Rename `authenticate` → `auth/login` for method types that define protocol-driven login. If you return a non-empty `authMethods` list, implement both `auth/login` and `auth/logout`. If you omit the field or return an empty array, Clients **MUST NOT** call either method. Do not add a logout support marker: `capabilities.auth` is only for authentication-related extensions. Add `type` and `methodId` to your auth method descriptors, and send terminal method `env` as `{ "name", "value" }` entries.
-4. **Prompt lifecycle.** Respond to an accepted `session/prompt` with `{ "messageId": "…" }`, carrying the agent-generated ID of the inserted user message. Emit a `user_message` (or streamed `user_message_chunk`) acknowledgment with the same `messageId`, a `running` state update when foreground work starts (or `requires_action` if it starts blocked, then `running` when progress resumes), and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Don't reject a prompt only because work is active: insert or hold it, and answer prompts not yet inserted with `-32800` on `session/cancel` or `session/close`. Report a failure after insertion as an idle `state_update` with `stopReason: "error"` and the JSON-RPC error in `error`, never as an error response to the prompt. Background updates may continue while idle. Reject a malformed `idempotencyKey` with `-32602`. Recognize the key for as long as the message is retained, across restarts, or for a live-only message while the session stays active on a connection. Return the recorded `messageId` without another insertion.
+4. **Prompt lifecycle.** Respond to an accepted `session/prompt` with `{ "messageId": "…" }`, carrying the agent-generated ID of the inserted user message. Emit a `user_message` (or streamed `user_message_chunk`) acknowledgment with the same `messageId`, a `running` state update when foreground work starts (or `requires_action` if it starts blocked, then `running` when progress resumes), and an idle `state_update` carrying the stop reason when it ends, including `cancelled` after `session/cancel`. Don't reject a prompt only because work is active: insert or hold it, and answer prompts not yet inserted with `-32800` on `session/cancel` or `session/close`. Report a failure after insertion as an idle `state_update` with `stopReason: "error"` and the JSON-RPC error in `error`, never as an error response to the prompt. Background updates may continue while idle. Reject a prompt that contains a content type you did not advertise with `-32602`, without inserting it. Reject a malformed `idempotencyKey` with `-32602`. Recognize the key for as long as the message is retained, across restarts, or for a live-only message while the session stays active on a connection. Return the recorded `messageId` without another insertion.
 5. **Message IDs.** Generate and attach a `messageId` to every message chunk and update.
 6. **Tool calls.** Stop sending `tool_call`. Send `tool_call_update` for creation and patches. Use `tool_call_content_chunk` to stream content. Respect omit/`null`/value patch semantics, including key-level `_meta` patches.
 7. **Terminal output.** Add `terminal` content references for Agent-owned display terminals. Send `terminal_update` for command, absolute cwd, size, snapshots, and exit state. Send independently base64-encoded `terminal_output_chunk` values for live bytes. The Client's only control is `terminal/cancel`, which you opt into for each terminal with `capabilities.cancel`.
 8. **Diffs.** Replace `oldText`/`newText` with `changes` (+ `fileType`/`mimeType` where known) and provide `patch` in `git_patch` format whenever feasible. If a tool's input describes an edit only as a snippet, read the file somewhere the tool waits on, before it can run, or send no diff until the change is done (see [Edits known only as a snippet](#edits-known-only-as-a-snippet)).
-9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations. Check the selected option in this request. A rejection or `cancelled` outcome means "don't proceed with this operation", not that the turn must end.
+9. **Permissions.** Put prompt copy in required `title` (+ optional `description`). Use the `tool_call` subject for tool-call state and the `command` subject for a command, required absolute cwd, and optional tool-call/terminal associations. Check the selected option in this request. A rejection or `cancelled` outcome means "don't proceed with this operation", not that the turn must end. On `session/cancel`, cancel the pending permission requests of the cancelled work with `$/cancel_request`. On `session/close`, cancel every pending permission request and elicitation of the session the same way. In v1 the Client answered them.
 10. **Plans.** Send `plan_update` with the complete `items` or `markdown` plan, and `plan_removed` to remove it. Neither requires a Client capability.
 11. **Modes and config options.** Drop `session/set_mode`, `modes`, and `current_mode_update`. Expose the same state as config options with `category: "mode"` and emit `config_option_update`. Return the session's `configOptions` in every `session/new` and `session/resume` response. Rename option `id` to `configId` and group `group` to `groupId`, and require the `type` discriminator (`"id"` or `"boolean"`) on `session/set_config_option`. List the values of a `select` `thought_level` option from lowest to highest.
-12. **Replay.** Handle `replayFrom` on `session/resume`. Replay history as ordinary `session/update` notifications when asked, current-state snapshots such as terminal `output` are fine. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Start each entity that you replay as chunks with an update that empties the chunked field. Send `replay_complete` after the last replayed update, also for an empty history, and hold every other update for the session until after it. Remove `session/load`.
+12. **Replay.** Handle `replayFrom` on `session/resume`, and send a current `state_update` before every resume response, with or without replay. Replay history as ordinary `session/update` notifications when asked, current-state snapshots such as terminal `output` are fine. When the Client may already hold an entity's `_meta`, remove stale keys explicitly, since an `_meta` object no longer replaces them. Start each entity that you replay as chunks with an update that empties the chunked field. Send `replay_complete` after the last replayed update, also for an empty history, and hold every other update for the session until after it. Remove `session/load`.
 13. **Client file and terminal methods.** Remove all `fs/*` and `terminal/*` calls. The new terminal content is Agent-owned display state, not a Client resource.
-14. **MCP config.** Require and emit `type` discriminators. Reject SSE and unadvertised transports with `-32602`, and a relative stdio `command` too. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
+14. **MCP config.** Require `type` discriminators. Reject SSE and unadvertised transports with `-32602`, and a relative stdio `command` too. Advertise `session.mcp.stdio` / `session.mcp.http` as appropriate.
 15. **Slash commands.** Add the `type: "command"` discriminator to each advertised command and the `type: "text"` discriminator to command `input` specifications. Return the session's commands in `availableCommands` in every `session/new` and `session/resume` response, and use complete-replacement `available_commands_update` notifications for later changes.
 16. **Parsing.** Make enum handling open: preserve unknown variants where a safe fallback exists.
 17. **Errors.** Return the now-required [error codes](#errors): `-32601`, `-32002` with `data.sessionId`, and `-32600` before initialization or for a late `initialize`.
@@ -1018,12 +1033,13 @@ See [Errors](/protocol/v2/error).
 10. **Notices and compaction.** Handle `notice`, `compaction_update`, and `compaction_summary_chunk`, or ignore them. v2 sends them without a Client capability.
 11. **Modes and config options.** Drop `session/set_mode` and `current_mode_update` handling. Drive mode/model UI from `configOptions` (using `category`) via `session/set_config_option` and `config_option_update`. Read `configId` and `groupId`, render `boolean` options, and send `session/set_config_option` with a `type` of `"id"` or `"boolean"`.
 12. **Resume.** Replace `session/load` with `session/resume` + `replayFrom: { "type": "start" }`, and use `session/resume` without `replayFrom` to reattach when you still hold the session's entities and missed no updates. Request replay when you want them resynchronized, for example after a lost connection. Use `replay_complete` to find the end of the replayed history, and treat a replay that ends without it and without a successful response as truncated.
-13. **Client file and terminal methods.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`, using only transports the Agent advertises under `session.mcp`. Send an absolute `command` for each stdio server. Do not treat display terminals as Client resources.
+13. **Client file and terminal methods.** Remove `fs/*` and `terminal/*` implementations for v2 connections. Expose Client-side tools through MCP servers passed in `mcpServers`, using only transports the Agent advertises under `session.mcp`. Send a `type` on every server config and an absolute `command` for each stdio server. Do not treat display terminals as Client resources.
 14. **Cancellation.** After `session/cancel`, keep accepting updates. An idle `state_update` with `stopReason: "cancelled"` confirms that foreground work was cancelled. It does not end the session's update stream. The work can also end first with another stop reason. No additional idle update is required if no foreground work was active when cancellation took effect. Don't answer every pending permission request when you send it. Dismiss and answer a request when the Agent cancels it with `$/cancel_request`.
 15. **Parsing.** Preserve unknown enum variants, tolerate unknown `sessionUpdate` types, and read commands and their `input` as tagged unions. Replace the `configOptions` and `availableCommands` lists you hold with the lists in each setup response, including lists from updates that arrived before the response. An omitted list means none. Replace the command list on each `available_commands_update`, including `[]` to clear it.
 16. **Subagents.** Handle `subagent_update`, which needs no capability and cannot be ignored as an unknown update. Register each child session, attribute its updates and requests to it, and show `session_message` entries as messages between sessions. Send nothing for a child except responses to its requests, `session/cancel` while the child advertises `capabilities.cancel`, and `tool_call/cancel` or `terminal/cancel` for an item that advertises its own. Discard child state and capabilities when you resume the parent.
 17. **Elicitation.** Stop evaluating `pattern` on string properties. v2 forms don't carry it.
 18. **Background work.** Read the `background` list on `state_update`, and treat an omitted list as not reported. Show `paused` tool calls as paused. Offer to stop a tool call or terminal only while it advertises `capabilities.cancel`, with `tool_call/cancel` or `terminal/cancel`.
+19. **Auth.** Call `auth/login` instead of `authenticate` and `auth/logout` instead of `logout`, and only when the Agent returns a non-empty `authMethods` list. Read `methodId` instead of `id` on each method descriptor, expect its `type`, and read a terminal method's `env` as `{ "name", "value" }` entries.
 
 ## Migration checklist: SDKs
 
@@ -1033,6 +1049,7 @@ See [Errors](/protocol/v2/error).
 4. **Preserve what you don't understand.** Round-trip `_`-prefixed extension values, unknown future variants, and `_meta` when storing, replaying, proxying, or forwarding.
 5. **Fixtures.** Cover the full prompt lifecycle, resume replay, cancellation, permission flow, message replacement and clearing, tool-call content chunks, terminal snapshot replacement, split and invalid UTF-8 bytes, exit state, command subjects, structured diffs, and child session announcements, routing, and resume.
 6. **Stop reasons.** Don't remove or mark the user's message on `refusal`. Model the idle update's stop reason as a union tagged by `stopReason` and flattened into the update, so a stop reason can carry fields of its own, such as the `error` stop reason's `error`. Keep unknown stop reasons with their fields, and treat a missing or `null` `stopReason` as no stop reason.
+7. **JSON-RPC envelope.** Never send a request with `id: null` or a JSON array of messages. Reject a message that has a `method` and `id: null` with `-32600`, and a JSON array with `-32600` too.
 
 ## Supporting v1 and v2 side by side
 

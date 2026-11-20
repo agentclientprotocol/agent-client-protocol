@@ -60,7 +60,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Agents should expose mode-like and model-related state through [Session Config Options](../session-config-options.mdx) instead of dedicated mode or model selector APIs.
 - Remove the v1 Client filesystem and terminal execution surface from v2. This includes `clientCapabilities.fs`, the top-level `clientCapabilities.terminal` field, `fs/*` methods, `terminal/*` methods, and the Client-owned semantics of v1 terminal tool-call content. Terminal authentication remains separate under `capabilities.auth.terminal`.
 - Remove `pattern` from elicitation string properties. MCP's string schema, which the form schema is based on, does not have it.
-- Add [Agent-owned, display-only terminal output](./terminal-output.mdx). Tool calls reference terminals by `terminalId`; terminal upserts carry `command`, absolute `cwd`, replay snapshots, and exit status; terminal output chunks append independently base64-encoded bytes. The display surface is baseline v2 and does not add Client execution or control methods.
+- Add [Agent-owned, display-only terminal output](./terminal-output.mdx). Tool calls reference terminals by `terminalId`; terminal upserts carry `command`, absolute `cwd`, replay snapshots, and exit status; terminal output chunks append independently base64-encoded bytes. The display surface is baseline v2 and does not add Client execution methods. Its one control is the opt-in `terminal/cancel` from [background work](./background-work.mdx).
 - Make [plan variants](./plan-variants.mdx) the default v2 plan shape by replacing the old `plan` session update with item-based `plan_update`.
 - Replace the v1 split between `tool_call` and `tool_call_update` with a single [tool-call update](./tool-call-updates.mdx) upsert shape keyed by `toolCallId`.
 - Add [tool-call content chunks](./tool-call-updates.mdx) so Agents can stream individual `ToolCallContent` items that append to a tool call.
@@ -74,7 +74,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Report [failures after prompt insertion](./prompt.mdx#report-failures-after-insertion) by ending foreground work with an idle `state_update` whose `stopReason` is `error`, carrying an optional JSON-RPC error object. A JSON-RPC error on `session/prompt` always means the message was not inserted.
 - Do not use JSON-RPC 2.0 batches. Each transport message is a single request, notification, or response, and receivers reject an array with `-32600`, as MCP does since 2025-06-18.
 - Require a string or integer request ID. `null` is no longer a valid ID for a request.
-- Make three error rules requirements that v1 only recommended: `-32601` for a method the receiver does not implement or did not advertise, `-32002` for a session that does not exist or is not active on the connection, and `-32600` for a request other than `initialize` before initialization completes. Agents also reject an `initialize` repeated after another request with `-32600`.
+- Make five error rules requirements that v1 only recommended: `-32601` for a method the receiver does not implement or did not advertise, `-32002` for a session that does not exist or is not active on the connection, `-32600` for a request other than `initialize` before initialization completes, `-32602` for a `systemPrompt` the Agent cannot accept, and `-32602` for an invalid `session/list` cursor. Agents also reject an `initialize` repeated after another request with `-32600`.
 - Make [enums and tagged unions open](./enum-variant-extension.mdx) where a safe fallback exists: `_`-prefixed values are for extensions, and other unknown values are reserved for future ACP versions.
 - Add the `cancelled` status for tool calls and plan entries.
 - Add [background work](./background-work.mdx): a `paused` tool call status, opt-in `capabilities.cancel` on tool calls and terminals with `tool_call/cancel` and `terminal/cancel`, and a `background` list on state snapshots.
@@ -84,12 +84,19 @@ This list tracks every breaking change in v2. Smaller changes without their own 
 - Add `availableCommands` to `session/new` and `session/resume` responses, make `configOptions` in those responses a non-null array, and add `type` discriminators to commands (`command`) and command input (`text`).
 - Remove the Client `session.notices`, `session.compaction`, and `session.configOptions.boolean` capabilities. Notices, compaction updates, and boolean config options need no Client capability.
 - Handle an unknown elicitation `action` as `cancel`. In v1 an Agent could not treat it as a known action.
+- Require exactly one of `sessionId` and `requestId` on `elicitation/create`.
+- Answer `elicitation/create` with `-32601` when the Client has no `elicitation` capability. `-32602` stays the code for a mode the Client did not advertise.
 - Tighten schema validation where v1 was loose, for example at least one content block in `session/prompt`, `type: "object"` and `properties` in an elicitation `requestedSchema`, and at least one entry in permission `options`. The [migration guide](/protocol/v2/migration#content-blocks) has the full list.
 - Reject `initialize` with `-32022` (Unsupported protocol version) when no supported version is at or below the requested one, with the requested and supported versions in the error data.
-- Require a `type` discriminator on `session/set_config_option` values, and rename the config option `group` field to `groupId`.
+- Require a `type` discriminator on `session/set_config_option` values, and rename the config option `id` field to `configId` and its `group` field to `groupId`.
 - Make `usage_update.cost` a patch field: omitted leaves it unchanged and `null` clears it.
 - Make `status` on `compaction_update` a patch field: omitted leaves it unchanged and `null` resets it to `in_progress`. v1 requires it on every update.
 - Make `mcpServers` optional on session setup requests.
+- Cancel a deleted session's work as if the session were closed. v1 left this to the implementation.
+- Narrow the `refusal` stop reason. It no longer says that the user prompt and what followed it are left out of the next prompt.
+- Reject a prompt that contains a content type the Agent did not advertise with `-32602`. v1 put the restriction only on Clients.
+- Require identifiers to be unique within their list: command names, authentication `methodId` values, permission `optionId` values, and config option, value, and group IDs.
+- Require receivers to ignore a `$/cancel_request` for a request ID that is unknown or already answered.
 - Clean up capability naming and organization:
   - Use a single `capabilities` field in both `initialize` params and results, replacing the v1-style `clientCapabilities` and `agentCapabilities` fields.
   - Require implementation metadata in both `initialize` params and results with a single role-agnostic `info` field, replacing the v1-style `clientInfo` and `agentInfo` fields so agent-to-agent and other symmetric ACP connections do not need role-specific field names.
@@ -107,6 +114,7 @@ This list tracks every breaking change in v2. Smaller changes without their own 
   - Make stdio an explicit `session.mcp.stdio` capability so Agents that cannot launch local subprocesses can opt out.
   - Require MCP server configurations to include a `type` discriminator, including `type: "stdio"`, so unknown future transports can be preserved as extension/future variants.
   - Keep HTTP as the remote MCP server transport capability.
+  - Require each server `name` to be unique within `mcpServers` and a stdio `command` to be an absolute path. Agents reject either with `-32602`.
 - Unify ID naming and typing across the v2 schema. Protocol fields should use domain-specific ID names such as `messageId`, `toolCallId`, `planId`, `terminalId`, `configId`, and `methodId` rather than a generic `id` whenever the field identifies a protocol entity or references another resource.
 
 ## Shiny future
@@ -139,6 +147,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-20: Added changes that the list missed and the migration guide already records: two more error rules that became requirements, the elicitation scope and capability rules, the `id` to `configId` rename, session deletion, the narrower `refusal`, the prompt content type rejection, the uniqueness rules, late `$/cancel_request`, and the MCP server `name` and `command` rules. Corrected the terminal output entry, which said there are no control methods.
 - 2026-11-19: Made `status` on `compaction_update` a patch field, so every upsert requires only its ID.
 - 2026-11-19: Removed the MCP revamp from this RFD. That work will be additive and does not need a breaking change.
 - 2026-11-19: Added the changes that the list missed: non-null request IDs, the error rules that became requirements, the removed Client capabilities, the terminal authentication `env` shape, the unknown elicitation `action` rule, and schema validation. Corrected the entry on setup responses, where only `availableCommands` is new.
