@@ -8,7 +8,7 @@ version = "1.33.0"
 
 [[package]]
 name = "agent-client-protocol-json-schema-v2"
-version = "2.0.0-alpha.17"
+version = "2.0.0-beta.1"
 
 [[package]]
 name = "agent-client-protocol-schema"
