@@ -227,7 +227,6 @@
                 ]
               },
               "rfds/end-turn-token-usage",
-              "rfds/get-auth-state",
               "rfds/session-status",
               "rfds/session-set-title",
               "rfds/session-archive",
@@ -239,7 +238,11 @@
           },
           {
             "group": "Preview",
-            "pages": ["rfds/subagents", "rfds/speed-config-category"]
+            "pages": [
+              "rfds/get-auth-state",
+              "rfds/subagents",
+              "rfds/speed-config-category"
+            ]
           },
           {
             "group": "Completed",
