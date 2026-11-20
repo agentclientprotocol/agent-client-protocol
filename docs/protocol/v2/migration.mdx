@@ -1042,7 +1042,7 @@ Supporting both versions is the recommended path, not an edge case: v1 peers wil
 
 The [v2 version negotiation rules](/protocol/v2/initialization#version-negotiation) apply to Agent endpoints implementing v2, including dual-stack endpoints. They do not impose new requirements on legacy v1-only Agents:
 
-- The Client **MUST** request the latest version it supports. After the Agent selects a lower version, the Client **MAY** request that version when it repeats `initialize` or reconnects.
+- The Client **MUST** request the latest version it supports. After the Agent selects a lower version, the Client **MAY** request that version, or a lower version it supports, when it repeats `initialize` or reconnects.
 - An Agent implementing v2 **MUST** select the highest supported version at or below the requested version. If none exists, it **MUST** return `-32022` with `requested` and `supported` data instead of a higher-version success response.
 - Both peers **MUST** use the selected version's specification for subsequent traffic. A Client that cannot support the returned version **SHOULD** close the connection and inform the user.
 
