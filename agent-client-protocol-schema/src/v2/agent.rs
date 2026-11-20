@@ -5398,9 +5398,10 @@ pub enum StopReason {
     Refusal,
     /// The user or client chose to stop the work: via `session/cancel`, by
     /// closing the session, or through an interaction the agent offers, such
-    /// as a permission option that tells the agent to stop. Work the agent
-    /// stops for its own reasons uses another reason, such as `error` for an
-    /// internal timeout.
+    /// as a permission option that tells the agent to stop. A child session
+    /// also reports this reason when its parent cancels its work. Other work
+    /// the agent stops for its own reasons uses another reason, such as
+    /// `error` for an internal timeout.
     ///
     /// Agents MUST report this stop reason on an idle `state_update` when
     /// cancellation ends active foreground work, even if aborting causes
