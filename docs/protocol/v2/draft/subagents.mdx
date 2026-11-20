@@ -460,9 +460,9 @@ When the Client sends `session/resume` for a session, it **MUST** discard the st
 Which `subagent_update` notifications are current depends on the request:
 
 - **Resume without replay.** Every `subagent_update` and every child update is current. They can arrive before or after the response.
-- **Resume with replay.** Each session has its own [`replay_complete`](/protocol/v2/draft/session-setup#child-sessions), which separates that session's replayed history from its current updates. No session waits for another.
-  - A child's own updates follow the child's `replay_complete`. A `state_update` on the child is never replayed, so it is always current.
-  - A `subagent_update` is an update for the child's immediate parent, so that parent's `replay_complete` is the boundary for it. The `capabilities` and `state` in a replayed `subagent_update` are historical. They never become the child's effective capabilities, and they do not confirm that the child is working. A `subagent_update` after that `replay_complete` is current.
+- **Resume with replay.** Each session has its own [`replay_complete`](/protocol/v2/draft/session-setup#child-sessions). No session waits for another.
+  - The Agent sends current updates for a child after that child's marker. A child's `state_update` is never replayed. If the root was already active, a live update the Agent sent before receiving the request can still be in flight.
+  - A `subagent_update` belongs to the child's immediate parent. During a replaying resume, only a `subagent_update` after that parent's marker can establish the child's current `capabilities` or mirrored `state`. An earlier update might have been replayed or already in flight. Neither confirms the child's state or permissions after resume.
 
 ### What the Agent sends
 

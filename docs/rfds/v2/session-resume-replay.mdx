@@ -64,7 +64,7 @@ Replay uses the same updates as live delivery. The Agent can send each entity's 
 
 When the Agent rebuilds an entity from chunks, it **MUST** first send that entity's update with the chunked field emptied, so the chunks do not append to content the Client already holds. This covers message, session-directed message, tool-call content, terminal output, and compaction summary chunks.
 
-Agents **SHOULD** preserve agent and thought message IDs, `toolCallId`, `terminalId`, and `planId` across replay when possible, but Clients cannot assume stability across reconnects or Agent restarts. Full replay should rebuild messages, tool calls, terminals, and plans rather than merge them into existing state solely by ID. The empty-content primer for chunked
+Agents **SHOULD** preserve agent and thought message IDs, `toolCallId`, `terminalId`, and `planId` across replay when possible, but Clients cannot assume stability across reconnects or Agent restarts. A Client attaching to a session can rebuild its transcript from a full replay of the retained history. If that session is already active on the connection, sending `session/resume` does not [mark the start of replay](/protocol/v2/session-setup#replay-complete). The empty-content primer for chunked
 replay initializes or clears content only under the ID used in that replay;
 it does not reconcile messages previously delivered under different IDs.
 

@@ -1251,9 +1251,10 @@ these differences:
   [v2 Replay Complete Signal RFD](./v2/session-replay-complete.mdx#subagent-sessions).
 - **Freshness boundary.** In v2, the parent's `replay_complete` is the
   freshness boundary for a child's work state and capabilities, not the
-  response. A `subagent_update` is an update for the parent session. One
-  that arrives before the parent's `replay_complete` is replayed history, and
-  one that arrives after it is current. The Agent sends a current
+  response. A `subagent_update` belongs to the parent session. During a
+  replaying resume, one received before the parent's marker may be replayed
+  or already in flight. Neither establishes the child's current capabilities
+  or mirrored state after resume. The Agent sends a current
   `subagent_update` for each child in the `background` list before the state
   snapshot that lists it. The Client still does not send `session/cancel` for
   a child until the resume succeeds. v1 keeps the response as the boundary,
