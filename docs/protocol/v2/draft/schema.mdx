@@ -2454,8 +2454,11 @@ After `session/cancel`, the agent stops waiting for requests of the cancelled
 foreground work and MUST cancel them with `$/cancel_request`. The client
 answers a cancelled request with the `cancelled` outcome.
 
+If the selected option has kind `reject_once` or `reject_always`, the Agent MUST NOT
+perform the requested operation.
+
 An error response is not approval, and neither is a connection that ends
-before the client answers. The agent MUST NOT treat either as approval.
+before the Client answers. The Agent MUST NOT treat either as approval.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/draft/tool-calls#requesting-permission)
 
@@ -7457,7 +7460,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="kind" type={<a href="#permissionoptionkind">PermissionOptionKind</a>} required>
-  Hint about the nature of this permission option.
+  What selecting this option means. Clients can also use it to choose how to display the option.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Human-readable label to display to the user.
@@ -7476,7 +7479,9 @@ Unique identifier for a permission option.
 
 The type of permission option being presented to the user.
 
-Helps clients choose appropriate icons and UI treatment.
+If the user selects a `reject_once` or `reject_always` option, the Agent MUST NOT
+perform the requested operation. For `reject_always`, the Agent also remembers
+the rejection for later operations within its scope.
 
 **Type:** Union
 
@@ -8443,10 +8448,12 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 
 <ResponseField name="selected" type="object">
-The user selected one of the provided options.
+The user selected an option. Selection is not approval by itself.
 
-If `optionId` doesn't match an offered option, the agent MUST treat the request as not
-approved.
+The Agent MUST match `optionId` against the options it offered in this request.
+For `reject_once` or `reject_always`, the Agent MUST NOT perform the requested
+operation. If no option matches or the Agent does not understand its `kind`,
+the Agent MUST NOT treat the response as approval.
 
 <Expandable title="Properties">
 
@@ -8459,7 +8466,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="optionId" type={<a href="#permissionoptionid">PermissionOptionId</a>} required>
-  The ID of the option the user selected.
+  The ID of the option the user selected from this request's `options`.
 </ResponseField>
 <ResponseField name="outcome" type={"string"} required>
   The discriminator value. Must be `"selected"`.
@@ -8738,7 +8745,7 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 
 ## <span class="font-mono">SelectedPermissionOutcome</span>
 
-The user selected one of the provided options.
+Identifies the option the user chose, whether it allows or rejects the operation.
 
 **Type:** Object
 
@@ -8753,7 +8760,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 
 </ResponseField>
 <ResponseField name="optionId" type={<a href="#permissionoptionid">PermissionOptionId</a>} required>
-  The ID of the option the user selected.
+  The ID of the option the user selected from this request's `options`.
 </ResponseField>
 
 ## <span class="font-mono">SessionAdditionalDirectoriesCapabilities</span>

@@ -77,6 +77,10 @@ Omitted and `null` subjects are equivalent and mean no structured subject was pr
 
 Unknown future subject types should be preserved by clients that proxy, store, replay, or forward permission requests. Clients that cannot understand the subject should show a generic permission prompt or decline according to policy.
 
+### Honoring the decision
+
+A Client reports a chosen option as `selected`, including when the user chooses a rejection. The Agent **MUST** match `optionId` against the options it offered in this request. If the selected kind is `reject_once` or `reject_always`, the Agent **MUST NOT** perform the requested operation. Remembering a rejection changes how the Agent handles later requests in scope, not whether it can perform this operation. An unoffered ID, a selected kind the Agent does not understand, or an unknown outcome **MUST NOT** be treated as approval. See [Requesting permission](/protocol/v2/tool-calls#requesting-permission).
+
 ## Shiny future
 
 > How will things play out once this feature exists?
@@ -93,6 +97,12 @@ Agents can request permission for tool calls without conflating permission UI te
 4. Add common required `title` and optional `description` fields.
 5. Keep `options` as the required list of choices the user can select.
 6. Preserve unknown subject variants while keeping known subject payloads distinct from unknown fallback variants.
+
+To test the decision, use a tool that writes a marker file:
+
+- Select each of `reject_once` and `reject_always` by its offered ID. In each case the tool must not be invoked and the marker must not exist. For `reject_always`, try a later matching operation while the remembered decision applies and verify it is still denied.
+- Repeat the negative check with `cancelled`, an ID offered only on a different request, and an outcome the Agent does not understand.
+- As a positive control, select the offered `allow_once` option and verify that the test tool writes the marker. Use IDs that do not spell out the option kind.
 
 ## Frequently asked questions
 
@@ -116,5 +126,6 @@ Those fields patch the displayed tool call. Permission-only prompt copy belongs 
 
 ## Revision history
 
+- 2026-11-20: Made selection of either reject kind a binding denial for the requested operation.
 - 2026-07-14: Added the command permission subject for Agent-executed commands.
 - 2026-07-02: Initial draft

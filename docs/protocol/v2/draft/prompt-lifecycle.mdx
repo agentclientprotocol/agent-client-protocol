@@ -261,11 +261,16 @@ sequenceDiagram
                 Client-->>Agent: Permission response
                 Agent->>Client: session/update (state_update: running)
             end
-            Agent->>Client: session/update (tool_call_update status: in_progress)
-            Note right of Agent: Execute tool
-            Agent->>Client: session/update (tool_call_content_chunk)
-            Agent->>Client: session/update (tool_call_update status: completed)
-            Note right of Agent: Send tool results<br/>back to LLM
+            alt Permission granted or not required
+                Agent->>Client: session/update (tool_call_update status: in_progress)
+                Note right of Agent: Execute tool
+                Agent->>Client: session/update (tool_call_content_chunk)
+                Agent->>Client: session/update (tool_call_update status: completed)
+                Note right of Agent: Send tool results back to LLM
+            else Permission denied
+                Note right of Agent: Do not execute the tool
+                Agent->>Client: session/update (tool_call_update status: cancelled)
+            end
         end
 
       opt User cancelled during execution

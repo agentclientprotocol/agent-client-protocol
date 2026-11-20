@@ -143,7 +143,7 @@
               "anyOf": [
                 {
                   "title": "RequestPermissionRequest",
-                  "description": "Requests permission from the user for an operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nAfter `session/cancel`, the agent stops waiting for requests of the cancelled\nforeground work and MUST cancel them with `$/cancel_request`. The client\nanswers a cancelled request with the `cancelled` outcome.\n\nAn error response is not approval, and neither is a connection that ends\nbefore the client answers. The agent MUST NOT treat either as approval.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)",
+                  "description": "Requests permission from the user for an operation.\n\nCalled by the agent when it needs user authorization before executing\na potentially sensitive operation. The client should present the options\nto the user and return their decision.\n\nAfter `session/cancel`, the agent stops waiting for requests of the cancelled\nforeground work and MUST cancel them with `$/cancel_request`. The client\nanswers a cancelled request with the `cancelled` outcome.\n\nIf the selected option has kind `reject_once` or `reject_always`, the Agent MUST NOT\nperform the requested operation.\n\nAn error response is not approval, and neither is a connection that ends\nbefore the Client answers. The Agent MUST NOT treat either as approval.\n\nSee protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)",
                   "allOf": [
                     {
                       "$ref": "#/$defs/RequestPermissionRequest"
@@ -1785,7 +1785,7 @@
           "type": "string"
         },
         "kind": {
-          "description": "Hint about the nature of this permission option.",
+          "description": "What selecting this option means. Clients can also use it to choose how to display the option.",
           "allOf": [
             {
               "$ref": "#/$defs/PermissionOptionKind"
@@ -1806,7 +1806,7 @@
       "type": "string"
     },
     "PermissionOptionKind": {
-      "description": "The type of permission option being presented to the user.\n\nHelps clients choose appropriate icons and UI treatment.",
+      "description": "The type of permission option being presented to the user.\n\nIf the user selects a `reject_once` or `reject_always` option, the Agent MUST NOT\nperform the requested operation. For `reject_always`, the Agent also remembers\nthe rejection for later operations within its scope.",
       "anyOf": [
         {
           "description": "Allow this operation only this time.",
@@ -8011,7 +8011,7 @@
           ]
         },
         {
-          "description": "The user selected one of the provided options.\n\nIf `optionId` doesn't match an offered option, the agent MUST treat the request as not\napproved.",
+          "description": "The user selected an option. Selection is not approval by itself.\n\nThe Agent MUST match `optionId` against the options it offered in this request.\nFor `reject_once` or `reject_always`, the Agent MUST NOT perform the requested\noperation. If no option matches or the Agent does not understand its `kind`,\nthe Agent MUST NOT treat the response as approval.",
           "type": "object",
           "properties": {
             "outcome": {
@@ -8078,11 +8078,11 @@
       }
     },
     "SelectedPermissionOutcome": {
-      "description": "The user selected one of the provided options.",
+      "description": "Identifies the option the user chose, whether it allows or rejects the operation.",
       "type": "object",
       "properties": {
         "optionId": {
-          "description": "The ID of the option the user selected.",
+          "description": "The ID of the option the user selected from this request's `options`.",
           "allOf": [
             {
               "$ref": "#/$defs/PermissionOptionId"
