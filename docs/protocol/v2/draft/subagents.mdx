@@ -417,7 +417,7 @@ The rules for pending requests in [Cancellation](/protocol/v2/draft/prompt-lifec
 - When the Agent stops a session's cancelled work, it stops waiting for that work's pending permission requests and **MUST** cancel each of them with [`$/cancel_request`](/protocol/v2/draft/cancellation). This includes the requests of descendants that the cancellation stopped.
 - `session/cancel` on a parent does not resolve the requests of a child that keeps running. The user can still answer them.
 - Even without `$/cancel_request`, the Client **MAY** answer a child's pending permission request with `cancelled` once that child reports `idle` with `stopReason: "cancelled"` and the Client knows the request belonged to the cancelled work. The idle update does not cancel permission requests for surviving background work.
-- A response that arrives after the work was cancelled still resolves its request. The Agent **MUST NOT** use it to restart cancelled or abandoned work, or to permit a new task for the same child. A request **MUST NOT** get more than one response.
+- A response that arrives after the work was cancelled still resolves its request. The Agent **SHOULD NOT** use it to restart cancelled or abandoned work, and **MUST NOT** use it to permit a new task for the same child. A request **MUST NOT** get more than one response.
 - The Agent does not wait for a child's pending requests to resolve before it reports the child's state.
 
 ## Closing the parent

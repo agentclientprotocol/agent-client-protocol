@@ -472,7 +472,7 @@ Marking a tool call as cancelled does not resolve the requests that are pending 
 - The cancellation does not resolve a descendant's pending requests. Once that descendant reports `idle` with `stopReason: "cancelled"`, the Client handles its requests as if it had cancelled the descendant directly. Until then, the user can still answer them. A descendant that keeps running keeps its requests.
 - If the Client learns that the work behind a request has ended and the request no longer applies, it **SHOULD** dismiss the control and send the matching cancellation response. `idle` alone does not cancel the requests of unrelated work that continues.
 - Agents can cancel a child's abandoned request with [`$/cancel_request`](/protocol/v1/cancellation), including when the Agent stops the work on its own. `$/cancel_request` stays optional. Advertising `subagents` does not require it.
-- A response that arrives after the work was cancelled still resolves its request. The Agent **MUST NOT** use it to restart cancelled or abandoned work, or to permit a new task for the same child. A request **MUST NOT** get more than one response.
+- A response that arrives after the work was cancelled still resolves its request. The Agent **SHOULD NOT** use it to restart cancelled or abandoned work, and **MUST NOT** use it to permit a new task for the same child. A request **MUST NOT** get more than one response.
 - The Agent does not wait for a child's pending requests to resolve before it reports the child's state.
 
 ## Closing the parent
