@@ -7,7 +7,7 @@ Agents can provide an arbitrary list of configuration options for a session, whi
 
 ## Initial state
 
-An Agent whose session has configuration options **MUST** include them, with their current values, in `configOptions` in the `session/new` and `session/resume` responses, since a [setup response](/protocol/v2/draft/session-setup#initial-session-state) replaces the Client's list:
+An Agent whose session has configuration options **MUST** include them, with their current values, in `configOptions` in the `session/new`, `session/resume`, and, when supported, `session/fork` responses, since a [setup response](/protocol/v2/draft/session-setup#initial-session-state) replaces the Client's list:
 
 ```json
 {
