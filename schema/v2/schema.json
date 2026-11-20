@@ -1970,7 +1970,12 @@
           "x-deserialize-default-on-error": true
         }
       },
-      "required": ["sessionId"]
+      "required": ["sessionId"],
+      "propertyNames": {
+        "not": {
+          "const": "requestId"
+        }
+      }
     },
     "ElicitationRequestScope": {
       "description": "Request-scoped elicitation, tied to a specific JSON-RPC request outside of a session\n(e.g., during auth/configuration phases before any session is started).",
@@ -1985,7 +1990,12 @@
           ]
         }
       },
-      "required": ["requestId"]
+      "required": ["requestId"],
+      "propertyNames": {
+        "not": {
+          "enum": ["sessionId", "toolCallId"]
+        }
+      }
     },
     "ElicitationSchema": {
       "description": "Type-safe elicitation schema for requesting structured user input.\n\nThis represents a JSON Schema object with primitive-typed properties,\nas required by the elicitation specification.",
@@ -2498,7 +2508,7 @@
       "required": ["enum"]
     },
     "TitledMultiSelectItems": {
-      "description": "Items definition for titled multi-select enum properties.",
+      "description": "Titled multi-select items use `anyOf` and omit `type`.",
       "type": "object",
       "properties": {
         "anyOf": {
@@ -2516,7 +2526,12 @@
           "additionalProperties": true
         }
       },
-      "required": ["anyOf"]
+      "required": ["anyOf"],
+      "propertyNames": {
+        "not": {
+          "const": "type"
+        }
+      }
     },
     "MultiSelectPropertySchema": {
       "description": "Schema for multi-select (array) properties in an elicitation form.",

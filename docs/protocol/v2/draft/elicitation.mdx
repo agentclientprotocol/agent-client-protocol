@@ -75,7 +75,8 @@ Every request has these fields. Each mode adds its own.
 </ParamField>
 
 Scope is represented with flattened fields. Exactly one of `sessionId` or
-`requestId` **MUST** be present:
+`requestId` **MUST** be present. Omit the unused field rather than sending `null`.
+With `requestId`, the Agent **MUST NOT** send `toolCallId`.
 
 <ParamField path="sessionId" type="SessionId">
   The session, for a session-scoped request.
@@ -162,6 +163,8 @@ optional `required`, `title`, and `description`. Each property is one of:
 
 Every property may also have `title` and `description`. Each `oneOf` or `anyOf` option has a `const` value and a `title`, and may also have a `description`. Clients treat an unknown
 `format` as plain text. Accepted `content` maps each answered property name to its value: a string for text and single-select properties, a number for `number` and `integer`, a boolean for `boolean`, and an array of strings for multi-select. Unanswered properties are omitted, not set to `null`. Custom or future property types may use other JSON values.
+
+In multi-select `items`, the titled `anyOf` form omits `type`. When `type` is `"string"`, `enum` is required even if `anyOf` is also present.
 
 Clients **SHOULD** validate submitted values before responding, and Agents
 **SHOULD** validate them again.
