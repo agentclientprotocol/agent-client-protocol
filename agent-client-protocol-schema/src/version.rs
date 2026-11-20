@@ -23,7 +23,7 @@ impl ProtocolVersion {
     pub const V1: Self = Self(1);
     /// Version `2` of the protocol.
     ///
-    /// This is an unstable draft used for protocol iteration. It is only
+    /// This version is in Preview and can still change. It is only
     /// available when the `unstable_protocol_v2` feature is enabled and must
     /// be selected explicitly.
     #[cfg(feature = "unstable_protocol_v2")]
@@ -33,8 +33,8 @@ impl ProtocolVersion {
     /// Currently this is version `1`.
     ///
     /// This shorthand is intentionally unavailable when the
-    /// `unstable_protocol_v2` feature is enabled, so code that opts into the
-    /// v2 draft must choose `V1` or `V2` explicitly.
+    /// `unstable_protocol_v2` feature is enabled, so code that opts into
+    /// v2 must choose `V1` or `V2` explicitly.
     #[cfg(not(feature = "unstable_protocol_v2"))]
     pub const LATEST: Self = Self::V1;
 

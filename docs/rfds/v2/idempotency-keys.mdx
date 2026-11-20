@@ -282,7 +282,7 @@ Status on 2026-11-18:
 
 ### Why is there no capability?
 
-All Agents that advertise `capabilities.session` follow the same key-retention rules. A capability for accepting keys would not tell a Client whether a particular key survived a disconnect. v2 is still a draft, so the requirement can be part of the baseline now. Adding it after v2 is stable would need a capability.
+All Agents that advertise `capabilities.session` follow the same key-retention rules. A capability for accepting keys would not tell a Client whether a particular key survived a disconnect. v2 was still a draft when this was decided, so the requirement could be part of the baseline. Adding it after v2 is stable would need a capability.
 
 The Agent's obligation scales with what it already stores. An Agent that keeps sessions in memory keeps a map in memory. An Agent that stores sessions stores the key with the message, and both adapters can do that without storage of their own (see [Adapter validation](#adapter-validation)).
 
@@ -345,6 +345,7 @@ This RFD doesn't change v1. A v1 `session/prompt` response arrives at the end of
 
 ## Revision history
 
+- 2026-11-20: Moved to Preview with the other v2 RFDs.
 - 2026-11-20: The example of storing the key with the message now says to derive the message's ID from the key with a one-way function. "As part of the message's ID" could be read as putting the key in an ID that the Agent sends back.
 - 2026-11-20: Clarified that reconnecting does not guarantee a key survived. Clients should not automatically retry unanswered prompts when duplicate work would matter and cannot be ruled out.
 - 2026-11-18: Recorded the status of the implementation plan.

@@ -124,7 +124,7 @@
               },
               {
                 "group": "v2",
-                "tag": "Draft",
+                "tag": "Preview",
                 "expanded": true,
                 "pages": [
                   "protocol/v2/overview",
@@ -205,6 +205,20 @@
               "rfds/mcp-over-acp",
               "rfds/custom-llm-endpoint",
               "rfds/streamable-http-websocket-transport",
+              "rfds/end-turn-token-usage",
+              "rfds/get-auth-state",
+              "rfds/session-status",
+              "rfds/session-set-title",
+              "rfds/session-archive",
+              "rfds/session-options",
+              "rfds/prompt-suggestions",
+              "rfds/agent-skills",
+              "rfds/session-cursors"
+            ]
+          },
+          {
+            "group": "Preview",
+            "pages": [
               {
                 "group": "v2",
                 "expanded": true,
@@ -227,20 +241,8 @@
                   "rfds/v2/idempotency-keys"
                 ]
               },
-              "rfds/end-turn-token-usage",
-              "rfds/get-auth-state",
-              "rfds/session-status",
-              "rfds/session-set-title",
-              "rfds/session-archive",
-              "rfds/session-options",
-              "rfds/prompt-suggestions",
-              "rfds/agent-skills",
-              "rfds/session-cursors"
+              "rfds/speed-config-category"
             ]
-          },
-          {
-            "group": "Preview",
-            "pages": ["rfds/speed-config-category"]
           },
           {
             "group": "Completed",

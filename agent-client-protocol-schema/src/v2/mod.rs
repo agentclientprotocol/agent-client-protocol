@@ -1,11 +1,11 @@
-//! Agent Client Protocol version 2 draft types.
+//! Agent Client Protocol version 2 types.
 //!
-//! **EXPERIMENTAL.** This module is gated behind the `unstable_protocol_v2`
+//! **PREVIEW.** This module is gated behind the `unstable_protocol_v2`
 //! feature, is not part of the [`unstable`] umbrella, and must be selected
 //! explicitly with [`crate::ProtocolVersion::V2`]. The types here evolve v2
 //! without disturbing the stable v1 API, and the wire format intentionally
-//! diverges from v1 as draft v2 RFDs land. The type definitions may change at
-//! any time.
+//! diverges from v1 as the v2 RFDs describe. Version 2 is in Preview, and the
+//! type definitions can still change.
 //!
 //! [`unstable`]: https://docs.rs/crate/agent-client-protocol-schema/latest/features
 

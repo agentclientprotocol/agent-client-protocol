@@ -135,11 +135,21 @@ I created the initial [draft of the v2 schema](https://github.com/agentclientpro
 
 The Rust schema does not provide cross-version conversion. Even initialize-request normalization depends on SDK routing policy, while many v2 lifecycle and update semantics require state that a schema-level conversion cannot supply. SDKs supporting both versions should expose explicit versioned implementations or build a purpose-specific adapter at their runtime boundary.
 
-Once we have more pieces in place, we can start publishing both schemas to assist SDK developers to start figuring out how to support this. **This should be done in an opt-in, off by default, clearly labeled unstable way for SDK consumers**. There will likely be bumps as we figure out the necessary plumbing and we shouldn't be shipping v2 in production without feature flags prior to a more stable release as we align all of the necessary pieces.
+Both schemas are published with each release. While v2 was a Draft, SDKs exposed it as opt-in, off by default, and labeled unstable, and v2 was not meant to ship without feature flags.
+
+In Preview, v2 is ready to build on and is not frozen. Agents can serve v2 to any Client that requests it, because version negotiation decides what each connection speaks. Clients choose when to request v2, and we suggest keeping that choice opt-in for users while Preview feedback comes in.
 
 ### SDK Support
 
 With the needed breaking changes, as much as possible I am targeting having a consistent API surface for Agents, since they will want to target v2 APIs but still support v1 clients. Because of how the version negotiation works, if we can achieve the same thing for clients that will be great, but if not, they will at least be provided clear version entry points.
+
+### Implementations
+
+These were checked on 2026-11-20.
+
+- The [Rust SDK](https://github.com/agentclientprotocol/rust-sdk) has v2 behind the `unstable_protocol_v2` feature, and the [TypeScript SDK](https://github.com/agentclientprotocol/typescript-sdk) has it under `@agentclientprotocol/sdk/experimental/v2`. Both have routers that negotiate the version and send each connection to a v1 or v2 implementation.
+- The [Claude Agent adapter](https://github.com/agentclientprotocol/claude-agent-acp) and the [Codex adapter](https://github.com/agentclientprotocol/codex-acp) serve v2 next to v1.
+- [Zed](https://github.com/zed-industries/zed) has a v2 Client behind its `acp-beta` feature flag.
 
 ## Frequently asked questions
 
@@ -147,6 +157,7 @@ With the needed breaking changes, as much as possible I am targeting having a co
 
 ## Revision history
 
+- 2026-11-20: Moved to Preview with the fifteen RFDs this one tracks. Replaced the plan for publishing the schemas with the Preview rollout guidance and added the implementations.
 - 2026-11-20: Added changes that the list missed and the migration guide already records: two more error rules that became requirements, the elicitation scope and capability rules, the `id` to `configId` rename, session deletion, the narrower `refusal`, the prompt content type rejection, the uniqueness rules, late `$/cancel_request`, and the MCP server `name` and `command` rules. Corrected the terminal output entry, which said there are no control methods.
 - 2026-11-19: Made `status` on `compaction_update` a patch field, so every upsert requires only its ID.
 - 2026-11-19: Removed the MCP revamp from this RFD. That work will be additive and does not need a breaking change.
