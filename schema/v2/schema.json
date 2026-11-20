@@ -245,7 +245,7 @@
       "required": ["sessionId", "title", "options"],
       "x-side": "client",
       "x-method": "session/request_permission",
-      "x-state": [
+      "x-session-state": [
         {
           "action": "upsert",
           "session": "sessionId",
@@ -3526,7 +3526,7 @@
       "required": ["sessionId"],
       "x-side": "agent",
       "x-method": "session/new",
-      "x-state": [
+      "x-session-state": [
         {
           "action": "replace",
           "session": "result.sessionId",
@@ -4104,7 +4104,7 @@
       },
       "x-side": "agent",
       "x-method": "session/resume",
-      "x-state": [
+      "x-session-state": [
         {
           "action": "replace",
           "session": "params.sessionId",
@@ -4183,7 +4183,7 @@
       "required": ["configOptions"],
       "x-side": "agent",
       "x-method": "session/set_config_option",
-      "x-state": [
+      "x-session-state": [
         {
           "action": "replace",
           "session": "params.sessionId",
@@ -4495,7 +4495,7 @@
               "const": "user_message_chunk"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "append",
               "target": "userMessage",
@@ -4520,7 +4520,7 @@
               "const": "user_message"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "userMessage",
@@ -4543,7 +4543,7 @@
               "const": "agent_message_chunk"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "append",
               "target": "agentMessage",
@@ -4568,7 +4568,7 @@
               "const": "agent_message"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "agentMessage",
@@ -4591,7 +4591,7 @@
               "const": "agent_thought_chunk"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "append",
               "target": "agentThought",
@@ -4616,7 +4616,7 @@
               "const": "agent_thought"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "agentThought",
@@ -4639,7 +4639,7 @@
               "const": "state_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "replace",
               "target": "state"
@@ -4661,7 +4661,7 @@
               "const": "tool_call_content_chunk"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "append",
               "target": "toolCall",
@@ -4686,7 +4686,7 @@
               "const": "tool_call_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "toolCall",
@@ -4709,7 +4709,7 @@
               "const": "terminal_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "terminal",
@@ -4732,7 +4732,7 @@
               "const": "terminal_output_chunk"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "append",
               "target": "terminal",
@@ -4757,7 +4757,7 @@
               "const": "plan_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "replace",
               "target": "plan",
@@ -4781,7 +4781,7 @@
               "const": "plan_removed"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "remove",
               "target": "plan",
@@ -4804,7 +4804,7 @@
               "const": "available_commands_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "replace",
               "target": "availableCommands",
@@ -4827,7 +4827,7 @@
               "const": "config_option_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "replace",
               "target": "configOptions",
@@ -4850,7 +4850,7 @@
               "const": "session_info_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "sessionInfo"
@@ -4872,7 +4872,7 @@
               "const": "usage_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "usage"
@@ -4894,7 +4894,7 @@
               "const": "notice"
             }
           },
-          "x-state": [],
+          "x-session-state": [],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4911,7 +4911,7 @@
               "const": "compaction_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "compaction",
@@ -4934,7 +4934,7 @@
               "const": "compaction_summary_chunk"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "append",
               "target": "compaction",
@@ -4959,7 +4959,7 @@
               "const": "replay_complete"
             }
           },
-          "x-state": [],
+          "x-session-state": [],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4976,7 +4976,7 @@
               "const": "subagent_update"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "subagent",
@@ -4999,7 +4999,7 @@
               "const": "session_message"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "upsert",
               "target": "sessionMessage",
@@ -5022,7 +5022,7 @@
               "const": "session_message_chunk"
             }
           },
-          "x-state": [
+          "x-session-state": [
             {
               "action": "append",
               "target": "sessionMessage",

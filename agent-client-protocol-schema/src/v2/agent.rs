@@ -1432,7 +1432,7 @@ impl NewSessionRequest {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_NEW_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "session": "result.sessionId", "target": "configOptions", "value": "result.configOptions"}, {"action": "replace", "session": "result.sessionId", "target": "availableCommands", "value": "result.availableCommands"}])))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "replace", "session": "result.sessionId", "target": "configOptions", "value": "result.configOptions"}, {"action": "replace", "session": "result.sessionId", "target": "availableCommands", "value": "result.availableCommands"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NewSessionResponse {
@@ -1717,7 +1717,7 @@ impl ForkSessionRequest {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_FORK_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "session": "result.sessionId", "target": "configOptions", "value": "result.configOptions"}, {"action": "replace", "session": "result.sessionId", "target": "availableCommands", "value": "result.availableCommands"}])))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "replace", "session": "result.sessionId", "target": "configOptions", "value": "result.configOptions"}, {"action": "replace", "session": "result.sessionId", "target": "availableCommands", "value": "result.availableCommands"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ForkSessionResponse {
@@ -2134,7 +2134,7 @@ crate::serde_util::default_on_null! {
     #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
     #[derive(Default, Debug, Clone, Serialize, PartialEq, Eq)]
     #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_RESUME_METHOD_NAME)))]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "session": "params.sessionId", "target": "configOptions", "value": "result.configOptions"}, {"action": "replace", "session": "params.sessionId", "target": "availableCommands", "value": "result.availableCommands"}])))]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "replace", "session": "params.sessionId", "target": "configOptions", "value": "result.configOptions"}, {"action": "replace", "session": "params.sessionId", "target": "availableCommands", "value": "result.availableCommands"}])))]
     #[serde(rename_all = "camelCase")]
     #[non_exhaustive]
     pub struct ResumeSessionResponse {
@@ -3680,7 +3680,7 @@ impl SetSessionTitleRequest {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_TITLE_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "session": "params.sessionId", "target": "sessionInfo", "field": "title", "value": "result.title"}])))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "replace", "session": "params.sessionId", "target": "sessionInfo", "field": "title", "value": "result.title"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionTitleResponse {
@@ -4489,7 +4489,7 @@ impl SetSessionConfigOptionRequest {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "agent", "x-method" = SESSION_SET_CONFIG_OPTION_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-state" = [{"action": "replace", "session": "params.sessionId", "target": "configOptions", "value": "result.configOptions"}])))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-session-state" = [{"action": "replace", "session": "params.sessionId", "target": "configOptions", "value": "result.configOptions"}])))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionConfigOptionResponse {

@@ -1562,9 +1562,9 @@ mod schema_annotation_tests {
         }
     }
 
-    /// Checks the `x-state` hint.
+    /// Checks the `x-session-state` hint.
     ///
-    /// `x-state` lists how a message changes what a Client holds for its
+    /// `x-session-state` lists how a message changes what a Client holds for its
     /// session. An empty list means no change. Each rule has an `action`
     /// (`upsert`, `append`, `replace`, or `remove`) and names what it writes:
     ///
@@ -1587,7 +1587,7 @@ mod schema_annotation_tests {
         use serde_json::{Value, json};
         use std::collections::{BTreeMap, BTreeSet};
 
-        const STATE_EXTENSION: &str = "x-state";
+        const STATE_EXTENSION: &str = "x-session-state";
         const RULE_KEYS: [&str; 6] = ["action", "session", "target", "id", "field", "value"];
 
         #[test]
@@ -1676,7 +1676,7 @@ mod schema_annotation_tests {
             targets
         }
 
-        /// Checks the `x-state` rules on `annotated` against `message`, the
+        /// Checks the `x-session-state` rules on `annotated` against `message`, the
         /// schema its fields are read from. Returns whether it has the hint.
         fn assert_state_rules(
             schema: &Value,
@@ -1689,7 +1689,7 @@ mod schema_annotation_tests {
                 return false;
             };
             let targets = targets(schema);
-            for rule in rules.as_array().expect("x-state must be a list") {
+            for rule in rules.as_array().expect("x-session-state must be a list") {
                 let rule = rule.as_object().unwrap();
                 let get = |key: &str| rule.get(key).map(|value| value.as_str().unwrap());
                 let (Some(action), Some(name)) = (get("action"), get("target")) else {
