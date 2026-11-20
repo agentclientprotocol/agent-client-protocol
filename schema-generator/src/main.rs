@@ -1564,31 +1564,44 @@ mod schema_annotation_tests {
 
     /// Checks the `x-state` and `x-scope` hints.
     ///
-    /// `x-state` says how a message changes the stored state of its session.
-    /// `x-scope` lists what an Agent-to-Client message is about, most specific
-    /// path first. Both name things with paths such as
-    /// `/sessions/{sessionId}/toolCalls/{update.toolCallId}`, where a `{field}`
-    /// segment is read from the message. In a response rule, `result.` reads
-    /// from the result and any other field reads from the request params.
+    /// `x-state` lists how a message changes the state of its session. An empty
+    /// list means no change. Each rule has an `action` (`upsert`, `append`,
+    /// `replace`, or `remove`) and names what it writes:
+    ///
+    /// - `entity` is the part of the session state. A `remove` without one
+    ///   removes the session.
+    /// - `id` is the field holding the ID of the entity. An entity the session
+    ///   has only one of has no `id`.
+    /// - `field` is the field of the entity to write. Without it the rule writes
+    ///   the whole entity.
+    /// - `value` is the field of the message to write. Without it the rule
+    ///   writes the whole update, params, or result.
+    ///
+    /// `x-scope` maps each kind of thing an Agent-to-Client message can be about
+    /// to the fields that can hold its ID. The first one the message has is used.
+    ///
+    /// A field is a dotted path into the schema that has the hint. On a response
+    /// it starts with `result.`, or with `params.` to read the params of the
+    /// request. A rule on a request or response names the field holding the
+    /// `session` ID. A rule on a `session/update` variant writes to the session
+    /// of its notification.
     #[cfg(feature = "unstable_protocol_v2")]
     mod state_and_scope {
         use super::{def_schema, root_schema_value};
         use serde_json::{Value, json};
-        use std::collections::BTreeSet;
+        use std::collections::{BTreeMap, BTreeSet};
 
         const STATE_EXTENSION: &str = "x-state";
         const SCOPE_EXTENSION: &str = "x-scope";
+        const RULE_KEYS: [&str; 6] = ["action", "session", "entity", "id", "field", "value"];
+        const SCOPE_KINDS: [&str; 5] =
+            ["session", "toolCall", "request", "elicitation", "mcpServer"];
 
         #[test]
-        fn every_session_update_has_a_state_rule() {
+        fn every_session_update_has_state_rules() {
             let schema = root_schema_value();
-            let session_id =
-                &def_schema(&schema, "UpdateSessionNotification")["properties"]["sessionId"];
-            let variants = def_schema(&schema, "SessionUpdate")["anyOf"]
-                .as_array()
-                .unwrap();
             let mut checked = 0;
-            for variant in variants {
+            for variant in update_variants(&schema) {
                 let Some(name) = variant
                     .pointer("/properties/sessionUpdate/const")
                     .and_then(Value::as_str)
@@ -1597,9 +1610,8 @@ mod schema_annotation_tests {
                     assert!(variant.get(STATE_EXTENSION).is_none());
                     continue;
                 };
-                let params = json!({"properties": {"sessionId": session_id, "update": variant}});
                 assert!(
-                    assert_state_rules(&schema, name, variant, &params),
+                    assert_state_rules(&schema, name, variant, variant, false),
                     "{name} has no {STATE_EXTENSION}"
                 );
                 checked += 1;
@@ -1614,14 +1626,18 @@ mod schema_annotation_tests {
             assert!(!params.is_empty(), "expected Agent-to-Client methods");
             for name in params {
                 let def = def_schema(&schema, name);
-                let paths = def[SCOPE_EXTENSION]
-                    .as_array()
+                let scope = def[SCOPE_EXTENSION]
+                    .as_object()
                     .unwrap_or_else(|| panic!("{name} has no {SCOPE_EXTENSION}"));
-                assert!(!paths.is_empty(), "{name} has an empty {SCOPE_EXTENSION}");
-                for path in paths {
-                    assert_path(&schema, name, def, path.as_str().unwrap());
+                for (kind, fields) in scope {
+                    assert!(SCOPE_KINDS.contains(&kind.as_str()), "{name}: {kind}");
+                    let fields = fields.as_array().unwrap();
+                    assert!(!fields.is_empty(), "{name}: {kind} names no field");
+                    for field in fields {
+                        assert_id_field(&schema, name, def, field.as_str().unwrap());
+                    }
                 }
-                assert_state_rules(&schema, name, def, def);
+                assert_state_rules(&schema, name, def, def, true);
             }
         }
 
@@ -1636,11 +1652,11 @@ mod schema_annotation_tests {
                     .iter()
                     .find(|request| def_schema(&schema, request)["x-method"] == def["x-method"])
                     .unwrap_or_else(|| panic!("{name} has no request"));
-                let message = json!({
-                    "allOf": [{"$ref": format!("#/$defs/{request}")}],
-                    "properties": {"result": {"$ref": format!("#/$defs/{name}")}}
-                });
-                checked += usize::from(assert_state_rules(&schema, name, def, &message));
+                let message = json!({"properties": {
+                    "params": {"$ref": format!("#/$defs/{request}")},
+                    "result": {"$ref": format!("#/$defs/{name}")}
+                }});
+                checked += usize::from(assert_state_rules(&schema, name, def, &message, true));
             }
             assert!(checked > 0, "expected at least one response state rule");
         }
@@ -1655,9 +1671,7 @@ mod schema_annotation_tests {
                     .collect::<Vec<_>>()
             };
             let to_client = defs(&["AgentRequest", "AgentNotification"]);
-            let with_state = def_schema(&schema, "SessionUpdate")["anyOf"]
-                .as_array()
-                .unwrap()
+            let with_state = update_variants(&schema)
                 .iter()
                 .chain(to_client.iter().copied())
                 .chain(defs(&["AgentResponse"]))
@@ -1670,91 +1684,118 @@ mod schema_annotation_tests {
         }
 
         /// Checks the `x-state` rules on `annotated` against `message`, the
-        /// schema its fields are read from. Returns whether it has any.
+        /// schema its fields are read from. Returns whether it has the hint.
         fn assert_state_rules(
             schema: &Value,
             owner: &str,
             annotated: &Value,
             message: &Value,
+            names_session: bool,
         ) -> bool {
-            let rules = match annotated.get(STATE_EXTENSION) {
-                Some(Value::Array(rules)) => rules.iter().collect(),
-                Some(rule) => vec![rule],
-                None => return false,
+            let Some(rules) = annotated.get(STATE_EXTENSION) else {
+                return false;
             };
-            assert!(!rules.is_empty(), "{owner} has an empty {STATE_EXTENSION}");
-            for rule in rules {
+            let entities = entities(schema);
+            for rule in rules.as_array().expect("x-state must be a list") {
                 let rule = rule.as_object().unwrap();
-                let action = rule["action"].as_str().unwrap();
-                let path = rule.get("path").map(|path| path.as_str().unwrap());
-                let value = rule.get("value").map(|value| value.as_str().unwrap());
+                let get = |key: &str| rule.get(key).map(|value| value.as_str().unwrap());
+                let (action, entity) = (get("action").unwrap(), get("entity"));
+                let (id, field, value) = (get("id"), get("field"), get("value"));
                 assert!(
-                    rule.keys()
-                        .all(|key| ["action", "path", "value"].contains(&key.as_str())),
+                    rule.keys().all(|key| RULE_KEYS.contains(&key.as_str())),
                     "{owner}: unknown key in {STATE_EXTENSION}"
                 );
-                let (needs_path, needs_value, allows_value) = match action {
-                    "upsert" | "replace" => (true, false, true),
-                    "append" => (true, true, true),
-                    "remove" => (true, false, false),
-                    "none" => (false, false, false),
+                let complete = match action {
+                    "upsert" | "replace" => entity.is_some(),
+                    "append" => entity.is_some() && field.is_some() && value.is_some(),
+                    "remove" => field.is_none() && value.is_none(),
                     _ => panic!("{owner}: unknown {STATE_EXTENSION} action {action}"),
                 };
-                assert_eq!(path.is_some(), needs_path, "{owner}: {action} path");
-                assert!(
-                    value.is_some() || !needs_value,
-                    "{owner}: {action} needs a value"
-                );
-                assert!(
-                    value.is_none() || allows_value,
-                    "{owner}: {action} takes no value"
-                );
-                if let Some(path) = path {
-                    assert!(path.starts_with("/sessions/{"), "{owner}: {path}");
-                    assert_path(schema, owner, message, path);
+                assert!(complete, "{owner}: {action} has the wrong keys");
+                assert_eq!(get("session").is_some(), names_session, "{owner}: session");
+                for id_field in [get("session"), id].into_iter().flatten() {
+                    assert_id_field(schema, owner, message, id_field);
                 }
-                if let Some(value) = value {
+                let value = value.map(|value| one_field(schema, owner, message, value));
+                let Some(entity) = entity else {
+                    assert!(id.is_none(), "{owner}: an id needs an entity");
+                    continue;
+                };
+                let (shape, has_id) = entities
+                    .get(entity)
+                    .unwrap_or_else(|| panic!("{owner}: no session update writes {entity}"));
+                assert_eq!(id.is_some(), *has_id, "{owner}: {entity} id");
+                let target = field.map(|field| one_field(schema, owner, shape, field));
+                if action == "append" {
                     assert!(
-                        !field_schemas(schema, message, value).is_empty(),
-                        "{owner}: no field {value}"
+                        appends_to(target.unwrap(), value.unwrap()),
+                        "{owner}: the value cannot be appended to the field"
                     );
                 }
             }
             true
         }
 
-        /// Checks that every `{field}` segment of `path` is a string or number
-        /// field of `message`.
-        fn assert_path(schema: &Value, owner: &str, message: &Value, path: &str) {
-            let segments = path
-                .strip_prefix('/')
-                .unwrap_or_else(|| panic!("{owner}: {path} must start with /"));
-            if segments.is_empty() {
-                // `/` on its own is the Agent.
-                return;
+        /// What each entity looks like: the payload of the `session/update`
+        /// variant that writes it whole, and whether it has an ID.
+        fn entities(schema: &Value) -> BTreeMap<&str, (&Value, bool)> {
+            let mut entities = BTreeMap::new();
+            for variant in update_variants(schema) {
+                let rules = variant.get(STATE_EXTENSION).and_then(Value::as_array);
+                for rule in rules.into_iter().flatten() {
+                    if rule["action"] == "remove" || rule.get("field").is_some() {
+                        continue;
+                    }
+                    let name = rule["entity"].as_str().unwrap();
+                    let shape = match rule.get("value").and_then(Value::as_str) {
+                        Some(value) => one_field(schema, name, variant, value),
+                        None => variant,
+                    };
+                    let known = entities.insert(name, (shape, rule.get("id").is_some()));
+                    assert!(known.is_none(), "two session updates write {name} whole");
+                }
             }
-            for segment in segments.split('/') {
-                let Some(field) = segment
-                    .strip_prefix('{')
-                    .and_then(|field| field.strip_suffix('}'))
-                else {
-                    assert!(
-                        !segment.is_empty()
-                            && segment
-                                .chars()
-                                .all(|c| c.is_ascii_alphanumeric() || c == '_'),
-                        "{owner}: bad segment in {path}"
-                    );
-                    continue;
-                };
-                let fields = field_schemas(schema, message, field);
-                assert!(!fields.is_empty(), "{owner}: {path} has no field {field}");
-                assert!(
-                    fields
-                        .iter()
-                        .all(|field| is_string_or_number(schema, field)),
-                    "{owner}: {field} in {path} must be a string or a number"
-                );
+            entities
+        }
+
+        /// Whether a `chunk` can be added to `target`: as one item of a list of
+        /// its type, or as a string in the same encoding.
+        fn appends_to(target: &Value, chunk: &Value) -> bool {
+            let type_ref =
+                |node: &Value| node.pointer("/allOf/0/$ref").or(node.get("$ref")).cloned();
+            match target.get("items") {
+                Some(items) => type_ref(chunk).is_some() && type_ref(items) == type_ref(chunk),
+                None => {
+                    target["type"] == "string"
+                        && chunk["type"] == "string"
+                        && target.get("contentEncoding") == chunk.get("contentEncoding")
+                }
+            }
+        }
+
+        /// Checks that the dotted `field` of `message` holds a string or a number.
+        fn assert_id_field(schema: &Value, owner: &str, message: &Value, field: &str) {
+            let fields = field_schemas(schema, message, field);
+            assert!(!fields.is_empty(), "{owner}: no field {field}");
+            assert!(
+                fields
+                    .iter()
+                    .all(|field| is_string_or_number(schema, field)),
+                "{owner}: {field} must be a string or a number"
+            );
+        }
+
+        /// The schema of the dotted `field` of `message`, which must have it on
+        /// exactly one branch.
+        fn one_field<'a>(
+            schema: &'a Value,
+            owner: &str,
+            message: &'a Value,
+            field: &str,
+        ) -> &'a Value {
+            match field_schemas(schema, message, field)[..] {
+                [field] => field,
+                ref fields => panic!("{owner}: {} fields named {field}", fields.len()),
             }
         }
 
@@ -1815,6 +1856,12 @@ mod schema_annotation_tests {
                 .filter_map(|key| node.get(key).and_then(Value::as_array))
                 .flatten();
             target.into_iter().chain(members).collect()
+        }
+
+        fn update_variants(schema: &Value) -> &Vec<Value> {
+            def_schema(schema, "SessionUpdate")["anyOf"]
+                .as_array()
+                .unwrap()
         }
 
         /// The definitions with an `x-method` that the `unions` reference.

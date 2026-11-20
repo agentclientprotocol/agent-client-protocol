@@ -245,16 +245,19 @@
       "required": ["sessionId", "title", "options"],
       "x-side": "client",
       "x-method": "session/request_permission",
-      "x-scope": [
-        "/sessions/{sessionId}/toolCalls/{subject.toolCall.toolCallId}",
-        "/sessions/{sessionId}/toolCalls/{subject.toolCallId}",
-        "/sessions/{sessionId}"
-      ],
-      "x-state": {
-        "action": "upsert",
-        "path": "/sessions/{sessionId}/toolCalls/{subject.toolCall.toolCallId}",
-        "value": "subject.toolCall"
-      }
+      "x-scope": {
+        "session": ["sessionId"],
+        "toolCall": ["subject.toolCall.toolCallId", "subject.toolCallId"]
+      },
+      "x-state": [
+        {
+          "action": "upsert",
+          "session": "sessionId",
+          "entity": "toolCall",
+          "id": "subject.toolCall.toolCallId",
+          "value": "subject.toolCall"
+        }
+      ]
     },
     "SessionId": {
       "description": "A unique identifier for a conversation session between a client and agent.\n\nEach session has its own context, conversation history, and state, so one\nagent can run several independent sessions.\n\nSee protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/session-setup#session-id)",
@@ -1954,11 +1957,11 @@
       "required": ["message"],
       "x-side": "client",
       "x-method": "elicitation/create",
-      "x-scope": [
-        "/requests/{requestId}",
-        "/sessions/{sessionId}/toolCalls/{toolCallId}",
-        "/sessions/{sessionId}"
-      ]
+      "x-scope": {
+        "request": ["requestId"],
+        "session": ["sessionId"],
+        "toolCall": ["toolCallId"]
+      }
     },
     "ElicitationSessionScope": {
       "description": "Session-scoped elicitation, optionally tied to a specific tool call.\n\nWhen `toolCallId` is set, the elicitation is tied to a specific tool call.\nThis is useful when an agent receives an elicitation from an MCP server\nduring a tool call and needs to redirect it to the user.",
@@ -3535,12 +3538,14 @@
       "x-state": [
         {
           "action": "replace",
-          "path": "/sessions/{result.sessionId}/config",
+          "session": "result.sessionId",
+          "entity": "configOptions",
           "value": "result.configOptions"
         },
         {
           "action": "replace",
-          "path": "/sessions/{result.sessionId}/commands",
+          "session": "result.sessionId",
+          "entity": "availableCommands",
           "value": "result.availableCommands"
         }
       ]
@@ -4076,10 +4081,12 @@
       },
       "x-side": "agent",
       "x-method": "session/delete",
-      "x-state": {
-        "action": "remove",
-        "path": "/sessions/{sessionId}"
-      }
+      "x-state": [
+        {
+          "action": "remove",
+          "session": "params.sessionId"
+        }
+      ]
     },
     "ResumeSessionResponse": {
       "description": "Response from resuming an existing session.\n\nThe agent MUST send a current `state_update` after any requested history\nreplay and before this response, even without replay. The update reports\nforeground state after resuming. The response alone does not imply `idle`.\n\nSee protocol docs: [Current-State Synchronization](https://agentclientprotocol.com/protocol/v2/session-setup#current-state-synchronization)",
@@ -4115,12 +4122,14 @@
       "x-state": [
         {
           "action": "replace",
-          "path": "/sessions/{sessionId}/config",
+          "session": "params.sessionId",
+          "entity": "configOptions",
           "value": "result.configOptions"
         },
         {
           "action": "replace",
-          "path": "/sessions/{sessionId}/commands",
+          "session": "params.sessionId",
+          "entity": "availableCommands",
           "value": "result.availableCommands"
         }
       ]
@@ -4189,11 +4198,14 @@
       "required": ["configOptions"],
       "x-side": "agent",
       "x-method": "session/set_config_option",
-      "x-state": {
-        "action": "replace",
-        "path": "/sessions/{sessionId}/config",
-        "value": "result.configOptions"
-      }
+      "x-state": [
+        {
+          "action": "replace",
+          "session": "params.sessionId",
+          "entity": "configOptions",
+          "value": "result.configOptions"
+        }
+      ]
     },
     "PromptResponse": {
       "description": "Response acknowledging that a user prompt was inserted into the ACP conversation.\n\nThis response does not indicate that the prompt was merely received or held, nor that the\nagent has finished processing it.\nProcessing and completion are reported through `state_update` session updates.\n\nInsertion is the logical addition of a user message with a message ID and a position\nrelative to other messages in the ACP conversation.\n\nSee protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#2-prompt-accepted)",
@@ -4485,7 +4497,9 @@
       "required": ["sessionId", "update"],
       "x-side": "client",
       "x-method": "session/update",
-      "x-scope": ["/sessions/{sessionId}"]
+      "x-scope": {
+        "session": ["sessionId"]
+      }
     },
     "SessionUpdate": {
       "description": "Different types of updates that can be sent while a session exists.\n\nThese updates report messages, progress, and other session activity.\n\nSee protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)",
@@ -4499,11 +4513,15 @@
               "const": "user_message_chunk"
             }
           },
-          "x-state": {
-            "action": "append",
-            "path": "/sessions/{sessionId}/messages/user/{update.messageId}/content",
-            "value": "update.content"
-          },
+          "x-state": [
+            {
+              "action": "append",
+              "entity": "userMessage",
+              "id": "messageId",
+              "field": "content",
+              "value": "content"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4520,10 +4538,13 @@
               "const": "user_message"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/messages/user/{update.messageId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "userMessage",
+              "id": "messageId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4540,11 +4561,15 @@
               "const": "agent_message_chunk"
             }
           },
-          "x-state": {
-            "action": "append",
-            "path": "/sessions/{sessionId}/messages/agent/{update.messageId}/content",
-            "value": "update.content"
-          },
+          "x-state": [
+            {
+              "action": "append",
+              "entity": "agentMessage",
+              "id": "messageId",
+              "field": "content",
+              "value": "content"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4561,10 +4586,13 @@
               "const": "agent_message"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/messages/agent/{update.messageId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "agentMessage",
+              "id": "messageId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4581,11 +4609,15 @@
               "const": "agent_thought_chunk"
             }
           },
-          "x-state": {
-            "action": "append",
-            "path": "/sessions/{sessionId}/messages/thought/{update.messageId}/content",
-            "value": "update.content"
-          },
+          "x-state": [
+            {
+              "action": "append",
+              "entity": "agentThought",
+              "id": "messageId",
+              "field": "content",
+              "value": "content"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4602,10 +4634,13 @@
               "const": "agent_thought"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/messages/thought/{update.messageId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "agentThought",
+              "id": "messageId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4622,10 +4657,12 @@
               "const": "state_update"
             }
           },
-          "x-state": {
-            "action": "replace",
-            "path": "/sessions/{sessionId}/state"
-          },
+          "x-state": [
+            {
+              "action": "replace",
+              "entity": "state"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4642,11 +4679,15 @@
               "const": "tool_call_content_chunk"
             }
           },
-          "x-state": {
-            "action": "append",
-            "path": "/sessions/{sessionId}/toolCalls/{update.toolCallId}/content",
-            "value": "update.content"
-          },
+          "x-state": [
+            {
+              "action": "append",
+              "entity": "toolCall",
+              "id": "toolCallId",
+              "field": "content",
+              "value": "content"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4663,10 +4704,13 @@
               "const": "tool_call_update"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/toolCalls/{update.toolCallId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "toolCall",
+              "id": "toolCallId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4683,10 +4727,13 @@
               "const": "terminal_update"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/terminals/{update.terminalId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "terminal",
+              "id": "terminalId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4703,11 +4750,15 @@
               "const": "terminal_output_chunk"
             }
           },
-          "x-state": {
-            "action": "append",
-            "path": "/sessions/{sessionId}/terminals/{update.terminalId}/output/data",
-            "value": "update.data"
-          },
+          "x-state": [
+            {
+              "action": "append",
+              "entity": "terminal",
+              "id": "terminalId",
+              "field": "output.data",
+              "value": "data"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4724,11 +4775,14 @@
               "const": "plan_update"
             }
           },
-          "x-state": {
-            "action": "replace",
-            "path": "/sessions/{sessionId}/plans/{update.plan.planId}",
-            "value": "update.plan"
-          },
+          "x-state": [
+            {
+              "action": "replace",
+              "entity": "plan",
+              "id": "plan.planId",
+              "value": "plan"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4745,10 +4799,13 @@
               "const": "plan_removed"
             }
           },
-          "x-state": {
-            "action": "remove",
-            "path": "/sessions/{sessionId}/plans/{update.planId}"
-          },
+          "x-state": [
+            {
+              "action": "remove",
+              "entity": "plan",
+              "id": "planId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4765,11 +4822,13 @@
               "const": "available_commands_update"
             }
           },
-          "x-state": {
-            "action": "replace",
-            "path": "/sessions/{sessionId}/commands",
-            "value": "update.availableCommands"
-          },
+          "x-state": [
+            {
+              "action": "replace",
+              "entity": "availableCommands",
+              "value": "availableCommands"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4786,11 +4845,13 @@
               "const": "config_option_update"
             }
           },
-          "x-state": {
-            "action": "replace",
-            "path": "/sessions/{sessionId}/config",
-            "value": "update.configOptions"
-          },
+          "x-state": [
+            {
+              "action": "replace",
+              "entity": "configOptions",
+              "value": "configOptions"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4807,10 +4868,12 @@
               "const": "session_info_update"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/info"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "sessionInfo"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4827,10 +4890,12 @@
               "const": "usage_update"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/usage"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "usage"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4847,9 +4912,7 @@
               "const": "notice"
             }
           },
-          "x-state": {
-            "action": "none"
-          },
+          "x-state": [],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4866,10 +4929,13 @@
               "const": "compaction_update"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/compactions/{update.compactionId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "compaction",
+              "id": "compactionId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4886,11 +4952,15 @@
               "const": "compaction_summary_chunk"
             }
           },
-          "x-state": {
-            "action": "append",
-            "path": "/sessions/{sessionId}/compactions/{update.compactionId}/summary",
-            "value": "update.content"
-          },
+          "x-state": [
+            {
+              "action": "append",
+              "entity": "compaction",
+              "id": "compactionId",
+              "field": "summary",
+              "value": "content"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4907,9 +4977,7 @@
               "const": "replay_complete"
             }
           },
-          "x-state": {
-            "action": "none"
-          },
+          "x-state": [],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4926,10 +4994,13 @@
               "const": "subagent_update"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/subagents/{update.sessionId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "subagent",
+              "id": "sessionId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4946,10 +5017,13 @@
               "const": "session_message"
             }
           },
-          "x-state": {
-            "action": "upsert",
-            "path": "/sessions/{sessionId}/messages/session/{update.messageId}"
-          },
+          "x-state": [
+            {
+              "action": "upsert",
+              "entity": "sessionMessage",
+              "id": "messageId"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -4966,11 +5040,15 @@
               "const": "session_message_chunk"
             }
           },
-          "x-state": {
-            "action": "append",
-            "path": "/sessions/{sessionId}/messages/session/{update.messageId}/content",
-            "value": "update.content"
-          },
+          "x-state": [
+            {
+              "action": "append",
+              "entity": "sessionMessage",
+              "id": "messageId",
+              "field": "content",
+              "value": "content"
+            }
+          ],
           "required": ["sessionUpdate"],
           "allOf": [
             {
@@ -6975,7 +7053,9 @@
       "required": ["elicitationId"],
       "x-side": "client",
       "x-method": "elicitation/complete",
-      "x-scope": ["/elicitations/{elicitationId}"]
+      "x-scope": {
+        "elicitation": ["elicitationId"]
+      }
     },
     "ExtNotification": {
       "description": "Allows either side to send an arbitrary notification that is not part of the ACP spec.\nExtension notifications provide a way to send one-way messages for custom functionality\nwhile maintaining protocol compatibility.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/extensibility)"
