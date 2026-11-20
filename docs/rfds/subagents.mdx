@@ -1121,6 +1121,10 @@ cancelled work did not wait on may continue, as it would have if that work had
 ended normally. The Client learns which descendants stopped from their reported
 work state, not from the cancellation itself.
 
+In v2, work in an affected session's latest `background` list is not cancelled
+by `session/cancel`. This includes a listed child and the work listed by a child
+whose own foreground is cancelled. See [Background Work](./v2/background-work.mdx#cancellation-close-and-resume).
+
 An omitted or `null` per-child `cancel` capability does not waive this cascade
 from an ancestor. Adapters should verify whether the provider already supplies
 it or needs additional descendant cancellation. Advertise individual
@@ -1487,9 +1491,9 @@ Descendant work that the cancelled work is waiting on has no purpose once that
 work is cancelled, so it must still stop.
 
 Because the Client cannot tell in advance which descendants will stop, it acts
-on each one only after that child reports a cancelled `idle`. A Client that
-wants to stop a background child uses that child's `cancel` capability when the
-Agent advertises it.
+on each one only after that child reports a cancelled `idle`. A Client can
+cancel a background child's foreground work if the child advertises `cancel`.
+In v2, this does not stop a terminal in the child's own `background` list.
 
 ### Why one `subagent_update` type instead of separate spawn and state notifications?
 

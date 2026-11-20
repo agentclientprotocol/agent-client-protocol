@@ -216,7 +216,7 @@ Background work is work the user can reason about: something the user or the mod
 - **Omitted or `null` means not reported**, not that nothing is running. An Agent that reports background work **MUST** include `background` on every `state_update` for the session. If a later snapshot omits it, the Client treats background work as unknown until a list is reported again.
 - **The Agent re-sends the state when the list changes.** When background work starts or ends, the Agent **SHOULD** send a repeated `state_update` with the current state and the updated list. A repeated snapshot is not a [state transition](#state-transitions), and a repeated `idle` without a new stop reason is not a new completion.
 - **Items are announced before they are listed and finalized before they are removed.** The Agent **MUST** send a `terminal_update` for a terminal, a `tool_call_update` for a tool call, or a `subagent_update` for a child, before the first snapshot that lists it. When a terminal exits or a tool call ends, the Agent **MUST** send its `exitStatus` or final status before the snapshot that removes it.
-- **Known follow-up work is reported with the removal.** When finished background work starts new foreground work and the Agent knows this when it removes the item, the Agent **SHOULD** report `running` in the same snapshot that removes the item, or earlier. An Agent that only learns of the follow-up later, for example because the underlying agent decides after the work ends, reports `running` when that work starts. Clients cover that gap with the grace period described below.
+- **Known follow-up work is reported with the removal.** When finished background work starts new foreground work and the Agent knows this when it removes the item, the Agent **SHOULD** report `running` in the same snapshot that removes the item, or earlier. If the previous foreground work is being [cancelled](#cancellation), the follow-up waits for `idle(cancelled)`. An Agent that only learns of the follow-up later, for example because the underlying agent decides after the work ends, reports `running` when that work starts. Clients cover that gap with the grace period described below.
 - **Only background work is listed, and only once.** A terminal or tool call that foreground work is waiting on is foreground work and is not listed. Process-backed work is listed as its terminal, and the Agent **MUST NOT** also list a tool call whose only live work is a listed terminal.
 - **Unknown items still count.** An item with an unknown `type` does not invalidate the list. It still means background work is running.
 - **A background child is listed while it has anything running.** A detached child is listed while its state is not `idle`, or while its own `background` list is non-empty or not reported. An `idle` child with no background work of its own is not listed, even though it remains associated.
@@ -413,7 +413,7 @@ Clients **MAY** send `session/prompt` in any state, including while foreground w
 
 A held prompt's response stays pending until the prompt is inserted. Until then, the Client can drop it in two ways:
 
-- [`session/cancel`](#cancellation) and `session/close` drop every prompt the Agent has not inserted. The Agent answers each of them with `-32800`. Both also stop the foreground work.
+- [`session/cancel`](#cancellation) and `session/close` drop prompts the Agent has already received but not inserted. The Agent answers each of them with `-32800`. Both also stop the foreground work.
 - [`$/cancel_request`](/protocol/v2/draft/cancellation) for the prompt's request is best effort, because request cancellation is optional for the receiver. An Agent that honors it answers with `-32800` and does not insert the message. Otherwise the prompt is inserted as usual, and the response carries its `messageId`.
 
 Once a prompt is inserted, the Client cannot withdraw it. It stops the work the prompt started with `session/cancel`.
@@ -1454,6 +1454,8 @@ may carry a previous stop reason without creating another completion.
 | A pending request while other foreground work progresses       | Remain `running` and display the request independently                                                                                  |
 | A local command finishes while other foreground work continues | Remain active with no idle boundary for the individual command                                                                          |
 | Cancellation while blocked                                     | `requires_action` → cancellation cleanup → `idle(cancelled)`. After completion, late answers should not resume that work                |
+| A listed tool call finishes after foreground cancellation      | `session/cancel` → `idle(cancelled)` with the call still listed → `tool_call_update(completed)` → `idle` with `background: []`          |
+| A new prompt B arrives while foreground work A is stopping     | `session/cancel` → receive B → final updates for A → `idle(cancelled)` → `running` for B. B may already have its `messageId`.           |
 | Repeated snapshot                                              | `running, running` or `idle, idle` has one logical state, not two work intervals or completions                                         |
 | Same state with updated information                            | Apply the updated information without another state transition or completion                                                            |
 | Resume idle with an old `cancelled` stop reason                | Synchronize idle without cancelling a newer URL interaction or creating another cancellation event                                      |
@@ -1487,14 +1489,11 @@ A response can race with `session/cancel` before cancellation completes. After
 cancellation completes, the Agent **SHOULD** ignore late responses or external
 URL completions rather than use them to resume the cancelled work.
 
-After all ongoing operations have been successfully aborted and pending updates
-have been sent, the Agent **MUST** send an idle `state_update` session update
-with the `cancelled` [stop reason](#stop-reasons) if foreground work was active
-when cancellation took effect. Cancellation can finish without receiving
-answers to abandoned user-action requests.
+When cancellation stops active foreground work, the Agent **MUST** send the pending updates for that work, then an idle `state_update` with `stopReason: "cancelled"`. It does not wait for listed background work to finish or for answers to abandoned user-action requests. Updates for surviving background work can arrive before or after this idle update.
 
-If no foreground work was active when cancellation took effect, no additional
-completion update is required.
+The Agent **MUST** send that idle update before starting new foreground work in the same session, including Agent-initiated work. This orders execution, not [prompt insertion](#2-prompt-accepted). The Agent can insert and acknowledge a later prompt while cancellation is in progress. If insertion would start its work immediately, the Agent holds the prompt with its response pending instead. It **MUST NOT** reject the later prompt solely because cancellation is in progress.
+
+If the foreground work had already ended when cancellation took effect, its stop reason stands. No additional idle update is required when there was no active foreground work.
 
 <Warning>
   API client libraries and tools often throw an exception when their operation is aborted, which may otherwise be surfaced as a generic failure.
@@ -1505,6 +1504,4 @@ Agents **MUST** catch these errors and report the semantically meaningful `cance
 
 </Warning>
 
-The Agent **MAY** send `session/update` notifications with content or tool call updates after receiving the `session/cancel` notification, but it **MUST** ensure that it does so before sending the idle `state_update` session update that reports cancellation.
-
-The Client **SHOULD** still accept tool call updates received after sending `session/cancel`.
+Clients **SHOULD** continue accepting tool call updates after `session/cancel`, including updates for surviving background work after `idle(cancelled)`.

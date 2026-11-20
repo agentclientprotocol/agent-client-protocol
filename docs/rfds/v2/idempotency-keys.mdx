@@ -208,7 +208,7 @@ This audit covers the stable and unstable v2 methods. "Sending it again" means t
 
 | Method                                       | Sending it again                                                                                                                                  | Class       |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `session/cancel`                             | Does nothing on an idle session. A copy that arrives after new work has started cancels that work, so a sender must not resend it later.          | Not retried |
+| `session/cancel`                             | A later copy can cancel newer foreground work or a newly held prompt. The Client does not resend it.                                              | Not retried |
 | `$/cancel_request`                           | Receivers ignore a request ID that is unknown or already answered.                                                                                | Not retried |
 | `session/update`                             | Upserts replace state by entity ID, but chunks append, so a resent chunk duplicates content. A Client that missed updates calls `session/resume`. | Not retried |
 | `elicitation/complete`, `auth/status_update` | Reports the same state again.                                                                                                                     | Not retried |

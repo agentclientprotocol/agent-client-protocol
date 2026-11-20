@@ -50,9 +50,9 @@ foreground workflow or determine its state. The Agent applies the aggregate
 [state-transition rules](/protocol/v2/draft/prompt-lifecycle#state-transitions).
 
 On `session/cancel`, the Agent stops waiting for pending permission requests of the cancelled foreground work and **MUST** cancel each of them with `$/cancel_request`. The Agent decides which requests belong to that work. Clients **MAY** answer such a request with the `cancelled` outcome without waiting for `$/cancel_request`. After cancellation completes, Agents **SHOULD** ignore late
-answers rather than use them to resume the cancelled work. After aborting active
-foreground work and sending its final updates, the Agent **MUST** report `idle`
-with `stopReason: "cancelled"`. No additional completion update is required if
+answers rather than use them to resume the cancelled work. When cancellation stops active foreground work,
+the Agent **MUST** send that work's final updates, then report `idle` with `stopReason: "cancelled"` before starting new foreground work in the same session.
+Listed background work can continue reporting updates afterward. No additional idle update is required if
 no foreground work was active. See [Elicitation Cancellation](/protocol/v2/draft/elicitation#session-cancellation)
 for selective cancellation of related requests and external URL interactions.
 

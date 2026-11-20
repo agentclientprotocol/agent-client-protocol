@@ -7694,7 +7694,8 @@ impl McpAcpCapabilities {
     }
 }
 
-/// Notification to cancel a session's foreground work and its prompts not yet inserted.
+/// Cancels the named session's active foreground work and earlier prompts not yet inserted.
+/// It does not cancel later submissions or work in the session's latest `background` list.
 ///
 /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
 #[serde_as]
@@ -8250,7 +8251,9 @@ pub enum AgentResponse {
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum ClientNotification {
-    /// Cancels a session's foreground work and its prompts not yet inserted.
+    /// Cancels the named session's active foreground work and earlier prompts not yet inserted.
+    /// The Agent MUST answer those uninserted prompts with `-32800`. Inserted prompts still
+    /// succeed with their `messageId`. This cancellation does not cover later submissions.
     ///
     /// Work in the latest `background` list is not covered and keeps running. The
     /// Agent MAY stop background activity it does not list.
@@ -8263,21 +8266,18 @@ pub enum ClientNotification {
     /// the cancelled work and treat them as not approved. It MUST cancel each of them
     /// with `$/cancel_request`.
     ///
-    /// After all ongoing operations have been successfully aborted and pending
-    /// updates have been sent, the Agent MUST send an idle `state_update` session
-    /// update with the `cancelled` stop reason if cancellation ended active
-    /// foreground work. No additional completion update is required if no
-    /// foreground work was active.
+    /// When cancellation stops active foreground work, the Agent MUST send that work's
+    /// pending updates, then an idle `state_update` with `stopReason: "cancelled"`,
+    /// before starting new foreground work in the same session. A later prompt can be
+    /// inserted and acknowledged before that idle update, or held with its response
+    /// pending. Listed background work can report updates before or after it.
+    /// No additional idle update is required if no foreground work was active.
     ///
     /// After cancellation completes, the Agent SHOULD ignore late answers rather
     /// than use them to resume the cancelled work.
     ///
     /// Agents MUST catch errors caused by aborting cancelled work and report the
     /// `cancelled` stop reason, not `error`.
-    ///
-    /// The Agent MAY send content or tool call updates after receiving
-    /// `session/cancel`, but MUST send them before the idle `state_update` that
-    /// reports cancellation.
     ///
     /// See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#cancellation)
     CancelSessionNotification(Box<CancelSessionNotification>),
