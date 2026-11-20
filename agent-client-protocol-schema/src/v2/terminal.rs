@@ -1,4 +1,4 @@
-//! Agent-owned terminal output reported for display by clients.
+//! Agent-owned terminal output reported for display by Clients.
 
 use std::{num::NonZeroU16, sync::Arc};
 
@@ -9,7 +9,7 @@ use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 use super::{AbsolutePath, Meta, apply_meta_update};
 use crate::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 
-/// Unique identifier for an agent-owned terminal within a session.
+/// Unique identifier for an Agent-owned terminal within a session.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Display, From)]
 #[serde(transparent)]
@@ -31,7 +31,7 @@ impl IntoOption<TerminalId> for &str {
     }
 }
 
-/// A display-only reference to an agent-owned terminal.
+/// A display-only reference to an Agent-owned terminal.
 ///
 /// Terminal state and output are delivered separately through
 /// `terminal_update` and `terminal_output_chunk` session updates.
@@ -44,7 +44,7 @@ impl IntoOption<TerminalId> for &str {
 pub struct Terminal {
     /// The ID of the terminal to display.
     pub terminal_id: TerminalId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -85,7 +85,7 @@ pub struct TerminalOutput {
     /// Base64-encoded replacement terminal output bytes.
     #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -115,7 +115,7 @@ impl TerminalOutput {
     }
 }
 
-/// Exit information for an agent-owned terminal.
+/// Exit information for an Agent-owned terminal.
 ///
 /// The presence of this object marks the terminal as exited, even when neither
 /// an exit code nor a signal is known.
@@ -141,7 +141,7 @@ pub struct TerminalExitStatus {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub signal: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -200,7 +200,7 @@ pub struct TerminalCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cancel: Option<TerminalCancelCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -226,7 +226,7 @@ impl TerminalCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -247,7 +247,7 @@ impl TerminalCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct TerminalCancelCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -266,7 +266,7 @@ impl TerminalCancelCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -278,7 +278,7 @@ impl TerminalCancelCapabilities {
     }
 }
 
-/// An upsert for the stored state of an agent-owned terminal.
+/// An upsert for the stored state of an Agent-owned terminal.
 ///
 /// Only `terminalId` is required. Other fields have patch
 /// semantics: omitted fields leave the stored value unchanged, `null` clears
@@ -329,7 +329,7 @@ pub struct TerminalUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub capabilities: MaybeUndefined<TerminalCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -448,7 +448,7 @@ impl TerminalUpdate {
     }
 }
 
-/// The size of an agent-owned terminal in character cells.
+/// The size of an Agent-owned terminal in character cells.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -460,7 +460,7 @@ pub struct TerminalSize {
     pub cols: NonZeroU16,
     /// Number of rows. At least 1.
     pub rows: NonZeroU16,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -483,7 +483,7 @@ impl TerminalSize {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -495,7 +495,7 @@ impl TerminalSize {
     }
 }
 
-/// A chunk of bytes appended to an agent-owned terminal's output.
+/// A chunk of bytes appended to an Agent-owned terminal's output.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -508,7 +508,7 @@ pub struct TerminalOutputChunk {
     /// Independently base64-encoded terminal output bytes.
     #[cfg_attr(feature = "schemars", schemars(extend("contentEncoding" = "base64")))]
     pub data: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This metadata is scoped to the chunk and does not patch stored metadata.

@@ -1,7 +1,7 @@
 //! Content blocks: the text, images, audio, and resources that appear in prompts,
 //! session updates, and tool call results.
 //!
-//! The content block structure is compatible with the Model Context Protocol (MCP), so agents
+//! The content block structure is compatible with the Model Context Protocol (MCP), so Agents
 //! can forward MCP tool output without converting it.
 //!
 //! See: [Content](https://agentclientprotocol.com/protocol/v2/content)
@@ -72,7 +72,7 @@ impl_media_type_option_conversion!(Cow<'_, str>);
 ///   message updates or streamed chunks
 /// - Progress updates and results from tool calls
 ///
-/// This structure is compatible with the Model Context Protocol (MCP), so agents can
+/// This structure is compatible with the Model Context Protocol (MCP), so Agents can
 /// forward content from MCP tool outputs without transformation.
 ///
 /// See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content)
@@ -83,7 +83,7 @@ impl_media_type_option_conversion!(Cow<'_, str>);
 pub enum ContentBlock {
     /// Text content. May be plain text or formatted with Markdown.
     ///
-    /// All agents MUST support text content blocks in prompts.
+    /// All Agents MUST support text content blocks in prompts.
     /// Clients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown
     /// extensions.
     Text(TextContent),
@@ -97,7 +97,7 @@ pub enum ContentBlock {
     Audio(AudioContent),
     /// References to resources that the receiver may be able to read.
     ///
-    /// All agents MUST support resource links in prompts.
+    /// All Agents MUST support resource links in prompts.
     ResourceLink(ResourceLink),
     /// Complete resource contents embedded directly in the message.
     ///
@@ -217,14 +217,14 @@ fn other_content_block_schema(schema: &mut Schema) {
 pub struct TextContent {
     /// Text payload carried by this content block.
     pub text: String,
-    /// Optional annotations that help clients decide how to display or route this content.
+    /// Optional annotations that help Clients decide how to display or route this content.
     ///
     /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -254,7 +254,7 @@ impl TextContent {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -293,14 +293,14 @@ pub struct ImageContent {
     #[cfg_attr(feature = "schemars", schemars(url))]
     #[serde(default)]
     pub uri: Option<String>,
-    /// Optional annotations that help clients decide how to display or route this content.
+    /// Optional annotations that help Clients decide how to display or route this content.
     ///
     /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -339,7 +339,7 @@ impl ImageContent {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -364,14 +364,14 @@ pub struct AudioContent {
     pub data: String,
     /// MIME type describing the encoded media payload.
     pub mime_type: MediaType,
-    /// Optional annotations that help clients decide how to display or route this content.
+    /// Optional annotations that help Clients decide how to display or route this content.
     ///
     /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -402,7 +402,7 @@ impl AudioContent {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -423,14 +423,14 @@ impl AudioContent {
 pub struct EmbeddedResource {
     /// Embedded resource payload, either text or binary data.
     pub resource: EmbeddedResourceResource,
-    /// Optional annotations that help clients decide how to display or route this content.
+    /// Optional annotations that help Clients decide how to display or route this content.
     ///
     /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -460,7 +460,7 @@ impl EmbeddedResource {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -504,7 +504,7 @@ pub struct TextResourceContents {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -535,7 +535,7 @@ impl TextResourceContents {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -568,7 +568,7 @@ pub struct BlobResourceContents {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub mime_type: Option<MediaType>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -599,7 +599,7 @@ impl BlobResourceContents {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -638,7 +638,7 @@ pub struct ResourceLink {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
-    /// Optional set of sized icons that the client can display in a user interface.
+    /// Optional set of sized icons that the Client can display in a user interface.
     ///
     /// Omitted and `null` are equivalent and mean no icons are provided.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
@@ -659,14 +659,14 @@ pub struct ResourceLink {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub size: Option<u64>,
-    /// Optional annotations that help clients decide how to display or route this content.
+    /// Optional annotations that help Clients decide how to display or route this content.
     ///
     /// Omitted and `null` are equivalent and mean no annotations are provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub annotations: Option<Annotations>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -737,7 +737,7 @@ impl ResourceLink {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -780,7 +780,7 @@ pub struct SkillReference {
     /// Required and non-null. The Agent MUST reject the prompt with `-32602`
     /// when it cannot resolve the name to a skill the user can invoke.
     pub name: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -803,7 +803,7 @@ impl SkillReference {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -841,7 +841,7 @@ pub struct Icon {
     /// Each string SHOULD be in `WxH` format (e.g., `"48x48"`, `"96x96"`) or
     /// `"any"` for scalable formats like SVG.
     ///
-    /// If not provided, the client SHOULD assume that the icon can be used at any size.
+    /// If not provided, the Client SHOULD assume that the icon can be used at any size.
     ///
     /// Omitted and `null` are equivalent and mean no sizes are specified.
     #[serde_as(deserialize_as = "DefaultOnError<Option<VecSkipError<_>>>")]
@@ -855,7 +855,7 @@ pub struct Icon {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub theme: Option<IconTheme>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -880,7 +880,7 @@ impl Icon {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -932,7 +932,7 @@ pub enum IconTheme {
     Other(String),
 }
 
-/// Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
+/// Optional annotations for the Client. The Client can use annotations to inform how objects are used or displayed
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -956,7 +956,7 @@ pub struct Annotations {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub last_modified: Option<String>,
-    /// Relative importance of this content when clients choose what to surface, from 0 (least
+    /// Relative importance of this content when Clients choose what to surface, from 0 (least
     /// important) to 1 (most important).
     ///
     /// Omitted and `null` are equivalent and mean no priority is specified.
@@ -965,7 +965,7 @@ pub struct Annotations {
     #[cfg_attr(feature = "schemars", schemars(range(min = 0, max = 1)))]
     #[serde(default)]
     pub priority: Option<f64>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1034,7 +1034,7 @@ impl Annotations {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///

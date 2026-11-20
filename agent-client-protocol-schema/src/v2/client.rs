@@ -1,7 +1,7 @@
-//! Methods and notifications the client handles/receives.
+//! Methods and notifications the Client handles/receives.
 //!
 //! This module defines the Client trait and all associated types for implementing
-//! a client that interacts with AI coding agents via the Agent Client Protocol (ACP).
+//! a Client that interacts with AI coding agents via the Agent Client Protocol (ACP).
 
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ use super::mcp::{MCP_MESSAGE_METHOD_NAME, MessageMcpRequest, MessageMcpResponse}
 
 // Session updates
 
-/// Notification containing a session update from the agent.
+/// Notification containing a session update from the Agent.
 ///
 /// Agents can send session updates at any point while the session exists.
 ///
@@ -50,7 +50,7 @@ pub struct UpdateSessionNotification {
     pub session_id: SessionId,
     /// The actual update content.
     pub update: SessionUpdate,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -73,7 +73,7 @@ impl UpdateSessionNotification {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -101,26 +101,26 @@ pub enum SessionUpdate {
     /// A user message has been created or updated.
     ///
     /// Agents can send this when they accept or replay a user message. When a
-    /// client receives another `user_message` update with the same `messageId`,
+    /// Client receives another `user_message` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "upsert", "target": "userMessage", "id": "messageId"}]})))]
     UserMessage(UserMessage),
-    /// A chunk of the agent's response being streamed.
+    /// A chunk of the Agent's response being streamed.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "append", "target": "agentMessage", "id": "messageId", "field": "content", "value": "content"}]})))]
     AgentMessageChunk(ContentChunk),
-    /// An agent message has been created or updated.
+    /// An Agent message has been created or updated.
     ///
-    /// Agents can send this in addition to streamed chunks. When a client
+    /// Agents can send this in addition to streamed chunks. When a Client
     /// receives another `agent_message` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "upsert", "target": "agentMessage", "id": "messageId"}]})))]
     AgentMessage(AgentMessage),
-    /// A chunk of the agent's internal reasoning being streamed.
+    /// A chunk of the Agent's internal reasoning being streamed.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "append", "target": "agentThought", "id": "messageId", "field": "content", "value": "content"}]})))]
     AgentThoughtChunk(ContentChunk),
-    /// An agent thought or reasoning message has been created or updated.
+    /// An Agent thought or reasoning message has been created or updated.
     ///
-    /// Agents can send this in addition to streamed chunks. When a client
+    /// Agents can send this in addition to streamed chunks. When a Client
     /// receives another `agent_thought` update with the same `messageId`,
     /// fields in the new update patch the previous fields for that message.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "upsert", "target": "agentThought", "id": "messageId"}]})))]
@@ -134,10 +134,10 @@ pub enum SessionUpdate {
     /// A tool call has been created or updated.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "upsert", "target": "toolCall", "id": "toolCallId"}]})))]
     ToolCallUpdate(ToolCallUpdate),
-    /// An agent-owned terminal has been created or updated.
+    /// An Agent-owned terminal has been created or updated.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "upsert", "target": "terminal", "id": "terminalId"}]})))]
     TerminalUpdate(TerminalUpdate),
-    /// A chunk of bytes appended to an agent-owned terminal's output.
+    /// A chunk of bytes appended to an Agent-owned terminal's output.
     #[cfg_attr(feature = "schemars", schemars(extend("x-state" = {"session": [{"action": "append", "target": "terminal", "id": "terminalId", "field": "output.data", "value": "data"}]})))]
     TerminalOutputChunk(TerminalOutputChunk),
     /// A content update for a plan identified by ID.
@@ -238,7 +238,7 @@ pub struct SessionMessageChunk {
     pub message_id: MessageId,
     /// A single content block appended to the message.
     pub content: ContentBlock,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This metadata is scoped to the chunk and does not patch stored metadata.
@@ -317,7 +317,7 @@ pub struct SessionMessage {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -720,7 +720,7 @@ pub struct Notice {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub description: Option<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -832,7 +832,7 @@ pub struct CompactionUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub error: MaybeUndefined<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -908,7 +908,7 @@ pub struct CompactionSummaryChunk {
     pub compaction_id: CompactionId,
     /// One content block to append.
     pub content: ContentBlock,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This metadata is scoped to the chunk and does not patch stored metadata.
@@ -1008,7 +1008,7 @@ pub struct CursorUpdate {
     /// equivalent and leave the stored anchor unchanged.
     #[serde(default)]
     pub anchor: Option<CursorAnchor>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -1091,7 +1091,7 @@ pub struct CursorCapabilities {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub fork: Option<CursorForkCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1119,7 +1119,7 @@ impl CursorCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -1148,7 +1148,7 @@ impl CursorCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct CursorForkCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1171,7 +1171,7 @@ impl CursorForkCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -1202,9 +1202,9 @@ impl CursorForkCapabilities {
 pub enum CursorAnchor {
     /// The cursor is next to a user message.
     UserMessage(CursorMessageAnchor),
-    /// The cursor is next to an agent message.
+    /// The cursor is next to an Agent message.
     AgentMessage(CursorMessageAnchor),
-    /// The cursor is next to an agent thought.
+    /// The cursor is next to an Agent thought.
     AgentThought(CursorMessageAnchor),
     /// The cursor is next to a session-directed message.
     SessionMessage(CursorMessageAnchor),
@@ -1267,7 +1267,7 @@ pub struct CursorMessageAnchor {
     pub message_id: MessageId,
     /// On which side of the message the cursor is.
     pub position: CursorAnchorPosition,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1291,7 +1291,7 @@ impl CursorMessageAnchor {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -1320,7 +1320,7 @@ pub struct CursorToolCallAnchor {
     pub tool_call_id: ToolCallId,
     /// On which side of the tool call the cursor is.
     pub position: CursorAnchorPosition,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1344,7 +1344,7 @@ impl CursorToolCallAnchor {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -1373,7 +1373,7 @@ pub struct CursorCompactionAnchor {
     pub compaction_id: CompactionId,
     /// On which side of the compaction the cursor is.
     pub position: CursorAnchorPosition,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1397,7 +1397,7 @@ impl CursorCompactionAnchor {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -1517,7 +1517,7 @@ fn other_cursor_anchor_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ReplayComplete {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1634,7 +1634,7 @@ pub struct SubagentUpdate {
     /// array replaces the whole list. `[]` reports no additional directories.
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub additional_directories: MaybeUndefined<Vec<AbsolutePath>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -1682,7 +1682,7 @@ impl SubagentUpdate {
         self
     }
 
-    /// Sets, clears, or leaves unchanged the permitted client-initiated session mutations.
+    /// Sets, clears, or leaves unchanged the permitted Client-initiated session mutations.
     #[must_use]
     pub fn capabilities(
         mut self,
@@ -1744,14 +1744,14 @@ impl SubagentUpdate {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SubagentSessionCapabilities {
-    /// Permits the client to cancel this child's current work without ending
+    /// Permits the Client to cancel this child's current work without ending
     /// the session. Omitted and `null` are equivalent and mean unsupported. An object (including
     /// `{}`) means supported.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub cancel: Option<SessionCancelCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1777,7 +1777,7 @@ impl SubagentSessionCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     #[must_use]
@@ -1796,7 +1796,7 @@ impl SubagentSessionCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct SessionCancelCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -1815,7 +1815,7 @@ impl SessionCancelCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -1830,7 +1830,7 @@ impl SessionCancelCapabilities {
 /// Custom or future session update payload.
 ///
 /// This preserves the unknown `sessionUpdate` discriminator and the rest of the
-/// update object for clients that store, replay, proxy, or forward session
+/// update object for Clients that store, replay, proxy, or forward session
 /// history.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -1988,7 +1988,7 @@ pub struct ConfigOptionUpdate {
     #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub config_options: Vec<SessionConfigOption>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2010,7 +2010,7 @@ impl ConfigOptionUpdate {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2047,7 +2047,7 @@ pub struct SessionInfoUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "format" = "date-time")))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub updated_at: MaybeUndefined<String>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -2116,7 +2116,7 @@ pub struct UsageUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub cost: MaybeUndefined<Cost>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -2166,13 +2166,13 @@ impl UsageUpdate {
 
 /// A snapshot of the session's aggregate foreground activity.
 ///
-/// Foreground work is the agent's active response or workflow in the session,
+/// Foreground work is the Agent's active response or workflow in the session,
 /// including model processing, tool execution, and waiting for user action needed
-/// to continue that work. It can start with a prompt or be agent-initiated, for
+/// to continue that work. It can start with a prompt or be Agent-initiated, for
 /// example to pursue an ongoing goal or follow up on a completed background task.
-/// Either way, the agent MUST report `running` when foreground work starts,
+/// Either way, the Agent MUST report `running` when foreground work starts,
 /// or `requires_action` if it starts blocked on user action, and `idle` when it
-/// ends. The agent SHOULD include a stop reason on that idle update.
+/// ends. The Agent SHOULD include a stop reason on that idle update.
 /// Agent-initiated work does not require a prompt request or a synthetic user
 /// message.
 ///
@@ -2185,7 +2185,7 @@ impl UsageUpdate {
 /// completion, do not by themselves change this state. A permission request only
 /// warrants `requires_action` when foreground work is blocked on user action.
 ///
-/// The agent SHOULD report `requires_action` when the foreground workflow as a
+/// The Agent SHOULD report `requires_action` when the foreground workflow as a
 /// whole cannot progress without user action, including permissions or elicitations.
 /// Once reported, it MUST report `running` when progress resumes, or `idle` when
 /// work ends without resuming.
@@ -2199,7 +2199,7 @@ impl UsageUpdate {
 /// The response alone does not imply idle.
 /// Repeated snapshots are idempotent, not additional work or completions.
 /// A repeated state may carry updated information without another state transition.
-/// The agent MUST report `idle` when no foreground activity remains. Completing
+/// The Agent MUST report `idle` when no foreground activity remains. Completing
 /// an individual activity while other foreground work continues does not require
 /// an idle boundary. Local commands use the same lifecycle even without model work.
 ///
@@ -2273,7 +2273,7 @@ pub struct RunningStateUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub background: Option<Vec<BackgroundWork>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2299,7 +2299,7 @@ impl RunningStateUpdate {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2315,7 +2315,7 @@ impl RunningStateUpdate {
 ///
 /// Agents SHOULD include a `stopReason` when the idle transition ends foreground
 /// work. An idle update that does not end foreground work need not include one.
-/// Receivers treat an omitted or `null` `stopReason` as the agent not reporting one.
+/// Receivers treat an omitted or `null` `stopReason` as the Agent not reporting one.
 /// Repeated or resume snapshots may carry the last stop reason for context.
 /// They MUST NOT be counted as new completions or cancellations.
 #[serde_as]
@@ -2335,7 +2335,7 @@ pub struct IdleStateUpdate {
     ///
     /// Token usage for completed foreground work.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the agent is not reporting token
+    /// Optional. Omitted and `null` are equivalent and mean the Agent is not reporting token
     /// usage for this state update. A repeated or resume snapshot that carries it MUST NOT
     /// be counted as additional usage.
     #[cfg(feature = "unstable_end_turn_token_usage")]
@@ -2355,7 +2355,7 @@ pub struct IdleStateUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub background: Option<Vec<BackgroundWork>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2400,7 +2400,7 @@ impl IdleStateUpdate {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2429,7 +2429,7 @@ fn idle_state_update_schema(schema: &mut Schema) {
         properties.insert(
             "stopReason".into(),
             serde_json::json!({
-                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
+                "description": "Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.\n\nOptional. Omitted and `null` are equivalent and mean the Agent is not reporting a stop reason.\n\nSee protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)",
                 "type": ["string", "null"],
                 "x-deserialize-default-on-error": true
             }),
@@ -2460,7 +2460,7 @@ fn idle_state_update_schema(schema: &mut Schema) {
 /// Agents SHOULD report this state when foreground work cannot progress without
 /// user action. Pending permissions or elicitations alone do not imply this
 /// state if other foreground work can progress, or if the requests belong only
-/// to independent background activity. Once reported, agents MUST report
+/// to independent background activity. Once reported, Agents MUST report
 /// `running` when progress resumes, or `idle` if the work ends without resuming.
 /// Responding to one request does not itself imply `running`.
 #[serde_as]
@@ -2482,7 +2482,7 @@ pub struct RequiresActionStateUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub background: Option<Vec<BackgroundWork>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2508,7 +2508,7 @@ impl RequiresActionStateUpdate {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2551,7 +2551,7 @@ pub struct UnknownStateUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub background: Option<Vec<BackgroundWork>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2587,7 +2587,7 @@ impl UnknownStateUpdate {
 /// Custom or future session state payload.
 ///
 /// This preserves the unknown `state` discriminator and the rest of the state
-/// object for clients that store, replay, proxy, or forward session history.
+/// object for Clients that store, replay, proxy, or forward session history.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
@@ -2703,7 +2703,7 @@ pub enum BackgroundWork {
 pub struct BackgroundTerminal {
     /// The ID of the listed terminal.
     pub terminal_id: TerminalId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2725,7 +2725,7 @@ impl BackgroundTerminal {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2747,7 +2747,7 @@ impl BackgroundTerminal {
 pub struct BackgroundToolCall {
     /// The ID of the listed tool call.
     pub tool_call_id: ToolCallId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2769,7 +2769,7 @@ impl BackgroundToolCall {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2791,7 +2791,7 @@ impl BackgroundToolCall {
 pub struct BackgroundSubagent {
     /// The ID of the listed session.
     pub session_id: SessionId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2813,7 +2813,7 @@ impl BackgroundSubagent {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2907,7 +2907,7 @@ pub struct Cost {
     /// Unit of `amount`: an ISO 4217 currency code (e.g., "USD", "EUR") for money, or another
     /// unit such as "credits".
     pub currency: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -2930,7 +2930,7 @@ impl Cost {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -2957,7 +2957,7 @@ pub struct ContentChunk {
     pub message_id: MessageId,
     /// A single item of content
     pub content: ContentBlock,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     /// This metadata is scoped to the chunk and does not patch stored metadata.
@@ -2981,7 +2981,7 @@ impl ContentChunk {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize. This field is chunk-scoped.
     ///
@@ -3020,7 +3020,7 @@ pub struct UserMessage {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -3067,7 +3067,7 @@ impl UserMessage {
     }
 }
 
-/// An agent message upsert.
+/// An Agent message upsert.
 ///
 /// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing message content unchanged, `null` clears the
@@ -3094,7 +3094,7 @@ pub struct AgentMessage {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -3141,7 +3141,7 @@ impl AgentMessage {
     }
 }
 
-/// An agent thought or reasoning message upsert.
+/// An Agent thought or reasoning message upsert.
 ///
 /// Only `messageId` is required. `content` has patch semantics:
 /// an omitted field leaves existing thought content unchanged, `null` clears the
@@ -3168,7 +3168,7 @@ pub struct AgentThought {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub content: MaybeUndefined<Vec<ContentBlock>>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
     /// clears it. An object patches the stored metadata by top-level key: keys it omits are
     /// unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -3217,7 +3217,7 @@ impl AgentThought {
 
 /// Identifier for a message, unique among messages of the same type within a session.
 ///
-/// Each message type, such as user messages, agent messages, and agent thoughts,
+/// Each message type, such as user messages, Agent messages, and Agent thoughts,
 /// has its own ID space: messages of different types may share an ID and remain
 /// distinct messages.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3266,7 +3266,7 @@ pub struct PromptSuggestionsUpdate {
     #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub suggestions: Vec<PromptSuggestion>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -3291,7 +3291,7 @@ impl PromptSuggestionsUpdate {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -3329,7 +3329,7 @@ pub struct PromptSuggestion {
     /// or whitespace-only text.
     #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
     pub prompt: Vec<ContentBlock>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -3349,7 +3349,7 @@ impl PromptSuggestion {
         Self { prompt, meta: None }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -3369,11 +3369,11 @@ impl PromptSuggestion {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AvailableCommandsUpdate {
-    /// Commands the agent can execute.
+    /// Commands the Agent can execute.
     #[serde_as(deserialize_as = "VecSkipError<_>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-skip-invalid-items" = true)))]
     pub available_commands: Vec<AvailableCommand>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -3395,7 +3395,7 @@ impl AvailableCommandsUpdate {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -3407,7 +3407,7 @@ impl AvailableCommandsUpdate {
     }
 }
 
-/// A command the agent advertises to the client.
+/// A command the Agent advertises to the Client.
 ///
 /// The `type` field acts as the discriminator in the serialized JSON form.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -3464,7 +3464,7 @@ impl AvailableCommand {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -3602,7 +3602,7 @@ pub struct Command {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub input: Option<AvailableCommandInput>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -3633,7 +3633,7 @@ impl Command {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -3685,7 +3685,7 @@ pub struct Skill {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub path: Option<AbsolutePath>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -3718,7 +3718,7 @@ impl Skill {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -3833,7 +3833,7 @@ fn other_available_command_input_schema(schema: &mut Schema) {
 pub struct TextCommandInput {
     /// A hint to display when the input hasn't been provided yet
     pub hint: String,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -3855,7 +3855,7 @@ impl TextCommandInput {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -3871,7 +3871,7 @@ impl TextCommandInput {
 
 /// Request for user permission to proceed with an operation.
 ///
-/// Sent when the agent needs authorization before performing a sensitive operation.
+/// Sent when the Agent needs authorization before performing a sensitive operation.
 ///
 /// See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
 #[serde_as]
@@ -3910,7 +3910,7 @@ pub struct RequestPermissionRequest {
     #[cfg_attr(feature = "schemars", schemars(length(min = 1)))]
     #[serde(deserialize_with = "deserialize_permission_options")]
     pub options: Vec<PermissionOption>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -3972,7 +3972,7 @@ impl RequestPermissionRequest {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4040,7 +4040,7 @@ pub struct ToolCallPermissionSubject {
     /// notification, in the order it was received, before showing the prompt. A first-seen
     /// `toolCallId` creates the tool call.
     pub tool_call: ToolCallUpdate,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4062,7 +4062,7 @@ impl ToolCallPermissionSubject {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4096,7 +4096,7 @@ pub struct CommandPermissionSubject {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub terminal_id: Option<TerminalId>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4225,7 +4225,7 @@ pub struct PermissionOption {
     pub name: String,
     /// What selecting this option means. Clients can also use it to choose how to display the option.
     pub kind: PermissionOptionKind,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4253,7 +4253,7 @@ impl PermissionOption {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4319,7 +4319,7 @@ pub enum PermissionOptionKind {
 pub struct RequestPermissionResponse {
     /// The user's decision on the permission request.
     pub outcome: RequestPermissionOutcome,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4341,7 +4341,7 @@ impl RequestPermissionResponse {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4360,11 +4360,11 @@ impl RequestPermissionResponse {
 #[non_exhaustive]
 pub enum RequestPermissionOutcome {
     /// The request was not approved and no option was selected: the session's work was
-    /// cancelled, the user dismissed the prompt, or the client declined it by policy.
+    /// cancelled, the user dismissed the prompt, or the Client declined it by policy.
     /// Agents MUST NOT proceed with the operation.
     ///
-    /// The client answers a request the agent cancels with `$/cancel_request` with
-    /// this outcome. After sending `session/cancel`, the client MAY also send it
+    /// The Client answers a request the Agent cancels with `$/cancel_request` with
+    /// this outcome. After sending `session/cancel`, the Client MAY also send it
     /// without waiting for `$/cancel_request`, for a request it knows belongs to the
     /// cancelled foreground work.
     ///
@@ -4395,7 +4395,7 @@ pub enum RequestPermissionOutcome {
 /// Custom or future permission outcome payload.
 ///
 /// This preserves the unknown `outcome` discriminator and the rest of the
-/// outcome object for agents that store, replay, proxy, or forward permission
+/// outcome object for Agents that store, replay, proxy, or forward permission
 /// responses.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -4474,7 +4474,7 @@ fn other_request_permission_outcome_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct CancelledPermissionOutcome {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4493,7 +4493,7 @@ impl CancelledPermissionOutcome {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4521,7 +4521,7 @@ impl From<CancelledPermissionOutcome> for RequestPermissionOutcome {
 pub struct SelectedPermissionOutcome {
     /// The ID of the option the user selected from this request's `options`.
     pub option_id: PermissionOptionId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4543,7 +4543,7 @@ impl SelectedPermissionOutcome {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4557,9 +4557,9 @@ impl SelectedPermissionOutcome {
 
 // Capabilities
 
-/// Capabilities supported by the client.
+/// Capabilities supported by the Client.
 ///
-/// Advertised during initialization to inform the agent about
+/// Advertised during initialization to inform the Agent about
 /// available features and methods.
 ///
 /// See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#client-capabilities)
@@ -4570,20 +4570,20 @@ impl SelectedPermissionOutcome {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ClientCapabilities {
-    /// Authentication capabilities supported by the client.
-    /// Determines which authentication method types the agent may include
+    /// Authentication capabilities supported by the Client.
+    /// Determines which authentication method types the Agent can include
     /// in its `InitializeResponse`.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise any
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise any
     /// authentication-method extensions.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub auth: Option<ClientAuthCapabilities>,
-    /// Elicitation capabilities supported by the client.
-    /// Determines which elicitation modes the agent may use.
+    /// Elicitation capabilities supported by the Client.
+    /// Determines which elicitation modes the Agent can use.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise
     /// elicitation support.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
@@ -4593,9 +4593,9 @@ pub struct ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Session-related capabilities supported by the client.
+    /// Session-related capabilities supported by the Client.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise any
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise any
     /// session-related capabilities. This object only groups capabilities. Supplying `{}`
     /// advertises nothing.
     #[cfg(any(
@@ -4607,7 +4607,7 @@ pub struct ClientCapabilities {
     #[serde(default)]
     pub session: Option<ClientSessionCapabilities>,
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4626,8 +4626,8 @@ impl ClientCapabilities {
         Self::default()
     }
 
-    /// Authentication capabilities supported by the client.
-    /// Determines which authentication method types the agent may include
+    /// Authentication capabilities supported by the Client.
+    /// Determines which authentication method types the Agent can include
     /// in its `InitializeResponse`.
     #[must_use]
     pub fn auth(mut self, auth: impl IntoOption<ClientAuthCapabilities>) -> Self {
@@ -4635,8 +4635,8 @@ impl ClientCapabilities {
         self
     }
 
-    /// Elicitation capabilities supported by the client.
-    /// Determines which elicitation modes the agent may use.
+    /// Elicitation capabilities supported by the Client.
+    /// Determines which elicitation modes the Agent can use.
     #[must_use]
     pub fn elicitation(mut self, elicitation: impl IntoOption<ElicitationCapabilities>) -> Self {
         self.elicitation = elicitation.into_option();
@@ -4647,7 +4647,7 @@ impl ClientCapabilities {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Session-related capabilities supported by the client.
+    /// Session-related capabilities supported by the Client.
     #[cfg(any(
         feature = "unstable_prompt_suggestions",
         feature = "unstable_agent_skills"
@@ -4658,7 +4658,7 @@ impl ClientCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4674,9 +4674,9 @@ impl ClientCapabilities {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Session-related capabilities supported by the client.
+/// Session-related capabilities supported by the Client.
 ///
-/// This object only groups capabilities. Unlike the agent's `session`
+/// This object only groups capabilities. Unlike the Agent's `session`
 /// capability, it is not a support marker, and supplying `{}` advertises
 /// nothing.
 #[cfg(any(
@@ -4692,24 +4692,24 @@ impl ClientCapabilities {
 pub struct ClientSessionCapabilities {
     /// Support for `prompt_suggestions_update` session updates.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the client can offer prompt suggestions made of
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can offer prompt suggestions made of
     /// `text` and `resource_link` content blocks.
     #[cfg(feature = "unstable_prompt_suggestions")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub prompt_suggestions: Option<PromptSuggestionsCapabilities>,
-    /// Command types the client understands in addition to `command`.
+    /// Command types the Client understands in addition to `command`.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise support
     /// for any of them. This object only groups capabilities. Supplying `{}` advertises nothing.
     #[cfg(feature = "unstable_agent_skills")]
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub commands: Option<CommandsCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4743,7 +4743,7 @@ impl ClientSessionCapabilities {
         self
     }
 
-    /// Command types the client understands in addition to `command`.
+    /// Command types the Client understands in addition to `command`.
     #[cfg(feature = "unstable_agent_skills")]
     #[must_use]
     pub fn commands(mut self, commands: impl IntoOption<CommandsCapabilities>) -> Self {
@@ -4751,7 +4751,7 @@ impl ClientSessionCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4767,9 +4767,9 @@ impl ClientSessionCapabilities {
 ///
 /// This capability is not part of the spec yet, and may be removed or changed at any point.
 ///
-/// Command types the client understands in addition to `command`.
+/// Command types the Client understands in addition to `command`.
 ///
-/// Agents MUST NOT send a command type listed here unless the client
+/// Agents MUST NOT send a command type listed here unless the Client
 /// advertised it. This object only groups capabilities. Supplying `{}`
 /// advertises nothing.
 #[cfg(feature = "unstable_agent_skills")]
@@ -4782,14 +4782,14 @@ impl ClientSessionCapabilities {
 pub struct CommandsCapabilities {
     /// Support for `skill` command entries.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the agent MAY send `skill` entries in `availableCommands`. The
-    /// client invokes them with `skill` content blocks.
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+    /// Supplying `{}` means the Agent MAY send `skill` entries in `availableCommands`. The
+    /// Client invokes them with `skill` content blocks.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub skill: Option<CommandsSkillCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4816,7 +4816,7 @@ impl CommandsCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4834,8 +4834,8 @@ impl CommandsCapabilities {
 ///
 /// Client support for `skill` command entries.
 ///
-/// Supplying `{}` means the agent MAY send `skill` entries in
-/// `availableCommands`. The client invokes them with `skill` content blocks.
+/// Supplying `{}` means the Agent MAY send `skill` entries in
+/// `availableCommands`. The Client invokes them with `skill` content blocks.
 #[cfg(feature = "unstable_agent_skills")]
 #[serde_as]
 #[skip_serializing_none]
@@ -4843,7 +4843,7 @@ impl CommandsCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct CommandsSkillCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4863,7 +4863,7 @@ impl CommandsSkillCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4881,9 +4881,9 @@ impl CommandsSkillCapabilities {
 ///
 /// Client support for `prompt_suggestions_update` session updates.
 ///
-/// Supplying `{}` means the client can offer prompt suggestions made of `text`
-/// and `resource_link` content blocks. The client opts in to other content
-/// block types with the fields below. They have the same names as the agent's
+/// Supplying `{}` means the Client can offer prompt suggestions made of `text`
+/// and `resource_link` content blocks. The Client opts in to other content
+/// block types with the fields below. They have the same names as the Agent's
 /// `session.prompt` capability.
 #[cfg(feature = "unstable_prompt_suggestions")]
 #[serde_as]
@@ -4895,30 +4895,30 @@ impl CommandsSkillCapabilities {
 pub struct PromptSuggestionsCapabilities {
     /// Whether prompt suggestions may include `image` content blocks.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the client can offer suggestions that include images.
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can offer suggestions that include images.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub image: Option<PromptSuggestionsImageCapabilities>,
     /// Whether prompt suggestions may include `audio` content blocks.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the client can offer suggestions that include audio.
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can offer suggestions that include audio.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub audio: Option<PromptSuggestionsAudioCapabilities>,
     /// Whether prompt suggestions may include `resource` content blocks.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the client can offer suggestions that include
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can offer suggestions that include
     /// embedded resources.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub embedded_context: Option<PromptSuggestionsEmbeddedContextCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -4962,7 +4962,7 @@ impl PromptSuggestionsCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -4980,7 +4980,7 @@ impl PromptSuggestionsCapabilities {
 ///
 /// Capabilities for image content in prompt suggestions.
 ///
-/// Supplying `{}` means the client can offer suggestions that include images.
+/// Supplying `{}` means the Client can offer suggestions that include images.
 #[cfg(feature = "unstable_prompt_suggestions")]
 #[serde_as]
 #[skip_serializing_none]
@@ -4988,7 +4988,7 @@ impl PromptSuggestionsCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct PromptSuggestionsImageCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -5008,7 +5008,7 @@ impl PromptSuggestionsImageCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -5026,7 +5026,7 @@ impl PromptSuggestionsImageCapabilities {
 ///
 /// Capabilities for audio content in prompt suggestions.
 ///
-/// Supplying `{}` means the client can offer suggestions that include audio.
+/// Supplying `{}` means the Client can offer suggestions that include audio.
 #[cfg(feature = "unstable_prompt_suggestions")]
 #[serde_as]
 #[skip_serializing_none]
@@ -5034,7 +5034,7 @@ impl PromptSuggestionsImageCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct PromptSuggestionsAudioCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -5054,7 +5054,7 @@ impl PromptSuggestionsAudioCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -5072,7 +5072,7 @@ impl PromptSuggestionsAudioCapabilities {
 ///
 /// Capabilities for embedded resources in prompt suggestions.
 ///
-/// Supplying `{}` means the client can offer suggestions that include
+/// Supplying `{}` means the Client can offer suggestions that include
 /// `resource` content blocks.
 #[cfg(feature = "unstable_prompt_suggestions")]
 #[serde_as]
@@ -5081,7 +5081,7 @@ impl PromptSuggestionsAudioCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct PromptSuggestionsEmbeddedContextCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -5101,7 +5101,7 @@ impl PromptSuggestionsEmbeddedContextCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -5113,11 +5113,11 @@ impl PromptSuggestionsEmbeddedContextCapabilities {
     }
 }
 
-/// Authentication capabilities supported by the client.
+/// Authentication capabilities supported by the Client.
 ///
-/// Advertised during initialization to inform the agent which authentication
-/// method types the client can handle. This governs opt-in types that require
-/// additional client-side support.
+/// Advertised during initialization to inform the Agent which authentication
+/// method types the Client can handle. This governs opt-in types that require
+/// additional Client-side support.
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
@@ -5125,17 +5125,17 @@ impl PromptSuggestionsEmbeddedContextCapabilities {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ClientAuthCapabilities {
-    /// Whether the client supports `terminal` authentication methods.
+    /// Whether the Client supports `terminal` authentication methods.
     ///
-    /// Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the client can reproduce the configured agent
-    /// invocation in an interactive terminal, and the agent MAY include
+    /// Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can reproduce the configured Agent
+    /// invocation in an interactive terminal, and the Agent MAY include
     /// `terminal` entries in its authentication methods.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub terminal: Option<TerminalAuthCapabilities>,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -5154,11 +5154,11 @@ impl ClientAuthCapabilities {
         Self::default()
     }
 
-    /// Whether the client supports `terminal` authentication methods.
+    /// Whether the Client supports `terminal` authentication methods.
     ///
-    /// Omitted and `null` are equivalent and mean the client does not advertise support.
-    /// Supplying `{}` means the client can reproduce the configured agent
-    /// invocation in an interactive terminal, and the agent MAY include
+    /// Omitted and `null` are equivalent and mean the Client does not advertise support.
+    /// Supplying `{}` means the Client can reproduce the configured Agent
+    /// invocation in an interactive terminal, and the Agent MAY include
     /// `AuthMethod::Terminal` entries in its authentication methods.
     #[must_use]
     pub fn terminal(mut self, terminal: impl IntoOption<TerminalAuthCapabilities>) -> Self {
@@ -5166,7 +5166,7 @@ impl ClientAuthCapabilities {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -5180,7 +5180,7 @@ impl ClientAuthCapabilities {
 
 /// Capabilities for terminal authentication methods.
 ///
-/// Supplying `{}` means the client can reproduce the configured agent
+/// Supplying `{}` means the Client can reproduce the configured Agent
 /// invocation in an interactive terminal and supports terminal authentication
 /// methods.
 #[serde_as]
@@ -5189,7 +5189,7 @@ impl ClientAuthCapabilities {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct TerminalAuthCapabilities {
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -5208,7 +5208,7 @@ impl TerminalAuthCapabilities {
         Self::default()
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -5222,7 +5222,7 @@ impl TerminalAuthCapabilities {
 
 // Method schema
 
-/// Names of all methods that clients handle.
+/// Names of all methods that Clients handle.
 ///
 /// Provides a centralized definition of method names used in the protocol.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -5244,7 +5244,7 @@ pub struct ClientMethodNames {
     pub auth_status_update: &'static str,
 }
 
-/// Constant containing all client method names.
+/// Constant containing all Client method names.
 pub const CLIENT_METHOD_NAMES: ClientMethodNames = ClientMethodNames {
     session_update: SESSION_UPDATE_NOTIFICATION,
     session_request_permission: SESSION_REQUEST_PERMISSION_METHOD_NAME,
@@ -5268,12 +5268,12 @@ pub(crate) const ELICITATION_COMPLETE_NOTIFICATION: &str = "elicitation/complete
 #[cfg(feature = "unstable_auth_status")]
 pub(crate) const AUTH_STATUS_UPDATE_NOTIFICATION: &str = "auth/status_update";
 
-/// All possible requests that an agent can send to a client.
+/// All possible requests that an Agent can send to a Client.
 ///
 /// This enum is used internally for routing RPC requests. You typically won't need
 /// to use this directly.
 ///
-/// This enum encompasses all method calls from agent to client.
+/// This enum encompasses all method calls from Agent to Client.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -5282,12 +5282,12 @@ pub(crate) const AUTH_STATUS_UPDATE_NOTIFICATION: &str = "auth/status_update";
 pub enum AgentRequest {
     /// Requests permission from the user for an operation.
     ///
-    /// Called by the agent when it needs user authorization before executing
-    /// a potentially sensitive operation. The client should present the options
-    /// to the user and return their decision.
+    /// Called by the Agent when it needs user authorization before executing
+    /// a potentially sensitive operation. The Client presents the options
+    /// to the user and returns their decision.
     ///
-    /// After `session/cancel`, the agent stops waiting for requests of the cancelled
-    /// foreground work and MUST cancel them with `$/cancel_request`. The client
+    /// After `session/cancel`, the Agent stops waiting for requests of the cancelled
+    /// foreground work and MUST cancel them with `$/cancel_request`. The Client
     /// answers a cancelled request with the `cancelled` outcome.
     ///
     /// If the selected option has kind `reject_once` or `reject_always`, the Agent MUST NOT
@@ -5309,7 +5309,7 @@ pub enum AgentRequest {
     /// Exchanges an MCP-over-ACP message.
     #[cfg(feature = "unstable_mcp_over_acp")]
     MessageMcpRequest(Box<MessageMcpRequest>),
-    /// Handles extension method requests from the agent.
+    /// Handles extension method requests from the Agent.
     ///
     /// Allows the Agent to send an arbitrary request that is not part of the ACP spec.
     /// Extension methods are custom methods that are not part of the ACP spec.
@@ -5328,7 +5328,7 @@ impl_request_dispatch! {
     extension ExtMethodRequest(Box<ExtRequest>) => ExtMethodResponse;
 }
 
-/// All possible responses that a client can send to an agent.
+/// All possible responses that a Client can send to an Agent.
 ///
 /// This enum is used internally for routing RPC responses. You typically won't need
 /// to use this directly. The connection handles the responses automatically.
@@ -5351,7 +5351,7 @@ pub enum ClientResponse {
     ExtMethodResponse(Box<ExtResponse>),
 }
 
-/// All possible notifications that an agent can send to a client.
+/// All possible notifications that an Agent can send to a Client.
 ///
 /// This enum is used internally for routing RPC notifications. You typically won't need
 /// to use this directly.
@@ -5363,7 +5363,7 @@ pub enum ClientResponse {
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum AgentNotification {
-    /// Handles session update notifications from the agent.
+    /// Handles session update notifications from the Agent.
     ///
     /// This is a notification endpoint (no response expected) that receives
     /// updates about session activity, including message updates, message chunks,
@@ -5383,12 +5383,12 @@ pub enum AgentNotification {
     ///
     /// This capability is not part of the spec yet, and may be removed or changed at any point.
     ///
-    /// Notification that the agent's authentication state changed.
+    /// Notification that the Agent's authentication state changed.
     ///
-    /// Only sent by agents that advertise the `auth.status` capability.
+    /// Only sent by Agents that advertise the `auth.status` capability.
     #[cfg(feature = "unstable_auth_status")]
     AuthStatusUpdateNotification(Box<AuthStatusUpdateNotification>),
-    /// Handles extension notifications from the agent.
+    /// Handles extension notifications from the Agent.
     ///
     /// Allows the Agent to send an arbitrary notification that is not part of the ACP spec.
     /// Extension notifications are custom one-way messages that are not part of the ACP spec.

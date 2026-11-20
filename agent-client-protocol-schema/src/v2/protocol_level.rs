@@ -18,7 +18,7 @@ pub struct CancelRequestNotification {
     /// The ID of the request to cancel: a request that the sender of this notification issued.
     /// Receivers match it only against requests they received from that sender.
     pub request_id: RequestId,
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -40,7 +40,7 @@ impl CancelRequestNotification {
         }
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///

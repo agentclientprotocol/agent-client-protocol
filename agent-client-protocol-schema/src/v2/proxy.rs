@@ -1,6 +1,6 @@
 //! Proxy chain types: messages exchanged between a conductor and the proxies it manages.
 //!
-//! Ordinary clients and agents never send or receive these messages.
+//! Ordinary Clients and Agents never send or receive these messages.
 //! See the [Proxy Chains RFD](https://agentclientprotocol.com/rfds/proxy-chains).
 
 use std::sync::Arc;
@@ -23,9 +23,9 @@ use crate::IntoOption;
 ///
 /// A conductor sends `proxy/initialize` instead of `initialize` to every component that has a
 /// successor, which tells the component to run as a proxy. The params and the response are
-/// the same as for `initialize`. A conductor sends `initialize` to the final agent.
+/// the same as for `initialize`. A conductor sends `initialize` to the final Agent.
 ///
-/// The params carry the protocol version the conductor selected: the client's requested
+/// The params carry the protocol version the conductor selected: the Client's requested
 /// version, unless the conductor supports only a lower one. Before answering successfully,
 /// the proxy MUST forward an `initialize` request to its successor through `proxy/successor`.
 ///
@@ -129,7 +129,7 @@ pub struct ProxySuccessorRequest {
     /// message's `_meta`. It is hop-local: the conductor does not copy it into the message
     /// it unwraps.
     ///
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -159,7 +159,7 @@ impl ProxySuccessorRequest {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///
@@ -204,7 +204,7 @@ pub struct ProxySuccessorNotification {
     /// message's `_meta`. It is hop-local: the conductor does not copy it into the message
     /// it unwraps.
     ///
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
     ///
@@ -234,7 +234,7 @@ impl ProxySuccessorNotification {
         self
     }
 
-    /// The _meta property is reserved by ACP to allow clients and agents to attach additional
+    /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Implementations MUST NOT assign meaning to keys they
     /// do not recognize.
     ///

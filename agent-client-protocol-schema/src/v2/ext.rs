@@ -8,7 +8,7 @@ use crate::MaybeUndefined;
 
 /// Value attached to a given ACP type on the `_meta` field.
 ///
-/// The _meta property is reserved by ACP to allow clients and agents to attach
+/// The _meta property is reserved by ACP to allow Clients and Agents to attach
 /// additional metadata to their interactions. It is an object with string keys.
 /// Implementations MUST NOT assign meaning to keys they do not recognize.
 ///

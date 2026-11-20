@@ -133,10 +133,10 @@ impl<T: ?Sized + AsRef<OsStr>> crate::IntoMaybeUndefined<AbsolutePath> for &T {
         crate::MaybeUndefined::Value(self.into())
     }
 }
-/// A unique identifier for a conversation session between a client and agent.
+/// A unique identifier for a conversation session between a Client and Agent.
 ///
 /// Each session has its own context, conversation history, and state, so one
-/// agent can run several independent sessions.
+/// Agent can run several independent sessions.
 ///
 /// See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/session-setup#session-id)
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]

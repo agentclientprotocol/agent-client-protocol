@@ -21,17 +21,17 @@ requests from Clients and execute tasks using language models and tools.
 <a id="auth-login"></a>
 ### <span class="font-mono">auth/login</span>
 
-Authenticates the client using the specified authentication method.
+Authenticates the Client using the specified authentication method.
 
 Agents MUST support this method when their `initialize` response included
 a non-empty `authMethods` list. Clients MUST call this method only
 with a method whose type defines a protocol-driven login flow, and MUST NOT
 call it when `authMethods` was omitted or empty.
 
-Called when the agent requires authentication before allowing session creation.
-The client provides the authentication method ID that was advertised during initialization.
+Called when the Agent requires authentication before allowing session creation.
+The Client provides the authentication method ID that was advertised during initialization.
 
-After successful authentication, the client can proceed to create sessions with
+After successful authentication, the Client can proceed to create sessions with
 `session/new` without receiving a `-32000` (Authentication required) error.
 
 See protocol docs: [Authentication](https://agentclientprotocol.com/protocol/v2/authentication)
@@ -51,7 +51,7 @@ when `authMethods` was omitted or empty.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -72,7 +72,7 @@ Response to the `auth/login` method.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -90,7 +90,7 @@ a non-empty `authMethods` list. Clients MUST NOT call this method
 when `authMethods` was omitted or empty.
 
 After a successful logout, authentication-gated requests require the
-client to complete an advertised authentication flow again. There is no
+Client to complete an advertised authentication flow again. There is no
 guarantee about the behavior of already running sessions.
 
 #### <span class="font-mono">LogoutAuthRequest</span>
@@ -108,7 +108,7 @@ when `authMethods` was omitted or empty.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -125,7 +125,7 @@ Response to the `auth/logout` method.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -135,18 +135,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ### <span class="font-mono">initialize</span>
 
-Establishes the connection with a client and negotiates protocol capabilities.
+Establishes the connection with a Client and negotiates protocol capabilities.
 
 This method is called at the beginning of the connection, before any other request, to:
 
 - Negotiate the protocol version to use
-- Exchange capability information between client and agent
+- Exchange capability information between Client and Agent
 - Determine available authentication methods
 
 The Client MAY repeat it before its first other request. The latest successful
 `initialize` is authoritative.
 
-The agent should respond with its supported protocol version and capabilities.
+The Agent responds with its supported protocol version and capabilities.
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 
@@ -154,7 +154,7 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/
 
 Request parameters for the initialize method.
 
-Sent by the client to establish connection and negotiate capabilities.
+Sent by the Client to establish connection and negotiate capabilities.
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 
@@ -163,7 +163,7 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -171,7 +171,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="capabilities" type={<a href="#clientcapabilities">ClientCapabilities</a>} >
-  Capabilities supported by the client.
+  Capabilities supported by the Client.
 
     - Default: `{}`
 
@@ -180,14 +180,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Information about the implementation sending this initialize request.
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
-  The latest protocol version supported by the client.
+  The latest protocol version supported by the Client.
 </ResponseField>
 
 #### <span class="font-mono">InitializeResponse</span>
 
 Response to the `initialize` method.
 
-Contains the negotiated protocol version and agent capabilities.
+Contains the negotiated protocol version and Agent capabilities.
 
 See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/initialization)
 
@@ -196,7 +196,7 @@ See protocol docs: [Initialization](https://agentclientprotocol.com/protocol/v2/
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -204,15 +204,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="authMethods" type={<a href="#authmethod">AuthMethod[]</a>} >
-  Authentication methods supported by the agent.
+  Authentication methods supported by the Agent.
 
-Optional. Omitted or empty means the agent does not advertise the
+Optional. Omitted or empty means the Agent does not advertise the
 `auth/login` and `auth/logout` methods. Supplying one or more methods means
-the agent MUST support both `auth/login` and `auth/logout`.
+the Agent MUST support both `auth/login` and `auth/logout`.
 
 </ResponseField>
 <ResponseField name="capabilities" type={<a href="#agentcapabilities">AgentCapabilities</a>} >
-  Capabilities supported by the agent.
+  Capabilities supported by the Agent.
 
     - Default: `{}`
 
@@ -221,11 +221,11 @@ the agent MUST support both `auth/login` and `auth/logout`.
   Information about the implementation sending this initialize response.
 </ResponseField>
 <ResponseField name="protocolVersion" type={<a href="#protocolversion">ProtocolVersion</a>} required>
-  The highest protocol version supported by the agent that is at or below
-the version requested by the client. If no such version exists,
+  The highest protocol version supported by the Agent that is at or below
+the version requested by the Client. If no such version exists,
 initialization fails with error code -32022.
 
-The client MUST check that it supports this version and SHOULD disconnect
+The Client MUST check that it supports this version and SHOULD disconnect
 if it does not.
 
 </ResponseField>
@@ -275,7 +275,7 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/pr
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -323,7 +323,7 @@ has already been inserted, the Agent MUST respond successfully with its
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -343,7 +343,7 @@ Response from closing a session.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -356,7 +356,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Deletes an existing session from `session/list`.
 
-This method is only available if the agent advertises the `session.delete` capability.
+This method is only available if the Agent advertises the `session.delete` capability.
 
 #### <span class="font-mono">DeleteSessionRequest</span>
 
@@ -369,7 +369,7 @@ Only available if the Agent supports the `session.delete` capability.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -389,7 +389,7 @@ Response from deleting a session.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -400,9 +400,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <a id="session-list"></a>
 ### <span class="font-mono">session/list</span>
 
-Lists existing sessions known to the agent.
+Lists existing sessions known to the Agent.
 
-The agent should return metadata about sessions with optional filtering and pagination support.
+The Agent returns metadata about sessions, with optional filtering and pagination.
 
 #### <span class="font-mono">ListSessionsRequest</span>
 
@@ -413,7 +413,7 @@ Request parameters for listing existing sessions.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -446,7 +446,7 @@ Response from listing sessions.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -468,17 +468,17 @@ Agents SHOULD return the sessions with the most recent activity first.
 <a id="session-new"></a>
 ### <span class="font-mono">session/new</span>
 
-Creates a new conversation session with the agent.
+Creates a new conversation session with the Agent.
 
 Sessions represent independent conversation contexts with their own history and state.
 
-The agent should:
+The Agent:
 
-- Create a new session context
-- Connect to any specified MCP servers
-- Return a unique session ID for future requests
+- Creates a new session context
+- Connects to the specified MCP servers
+- Returns a unique session ID for future requests
 
-May return a `-32000` (Authentication required) error if the agent requires authentication.
+Fails with `-32000` (Authentication required) if the Agent requires authentication.
 
 See protocol docs: [Session Setup](https://agentclientprotocol.com/protocol/v2/session-setup)
 
@@ -493,7 +493,7 @@ See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -512,7 +512,7 @@ additional roots are activated for the new session.
   The working directory for this session. Must be an absolute path.
 </ResponseField>
 <ResponseField name="mcpServers" type={<a href="#mcpserver">McpServer[]</a>} >
-  List of MCP (Model Context Protocol) servers the agent should connect to.
+  List of MCP (Model Context Protocol) servers for the Agent to connect to.
 </ResponseField>
 <ResponseField name="systemPrompt" type={<><span><a href="#systemprompt">SystemPrompt</a></span><span> | null</span></>} >
   System-level instructions for the new session.
@@ -541,7 +541,7 @@ See protocol docs: [Creating a Session](https://agentclientprotocol.com/protocol
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -549,7 +549,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} >
-  Initial commands the agent can execute in this session.
+  Initial commands the Agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
 Senders MUST use an array, not `null`.
@@ -598,7 +598,7 @@ See protocol docs: [Prompt Lifecycle](https://agentclientprotocol.com/protocol/v
 
 #### <span class="font-mono">PromptRequest</span>
 
-Request parameters for sending a user prompt to the agent.
+Request parameters for sending a user prompt to the Agent.
 
 Contains the user's message and any additional context.
 
@@ -609,7 +609,7 @@ See protocol docs: [User Message](https://agentclientprotocol.com/protocol/v2/pr
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -648,12 +648,12 @@ while other variants are optionally enabled via `PromptCapabilities`.
 
 The Client MUST adapt its interface according to `PromptCapabilities`.
 
-The client MAY include referenced pieces of context as either
+The Client MAY include referenced pieces of context as either
 `resource` or `resource_link` content blocks.
 
 When available, `resource` is preferred
 as it avoids extra round-trips and allows the message to include
-pieces of context from sources the agent might not have access to.
+pieces of context from sources the Agent might not have access to.
 
 Clients MUST NOT send an empty array. Agents MAY reject one with `-32602` without
 inserting it.
@@ -668,7 +668,7 @@ inserting it.
 Response acknowledging that a user prompt was inserted into the ACP conversation.
 
 This response does not indicate that the prompt was merely received or held, nor that the
-agent has finished processing it.
+Agent has finished processing it.
 Processing and completion are reported through `state_update` session updates.
 
 Insertion is the logical addition of a user message with a message ID and a position
@@ -681,7 +681,7 @@ See protocol docs: [Prompt Accepted](https://agentclientprotocol.com/protocol/v2
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -704,8 +704,8 @@ not required to retain it. If retained and replayed, the message keeps this iden
 
 Resumes an existing session.
 
-The agent should resume the session context so that the conversation
-can continue. If `replayFrom` is set, the agent should replay
+The Agent resumes the session context so that the conversation
+can continue. If `replayFrom` is set, the Agent replays
 retained conversation history before responding.
 
 #### <span class="font-mono">ResumeSessionRequest</span>
@@ -720,7 +720,7 @@ history according to `replayFrom`.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -751,7 +751,7 @@ NOT restore servers from earlier requests.
 
 </ResponseField>
 <ResponseField name="replayFrom" type={<><span><a href="#replayfrom">ReplayFrom</a></span><span> | null</span></>} >
-  Inclusive cursor describing where conversation replay should begin.
+  Inclusive cursor describing where conversation replay begins.
 
 Optional. Omitted and `null` are equivalent, and the Agent MUST NOT replay
 previous conversation history. Replay cursors are inclusive:
@@ -782,7 +782,7 @@ session was created.
 
 Response from resuming an existing session.
 
-The agent MUST send a current `state_update` after any requested history
+The Agent MUST send a current `state_update` after any requested history
 replay and before this response, even without replay. The update reports
 foreground state after resuming. The response alone does not imply `idle`.
 
@@ -793,7 +793,7 @@ See protocol docs: [Current-State Synchronization](https://agentclientprotocol.c
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -801,7 +801,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} >
-  Current commands the agent can execute in this session.
+  Current commands the Agent can execute in this session.
 
 Optional. Omitted or empty means no initial commands are advertised.
 Senders MUST use an array, not `null`.
@@ -840,7 +840,7 @@ See protocol docs: [Session Config Options](https://agentclientprotocol.com/prot
 **Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -926,7 +926,7 @@ Response to `session/set_config_option` method.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -967,7 +967,7 @@ See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protoc
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -990,7 +990,7 @@ Response from cancelling a terminal.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1027,7 +1027,7 @@ See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/proto
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1050,7 +1050,7 @@ Response from cancelling a tool call.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1075,7 +1075,7 @@ See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/eli
 
 #### <span class="font-mono">CompleteElicitationNotification</span>
 
-Notification sent by the agent when a URL-based elicitation is complete.
+Notification sent by the Agent when a URL-based elicitation is complete.
 
 This notification is not a foreground state update.
 
@@ -1084,7 +1084,7 @@ This notification is not a foreground state update.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1104,14 +1104,14 @@ See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/eli
 
 #### <span class="font-mono">CreateElicitationRequest</span>
 
-Request from the agent to elicit structured user input.
+Request from the Agent to elicit structured user input.
 
-The agent sends this to the client to request information from the user,
+The Agent sends this to the Client to request information from the user,
 either via a form or by directing them to a URL.
 Elicitations are tied to a session (optionally a tool call) or a request.
 
 A session-scoped request follows the aggregate foreground-state contract:
-agents SHOULD report `requires_action` when the whole foreground workflow is
+Agents SHOULD report `requires_action` when the whole foreground workflow is
 blocked on user action. Once reported, they MUST report `running` when progress
 resumes, or `idle` if work ends without resuming. Independent background requests
 and request-scoped elicitations do not themselves change session state.
@@ -1128,7 +1128,7 @@ See protocol docs: [Elicitation](https://agentclientprotocol.com/protocol/v2/eli
 **Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1142,7 +1142,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 **Variants:**
 
 <ResponseField name="form" type="object">
-Form-based elicitation where the client renders a form from the provided schema.
+Form-based elicitation where the Client renders a form from the provided schema.
 
 <Expandable title="Properties">
 
@@ -1200,7 +1200,7 @@ Tied to a specific JSON-RPC request outside of a session
 </ResponseField>
 
 <ResponseField name="url" type="object">
-URL-based elicitation where the client directs the user to a URL.
+URL-based elicitation where the Client directs the user to a URL.
 
 <Expandable title="Properties">
 
@@ -1325,14 +1325,14 @@ Tied to a specific JSON-RPC request outside of a session
 
 #### <span class="font-mono">CreateElicitationResponse</span>
 
-Response from the client to an elicitation request.
+Response from the Client to an elicitation request.
 
 **Type:** Union
 
 **Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1414,12 +1414,12 @@ future ACP variants.
 
 Requests permission from the user for an operation.
 
-Called by the agent when it needs user authorization before executing
-a potentially sensitive operation. The client should present the options
-to the user and return their decision.
+Called by the Agent when it needs user authorization before executing
+a potentially sensitive operation. The Client presents the options
+to the user and returns their decision.
 
-After `session/cancel`, the agent stops waiting for requests of the cancelled
-foreground work and MUST cancel them with `$/cancel_request`. The client
+After `session/cancel`, the Agent stops waiting for requests of the cancelled
+foreground work and MUST cancel them with `$/cancel_request`. The Client
 answers a cancelled request with the `cancelled` outcome.
 
 If the selected option has kind `reject_once` or `reject_always`, the Agent MUST NOT
@@ -1434,7 +1434,7 @@ See protocol docs: [Requesting Permission](https://agentclientprotocol.com/proto
 
 Request for user permission to proceed with an operation.
 
-Sent when the agent needs authorization before performing a sensitive operation.
+Sent when the Agent needs authorization before performing a sensitive operation.
 
 See protocol docs: [Requesting Permission](https://agentclientprotocol.com/protocol/v2/tool-calls#requesting-permission)
 
@@ -1443,7 +1443,7 @@ See protocol docs: [Requesting Permission](https://agentclientprotocol.com/proto
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1488,7 +1488,7 @@ Response to a permission request.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1502,7 +1502,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <a id="session-update"></a>
 ### <span class="font-mono">session/update</span>
 
-Handles session update notifications from the agent.
+Handles session update notifications from the Agent.
 
 This is a notification endpoint (no response expected) that receives
 updates about session activity, including message updates, message chunks,
@@ -1516,7 +1516,7 @@ See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protoc
 
 #### <span class="font-mono">UpdateSessionNotification</span>
 
-Notification containing a session update from the agent.
+Notification containing a session update from the Agent.
 
 Agents can send session updates at any point while the session exists.
 
@@ -1527,7 +1527,7 @@ See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protoc
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1582,7 +1582,7 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/ca
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1605,7 +1605,7 @@ Uses the native syntax of the machine the Agent runs on, such as `/home/user/pro
 
 ## <span class="font-mono">AgentAuthCapabilities</span>
 
-Authentication-related extension capabilities supported by the agent.
+Authentication-related extension capabilities supported by the Agent.
 
 This object does not advertise support for `auth/login` or `auth/logout`.
 Those methods are advertised by a non-empty `authMethods` list in the
@@ -1616,7 +1616,7 @@ Those methods are advertised by a non-empty `authMethods` list in the
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1626,9 +1626,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">AgentCapabilities</span>
 
-Capabilities supported by the agent.
+Capabilities supported by the Agent.
 
-Advertised during initialization to inform the client about
+Advertised during initialization to inform the Client about
 available features and content types.
 
 See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#agent-capabilities)
@@ -1638,7 +1638,7 @@ See protocol docs: [Agent Capabilities](https://agentclientprotocol.com/protocol
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1646,19 +1646,19 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="auth" type={<><span><a href="#agentauthcapabilities">AgentAuthCapabilities</a></span><span> | null</span></>} >
-  Authentication-related extension capabilities supported by the agent.
+  Authentication-related extension capabilities supported by the Agent.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise any
 authentication-related extensions. This field does not advertise support
 for `auth/login` or `auth/logout`. Those methods are advertised by a
 non-empty `authMethods` list in the `initialize` response.
 
 </ResponseField>
 <ResponseField name="session" type={<><span><a href="#sessioncapabilities">SessionCapabilities</a></span><span> | null</span></>} >
-  Session capabilities supported by the agent.
+  Session capabilities supported by the Agent.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not support the
-`session/*` methods. Supplying `\{\}` means the agent supports the
+Optional. Omitted and `null` are equivalent and mean the Agent does not support the
+`session/*` methods. Supplying `\{\}` means the Agent supports the
 baseline session methods: `session/new`, `session/list`,
 `session/resume`, `session/close`, `session/prompt`, `session/cancel`,
 and `session/update`.
@@ -1667,7 +1667,7 @@ and `session/update`.
 
 ## <span class="font-mono">AgentMessage</span>
 
-An agent message upsert.
+An Agent message upsert.
 
 Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing message content unchanged, `null` clears the
@@ -1686,7 +1686,7 @@ content.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -1705,7 +1705,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 
 ## <span class="font-mono">AgentThought</span>
 
-An agent thought or reasoning message upsert.
+An Agent thought or reasoning message upsert.
 
 Only `messageId` is required. `content` has patch semantics:
 an omitted field leaves existing thought content unchanged, `null` clears the
@@ -1724,7 +1724,7 @@ content.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -1743,14 +1743,14 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 
 ## <span class="font-mono">Annotations</span>
 
-Optional annotations for the client. The client can use annotations to inform how objects are used or displayed
+Optional annotations for the Client. The Client can use annotations to inform how objects are used or displayed
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1772,7 +1772,7 @@ Omitted and `null` are equivalent and mean the modification time is not reported
 
 </ResponseField>
 <ResponseField name="priority" type={"number | null"} >
-  Relative importance of this content when clients choose what to surface, from 0 (least
+  Relative importance of this content when Clients choose what to surface, from 0 (least
 important) to 1 (most important).
 
 Omitted and `null` are equivalent and mean no priority is specified.
@@ -1793,7 +1793,7 @@ Audio provided to or from an LLM.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1801,7 +1801,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -1825,13 +1825,13 @@ The `type` field acts as the discriminator in the serialized JSON form.
 **Type:** Union
 
 <ResponseField name="terminal" type="object">
-Client runs the configured agent program as a separate interactive
+Client runs the configured Agent program as a separate interactive
 process, without passing this method to `auth/login`.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1839,7 +1839,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
-  Additional arguments to append to the configured agent invocation for terminal auth.
+  Additional arguments to append to the configured Agent invocation for terminal auth.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable description of this authentication method.
@@ -1848,7 +1848,7 @@ Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
-  Additional environment variables to set on the configured agent invocation for terminal auth.
+  Additional environment variables to set on the configured Agent invocation for terminal auth.
 Names SHOULD be unique, and otherwise the last entry wins. These values override
 same-named variables in the base launch configuration.
 </ResponseField>
@@ -1873,7 +1873,7 @@ The `type` discriminator value is `agent`.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1941,7 +1941,7 @@ The `type` discriminator value is `agent`.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1971,18 +1971,18 @@ Typed identifier used for auth method values on the wire.
 
 Terminal-based authentication method.
 
-The client runs the configured agent program as a separate interactive
+The Client runs the configured Agent program as a separate interactive
 process for the user to authenticate via a TUI. Agents MUST advertise this
-method only when the client enabled its terminal authentication capability.
+method only when the Client enabled its terminal authentication capability.
 A zero exit status signals success. Any other termination signals failure.
-The client MUST NOT pass this method to `auth/login`.
+The Client MUST NOT pass this method to `auth/login`.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -1990,7 +1990,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="args" type={<><span>"string"</span><span>[]</span></>} >
-  Additional arguments to append to the configured agent invocation for terminal auth.
+  Additional arguments to append to the configured Agent invocation for terminal auth.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable description of this authentication method.
@@ -1999,7 +1999,7 @@ Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="env" type={<a href="#envvariable">EnvVariable[]</a>} >
-  Additional environment variables to set on the configured agent invocation for terminal auth.
+  Additional environment variables to set on the configured Agent invocation for terminal auth.
 Names SHOULD be unique, and otherwise the last entry wins. These values override
 same-named variables in the base launch configuration.
 </ResponseField>
@@ -2012,7 +2012,7 @@ same-named variables in the base launch configuration.
 
 ## <span class="font-mono">AvailableCommand</span>
 
-A command the agent advertises to the client.
+A command the Agent advertises to the Client.
 
 The `type` field acts as the discriminator in the serialized JSON form.
 
@@ -2024,7 +2024,7 @@ A slash command the user can invoke by including it in a prompt.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2097,7 +2097,7 @@ All text after the command name and the whitespace following it is provided as i
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2149,7 +2149,7 @@ Available commands are ready or have changed
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2157,7 +2157,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} required>
-  Commands the agent can execute.
+  Commands the Agent can execute.
 </ResponseField>
 
 ## <span class="font-mono">BackgroundSubagent</span>
@@ -2169,7 +2169,7 @@ A listed subagent session associated with this session through `subagent_update`
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2189,7 +2189,7 @@ A listed terminal running in the background.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2209,7 +2209,7 @@ A listed tool call whose work continues in the background.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2241,7 +2241,7 @@ Live until its `terminal_update` reports `exitStatus`.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2266,7 +2266,7 @@ stay listed.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2290,7 +2290,7 @@ its own `background` list is non-empty or not reported.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2340,7 +2340,7 @@ Binary resource contents.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2375,7 +2375,7 @@ Schema for boolean properties in an elicitation form.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2410,7 +2410,7 @@ The request was not approved and no option was selected.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2420,18 +2420,18 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">ClientAuthCapabilities</span>
 
-Authentication capabilities supported by the client.
+Authentication capabilities supported by the Client.
 
-Advertised during initialization to inform the agent which authentication
-method types the client can handle. This governs opt-in types that require
-additional client-side support.
+Advertised during initialization to inform the Agent which authentication
+method types the Client can handle. This governs opt-in types that require
+additional Client-side support.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2439,20 +2439,20 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="terminal" type={<><span><a href="#terminalauthcapabilities">TerminalAuthCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports `terminal` authentication methods.
+  Whether the Client supports `terminal` authentication methods.
 
-Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-Supplying `\{\}` means the client can reproduce the configured agent
-invocation in an interactive terminal, and the agent MAY include
+Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+Supplying `\{\}` means the Client can reproduce the configured Agent
+invocation in an interactive terminal, and the Agent MAY include
 `terminal` entries in its authentication methods.
 
 </ResponseField>
 
 ## <span class="font-mono">ClientCapabilities</span>
 
-Capabilities supported by the client.
+Capabilities supported by the Client.
 
-Advertised during initialization to inform the agent about
+Advertised during initialization to inform the Agent about
 available features and methods.
 
 See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#client-capabilities)
@@ -2462,7 +2462,7 @@ See protocol docs: [Client Capabilities](https://agentclientprotocol.com/protoco
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2470,19 +2470,19 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="auth" type={<><span><a href="#clientauthcapabilities">ClientAuthCapabilities</a></span><span> | null</span></>} >
-  Authentication capabilities supported by the client.
-Determines which authentication method types the agent may include
+  Authentication capabilities supported by the Client.
+Determines which authentication method types the Agent can include
 in its `InitializeResponse`.
 
-Optional. Omitted and `null` are equivalent and mean the client does not advertise any
+Optional. Omitted and `null` are equivalent and mean the Client does not advertise any
 authentication-method extensions.
 
 </ResponseField>
 <ResponseField name="elicitation" type={<><span><a href="#elicitationcapabilities">ElicitationCapabilities</a></span><span> | null</span></>} >
-  Elicitation capabilities supported by the client.
-Determines which elicitation modes the agent may use.
+  Elicitation capabilities supported by the Client.
+Determines which elicitation modes the Agent can use.
 
-Optional. Omitted and `null` are equivalent and mean the client does not advertise
+Optional. Omitted and `null` are equivalent and mean the Client does not advertise
 elicitation support.
 
 </ResponseField>
@@ -2498,7 +2498,7 @@ The `type` discriminator value is `command`.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2530,7 +2530,7 @@ Permission request details for a command.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2596,7 +2596,7 @@ an in-progress compaction. Chunks append in receive order.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -2627,7 +2627,7 @@ stored metadata by top-level key instead of replacing it.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -2663,7 +2663,7 @@ Session configuration options have been updated.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2683,7 +2683,7 @@ Standard content block (text, images, resources).
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2705,7 +2705,7 @@ Content blocks appear in:
   message updates or streamed chunks
 - Progress updates and results from tool calls
 
-This structure is compatible with the Model Context Protocol (MCP), so agents can
+This structure is compatible with the Model Context Protocol (MCP), so Agents can
 forward content from MCP tool outputs without transformation.
 
 See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content)
@@ -2715,14 +2715,14 @@ See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content
 <ResponseField name="text" type="object">
 Text content. May be plain text or formatted with Markdown.
 
-All agents MUST support text content blocks in prompts.
+All Agents MUST support text content blocks in prompts.
 Clients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown
 extensions.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2730,7 +2730,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -2753,7 +2753,7 @@ Requires the `image` prompt capability when included in prompts.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2761,7 +2761,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -2798,7 +2798,7 @@ Requires the `audio` prompt capability when included in prompts.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2806,7 +2806,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -2830,12 +2830,12 @@ Omitted and `null` are equivalent and mean no annotations are provided.
 <ResponseField name="resource_link" type="object">
 References to resources that the receiver may be able to read.
 
-All agents MUST support resource links in prompts.
+All Agents MUST support resource links in prompts.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2843,7 +2843,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -2855,7 +2855,7 @@ Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="icons" type={<><span><a href="#icon">Icon[]</a></span><span> | null</span></>} >
-  Optional set of sized icons that the client can display in a user interface.
+  Optional set of sized icons that the Client can display in a user interface.
 
 Omitted and `null` are equivalent and mean no icons are provided.
 
@@ -2906,7 +2906,7 @@ Requires the `embeddedContext` prompt capability when included in prompts.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -2914,7 +2914,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -2965,7 +2965,7 @@ A streamed item of message content.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -2993,7 +2993,7 @@ Cost information for a session.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3024,7 +3024,7 @@ See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/tool-ca
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3049,7 +3049,7 @@ equivalent and mean no renderable patch text was provided.
 
 One file-level change described by a `Diff`.
 
-Structured change metadata lets clients identify affected files and
+Structured change metadata lets Clients identify affected files and
 operations without parsing the text patch.
 
 **Type:** Union
@@ -3057,7 +3057,7 @@ operations without parsing the text patch.
 **Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3249,7 +3249,7 @@ Renderable patch text and its format.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3349,14 +3349,14 @@ Omitted and `null` are equivalent and mean no content is provided.
 
 ## <span class="font-mono">ElicitationCapabilities</span>
 
-Elicitation capabilities supported by the client.
+Elicitation capabilities supported by the Client.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3364,17 +3364,17 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="form" type={<><span><a href="#elicitationformcapabilities">ElicitationFormCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports form-based elicitation.
+  Whether the Client supports form-based elicitation.
 
 Optional. Omitted and `null` are equivalent and mean form support is not advertised.
 Supplying `\{\}` explicitly advertises form support.
 
 </ResponseField>
 <ResponseField name="url" type={<><span><a href="#elicitationurlcapabilities">ElicitationUrlCapabilities</a></span><span> | null</span></>} >
-  Whether the client supports URL-based elicitation.
+  Whether the Client supports URL-based elicitation.
 
-Optional. Omitted and `null` are equivalent and mean the client does not advertise support.
-Supplying `\{\}` means the client supports URL-based elicitation.
+Optional. Omitted and `null` are equivalent and mean the Client does not advertise support.
+Supplying `\{\}` means the Client supports URL-based elicitation.
 
 </ResponseField>
 
@@ -3416,14 +3416,14 @@ other value.
 
 Form-based elicitation capabilities.
 
-Supplying `\{\}` means the client supports form-based elicitation.
+Supplying `\{\}` means the Client supports form-based elicitation.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3433,7 +3433,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">ElicitationFormMode</span>
 
-Form-based elicitation mode where the client renders a form from the provided schema.
+Form-based elicitation mode where the Client renders a form from the provided schema.
 
 **Type:** Union
 
@@ -3507,7 +3507,7 @@ String property (or single-select enum when `enum`/`oneOf` is set).
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3579,7 +3579,7 @@ Number (floating-point) property.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3629,7 +3629,7 @@ Integer property.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3679,7 +3679,7 @@ Boolean property.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3717,7 +3717,7 @@ Multi-select array property.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3822,7 +3822,7 @@ as required by the elicitation specification.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3869,7 +3869,7 @@ Type discriminator for elicitation schemas.
 Session-scoped elicitation, optionally tied to a specific tool call.
 
 When `toolCallId` is set, the elicitation is tied to a specific tool call.
-This is useful when an agent receives an elicitation from an MCP server
+This is useful when an Agent receives an elicitation from an MCP server
 during a tool call and needs to redirect it to the user.
 
 **Type:** Object
@@ -3891,14 +3891,14 @@ session without a specific tool call.
 
 URL-based elicitation capabilities.
 
-Supplying `\{\}` means the client supports URL-based elicitation.
+Supplying `\{\}` means the Client supports URL-based elicitation.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3908,7 +3908,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">ElicitationUrlMode</span>
 
-URL-based elicitation mode where the client directs the user to a URL.
+URL-based elicitation mode where the Client directs the user to a URL.
 
 **Type:** Union
 
@@ -3971,7 +3971,7 @@ The contents of a resource, embedded into a prompt or tool call result.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -3979,7 +3979,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -4000,7 +4000,7 @@ Text resource contents embedded directly in the message.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4032,7 +4032,7 @@ Binary resource contents embedded directly in the message.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4070,7 +4070,7 @@ A titled enum option with a const value, human-readable title, and optional desc
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4099,7 +4099,7 @@ An environment variable to set when launching a process.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4212,7 +4212,7 @@ Schema for the `data` field of an error: the shapes ACP defines, or any other va
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4235,7 +4235,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4262,7 +4262,7 @@ Details of a failure that ended active work.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -4294,7 +4294,7 @@ An HTTP header to set when making requests to the MCP server.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4317,7 +4317,7 @@ An optionally-sized icon that can be displayed in a user interface.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4335,7 +4335,7 @@ Omitted and `null` are equivalent and mean the source MIME type is used.
 Each string SHOULD be in `WxH` format (e.g., `"48x48"`, `"96x96"`) or
 `"any"` for scalable formats like SVG.
 
-If not provided, the client SHOULD assume that the icon can be used at any size.
+If not provided, the Client SHOULD assume that the icon can be used at any size.
 
 Omitted and `null` are equivalent and mean no sizes are specified.
 
@@ -4402,7 +4402,7 @@ No foreground work is active. Background activity may continue.
 
 Agents SHOULD include a `stopReason` when the idle transition ends foreground
 work. An idle update that does not end foreground work need not include one.
-Receivers treat an omitted or `null` `stopReason` as the agent not reporting one.
+Receivers treat an omitted or `null` `stopReason` as the Agent not reporting one.
 Repeated or resume snapshots may carry the last stop reason for context.
 They MUST NOT be counted as new completions or cancellations.
 
@@ -4411,7 +4411,7 @@ They MUST NOT be counted as new completions or cancellations.
 **Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4432,7 +4432,7 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting a stop reason.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
 
@@ -4454,7 +4454,7 @@ Includes locally handled commands that required no model call.
 </ResponseField>
 
 <ResponseField name="max_tokens" type="object">
-The active work ended because the agent reached the maximum number of tokens.
+The active work ended because the Agent reached the maximum number of tokens.
 
 <Expandable title="Properties">
 
@@ -4466,7 +4466,7 @@ The active work ended because the agent reached the maximum number of tokens.
 </ResponseField>
 
 <ResponseField name="max_turn_requests" type="object">
-The active work ended because the agent reached the maximum number of
+The active work ended because the Agent reached the maximum number of
 model requests for the foreground work.
 
 <Expandable title="Properties">
@@ -4479,7 +4479,7 @@ model requests for the foreground work.
 </ResponseField>
 
 <ResponseField name="refusal" type="object">
-The active work ended because the agent refused to continue.
+The active work ended because the Agent refused to continue.
 
 <Expandable title="Properties">
 
@@ -4491,11 +4491,11 @@ The active work ended because the agent refused to continue.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-The user or client chose to stop the work: via `session/cancel`, by
-closing the session, or through an interaction the agent offers, such
-as a permission option that tells the agent to stop. A child session
+The user or Client chose to stop the work: via `session/cancel`, by
+closing the session, or through an interaction the Agent offers, such
+as a permission option that tells the Agent to stop. A child session
 also reports this reason when its parent cancels its work. Other work
-the agent stops for its own reasons uses another reason, such as
+the Agent stops for its own reasons uses another reason, such as
 `error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
@@ -4524,7 +4524,7 @@ insertion, the prompt's response remains successful.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -4575,7 +4575,7 @@ An image provided to or from an LLM.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4583,7 +4583,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -4608,7 +4608,7 @@ Omitted and `null` are equivalent and mean no URI is associated with the image.
 
 ## <span class="font-mono">Implementation</span>
 
-Metadata about the implementation of the client or agent.
+Metadata about the implementation of the Client or Agent.
 Describes the name and version of an ACP implementation, with an optional
 title for UI representation.
 
@@ -4617,7 +4617,7 @@ title for UI representation.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4651,7 +4651,7 @@ Schema for integer properties in an elicitation form.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4691,14 +4691,14 @@ Optional. Omitted and `null` are equivalent and mean no title is provided.
 
 ## <span class="font-mono">McpCapabilities</span>
 
-MCP capabilities supported by the agent for session lifecycle requests.
+MCP capabilities supported by the Agent for session lifecycle requests.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4708,15 +4708,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="http" type={<><span><a href="#mcphttpcapabilities">McpHttpCapabilities</a></span><span> | null</span></>} >
   Agent supports `http` MCP servers.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports HTTP MCP server transports.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports HTTP MCP server transports.
 
 </ResponseField>
 <ResponseField name="stdio" type={<><span><a href="#mcpstdiocapabilities">McpStdioCapabilities</a></span><span> | null</span></>} >
   Agent supports `stdio` MCP servers.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports stdio MCP server transports.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports stdio MCP server transports.
 
 </ResponseField>
 
@@ -4724,14 +4724,14 @@ Supplying `\{\}` means the agent supports stdio MCP server transports.
 
 Capabilities for HTTP MCP server transports.
 
-Supplying `\{\}` means the agent supports HTTP MCP server transports.
+Supplying `\{\}` means the Agent supports HTTP MCP server transports.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4743,7 +4743,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Configuration for connecting to an MCP (Model Context Protocol) server.
 
-MCP servers provide tools and context that the agent can use when
+MCP servers provide tools and context that the Agent can use when
 processing prompts.
 
 See protocol docs: [MCP Servers](https://agentclientprotocol.com/protocol/v2/session-setup#mcp-servers)
@@ -4758,7 +4758,7 @@ Only available when the Agent capabilities include `session.mcp.http`.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4796,7 +4796,7 @@ Only available when the Agent capabilities include `session.mcp.stdio`.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4864,7 +4864,7 @@ HTTP transport configuration for MCP.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4897,7 +4897,7 @@ Stdio transport configuration for MCP.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4928,14 +4928,14 @@ Agents reject a request with a duplicate `name` with `-32602`.
 
 Capabilities for stdio MCP server transports.
 
-Supplying `\{\}` means the agent supports stdio MCP server transports.
+Supplying `\{\}` means the Agent supports stdio MCP server transports.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -4953,7 +4953,7 @@ An Internet media type identifying the format of protocol content.
 
 Identifier for a message, unique among messages of the same type within a session.
 
-Each message type, such as user messages, agent messages, and agent thoughts,
+Each message type, such as user messages, Agent messages, and Agent thoughts,
 has its own ID space: messages of different types may share an ID and remain
 distinct messages.
 
@@ -4971,7 +4971,7 @@ Multi-select string items with plain string values.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5013,7 +5013,7 @@ As in MCP, titled items omit `type` and are identified by `anyOf`.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5036,7 +5036,7 @@ Schema for multi-select (array) properties in an elicitation form.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5096,7 +5096,7 @@ See protocol docs: [Session Notices](https://agentclientprotocol.com/protocol/v2
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5154,7 +5154,7 @@ Schema for number (floating-point) properties in an elicitation form.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5201,7 +5201,7 @@ An option presented to the user when requesting permission.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5272,7 +5272,7 @@ See protocol docs: [Plan Entries](https://agentclientprotocol.com/protocol/v2/ag
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5371,7 +5371,7 @@ A plan represented as structured entries.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5398,7 +5398,7 @@ A plan represented as Markdown.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5429,7 +5429,7 @@ Removal notice for a plan identified by ID.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5449,7 +5449,7 @@ A content update for a plan identified by ID.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5472,7 +5472,7 @@ Structured plan entries.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5502,7 +5502,7 @@ The complete plan as Markdown.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5563,14 +5563,14 @@ future ACP variants.
 
 Capabilities for audio content in prompt requests.
 
-Supplying `\{\}` means the agent supports audio content in prompts.
+Supplying `\{\}` means the Agent supports audio content in prompts.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5580,16 +5580,16 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">PromptCapabilities</span>
 
-Prompt capabilities supported by the agent in `session/prompt` requests.
+Prompt capabilities supported by the Agent in `session/prompt` requests.
 
-Baseline agent functionality requires support for `text`
+Baseline Agent functionality requires support for `text`
 and `resource_link` content blocks in prompt requests.
 
-Other variants must be explicitly opted in to.
+Other content types need one of these capabilities.
 Capabilities for different types of content in prompt requests.
 
 Indicates which content types beyond the baseline (text and resource links)
-the agent can process.
+the Agent can process.
 
 See protocol docs: [Session Prompt Capabilities](https://agentclientprotocol.com/protocol/v2/initialization#session-prompt-capabilities)
 
@@ -5598,7 +5598,7 @@ See protocol docs: [Session Prompt Capabilities](https://agentclientprotocol.com
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5608,8 +5608,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 <ResponseField name="audio" type={<><span><a href="#promptaudiocapabilities">PromptAudioCapabilities</a></span><span> | null</span></>} >
   Agent supports `audio` content blocks.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports audio content in prompts.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports audio content in prompts.
 
 </ResponseField>
 <ResponseField name="embeddedContext" type={<><span><a href="#promptembeddedcontextcapabilities">PromptEmbeddedContextCapabilities</a></span><span> | null</span></>} >
@@ -5618,15 +5618,15 @@ Supplying `\{\}` means the agent supports audio content in prompts.
 When enabled, the Client is allowed to include `resource` content blocks
 in prompt requests for pieces of context that are referenced in the message.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports embedded context in prompts.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports embedded context in prompts.
 
 </ResponseField>
 <ResponseField name="image" type={<><span><a href="#promptimagecapabilities">PromptImageCapabilities</a></span><span> | null</span></>} >
   Agent supports `image` content blocks.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports image content in prompts.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports image content in prompts.
 
 </ResponseField>
 
@@ -5634,14 +5634,14 @@ Supplying `\{\}` means the agent supports image content in prompts.
 
 Capabilities for embedded context in prompt requests.
 
-Supplying `\{\}` means the agent supports embedded context in prompts.
+Supplying `\{\}` means the Agent supports embedded context in prompts.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5653,14 +5653,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Capabilities for image content in prompt requests.
 
-Supplying `\{\}` means the agent supports image content in prompts.
+Supplying `\{\}` means the Agent supports image content in prompts.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5706,7 +5706,7 @@ See protocol docs: [Replay Complete](https://agentclientprotocol.com/protocol/v2
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5716,7 +5716,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">ReplayFrom</span>
 
-Inclusive cursor describing where replayed session history should begin.
+Inclusive cursor describing where replayed session history begins.
 
 Replay includes the position identified by the cursor.
 
@@ -5728,7 +5728,7 @@ Replay all retained conversation history from its first replayable entry.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5777,7 +5777,7 @@ Inclusive replay cursor requesting replay from the start of retained conversatio
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5811,11 +5811,11 @@ The outcome of a permission request.
 
 <ResponseField name="cancelled" type="object">
 The request was not approved and no option was selected: the session's work was
-cancelled, the user dismissed the prompt, or the client declined it by policy.
+cancelled, the user dismissed the prompt, or the Client declined it by policy.
 Agents MUST NOT proceed with the operation.
 
-The client answers a request the agent cancels with `$/cancel_request` with
-this outcome. After sending `session/cancel`, the client MAY also send it
+The Client answers a request the Agent cancels with `$/cancel_request` with
+this outcome. After sending `session/cancel`, the Client MAY also send it
 without waiting for `$/cancel_request`, for a request it knows belongs to the
 cancelled foreground work.
 
@@ -5824,7 +5824,7 @@ See protocol docs: [Cancellation](https://agentclientprotocol.com/protocol/v2/pr
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5849,7 +5849,7 @@ the Agent MUST NOT treat the response as approval.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5904,7 +5904,7 @@ Permission is requested before executing a tool call.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5932,7 +5932,7 @@ Permission is requested before running a command.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -5991,7 +5991,7 @@ The foreground workflow as a whole is blocked on user action.
 Agents SHOULD report this state when foreground work cannot progress without
 user action. Pending permissions or elicitations alone do not imply this
 state if other foreground work can progress, or if the requests belong only
-to independent background activity. Once reported, agents MUST report
+to independent background activity. Once reported, Agents MUST report
 `running` when progress resumes, or `idle` if the work ends without resuming.
 Responding to one request does not itself imply `running`.
 
@@ -6000,7 +6000,7 @@ Responding to one request does not itself imply `running`.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6028,7 +6028,7 @@ A link to a resource that the receiver may be able to read, included in a prompt
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6036,7 +6036,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -6048,7 +6048,7 @@ Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="icons" type={<><span><a href="#icon">Icon[]</a></span><span> | null</span></>} >
-  Optional set of sized icons that the client can display in a user interface.
+  Optional set of sized icons that the Client can display in a user interface.
 
 Omitted and `null` are equivalent and mean no icons are provided.
 
@@ -6115,7 +6115,7 @@ Foreground work is in progress.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6143,7 +6143,7 @@ Identifies the option the user chose, whether it allows or rejects the operation
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6158,7 +6158,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Capabilities for additional session directories support.
 
-Supplying `\{\}` means the agent supports the `additionalDirectories` field on
+Supplying `\{\}` means the Agent supports the `additionalDirectories` field on
 supported session lifecycle requests. Agents MAY return
 `SessionInfo.additionalDirectories` in `session/list` to report the
 complete ordered additional-root list associated with a listed session.
@@ -6168,7 +6168,7 @@ complete ordered additional-root list associated with a listed session.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6187,7 +6187,7 @@ Supplying `\{\}` advertises support. An omitted or `null` `cancel` does not.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6197,9 +6197,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">SessionCapabilities</span>
 
-Session capabilities supported by the agent.
+Session capabilities supported by the Agent.
 
-Supplying `\{\}` means the agent supports the baseline session methods:
+Supplying `\{\}` means the Agent supports the baseline session methods:
 `session/new`, `session/list`, `session/resume`, `session/close`,
 `session/prompt`, `session/cancel`, and `session/update`.
 
@@ -6214,7 +6214,7 @@ See protocol docs: [Session Capabilities](https://agentclientprotocol.com/protoc
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6222,10 +6222,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="additionalDirectories" type={<><span><a href="#sessionadditionaldirectoriescapabilities">SessionAdditionalDirectoriesCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `additionalDirectories` on supported session lifecycle requests.
+  Whether the Agent supports `additionalDirectories` on supported session lifecycle requests.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports `additionalDirectories` on
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports `additionalDirectories` on
 supported session lifecycle requests.
 
 Agents MAY return `SessionInfo.additionalDirectories` to report the
@@ -6233,32 +6233,32 @@ complete ordered additional-root list associated with a listed session.
 
 </ResponseField>
 <ResponseField name="delete" type={<><span><a href="#sessiondeletecapabilities">SessionDeleteCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `session/delete`.
+  Whether the Agent supports `session/delete`.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports deleting sessions from `session/list`.
 
 </ResponseField>
 <ResponseField name="mcp" type={<><span><a href="#mcpcapabilities">McpCapabilities</a></span><span> | null</span></>} >
-  MCP capabilities supported by the agent for session lifecycle requests.
+  MCP capabilities supported by the Agent for session lifecycle requests.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise MCP
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise MCP
 server transport support for sessions.
 
 </ResponseField>
 <ResponseField name="prompt" type={<><span><a href="#promptcapabilities">PromptCapabilities</a></span><span> | null</span></>} >
-  Prompt capabilities supported by the agent in `session/prompt` requests.
+  Prompt capabilities supported by the Agent in `session/prompt` requests.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise any
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise any
 prompt extensions beyond the baseline text and resource-link content
 required by `session/prompt`.
 
 </ResponseField>
 <ResponseField name="systemPrompt" type={<><span><a href="#sessionsystempromptcapabilities">SessionSystemPromptCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `systemPrompt` on session lifecycle requests.
+  Whether the Agent supports `systemPrompt` on session lifecycle requests.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports `systemPrompt` in `append` mode.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports `systemPrompt` in `append` mode.
 
 </ResponseField>
 
@@ -6295,7 +6295,7 @@ A session configuration option selector and its current state.
 **Shared properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6462,7 +6462,7 @@ A group of possible values for a session configuration option.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6488,7 +6488,7 @@ A possible value for a session configuration option.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6532,14 +6532,14 @@ Unique identifier for a session configuration option value.
 
 Capabilities for the `session/delete` method.
 
-Supplying `\{\}` means the agent supports deleting sessions from `session/list`.
+Supplying `\{\}` means the Agent supports deleting sessions from `session/list`.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6549,10 +6549,10 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">SessionId</span>
 
-A unique identifier for a conversation session between a client and agent.
+A unique identifier for a conversation session between a Client and Agent.
 
 Each session has its own context, conversation history, and state, so one
-agent can run several independent sessions.
+Agent can run several independent sessions.
 
 See protocol docs: [Session ID](https://agentclientprotocol.com/protocol/v2/session-setup#session-id)
 
@@ -6567,7 +6567,7 @@ Information about a session returned by session/list
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6619,7 +6619,7 @@ top-level key.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -6654,7 +6654,7 @@ An upsert for an inter-session message.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -6712,7 +6712,7 @@ A chunk carries only content. The message's participants and references come fro
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -6739,7 +6739,7 @@ See protocol docs: [Unknown Sessions](https://agentclientprotocol.com/protocol/v
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6765,7 +6765,7 @@ referenced session received or finished any work.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6778,9 +6778,9 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">SessionSystemPromptCapabilities</span>
 
-Capabilities for client-provided system prompts.
+Capabilities for Client-provided system prompts.
 
-Supplying `\{\}` means the agent supports `systemPrompt` on session lifecycle
+Supplying `\{\}` means the Agent supports `systemPrompt` on session lifecycle
 requests in `append` mode.
 
 **Type:** Object
@@ -6788,7 +6788,7 @@ requests in `append` mode.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6796,17 +6796,17 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="mode" type={<><span><a href="#sessionsystempromptmodecapabilities">SessionSystemPromptModeCapabilities</a></span><span> | null</span></>} >
-  Delivery modes the agent supports in addition to `append`.
+  Delivery modes the Agent supports in addition to `append`.
 
-Optional. Omitted and `null` are equivalent and mean the agent supports only `append`.
+Optional. Omitted and `null` are equivalent and mean the Agent supports only `append`.
 
 </ResponseField>
 
 ## <span class="font-mono">SessionSystemPromptModeCapabilities</span>
 
-System prompt delivery modes the agent supports in addition to `append`.
+System prompt delivery modes the Agent supports in addition to `append`.
 
-`append` has no entry because every agent advertising `session.systemPrompt`
+`append` has no entry because every Agent advertising `session.systemPrompt`
 supports it.
 
 **Type:** Object
@@ -6814,7 +6814,7 @@ supports it.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6822,11 +6822,11 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="override" type={<><span><a href="#sessionsystempromptoverridecapabilities">SessionSystemPromptOverrideCapabilities</a></span><span> | null</span></>} >
-  Whether the agent supports `override` mode.
+  Whether the Agent supports `override` mode.
 
-Optional. Omitted and `null` are equivalent and mean the agent does not advertise support.
-Supplying `\{\}` means the agent supports replacing its built-in default
-instructions with the client-provided system prompt.
+Optional. Omitted and `null` are equivalent and mean the Agent does not advertise support.
+Supplying `\{\}` means the Agent supports replacing its built-in default
+instructions with the Client-provided system prompt.
 
 </ResponseField>
 
@@ -6834,15 +6834,15 @@ instructions with the client-provided system prompt.
 
 Capabilities for the `override` system prompt mode.
 
-Supplying `\{\}` means the agent supports replacing its built-in default
-instructions with the client-provided system prompt.
+Supplying `\{\}` means the Agent supports replacing its built-in default
+instructions with the Client-provided system prompt.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -6866,7 +6866,7 @@ A chunk of the user's message being streamed.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -6895,13 +6895,13 @@ Chunks for different messages can interleave.
 A user message has been created or updated.
 
 Agents can send this when they accept or replay a user message. When a
-client receives another `user_message` update with the same `messageId`,
+Client receives another `user_message` update with the same `messageId`,
 fields in the new update patch the previous fields for that message.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -6925,12 +6925,12 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 </ResponseField>
 
 <ResponseField name="agent_message_chunk" type="object">
-A chunk of the agent's response being streamed.
+A chunk of the Agent's response being streamed.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -6956,16 +6956,16 @@ Chunks for different messages can interleave.
 </ResponseField>
 
 <ResponseField name="agent_message" type="object">
-An agent message has been created or updated.
+An Agent message has been created or updated.
 
-Agents can send this in addition to streamed chunks. When a client
+Agents can send this in addition to streamed chunks. When a Client
 receives another `agent_message` update with the same `messageId`,
 fields in the new update patch the previous fields for that message.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -6989,12 +6989,12 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 </ResponseField>
 
 <ResponseField name="agent_thought_chunk" type="object">
-A chunk of the agent's internal reasoning being streamed.
+A chunk of the Agent's internal reasoning being streamed.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -7020,16 +7020,16 @@ Chunks for different messages can interleave.
 </ResponseField>
 
 <ResponseField name="agent_thought" type="object">
-An agent thought or reasoning message has been created or updated.
+An Agent thought or reasoning message has been created or updated.
 
-Agents can send this in addition to streamed chunks. When a client
+Agents can send this in addition to streamed chunks. When a Client
 receives another `agent_thought` update with the same `messageId`,
 fields in the new update patch the previous fields for that message.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7071,7 +7071,7 @@ Foreground work is in progress.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7102,7 +7102,7 @@ No foreground work is active. Background activity may continue.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7126,7 +7126,7 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting a stop reason.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
 
@@ -7150,7 +7150,7 @@ Includes locally handled commands that required no model call.
 </ResponseField>
 
 <ResponseField name="max_tokens" type="object">
-The active work ended because the agent reached the maximum number of tokens.
+The active work ended because the Agent reached the maximum number of tokens.
 
 <Expandable title="Properties">
 
@@ -7162,7 +7162,7 @@ The active work ended because the agent reached the maximum number of tokens.
 </ResponseField>
 
 <ResponseField name="max_turn_requests" type="object">
-The active work ended because the agent reached the maximum number of
+The active work ended because the Agent reached the maximum number of
 model requests for the foreground work.
 
 <Expandable title="Properties">
@@ -7175,7 +7175,7 @@ model requests for the foreground work.
 </ResponseField>
 
 <ResponseField name="refusal" type="object">
-The active work ended because the agent refused to continue.
+The active work ended because the Agent refused to continue.
 
 <Expandable title="Properties">
 
@@ -7187,11 +7187,11 @@ The active work ended because the agent refused to continue.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-The user or client chose to stop the work: via `session/cancel`, by
-closing the session, or through an interaction the agent offers, such
-as a permission option that tells the agent to stop. A child session
+The user or Client chose to stop the work: via `session/cancel`, by
+closing the session, or through an interaction the Agent offers, such
+as a permission option that tells the Agent to stop. A child session
 also reports this reason when its parent cancels its work. Other work
-the agent stops for its own reasons uses another reason, such as
+the Agent stops for its own reasons uses another reason, such as
 `error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
@@ -7220,7 +7220,7 @@ insertion, the prompt's response remains successful.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -7270,7 +7270,7 @@ Foreground work is blocked on user action.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7302,7 +7302,7 @@ This replaces previously confirmed activity without ending the work or session.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7362,7 +7362,7 @@ A chunk of tool-call content being streamed.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -7389,7 +7389,7 @@ A tool call has been created or updated.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7411,7 +7411,7 @@ the whole previous value. A new tool call starts with none.
 </ResponseField>
 <ResponseField name="kind" type={<><span><a href="#toolkind">ToolKind</a></span><span> | null</span></>} >
   The category of tool being invoked.
-Helps clients choose appropriate icons and UI treatment.
+Helps Clients choose appropriate icons and UI treatment.
 
 Omission leaves the kind unchanged, `null` resets it to `other`, and a value replaces it.
 A new tool call starts as `other`.
@@ -7419,14 +7419,14 @@ A new tool call starts as `other`.
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   File locations affected by this tool call.
-Enables "follow-along" features in clients.
+Enables "follow-along" features in Clients.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
   Programmatic name of the tool being invoked.
 
 This field is optional and has patch semantics. Omission means no
 change, `null` clears the name, and a string replaces it. For a tool
-call ID the client has not seen before, omission or `null` means that no
+call ID the Client has not seen before, omission or `null` means that no
 tool name is available.
 
 </ResponseField>
@@ -7462,12 +7462,12 @@ A new tool call starts without a title.
 </ResponseField>
 
 <ResponseField name="terminal_update" type="object">
-An agent-owned terminal has been created or updated.
+An Agent-owned terminal has been created or updated.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7514,12 +7514,12 @@ and cursor-positioned output display as the program wrote them.
 </ResponseField>
 
 <ResponseField name="terminal_output_chunk" type="object">
-A chunk of bytes appended to an agent-owned terminal's output.
+A chunk of bytes appended to an Agent-owned terminal's output.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -7550,7 +7550,7 @@ See protocol docs: [Agent Plan](https://agentclientprotocol.com/protocol/v2/agen
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7573,7 +7573,7 @@ Removal notice for a plan identified by ID.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7596,7 +7596,7 @@ Available commands are ready or have changed
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7604,7 +7604,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="availableCommands" type={<a href="#availablecommand">AvailableCommand[]</a>} required>
-  Commands the agent can execute.
+  Commands the Agent can execute.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"available_commands_update"`.
@@ -7619,7 +7619,7 @@ Session configuration options have been updated.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7642,7 +7642,7 @@ Session metadata has been updated (title, timestamps, custom metadata)
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7674,7 +7674,7 @@ Context window and cost update for the session.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7718,7 +7718,7 @@ present notices MAY ignore them.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7753,7 +7753,7 @@ A context compaction has been created or updated.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7792,7 +7792,7 @@ A content block appended to a context compaction's retained summary.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -7822,7 +7822,7 @@ this update is replayed history. Every update after it is not.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -7843,7 +7843,7 @@ that ownership association's metadata.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7916,7 +7916,7 @@ received from another session.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -7974,7 +7974,7 @@ One content block appended to a sent or received session message.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -8024,13 +8024,13 @@ future ACP variants.
 
 A snapshot of the session's aggregate foreground activity.
 
-Foreground work is the agent's active response or workflow in the session,
+Foreground work is the Agent's active response or workflow in the session,
 including model processing, tool execution, and waiting for user action needed
-to continue that work. It can start with a prompt or be agent-initiated, for
+to continue that work. It can start with a prompt or be Agent-initiated, for
 example to pursue an ongoing goal or follow up on a completed background task.
-Either way, the agent MUST report `running` when foreground work starts,
+Either way, the Agent MUST report `running` when foreground work starts,
 or `requires_action` if it starts blocked on user action, and `idle` when it
-ends. The agent SHOULD include a stop reason on that idle update.
+ends. The Agent SHOULD include a stop reason on that idle update.
 Agent-initiated work does not require a prompt request or a synthetic user
 message.
 
@@ -8043,7 +8043,7 @@ while `idle`. Those notifications, including a detached task's progress or
 completion, do not by themselves change this state. A permission request only
 warrants `requires_action` when foreground work is blocked on user action.
 
-The agent SHOULD report `requires_action` when the foreground workflow as a
+The Agent SHOULD report `requires_action` when the foreground workflow as a
 whole cannot progress without user action, including permissions or elicitations.
 Once reported, it MUST report `running` when progress resumes, or `idle` when
 work ends without resuming.
@@ -8057,7 +8057,7 @@ response. The snapshot reports foreground state after resuming.
 The response alone does not imply idle.
 Repeated snapshots are idempotent, not additional work or completions.
 A repeated state may carry updated information without another state transition.
-The agent MUST report `idle` when no foreground activity remains. Completing
+The Agent MUST report `idle` when no foreground activity remains. Completing
 an individual activity while other foreground work continues does not require
 an idle boundary. Local commands use the same lifecycle even without model work.
 
@@ -8071,7 +8071,7 @@ Foreground work is in progress.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8102,7 +8102,7 @@ No foreground work is active. Background activity may continue.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8126,7 +8126,7 @@ See protocol docs: [Background Work](https://agentclientprotocol.com/protocol/v2
 <ResponseField name="stopReason" type={"string | null"} >
   Why foreground work stopped. The value selects one of this type's variants, which may add fields of their own.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting a stop reason.
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting a stop reason.
 
 See protocol docs: [Stop Reasons](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#stop-reasons)
 
@@ -8150,7 +8150,7 @@ Includes locally handled commands that required no model call.
 </ResponseField>
 
 <ResponseField name="max_tokens" type="object">
-The active work ended because the agent reached the maximum number of tokens.
+The active work ended because the Agent reached the maximum number of tokens.
 
 <Expandable title="Properties">
 
@@ -8162,7 +8162,7 @@ The active work ended because the agent reached the maximum number of tokens.
 </ResponseField>
 
 <ResponseField name="max_turn_requests" type="object">
-The active work ended because the agent reached the maximum number of
+The active work ended because the Agent reached the maximum number of
 model requests for the foreground work.
 
 <Expandable title="Properties">
@@ -8175,7 +8175,7 @@ model requests for the foreground work.
 </ResponseField>
 
 <ResponseField name="refusal" type="object">
-The active work ended because the agent refused to continue.
+The active work ended because the Agent refused to continue.
 
 <Expandable title="Properties">
 
@@ -8187,11 +8187,11 @@ The active work ended because the agent refused to continue.
 </ResponseField>
 
 <ResponseField name="cancelled" type="object">
-The user or client chose to stop the work: via `session/cancel`, by
-closing the session, or through an interaction the agent offers, such
-as a permission option that tells the agent to stop. A child session
+The user or Client chose to stop the work: via `session/cancel`, by
+closing the session, or through an interaction the Agent offers, such
+as a permission option that tells the Agent to stop. A child session
 also reports this reason when its parent cancels its work. Other work
-the agent stops for its own reasons uses another reason, such as
+the Agent stops for its own reasons uses another reason, such as
 `error` for an internal timeout.
 
 Agents MUST report this stop reason on an idle `state_update` when
@@ -8220,7 +8220,7 @@ insertion, the prompt's response remains successful.
 <ResponseField name="error" type={<><span><a href="#error">Error</a></span><span> | null</span></>} >
   The failure, as a JSON-RPC error object.
 
-Optional. Omitted and `null` are equivalent and mean the agent is not reporting failure details.
+Optional. Omitted and `null` are equivalent and mean the Agent is not reporting failure details.
 Agents SHOULD include it.
 
 </ResponseField>
@@ -8270,7 +8270,7 @@ Foreground work is blocked on user action.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8302,7 +8302,7 @@ This replaces previously confirmed activity without ending the work or session.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8393,7 +8393,7 @@ String item schema for multi-select enum properties.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8416,7 +8416,7 @@ with `"type": "string"`.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8490,7 +8490,7 @@ See protocol docs: [Restricted methods](https://agentclientprotocol.com/protocol
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8498,7 +8498,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="cancel" type={<><span><a href="#sessioncancelcapabilities">SessionCancelCapabilities</a></span><span> | null</span></>} >
-  Permits the client to cancel this child's current work without ending
+  Permits the Client to cancel this child's current work without ending
 the session. Omitted and `null` are equivalent and mean unsupported. An object (including
 `\{\}`) means supported.
 </ResponseField>
@@ -8545,7 +8545,7 @@ See protocol docs: [Subagents](https://agentclientprotocol.com/protocol/v2/subag
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -8619,7 +8619,7 @@ error instead of creating or resuming the session.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8648,7 +8648,7 @@ treating it as `append` or `override`.
 
 ## <span class="font-mono">SystemPromptMode</span>
 
-How the Agent combines a client-provided system prompt with its own instructions.
+How the Agent combines a Client-provided system prompt with its own instructions.
 
 Unknown modes are preserved so they can be stored,
 proxied, or forwarded. An Agent MUST return an error for a mode it does not
@@ -8689,7 +8689,7 @@ future ACP variants.
 
 ## <span class="font-mono">Terminal</span>
 
-A display-only reference to an agent-owned terminal.
+A display-only reference to an Agent-owned terminal.
 
 Terminal state and output are delivered separately through
 `terminal_update` and `terminal_output_chunk` session updates.
@@ -8699,7 +8699,7 @@ Terminal state and output are delivered separately through
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8714,7 +8714,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 Capabilities for terminal authentication methods.
 
-Supplying `\{\}` means the client can reproduce the configured agent
+Supplying `\{\}` means the Client can reproduce the configured Agent
 invocation in an interactive terminal and supports terminal authentication
 methods.
 
@@ -8723,7 +8723,7 @@ methods.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8742,7 +8742,7 @@ Supplying `\{\}` advertises support. An omitted or `null` `cancel` does not.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8761,7 +8761,7 @@ See protocol docs: [Cancelling Terminals](https://agentclientprotocol.com/protoc
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8778,7 +8778,7 @@ means supported. Agents SHOULD stop advertising it once the terminal reports `ex
 
 ## <span class="font-mono">TerminalExitStatus</span>
 
-Exit information for an agent-owned terminal.
+Exit information for an Agent-owned terminal.
 
 The presence of this object marks the terminal as exited, even when neither
 an exit code nor a signal is known.
@@ -8788,7 +8788,7 @@ an exit code nor a signal is known.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8810,7 +8810,7 @@ platform-specific name. Omitted and `null` are equivalent.
 
 ## <span class="font-mono">TerminalId</span>
 
-Unique identifier for an agent-owned terminal within a session.
+Unique identifier for an Agent-owned terminal within a session.
 
 **Type:** `string`
 
@@ -8823,7 +8823,7 @@ An authoritative replacement snapshot of terminal output bytes.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8839,14 +8839,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">TerminalOutputChunk</span>
 
-A chunk of bytes appended to an agent-owned terminal's output.
+A chunk of bytes appended to an Agent-owned terminal's output.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -8866,14 +8866,14 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">TerminalSize</span>
 
-The size of an agent-owned terminal in character cells.
+The size of an Agent-owned terminal in character cells.
 
 **Type:** Object
 
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8901,7 +8901,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 ## <span class="font-mono">TerminalUpdate</span>
 
-An upsert for the stored state of an agent-owned terminal.
+An upsert for the stored state of an Agent-owned terminal.
 
 Only `terminalId` is required. Other fields have patch
 semantics: omitted fields leave the stored value unchanged, `null` clears
@@ -8914,7 +8914,7 @@ omitted fields start unknown.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -8963,7 +8963,7 @@ All text that was typed after the command name is provided as input.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8983,7 +8983,7 @@ Text provided to or from an LLM.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -8991,7 +8991,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="annotations" type={<><span><a href="#annotations">Annotations</a></span><span> | null</span></>} >
-  Optional annotations that help clients decide how to display or route this content.
+  Optional annotations that help Clients decide how to display or route this content.
 
 Omitted and `null` are equivalent and mean no annotations are provided.
 
@@ -9009,7 +9009,7 @@ Text-based resource contents.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9041,7 +9041,7 @@ Titled multi-select items use `anyOf` and omit `type`.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9063,7 +9063,7 @@ Supplying `\{\}` advertises support. An omitted or `null` `cancel` does not.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9082,7 +9082,7 @@ See protocol docs: [Cancelling Tool Calls](https://agentclientprotocol.com/proto
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9114,7 +9114,7 @@ Standard content block (text, images, resources).
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9137,7 +9137,7 @@ File modification shown as a diff.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9165,12 +9165,12 @@ equivalent and mean no renderable patch text was provided.
 </ResponseField>
 
 <ResponseField name="terminal" type="object">
-A display-only reference to an agent-owned terminal.
+A display-only reference to an Agent-owned terminal.
 
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9193,7 +9193,7 @@ A display-only reference to another session, such as a subagent.
 <Expandable title="Properties">
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9249,7 +9249,7 @@ instead.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 This metadata is scoped to the chunk and does not patch stored metadata.
@@ -9274,8 +9274,8 @@ Unique identifier for a tool call within a session.
 
 A file location being accessed or modified by a tool.
 
-Enables clients to implement "follow-along" features that track
-which files the agent is working with in real-time.
+Enables Clients to implement "follow-along" features that track
+which files the Agent is working with in real-time.
 
 See protocol docs: [Following the Agent](https://agentclientprotocol.com/protocol/v2/tool-calls#following-the-agent)
 
@@ -9284,7 +9284,7 @@ See protocol docs: [Following the Agent](https://agentclientprotocol.com/protoco
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9311,7 +9311,7 @@ Permission request details for a tool call.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9378,7 +9378,7 @@ Clients treat a tool call with an unrecognized status as still in progress.
 
 Represents an upsert for a tool call that the language model has requested.
 
-Tool calls are actions that the agent executes on behalf of the language model,
+Tool calls are actions that the Agent executes on behalf of the language model,
 such as reading files, executing code, or fetching data from external sources.
 
 Only `toolCallId` is required. Other fields have patch semantics:
@@ -9386,7 +9386,7 @@ omitted fields leave the existing tool call value unchanged, `null` clears or
 unsets the value, and concrete values replace the previous value. For
 collection fields, concrete arrays replace the previous collection, and both
 `null` and `[]` clear the collection. A concrete `_meta` object instead
-patches the stored metadata by top-level key. When a client receives a tool
+patches the stored metadata by top-level key. When a Client receives a tool
 call ID it has not seen before, omitted fields start at their protocol defaults.
 
 See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool-calls)
@@ -9396,7 +9396,7 @@ See protocol docs: [Tool Calls](https://agentclientprotocol.com/protocol/v2/tool
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -9418,7 +9418,7 @@ the whole previous value. A new tool call starts with none.
 </ResponseField>
 <ResponseField name="kind" type={<><span><a href="#toolkind">ToolKind</a></span><span> | null</span></>} >
   The category of tool being invoked.
-Helps clients choose appropriate icons and UI treatment.
+Helps Clients choose appropriate icons and UI treatment.
 
 Omission leaves the kind unchanged, `null` resets it to `other`, and a value replaces it.
 A new tool call starts as `other`.
@@ -9426,14 +9426,14 @@ A new tool call starts as `other`.
 </ResponseField>
 <ResponseField name="locations" type={<><span><a href="#toolcalllocation">ToolCallLocation[]</a></span><span> | null</span></>} >
   File locations affected by this tool call.
-Enables "follow-along" features in clients.
+Enables "follow-along" features in Clients.
 </ResponseField>
 <ResponseField name="name" type={"string | null"} >
   Programmatic name of the tool being invoked.
 
 This field is optional and has patch semantics. Omission means no
 change, `null` clears the name, and a string replaces it. For a tool
-call ID the client has not seen before, omission or `null` means that no
+call ID the Client has not seen before, omission or `null` means that no
 tool name is available.
 
 </ResponseField>
@@ -9466,7 +9466,7 @@ A new tool call starts without a title.
 
 Categories of tools that can be invoked.
 
-Tool kinds help clients choose appropriate icons and optimize how they
+Tool kinds help Clients choose appropriate icons and optimize how they
 display tool execution progress.
 
 See protocol docs: [Reporting](https://agentclientprotocol.com/protocol/v2/tool-calls#reporting)
@@ -9544,7 +9544,7 @@ for them, and Clients MUST NOT present them as confirmed live activity.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9574,7 +9574,7 @@ See protocol docs: [Version Negotiation](https://agentclientprotocol.com/protoco
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
 Implementations MUST NOT assign meaning to keys they do not recognize.
 
@@ -9597,7 +9597,7 @@ Context window and cost update for a session.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
@@ -9647,7 +9647,7 @@ content.
 **Properties:**
 
 <ResponseField name="_meta" type={"object | null"} >
-  The _meta property is reserved by ACP to allow clients and agents to attach additional
+  The _meta property is reserved by ACP to allow Clients and Agents to attach additional
 metadata to their interactions. Omitted leaves the stored metadata unchanged. `null`
 clears it. An object patches the stored metadata by top-level key: keys it omits are
 unchanged, a key set to `null` is removed, and any other value replaces that key's
