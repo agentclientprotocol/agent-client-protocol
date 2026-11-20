@@ -823,9 +823,11 @@ impl SkillReference {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Icon {
-    /// A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI.
-    /// Clients reject other schemes, fetch without credentials, and do not follow
-    /// scheme- or origin-changing redirects.
+    /// A standard URI pointing to an icon resource. May be an HTTP/HTTPS URL or a
+    /// `data:` URI with Base64-encoded image data.
+    ///
+    /// Clients MUST accept only `https:` and `data:` URIs, MUST fetch without
+    /// credentials, and MUST NOT follow redirects that change the scheme or origin.
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub src: String,
     /// Optional MIME type override if the source MIME type is missing or generic.

@@ -1060,7 +1060,7 @@
       "type": "object",
       "properties": {
         "src": {
-          "description": "A standard URI pointing to an icon resource. MUST be an `https:` or `data:` URI.\nClients reject other schemes, fetch without credentials, and do not follow\nscheme- or origin-changing redirects.",
+          "description": "A standard URI pointing to an icon resource. May be an HTTP/HTTPS URL or a\n`data:` URI with Base64-encoded image data.\n\nClients MUST accept only `https:` and `data:` URIs, MUST fetch without\ncredentials, and MUST NOT follow redirects that change the scheme or origin.",
           "type": "string",
           "format": "uri"
         },
