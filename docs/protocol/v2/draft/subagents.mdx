@@ -397,14 +397,14 @@ While a child's `capabilities.cancel` is an object, the Client **MAY** send [`se
 
 It cancels the child's foreground work, not the work of its parent or siblings. The capability governs what the Client can cancel. The Agent can cancel work it delegated at any time.
 
-- Cancellation follows the ordinary [cancellation rules](/protocol/v2/draft/prompt-lifecycle#cancellation). The Agent stops the work, sends its pending updates, and then confirms with an idle `state_update` with `stopReason: "cancelled"` on the child, mirrored in the parent's `subagent_update`. A child has no `session/prompt` response for the Client to wait for.
+- When cancellation stops the child's foreground work, the Agent sends that work's pending updates, then an idle `state_update` with `stopReason: "cancelled"` on the child, mirrored in the parent's `subagent_update`. An already-idle child needs no additional idle update. See [Cancellation](/protocol/v2/draft/prompt-lifecycle#cancellation).
 - A provider that accepts a stop command has not yet stopped the work. The Agent reports `cancelled` when it observes that the work stopped. If it can no longer observe the child, it reports [`unknown`](#unknown-state).
 - A cancellation that arrives after the work ended does not change that work's outcome.
 - Cancellation does not close the child. The parent can give it more work afterwards.
 
-Cancelling a session's foreground work, whether the session is a parent or a child, also cancels the descendant work that the cancelled work is waiting on, such as a child whose result a pending tool call needs. Whether other descendants keep running is up to the Agent. A background child that the cancelled work did not wait on can continue. A child that does not advertise `cancel` is still stopped when an ancestor's cancellation covers it. The Client learns which descendants stopped from their reported state, not from the cancellation.
+Cancelling a session's foreground work also cancels the descendant work it was waiting on, such as a child whose result a pending tool call needs. This applies even if the child does not advertise `cancel`. In each affected session, work in its latest `background` list is not covered. The Agent **MAY** stop unlisted background activity. The Client learns which descendants stopped from their reported state, not from the cancellation.
 
-To stop a background child, the Client cancels that child's session if it advertises `cancel`, or [closes](#closing-the-parent) the root session.
+A child can be listed as background work of its parent while its own foreground is `idle`. For example, a terminal in the child's `background` list can still be running. Sending `session/cancel` to the child does not stop that terminal. To stop a listed item, the Client sends `terminal/cancel` or `tool_call/cancel` with the child's `sessionId` if the item advertises its own `capabilities.cancel`. To stop the whole tree, the Client [closes the root session](#closing-the-parent).
 
 The Client **SHOULD** mark the cancelled session's unfinished tool calls as cancelled, as [Cancellation](/protocol/v2/draft/prompt-lifecycle#cancellation) describes, and skip tool calls in that session's latest `background` list and tool calls that reference a listed terminal. It **SHOULD** do the same for a descendant once that descendant reports `idle` with `stopReason: "cancelled"`. It **SHOULD** still accept later updates for those tool calls.
 
@@ -416,7 +416,7 @@ The rules for pending requests in [Cancellation](/protocol/v2/draft/prompt-lifec
 
 - When the Agent stops a session's cancelled work, it stops waiting for that work's pending permission requests and **MUST** cancel each of them with [`$/cancel_request`](/protocol/v2/draft/cancellation). This includes the requests of descendants that the cancellation stopped.
 - `session/cancel` on a parent does not resolve the requests of a child that keeps running. The user can still answer them.
-- The Client **MAY** answer a child's pending permission request with the `cancelled` outcome once that child reports `idle` with `stopReason: "cancelled"`. Before that, it leaves the request open.
+- Even without `$/cancel_request`, the Client **MAY** answer a child's pending permission request with `cancelled` once that child reports `idle` with `stopReason: "cancelled"` and the Client knows the request belonged to the cancelled work. The idle update does not cancel permission requests for surviving background work.
 - A response that arrives after the work was cancelled still resolves its request. The Agent **MUST NOT** use it to restart cancelled or abandoned work, or to permit a new task for the same child. A request **MUST NOT** get more than one response.
 - The Agent does not wait for a child's pending requests to resolve before it reports the child's state.
 

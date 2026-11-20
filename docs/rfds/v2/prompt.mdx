@@ -270,15 +270,19 @@ snapshots of aggregate foreground activity, not events for individual requests:
   prompt or command while other foreground activity continues needs no boundary.
   Local commands handled from idle still report
   an active state and `idle`, even without model work.
-- Session cancellation ends active foreground work with `idle(cancelled)`. The
-  agent stops waiting for that work's pending permission requests and cancels
+- When `session/cancel` stops active foreground work, the Agent sends that work's
+  pending updates and `idle(cancelled)` before starting new foreground work in
+  the same session. Listed background items can still report updates afterward.
+  The Agent stops waiting for the cancelled work's pending permission requests and cancels
   each of them with `$/cancel_request`. Permission requests for listed background
-  work stay open. Agents should cancel individual elicitations that the affected
+  work stay open. Agents cancel individual elicitations that the affected
   work no longer needs, not every elicitation scoped to the session.
-  Prompts the agent has not inserted, including held prompts, are answered with
-  `-32800`. After cancellation completes, agents should ignore late answers rather than
-  resume cancelled work. Repeated or resume snapshots do not cause new
-  cancellations. Cancelling idle work needs no additional completion update.
+  Earlier prompts not yet inserted get `-32800`. A new prompt received after
+  the notification can be held or inserted and acknowledged during cleanup. Its
+  foreground work waits for `idle(cancelled)`. After cancellation completes,
+  agents should ignore late answers rather than resume cancelled work. Repeated
+  or resume snapshots do not cause new cancellations. Cancelling an idle
+  session needs no additional completion update.
 
 These rules use the existing wire types. Normal completion stop reasons remain
 recommended. The cancellation stop reason is required.
@@ -366,6 +370,11 @@ The v2 schema and guides define the insertion-receipt response. The implementati
 
 The schema and serialization tests establish the wire shape. Adapters implement and validate insertion timing, live reporting for local commands, replay identity for retained messages, and reporting failures after insertion. The [foreground state contract](#foreground-state-contract) defines current-state synchronization on resume and gives guidance for cancellation races. Adapters and conformance suites should exercise the guide's traces, including concurrent requests and late answers. Those rules are separate from the insertion receipt's identity and do not require another prompt ID. Explicit queueing and steering capabilities, sender identity, safe retries, and submission idempotency guarantees remain outside this change.
 
+Two ordering cases for the [cancellation tests](/protocol/v2/prompt-lifecycle#lifecycle-examples):
+
+- With foreground work blocked on permission, send a prompt the Agent holds, then `session/cancel`, then a distinct new prompt without waiting for idle. Only the earlier held prompt gets `-32800` from that cancellation. The cancelled work's final tool update precedes `idle(cancelled)`, and the new foreground work starts after it. Do not require the new prompt's insertion receipt to follow idle.
+- Keep a listed background tool running while cancelling the foreground. Confirm that `idle(cancelled)` arrives while the tool is still listed. Let the tool finish and check that the Client applies its final status before the snapshot removing it.
+
 Status on 2026-11-18:
 
 - **The schema, tests, and docs are done.** That is steps 1 to 3 and 5 to 7.
@@ -452,6 +461,7 @@ Codex's app-server makes the same split. A failed turn ends with `turn/completed
 
 ## Revision history
 
+- 2026-11-20: Scoped the cancellation idle update to the foreground work that stopped. New foreground work waits for it, but prompt insertion and updates for surviving background work do not.
 - 2026-11-19: Matched the cancellation rule for permission requests to the spec page, pointed the retry question at the Idempotency Keys RFD, removed wording left from the proposal stage, and completed and sorted this history.
 - 2026-11-18: Recorded the status of the implementation plan.
 - 2026-10-29: Message IDs are unique per message type, not across the session. Prompts sent during active work are inserted or held in order rather than rejected, and held prompts get `-32800` on cancel.

@@ -5329,10 +5329,9 @@ pub enum AgentNotification {
     /// updates about session activity, including message updates, message chunks,
     /// tool calls, and execution plans.
     ///
-    /// Note: Clients SHOULD continue accepting tool call updates even after
-    /// sending a `session/cancel` notification, as the agent may send final
-    /// updates before reporting an idle `state_update` with the cancelled
-    /// stop reason.
+    /// Clients SHOULD continue accepting tool call updates after `session/cancel`.
+    /// Final updates for the cancelled foreground work precede the idle `state_update`
+    /// with `stopReason: "cancelled"`. Updates for surviving background work can follow it.
     ///
     /// See protocol docs: [Agent Reports Output](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle#3-agent-reports-output)
     UpdateSessionNotification(Box<UpdateSessionNotification>),
