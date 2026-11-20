@@ -113,6 +113,7 @@ An object leaves room for future cursor forms that need fields. The initial
 
 ## Revision history
 
+- 2026-11-20: Moved to Preview with the other v2 RFDs.
 - 2026-11-17: Said what a resume without replay leaves out. It reports the current state and background items and does not resynchronize other entities, so a Client that wants them resynchronized requests replay. A requirement to resend work in progress is left until Agents on remote transports need it.
 - 2026-11-17: The rule to clear an entity before replaying its chunks covers every chunked entity. It named only user, agent, and thought messages before. Session-directed messages, tool-call content, terminal output, and compaction summaries are added.
 - 2026-10-28: Replay may send current state instead of every update, and covers tool calls, terminals, and plans, not only messages.
