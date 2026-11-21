@@ -253,9 +253,10 @@ The Agent **MAY** request permission from the user before proceeding with an ope
 </ParamField>
 
 <ParamField path="description" type="string">
-  Optional explanation shown with the permission prompt. This text is separate
-  from any `toolCall` update and does not replace tool-call content. Omitted or
-  `null` means no separate permission description was provided.
+  Optional explanation shown with the permission prompt. It may contain
+  Markdown. This text is separate from any `toolCall` update and does not
+  replace tool-call content. Omitted or `null` means no separate permission
+  description was provided.
 </ParamField>
 
 <ParamField path="subject" type="RequestPermissionSubject">

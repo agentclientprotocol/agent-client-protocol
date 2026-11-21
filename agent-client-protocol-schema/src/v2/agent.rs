@@ -995,6 +995,7 @@ impl AuthMethod {
     }
 
     /// Optional human-readable description of this authentication method.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(&self) -> Option<&str> {
         match self {
@@ -1127,6 +1128,7 @@ pub struct AuthMethodAgent {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional human-readable description of this authentication method.
+    /// May contain Markdown.
     ///
     /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1158,6 +1160,7 @@ impl AuthMethodAgent {
     }
 
     /// Optional human-readable description of this authentication method.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -1195,6 +1198,7 @@ pub struct AuthMethodTerminal {
     /// Human-readable name of the authentication method.
     pub name: String,
     /// Optional human-readable description of this authentication method.
+    /// May contain Markdown.
     ///
     /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1256,6 +1260,7 @@ impl AuthMethodTerminal {
     }
 
     /// Optional human-readable description of this authentication method.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -3791,6 +3796,7 @@ pub struct SessionConfigSelectOption {
     /// Human-readable label for this option value.
     pub name: String,
     /// Optional description for this option value.
+    /// May contain Markdown.
     ///
     /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -4110,6 +4116,7 @@ pub struct SessionConfigOption {
     /// Human-readable label for the option.
     pub name: String,
     /// Optional description for the Client to display to the user.
+    /// May contain Markdown.
     ///
     /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]

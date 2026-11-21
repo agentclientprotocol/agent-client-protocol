@@ -102,7 +102,7 @@ Each command carries a required `type` discriminator. The stable type is `comman
 </ResponseField>
 
 <ResponseField name="description" type="string" required>
-  Human-readable description of what the command does
+  Human-readable description of what the command does. It may contain Markdown.
 </ResponseField>
 
 <ResponseField name="input" type="AvailableCommandInput">
@@ -191,9 +191,10 @@ Skills are delivered like other commands, in `availableCommands` in setup respon
 </ResponseField>
 
 <ResponseField name="description" type="string" required>
-  Human-readable description of what the skill does, shown to users. A skill's
-  frontmatter description is written for the model and can be long. An Agent
-  that has a shorter description meant for users **SHOULD** send that one.
+  Human-readable description of what the skill does, shown to users. It may
+  contain Markdown. A skill's frontmatter description is written for the model
+  and can be long. An Agent that has a shorter description meant for users
+  **SHOULD** send that one.
 </ResponseField>
 
 <ResponseField name="path" type="string">
