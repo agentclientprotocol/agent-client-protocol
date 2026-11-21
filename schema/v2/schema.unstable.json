@@ -9489,7 +9489,7 @@
         },
         "configOptions": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `session.options`.\n\nThe Agent applies the entries in list order, as if the Client had called\n`session/set_config_option` for each entry after the session was set up. Malformed\nentries and duplicate `configId` values fail the request with `-32602`. The Agent MUST\nignore an entry whose `configId` is unknown, whose `type` does not match the option,\nor whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries,\nand SHOULD NOT send other `session/update` notifications caused by applying them\nbefore it responds.",
-          "type": "array",
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/InitialSessionConfigOption"
           },
@@ -10024,7 +10024,7 @@
         },
         "configOptions": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the forked session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `session.options`.\n\nThe Agent applies the entries in list order on top of the configuration the fork\nstarts with, as if the Client had called `session/set_config_option` for each entry\nafter the session was set up. Malformed entries and duplicate `configId` values fail\nthe request with `-32602`. The Agent MUST ignore an entry whose `configId` is unknown,\nwhose `type` does not match the option, or whose value is not allowed when it is\napplied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries,\nand SHOULD NOT send other `session/update` notifications caused by applying them\nbefore it responds.",
-          "type": "array",
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/InitialSessionConfigOption"
           },
@@ -10124,7 +10124,7 @@
         },
         "additionalDirectories": {
           "description": "Additional workspace roots to resolve options for. Each path MUST be absolute.\n\nOptional. Omitted and `null` are equivalent to an empty list.",
-          "type": "array",
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/AbsolutePath"
           },
@@ -10239,7 +10239,7 @@
         },
         "configOptions": {
           "description": "**UNSTABLE**\n\nThis capability is not part of the spec yet, and may be removed or changed at any point.\n\nInitial values for the session's config options.\n\nOptional. Omitted and `null` are equivalent to an empty list. Clients MUST only send\nthis when the Agent advertises `session.options`.\n\nThe Agent applies the entries in list order, as if the Client had called\n`session/set_config_option` for each entry after the session was set up. Malformed\nentries and duplicate `configId` values fail the request with `-32602`. The Agent MUST\nignore an entry whose `configId` is unknown, whose `type` does not match the option,\nor whose value is not allowed when it is applied. The `configOptions` in the response contain the values the session actually\nhas. The Agent SHOULD NOT send `config_option_update` notifications for these entries\non the requesting connection. If the session is active on other connections, the\nAgent SHOULD send `config_option_update` on those connections.\n\nThe Agent applies the entries before it replays history for `replayFrom` and before\nit responds.",
-          "type": "array",
+          "type": ["array", "null"],
           "items": {
             "$ref": "#/$defs/InitialSessionConfigOption"
           },

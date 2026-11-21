@@ -1288,7 +1288,7 @@ pub struct NewSessionRequest {
     /// before it responds.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<InitialSessionConfigOption>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1516,7 +1516,7 @@ pub struct LoadSessionRequest {
     /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<InitialSessionConfigOption>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -1758,7 +1758,7 @@ pub struct ForkSessionRequest {
     /// before it responds.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<InitialSessionConfigOption>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2010,7 +2010,7 @@ pub struct ResumeSessionRequest {
     /// has. The Agent SHOULD NOT send `config_option_update` notifications for these entries.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<InitialSessionConfigOption>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow clients and agents to attach additional
@@ -2436,7 +2436,7 @@ pub struct SessionOptionsRequest {
     ///
     /// Optional. Omitted and `null` are equivalent to an empty list.
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<PathBuf>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<PathBuf>,
     /// The session to resolve options for.

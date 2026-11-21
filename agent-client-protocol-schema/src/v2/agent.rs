@@ -1334,7 +1334,7 @@ pub struct NewSessionRequest {
     /// before it responds.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<InitialSessionConfigOption>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
@@ -1603,7 +1603,7 @@ pub struct ForkSessionRequest {
     /// before it responds.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<InitialSessionConfigOption>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
@@ -1887,7 +1887,7 @@ pub struct ResumeSessionRequest {
     /// it responds.
     #[cfg(feature = "unstable_session_options")]
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<InitialSessionConfigOption>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub config_options: Vec<InitialSessionConfigOption>,
     /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
@@ -2518,7 +2518,7 @@ pub struct SessionOptionsRequest {
     ///
     /// Optional. Omitted and `null` are equivalent to an empty list.
     #[serde_as(deserialize_as = "DefaultOnNull")]
-    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-null" = true)))]
+    #[cfg_attr(feature = "schemars", schemars(with = "Option<Vec<AbsolutePath>>", extend("x-deserialize-default-on-null" = true)))]
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
     /// The session to resolve options for.
