@@ -1,0 +1,119 @@
+---
+title: "Command subject for v1 permission requests"
+---
+
+Author(s): [@hussain](https://github.com/hussain)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add an optional `subject` to the v1 `session/request_permission` request so an Agent can describe the command it wants to run in a defined place. It carries the `command` subject that v2 permission requests already define, plus the shell that will interpret the command:
+
+- `command`: the command, as the Agent will run it.
+- `cwd`: the absolute working directory.
+- `shell`: the program that will interpret `command`.
+
+The subject only describes the request. It changes neither the tool call nor what the Agent runs, and it doesn't ask Agents to request permission any more often than they do today.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+A v1 permission request carries a `toolCall`. When an Agent asks before running a command, that is an `execute` tool call, and the command itself sits in `rawInput`, whose shape each Agent defines: a string for some, an argv array for others, absent for others. Clients therefore cannot reliably tell what the user is being asked to approve. Inferring the command from `title` or `rawInput` would be brittle and implementation-specific.
+
+That matters most to Clients that answer permission requests by policy: rules the user configured, such as "allow `npm test`" or "deny anything that calls `sudo`". A person can read a title, but a rule needs the command itself, and today a v1 Client can only show a command request, never answer it by rule. The tool call can't fill the gap either, because a permission request's tool call is an update and need not carry the call's full context.
+
+v2 permission requests solve this with a `command` subject: a self-contained description of the proposed execution. v1 has nothing comparable, so a v1 Agent that wants its commands answerable by the user's rules has no standard way to say what it will run.
+
+The command alone isn't enough to act on. The same text means different things depending on the shell that reads it:
+
+| Line                       | bash                                           | PowerShell                                                            | cmd                                        |
+| -------------------------- | ---------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------ |
+| `` echo `whoami` ``        | runs `whoami`                                  | no substitution: the backtick is PowerShell's escape character        | no substitution                            |
+| `ls && rm x`               | two commands, the second if the first succeeds | a parse error in Windows PowerShell 5.1, two commands in PowerShell 7 | two commands                               |
+| `curl -s https://x \| iex` | `iex` is just a program name                   | runs the downloaded text (`iex` is `Invoke-Expression`)               | `iex` is just a program name               |
+| `rm x; ls`                 | two commands                                   | two commands (on Windows, `rm` is `Remove-Item`)                      | one command: `;` doesn't separate commands |
+
+The Agent already knows its shell. Codex selects one of `Zsh`, `Bash`, `Sh`, `PowerShell` and `Cmd`, and Gemini CLI distinguishes `bash`, `powershell` and `cmd` (each has a `ShellType`). The Client is the one that can't recover it from the text.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add an optional `subject` to `RequestPermissionRequest`, next to the existing required `toolCall`. In v1 it takes one variant, `command`:
+
+```json
+{
+  "sessionId": "sess_1",
+  "toolCall": { "toolCallId": "call_001", "kind": "execute", "title": "Run the test suite" },
+  "subject": {
+    "type": "command",
+    "command": "npm test && npm run build",
+    "cwd": "/workspace/project",
+    "shell": "bash"
+  },
+  "options": [ ... ]
+}
+```
+
+- `command` and `cwd` are required, as in v2, and `cwd` **MUST** be absolute.
+- `shell` is optional. It names the program that interprets `command` as the Agent runs it: a name (`bash`, `zsh`, `pwsh`, `powershell`, `cmd.exe`) or a path (`/bin/bash`). Omitted and `null` are equivalent and mean the shell is not stated.
+- An Agent **SHOULD** send the subject when the request is about running a command.
+- A Client that applies policy **MUST** treat a request with no subject, or a subject with no shell, as one it cannot read. That means asking the user, never allowing by default.
+
+The subject describes what the Agent wants permission to execute and never asks the Client to execute it.
+
+Two fields of v2's `command` subject stay out of v1, on purpose:
+
+- **`toolCallId`**: v1's request already carries the tool call and its id, so a second copy could only disagree with the first.
+- **`terminalId`**: v1 and v2 terminal references have the same fields, but their ownership and lifetime semantics are incompatible. A v1 terminal is one the Client created for the Agent, while a command the Agent runs itself has none.
+
+v1 needs only the `command` variant, because v1's `toolCall` field already is the tool-call subject.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A v1 Agent that asks before running a command says exactly what it will run, where, and under which shell. The Client reads the command with a parser for the named shell, judges each command the line runs against the user's rules, and answers the request the way the user configured: it shows the decision, or brings the request to the user when no rule speaks. A line in a shell the Client can't read, or with no stated shell, still reaches the user. Because the shape is the same as v2's, an Agent that adopts it in v1 has nothing to redo for v2, and Clients read both with the same code.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Schema (v1, unstable, behind `unstable_permission_command_subject`): add optional, nullable `subject` to `RequestPermissionRequest`. Its one variant is `command`, with required `command` and absolute `cwd` and optional, nullable `shell`.
+2. A malformed `command` subject doesn't fall back to an absent one. The Client acts on it, so it stays strict.
+3. Cross-version adapters: a v1 `command` subject maps to v2's one to one. Going from v2 to v1, a `command` subject keeps `command`, `cwd` and `shell`, and its `toolCallId` becomes the `toolCall` v1 requires.
+4. Docs: v1 Tool Calls, Requesting Permission.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+Putting the command on the tool call, letting Clients parse `rawInput`, and naming the shell with an enum. Each has its own question below. The subject's shape is v2's `command` subject on purpose, so an Agent that adopts it in v1 has nothing to redo for v2.
+
+### Does this make permission requests required?
+
+No. When to ask stays the Agent's decision, made with its own permission setup and modes. This only defines how an Agent describes a command when it does ask, so the Client can answer that request the way the user configured.
+
+### Why not put the command on the tool call?
+
+A tool call is display state that keeps changing as the call streams, and a permission request's tool call is an update that need not carry the call's full context. What the user is approving is a separate fact. v2 keeps the two apart for the same reason, and the same shape in both versions keeps adapters and Clients simple.
+
+### Why not let Clients parse `rawInput`?
+
+Its shape is each Agent's own choice, so there is nothing for a Client to rely on. A `rawInput` that fails to parse is also indistinguishable from one that was never sent.
+
+### Why name the shell as a free-form program rather than an enum?
+
+Shells keep arriving (fish, nu, xonsh), and versions matter: `powershell` (5.1) and `pwsh` (7) parse `&&` differently. A program name says exactly what will run, needs no shared list to maintain, and lets a Client recognize the shells it can read and treat the others as unreadable.
+
+### What about a command run with no shell at all?
+
+That's open. It could be marked by its own `shell` value, or carried as an argv in a variant of its own. An argv doesn't fit Agents that keep one shell open and feed it command after command, which is why the shell's name is the field proposed here.
+
+## Revision history
+
+- 2026-11-17: Initial draft
