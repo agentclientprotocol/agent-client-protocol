@@ -82,7 +82,6 @@ macro_rules! default_on_null {
                 struct NonNull;
 
                 impl<'de> serde_with::DeserializeAs<'de, $payload> for NonNull {
-                    #[allow(clippy::field_reassign_with_default)]
                     fn deserialize_as<D: serde::Deserializer<'de>>(
                         deserializer: D,
                     ) -> Result<$payload, D::Error> {
@@ -609,7 +608,10 @@ impl IntoOption<serde_json::Value> for Cow<'_, str> {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Copy, Clone, Default, PartialEq, PartialOrd, Eq, Ord, Debug, Hash)]
 #[cfg_attr(feature = "schemars", schemars(with = "Option<Option<T>>", inline))]
-#[expect(clippy::exhaustive_enums)]
+#[expect(
+    clippy::exhaustive_enums,
+    reason = "a JSON field is absent, null, or set"
+)]
 pub enum MaybeUndefined<T> {
     /// The field was not present.
     #[default]

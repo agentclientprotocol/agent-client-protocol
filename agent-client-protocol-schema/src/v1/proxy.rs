@@ -305,7 +305,10 @@ pub(crate) const PROXY_SUCCESSOR_METHOD_NAME: &str = "proxy/successor";
 /// `proxy/successor` to its conductor.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "TODO(next major): box InitializeProxyRequest in the v1 enum"
+)]
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
@@ -341,7 +344,10 @@ impl ProxyRequest {
 /// Responses to requests exchanged between a conductor and its proxies.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "TODO(next major): box InitializeProxyResponse in the v1 enum"
+)]
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]

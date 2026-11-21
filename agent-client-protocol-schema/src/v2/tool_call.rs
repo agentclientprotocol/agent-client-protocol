@@ -520,7 +520,7 @@ pub enum ToolCallContent {
     /// Standard content block (text, images, resources).
     Content(Box<Content>),
     /// File modification shown as a diff.
-    Diff(Diff),
+    Diff(Box<Diff>),
     /// A display-only reference to an Agent-owned terminal.
     Terminal(Terminal),
     /// A display-only reference to another session, such as a subagent.
@@ -616,7 +616,7 @@ impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
 
 impl From<Diff> for ToolCallContent {
     fn from(diff: Diff) -> Self {
-        ToolCallContent::Diff(diff)
+        ToolCallContent::Diff(Box::new(diff))
     }
 }
 
@@ -1596,7 +1596,7 @@ mod tests {
     #[test]
     fn diff_patch_serializes_git_patch_with_structured_changes() {
         let patch_text = "diff --git /repo/config.json /repo/config.json\n--- /repo/config.json\n+++ /repo/config.json\n@@ -1 +1 @@\n-old\n+new\n";
-        let diff = ToolCallContent::Diff(Diff::patch(
+        let diff = ToolCallContent::from(Diff::patch(
             patch_text,
             vec![
                 DiffChange::modify("/repo/config.json")
@@ -1637,7 +1637,7 @@ mod tests {
 
     #[test]
     fn diff_serializes_binary_modify_without_patch_text() {
-        let diff = ToolCallContent::Diff(Diff::new(vec![
+        let diff = ToolCallContent::from(Diff::new(vec![
             DiffChange::modify("/repo/assets/logo.png")
                 .file_type(DiffFileType::Binary)
                 .mime_type("image/png"),
@@ -1661,7 +1661,7 @@ mod tests {
 
     #[test]
     fn diff_move_serializes_shared_fields_with_operation_payload() {
-        let diff = ToolCallContent::Diff(Diff::new(vec![
+        let diff = ToolCallContent::from(Diff::new(vec![
             DiffChange::move_file("/repo/src/old.rs", "/repo/src/new.rs")
                 .file_type(DiffFileType::Text)
                 .mime_type("text/rust"),

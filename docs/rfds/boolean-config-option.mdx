@@ -163,7 +163,7 @@ Key changes:
 3. `SessionConfigOptionValue` enum using `#[serde(tag = "type")]` with an untagged `OtherSessionConfigOptionValue` fallback for future value shapes:
    - `Id { value: SessionConfigValueId }` — matched when `type` is `"id"`
    - `Boolean { value: bool }` — matched when `type` is `"boolean"`
-   - `Other(OtherSessionConfigOptionValue)` — preserves unrecognized typed value payloads
+   - `Other` — preserves unrecognized typed value payloads
 4. `SessionConfigOptionValue` is flattened (`#[serde(flatten)]`) onto `SetSessionConfigOptionRequest`, producing top-level `type` and `value` fields on the wire
 5. The `value` field in `SetSessionConfigOptionRequest` is a `SessionConfigOptionValue`, flattened onto the request
 6. The v1 `ClientCapabilities.session.config_options.boolean` field path serializes as `session.configOptions.boolean`
