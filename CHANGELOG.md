@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.21.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.21.1...v1.21.2) - 2026-11-21
+
+### Other
+
+- *(unstable-v2)* say which description fields may contain Markdown ([#2974](https://github.com/agentclientprotocol/agent-client-protocol/pull/2974))
+
 ## [1.21.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.21.0...v1.21.1) - 2026-11-21
 
 ### Other

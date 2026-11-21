@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-beta.3](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-beta.2...schema-v2.0.0-beta.3) - 2026-11-21
+
+### Other
+
+- *(unstable-v2)* say which description fields may contain Markdown ([#2974](https://github.com/agentclientprotocol/agent-client-protocol/pull/2974))
+
 ## [2.0.0-beta.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v2.0.0-beta.1...schema-v2.0.0-beta.2) - 2026-11-21
 
 ### Other
