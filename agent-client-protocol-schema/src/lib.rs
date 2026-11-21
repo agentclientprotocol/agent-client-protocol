@@ -51,6 +51,29 @@
 //! # Ok::<(), agent_client_protocol_schema::MethodDispatchError>(())
 //! ```
 //!
+//! ## Maps
+//!
+//! Maps keep the order of their keys, so the types hold them in an
+//! [`IndexMap`]. The crate re-exports it, so building one needs no direct
+//! `indexmap` dependency.
+//!
+//! ```
+//! use agent_client_protocol_schema::IndexMap;
+//! use agent_client_protocol_schema::v1::{OtherStateUpdate, StateUpdate};
+//! use serde_json::json;
+//!
+//! let fields = IndexMap::from([
+//!     ("reason".to_string(), json!("rate_limited")),
+//!     ("attempt".to_string(), json!(2)),
+//! ]);
+//! let state = StateUpdate::Other(OtherStateUpdate::new("_paused", fields));
+//! assert_eq!(
+//!     serde_json::to_string(&state)?,
+//!     r#"{"state":"_paused","reason":"rate_limited","attempt":2}"#
+//! );
+//! # Ok::<(), serde_json::Error>(())
+//! ```
+//!
 //! ## Cargo features
 //!
 //! The `schemars` feature implements `schemars::JsonSchema` for the protocol
@@ -87,6 +110,7 @@ mod version;
 use uuid as _;
 
 pub use dispatch::MethodDispatchError;
+pub use indexmap::IndexMap;
 pub use serde_util::{IntoMaybeUndefined, IntoOption, MaybeUndefined};
 pub use version::*;
 
