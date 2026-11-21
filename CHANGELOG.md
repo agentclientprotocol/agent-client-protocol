@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [1.21.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.20.0...v1.21.0) - 2026-11-21
+
+### Added
+
+- *(rust)* re-export IndexMap from the schema crate ([#2970](https://github.com/agentclientprotocol/agent-client-protocol/pull/2970))
+
+### Other
+
+- *(schema)* reorder the protocol pages and rename Cancellation ([#2964](https://github.com/agentclientprotocol/agent-client-protocol/pull/2964))
+
 ## [1.20.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.19.0...v1.20.0) - 2026-11-20
 
 ### Added
