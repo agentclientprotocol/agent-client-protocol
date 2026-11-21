@@ -98,7 +98,7 @@ An Agent whose session has configuration options **MUST** include them, with the
 </ResponseField>
 
 <ResponseField name="name" type="string" required>
-  Human-readable label for the option
+  Human-readable label the Client can display for the option, in plain text
 </ResponseField>
 
 <ResponseField name="description" type="string">
@@ -140,7 +140,7 @@ An Agent whose session has configuration options **MUST** include them, with the
 </ResponseField>
 
 <ResponseField name="name" type="string" required>
-  Human-readable name to display
+  Human-readable label the Client can display for this value, in plain text
 </ResponseField>
 
 <ResponseField name="description" type="string">
@@ -149,8 +149,8 @@ An Agent whose session has configuration options **MUST** include them, with the
 
 ### Grouped select options
 
-Select options may be grouped under labeled headers. Each
-`SessionConfigSelectGroup` requires `groupId`, `name`, and an `options` array containing
+Select options can be grouped under labeled headers. Each
+`SessionConfigSelectGroup` requires `groupId`, a plain-text `name`, and an `options` array containing
 the same `SessionConfigSelectOption` objects used by flat selects. A group's `_meta` is
 optional. Value descriptions and `_meta` remain optional as described above. Each `groupId` **MUST** be unique within the option.
 

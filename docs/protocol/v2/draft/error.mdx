@@ -6,7 +6,7 @@ description: "Error handling in the Agent Client Protocol"
 Failed requests return a [JSON-RPC 2.0 error object](https://www.jsonrpc.org/specification#error_object):
 
 - `code`: an integer identifying the kind of error
-- `message`: a short human-readable description
+- `message`: a short, human-readable description of the error, in plain text
 - `data` (optional): additional information whose shape depends on the code
 
 ```json

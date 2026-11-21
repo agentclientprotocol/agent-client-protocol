@@ -40,8 +40,8 @@ When the language model requests a tool invocation, the Agent **SHOULD** report 
 
 <ParamField path="title" type="string">
   A human-readable title describing what the tool is doing, as [plain
-  text](/protocol/v2/content#text-content). Agents **SHOULD** include the title
-  the first time they report a `toolCallId`.
+  text](/protocol/v2/content#plain-text-and-markdown). Agents **SHOULD** include
+  the title the first time they report a `toolCallId`.
 </ParamField>
 
 <ParamField path="name" type="string">
@@ -220,7 +220,7 @@ The Agent **MAY** request permission from the user before proceeding with an ope
   "params": {
     "sessionId": "sess_abc123def456",
     "title": "Approve file edit?",
-    "description": "Allow the agent to edit src/main.rs?",
+    "description": "Allow the Agent to edit `/home/user/project/src/main.rs`?",
     "subject": {
       "type": "tool_call",
       "toolCall": {
@@ -248,8 +248,9 @@ The Agent **MAY** request permission from the user before proceeding with an ope
 </ParamField>
 
 <ParamField path="title" type="string" required>
-  Title shown with the permission prompt. This text is separate from any
-  `toolCall` update and does not replace the tool-call title.
+  Human-readable title shown with the permission prompt, in plain text. This
+  text is separate from any `toolCall` update and does not replace the tool-call
+  title.
 </ParamField>
 
 <ParamField path="description" type="string">
@@ -362,7 +363,7 @@ Each permission option provided to the Client contains:
 </ParamField>
 
 <ParamField path="name" type="string" required>
-  Human-readable label to display to the user
+  Human-readable label for this choice, shown to the user as plain text
 </ParamField>
 
 <ParamField path="kind" type="PermissionOptionKind" required>

@@ -11,6 +11,20 @@ Content blocks appear in:
 - Language model output reported through [`session/update`](/protocol/v2/draft/prompt-lifecycle#3-agent-reports-output) notifications as message updates or streamed chunks
 - Progress updates and results from [tool calls](/protocol/v2/draft/tool-calls), including streamed tool-call content chunks
 
+## Plain text and Markdown
+
+Display strings are plain text unless the field specifies Markdown. Clients **SHOULD NOT** render plain-text fields as Markdown. These include tool call and session titles, command and config option names, labels, input hints, and error messages. For example, the underscores in a tool call title of `Read /work/_draft_.md` are part of the filename, not emphasis.
+
+When displaying the following fields, Clients **SHOULD** render them as [CommonMark](https://spec.commonmark.org/) and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables:
+
+- `text` in a [text content block](#text-content), wherever the block appears.
+- `content` in a [plan entry](/protocol/v2/draft/agent-plan#plan-entries) or a [Markdown plan](/protocol/v2/draft/agent-plan#markdown-plans).
+- `description` on an [authentication method](/protocol/v2/draft/authentication#authentication-method-types), a [command or skill](/protocol/v2/draft/slash-commands), a [config option or one of its select values](/protocol/v2/draft/session-config-options), a [permission request](/protocol/v2/draft/tool-calls#requesting-permission), or a [subagent](/protocol/v2/draft/subagents).
+
+The `description` of a [notice](/protocol/v2/draft/prompt-lifecycle#session-notices), a [resource link](#resource-link), an [elicitation form, property, or option](/protocol/v2/draft/elicitation#form-mode), or an [auth account](/protocol/v2/draft/schema#authaccount) is plain text. See [Rendering Agent content](/protocol/v2/draft/security#rendering-agent-content) for handling raw HTML and links when displaying Markdown.
+
+Payloads have their own formats. An embedded resource's `text` is the resource itself, a diff's `patch.text` is in the format named by `patch.format`, and terminal output carries bytes. None of these is a text content block.
+
 ## Content types
 
 Content from the Agent is untrusted. See [Rendering Agent Content](/protocol/v2/draft/security#rendering-agent-content) and [URIs and Remote Resources](/protocol/v2/draft/security#uris-and-remote-resources).
@@ -29,11 +43,7 @@ When displaying Agent output, Clients **SHOULD** show text content. For image, a
 
 ### Text content
 
-Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. Adjacent text blocks form one continuous text, and Clients **SHOULD** join them without a separator before rendering. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/draft/security#rendering-agent-content) for raw HTML.
-
-Other strings shown to users, such as a tool call `title`, a session `title`, and the `name` of a command or config option, are plain text unless the field's description says otherwise. Clients **SHOULD NOT** render them as Markdown.
-
-These `description` fields may contain Markdown, like a text block: the description of an [authentication method](/protocol/v2/draft/authentication#authentication-method-types), a [command or skill](/protocol/v2/draft/slash-commands), a [config option](/protocol/v2/draft/session-config-options) and each of its values, a [permission request](/protocol/v2/draft/tool-calls#requesting-permission), and a [subagent](/protocol/v2/draft/subagents). A [plan entry](/protocol/v2/draft/agent-plan#plan-entries)'s `content` may too.
+Adjacent text blocks form one continuous text. Clients **SHOULD** join them without a separator before rendering. This applies wherever text blocks appear, including in user and Agent messages, thoughts, tool-call content, and compaction summaries.
 
 ```json
 {
@@ -45,7 +55,8 @@ These `description` fields may contain Markdown, like a text block: the descript
 All Agents **MUST** support text content blocks when included in prompts.
 
 <ParamField path="text" type="string" required>
-  The text content to display
+  The text to display. It can be plain text or
+  [Markdown](#plain-text-and-markdown).
 </ParamField>
 
 <ParamField path="annotations" type="Annotations">
@@ -147,7 +158,8 @@ included in prompts.
     </ParamField>
 
     <ParamField path="text" type="string" required>
-      The text content of the resource
+      The contents of the resource. Its `mimeType`, when provided, describes the
+      format, for example `text/plain` or `text/markdown`.
     </ParamField>
 
     <ParamField path="mimeType" type="string">
@@ -205,7 +217,7 @@ All Agents **MUST** support resource links when included in prompts.
 </ParamField>
 
 <ParamField path="name" type="string" required>
-  A human-readable name for the resource
+  A human-readable name for the linked resource, in plain text
 </ParamField>
 
 <ParamField path="mimeType" type="string">
@@ -213,11 +225,12 @@ All Agents **MUST** support resource links when included in prompts.
 </ParamField>
 
 <ParamField path="title" type="string">
-  Optional display title for the resource
+  Optional plain-text title for displaying the resource to users
 </ParamField>
 
 <ParamField path="description" type="string">
-  Optional description of the resource contents
+  Optional human-readable description shown with the link. It describes the
+  resource contents in plain text.
 </ParamField>
 
 <ParamField path="icons" type="Icon[]">

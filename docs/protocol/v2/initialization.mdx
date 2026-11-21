@@ -312,14 +312,15 @@ Optionally, they **MAY** support more types of [content](/protocol/v2/content) b
 Both Clients and Agents **MUST** provide information about their implementation in the `info` field. It takes the following three fields:
 
 <ParamField path="name" type="string" required>
-  Intended for programmatic or logical use, but can be used as a display name
-  fallback if title isn't present.
+  Name intended for programmatic or logical use. It can also serve as the
+  plain-text display name when `title` is absent.
 </ParamField>
 
 <ParamField path="title" type="string">
-  Intended for UI and end-user contexts and optimized to be human-readable and
-  easily understood. Optional. Omitted and `null` are equivalent. If not
-  provided, the name **SHOULD** be used for display.
+  Optional human-readable title chosen to make the implementation easy to
+  recognize in the user interface. The title is plain text. Omission and `null`
+  are equivalent. When displaying an implementation without a title, the
+  receiver **SHOULD** use `name`.
 </ParamField>
 
 <ParamField path="version" type="string" required>

@@ -86,7 +86,8 @@ When the language model creates an execution plan, the Agent **SHOULD** report i
 ```
 
 <ParamField path="plan.content" type="string" required>
-  The complete plan as Markdown, not just the text that changed.
+  The complete plan as [Markdown](/protocol/v2/content#plain-text-and-markdown),
+  not just the text that changed.
 </ParamField>
 
 <ParamField path="plan.path" type="string | null">
@@ -129,9 +130,9 @@ Every plan content variant, including custom or future variants, **MUST** carry 
 Each plan entry represents a specific task or goal within the overall execution strategy:
 
 <ParamField path="content" type="string" required>
-  A human-readable description of what this task aims to accomplish. It may be
-  plain text or Markdown, like a [text content
-  block](/protocol/v2/content#text-content).
+  A human-readable description of what this task aims to accomplish. It can be
+  plain text or [Markdown](/protocol/v2/content#plain-text-and-markdown), like a
+  text content block.
 </ParamField>
 
 <ParamField path="priority" type="PlanEntryPriority" required>

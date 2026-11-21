@@ -127,7 +127,7 @@ The Agent **MUST** respond with a list of sessions and optional pagination metad
     </ResponseField>
 
     <ResponseField name="title" type="string">
-      Human-readable title for the session. May be auto-generated from the first prompt.
+      Human-readable title for the session, in plain text. The Agent can generate it from the first prompt.
     </ResponseField>
     <ResponseField name="updatedAt" type="string">
       RFC 3339 timestamp of the last activity in the session.
@@ -185,7 +185,7 @@ applies here.
 All fields are optional. Only include fields that have changed. Omitted fields are left unchanged. Set a nullable field to `null` to clear it.
 
 <ResponseField name="title" type="string | null">
-  Human-readable title for the session. Set to `null` to clear.
+  Human-readable title for the session, in plain text. Set to `null` to clear.
 </ResponseField>
 
 <ResponseField name="updatedAt" type="string | null">
