@@ -1,0 +1,260 @@
+---
+title: "v2 Session State and Message Scope Annotations"
+---
+
+Author(s): [@slapoguzov](https://github.com/slapoguzov)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add two annotations to the ACP v2 schema. `x-state` records how each session update, and each response that carries session state, changes the stored state of its session. `x-scope` records what each Agent-to-Client method is about: a session, a tool call, a Client request, or the Agent as a whole.
+
+Both annotations restate rules that v2 already gives in prose. With them, SDKs and intermediaries such as proxies can store, replay and route messages they have no code for, including custom ones. No existing message changes.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+v2 describes a session as stored state that updates change. A `tool_call_update` is an upsert by `toolCallId`. An `agent_message_chunk` appends to the content of a message. A `config_option_update` replaces the list of options. A `notice` is shown once and is not stored. These rules are precise, but each one is written on the page of its update, and nothing in the schema carries them.
+
+Every implementation that keeps session state therefore has code for each update variant. That is acceptable for a Client, which also has to render each variant. It is harder for implementations that only store and forward: SDKs that keep a session model, proxies, recorders, and session servers behind the draft [Streamable HTTP and WebSocket transport](../streamable-http-websocket-transport.mdx). Three cases show the problem:
+
+- A Client joins a session that is already active on another connection. A session server that answers `session/resume` from its own copy cannot send the stored updates again as they are, because replay does not include historical `state_update` notifications and notices **SHOULD NOT** be replayed ([replay contents](/protocol/v2/session-setup#replay-contents)). It has to know which updates are history, which hold a current value, and which are live only.
+- An Agent is newer than the intermediary. The [enum variant extension](./enum-variant-extension.mdx) lets a proxy keep an update variant it does not know. The proxy still cannot tell whether that update creates an entity, changes one, or replaces a value, so it cannot merge it into the state it stores.
+- An Agent sends a custom update. A `_`-prefixed update has no page, so a receiver can only keep it raw or drop it.
+
+A second set of rules says where an Agent-to-Client message belongs. One Agent can serve several connections: a session can be active on more than one connection at once ([session lifecycle](/protocol/v2/session-setup#session-lifecycle)), and the remote transport gives one Agent process many connections. Most Agent-to-Client methods carry a `sessionId`, and an implementation can route by it. Some do not:
+
+- `elicitation/create` carries exactly one of `sessionId` or `requestId`. With a `requestId` it belongs to that Client request, not to a session.
+- `elicitation/complete` carries only an `elicitationId`, and goes "only to the same Client that received the original request".
+- `mcp/message` carries a `serverId`.
+- `auth/status_update` has no params that select anything. claude-agent-acp and codex-acp both send a custom `_auth/status_update` without a `sessionId`, and an intermediary that routes by `sessionId` drops it.
+
+Each of these rules is prose on the page of its method. An implementation with several connections copies them by hand, and a custom method has no rule to copy.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Put both sets of rules into the schema as data. `x-state` is added to every `session/update` variant, to the six responses that change session state, and to the `session/request_permission` request. `x-scope` is added to every Agent-to-Client method. Both annotations name what they refer to with a path.
+
+### Paths
+
+A path names something that ACP messages are about:
+
+- `/` is the Agent.
+- `/sessions/{sessionId}` is a session. The state of the session is below it. An entity has an ID, as in `/sessions/{sessionId}/toolCalls/{toolCallId}`. The other entities are `messages/user`, `messages/agent`, `messages/thought`, `messages/session`, `terminals`, `plans`, `compactions`, `subagents` and `cursors`. A current value has no ID, as in `/sessions/{sessionId}/config`. The other current values are `state`, `commands`, `info` and `usage`.
+- `/requests/{requestId}`, `/elicitations/{elicitationId}` and `/mcpServers/{serverId}` exist on one connection. ACP defines these IDs as unique on a connection, and a path does not make them more unique.
+
+A path is `/` followed by segments separated by `/`. A segment is a name or `{field}`. A field is read from the message: from the params of a notification or request, as in `{sessionId}` and `{update.toolCallId}`, and for a response from the params of its request or from `{result.<field>}`. The value **MUST** be a string or a number and becomes exactly one segment. A string is percent-encoded as `encodeURIComponent` encodes it, and a number is written as `JSON.stringify` writes it. Two implementations then build the same path for the same thing, and an ID that contains `/` cannot name something else.
+
+The paths are a way to name things. They do not prescribe how an implementation stores a session.
+
+### The `x-state` annotation
+
+An `x-state` rule has an `action`, a `path`, and an optional `value` that names the field of the message to write. Without `value`, the rule writes the whole payload: the update object, the result of a response, or the params of a request.
+
+`tool_call_update` creates or updates a tool call:
+
+```json
+{
+  "action": "upsert",
+  "path": "/sessions/{sessionId}/toolCalls/{update.toolCallId}"
+}
+```
+
+`agent_message_chunk` appends its content to the content of a message:
+
+```json
+{
+  "action": "append",
+  "path": "/sessions/{sessionId}/messages/agent/{update.messageId}/content",
+  "value": "update.content"
+}
+```
+
+`config_option_update` replaces the list of options, and `notice` is not stored:
+
+```json
+{
+  "action": "replace",
+  "path": "/sessions/{sessionId}/config",
+  "value": "update.configOptions"
+}
+```
+
+```json
+{ "action": "none" }
+```
+
+The actions are the update kinds that v2 already has:
+
+- `upsert` creates the entity or the value, or updates it with the existing three-state rule: an omitted field is unchanged, a value replaces it, and `null` clears it or resets it to the default that the page of the variant defines. `_meta` is patched by top-level key, as [metadata patches](./meta-patches.mdx) define. The message, tool call, terminal, compaction, subagent and cursor updates use it, and so do `session_info_update` and `usage_update`.
+- `append` adds the value to the field that the path names, and creates the entity when it is new. A string is appended to a string, and any other value is added as one item of a list. With `"encoding": "base64"`, each chunk is decoded and its bytes are appended. The message chunks, `tool_call_content_chunk`, `terminal_output_chunk` and `compaction_summary_chunk` use it.
+- `replace` sets the whole value. When the named field is absent or `null`, the stored value is cleared, and a reader treats it as an empty list or as no value. `state_update`, `plan_update`, `config_option_update` and `available_commands_update` use it.
+- `remove` deletes what the path names and everything below it. `plan_removed` uses it.
+- `none` means that the message adds nothing to the state that a resume restores. `notice`, `replay_complete` and the unstable `prompt_suggestions_update` use it.
+
+The path also gives the replay rule, so it is not a separate field. A path with an ID names an entity. Entities are history, and a replay sends them in the order in which they were first reported. A path without an ID names a current value, and only its latest content matters. A message with `none` is live only. This is the distinction that the session server in the first case of the status quo needs.
+
+For example, a session receives a `tool_call_update` for `call_1` with the status `in_progress`, then a `notice`, then a `tool_call_update` for `call_1` with only the status `completed`. The stored state has one tool call with the status `completed` and the other fields of the first update. A Client that joins later gets that tool call and no notice.
+
+Some state arrives only in responses. After `session/new`, the options and commands of the session are in the result and nowhere else, so the response has two rules:
+
+```json
+[
+  {
+    "action": "replace",
+    "path": "/sessions/{result.sessionId}/config",
+    "value": "result.configOptions"
+  },
+  {
+    "action": "replace",
+    "path": "/sessions/{result.sessionId}/commands",
+    "value": "result.availableCommands"
+  }
+]
+```
+
+`session/fork` has the same rules, and `session/resume` has them with `{sessionId}` from its params. `session/set_config_option` replaces `config`, `session/set_title` replaces `info/title`, and `session/delete` removes `/sessions/{sessionId}`. The `session/request_permission` request is an upsert of the tool call in its subject, because the request can be the first message that reports it.
+
+Rules are applied in the order in which the messages arrive, and the rule of a response is applied at the position of the response. A rule is not applied when a field of its path is absent in the message, such as a permission request without a tool call. An `upsert` or `append` rule is also not applied when its `value` field is absent. The v2 rule for a full replay, where a Client rebuilds the entities of the session, stays in prose.
+
+Agents **MUST** send messages that are valid under the rule of their variant. This restates the existing rule of each variant and adds no new one.
+
+### The `x-scope` annotation
+
+`x-scope` is a list of paths, ordered from the most specific to the least specific. The scope of a message is the first path whose fields are all present in its params.
+
+Most methods have one path. `session/update` is about its session, and `auth/status_update` is about the Agent:
+
+```json
+["/sessions/{sessionId}"]
+```
+
+```json
+["/"]
+```
+
+A method that can be about different things has several paths. `elicitation/create` is about a Client request when it carries a `requestId`. Otherwise it is about a tool call when it names one, and about its session when it does not:
+
+```json
+[
+  "/requests/{requestId}",
+  "/sessions/{sessionId}/toolCalls/{toolCallId}",
+  "/sessions/{sessionId}"
+]
+```
+
+`session/request_permission` is scoped the same way, to the tool call of its subject and then to its session. `elicitation/complete` is scoped to `/elicitations/{elicitationId}`, and `mcp/message` to `/mcpServers/{serverId}`.
+
+A scope below a session belongs to that session, so an implementation that only needs the session reads the first two segments. An implementation that needs more can tell that a permission request is about one tool call.
+
+`x-scope` states what a message is about. It does not grant access. Which connections receive a message, and which of them may answer a request, is decided by the implementation that serves those connections. Client-to-Agent methods need no `x-scope`, because their response returns on the connection that sent the request.
+
+### Annotations in `initialize`
+
+A schema file reaches only the implementations that were built with it. A newer Agent, or an Agent with custom messages, can send its annotations when the connection starts.
+
+A Client that wants them sets `capabilities.schema` to an empty object in the `initialize` request. The Agent then returns in `capabilities.schema` of its response the annotations of the messages it sends, keyed by update variant and by method:
+
+```json
+{
+  "sessionUpdates": {
+    "tool_call_update": {
+      "x-state": {
+        "action": "upsert",
+        "path": "/sessions/{sessionId}/toolCalls/{update.toolCallId}"
+      }
+    },
+    "_task_update": {
+      "x-state": {
+        "action": "upsert",
+        "path": "/sessions/{sessionId}/_tasks/{update.taskId}"
+      }
+    }
+  },
+  "methods": {
+    "_auth/status_update": {
+      "x-scope": ["/"]
+    }
+  }
+}
+```
+
+The field is optional on both sides, and it is the only addition to the wire. An Agent that returns it **MUST** return the ACP annotations unchanged from the schema it was built with, and **MAY** add annotations for its custom updates and methods. A custom name in a path starts with `_`, and it is placed below `/sessions/{sessionId}/` or directly below `/`. A receiver ignores a custom rule that writes anywhere else, so a custom update cannot change ACP-defined state. A receiver reads only `x-state` and `x-scope` in this field and ignores other keys.
+
+### Schema requirements
+
+Every `SessionUpdate` variant in the ACP schema **MUST** have `x-state`, and every Agent-to-Client method **MUST** have `x-scope`. A response or an Agent-to-Client request has `x-state` only when it changes session state. The schema generator fails when an annotation is missing, or when a path or a `value` names a field that the type of the message does not have.
+
+### Client semantics
+
+A Client does not have to read the annotations. A Client or SDK that applies them gets the same state from each message as one that implements the prose rules. A Client or Agent that does not know `capabilities.schema` ignores it.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+An SDK keeps a session model with one generic function that reads the annotations. When ACP adds an update variant, the SDK needs the new schema and no new code to store it. A session server answers `session/resume` for a joining Client from its own copy, with the history first and the current values after it, and without old notices or historical `state_update` notifications.
+
+An intermediary built with an older schema keeps working with a newer Agent, because the Agent sends its annotations in `initialize`. Custom updates survive a reconnect, and custom methods such as `_auth/status_update` reach a Client, when the Agent declares them.
+
+The author of a new update or Agent-to-Client method has to decide what it changes and what it is about before the change can be merged.
+
+The cost is that each rule now exists twice, as prose and as an annotation, and the two have to agree. The generator check and a TCK check that replays a recorded session are there to find a difference.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+1. Emit `x-state` and `x-scope` from the schema generator, next to `x-method` and `x-side`, with the checks from the schema requirements.
+2. Add the optional `schema` field to the Client and Agent capabilities.
+3. The generator also writes all annotations to one file, `schema/v2/annotations.json`, in the shape of `capabilities.schema`. It copies the `contentEncoding` of each `append` value into the `encoding` of its rule, so that the file is all an implementation needs at run time. The file is released with the schema, and each SDK bundles it.
+4. Add to each SDK a reference implementation of the `x-state` rules that reads this file, and a function that returns `capabilities.schema`: the bundled annotations plus the Agent's custom ones. An Agent declares its custom annotations in code and does not download anything at run time. A receiver that is older than the Agent gets the newer annotations in `initialize`.
+5. Add the replay check to the TCK.
+
+A prototype checked that the annotations are enough. All v2 annotations are about 60 lines of JSON, and one function of about 150 lines applies every update variant from them. An intermediary built on it serves one Agent to several Clients with code only for the session lifecycle. On a recorded session of 1,025 updates, the stored state was 36 KB against 187 KB of raw updates. The intermediary is published as [acp-thin-host](https://github.com/slapoguzov/acp-thin-host): it includes the annotations file, a check of the generator rule against the current v2 schema, and a scripted walk-through of the cases above.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### v2 already defines these rules. Why put them in the schema?
+
+These rules are currently defined only in the protocol text. Each implementation that stores or routes messages must translate them into code. Schema annotations provide the same rules in a form that SDKs and intermediaries can apply directly.
+
+### How does this relate to "Multi-Client Session Attach" (#533)?
+
+[That proposal](https://github.com/agentclientprotocol/agent-client-protocol/pull/533) adds attach and detach methods, roles and a history policy. This RFD adds no method and no role. It records facts about existing messages that any design with several connections needs, including that one. Whether a session can be active on several connections stays the decision of the Agent.
+
+### Why does `x-scope` not say who receives a message or who may answer?
+
+That is authorization, and it depends on the deployment. One user on two devices, a read-only viewer and several users in one session all need different answers for the same permission request. The schema states the part that is the same in every deployment, which is what the message is about. The delivery rules that ACP already has, such as the one for `elicitation/complete`, stay as they are.
+
+### Why add rules to responses? Agents already send updates for changes a Client requested.
+
+Those updates are **SHOULD** rules, and they do not cover setup. After `session/new`, the options and commands exist only in the response. Without a rule on the response, an implementation that stores the session has no configuration for it until the first change.
+
+### Why the names `x-state` and `x-scope`?
+
+`x-state` names the whole state of a session, as the v2 pages do. `x-storage` would suggest that the annotation prescribes how an implementation stores data.
+
+`x-scope` names what a message is about, in the sense of "session-scoped" and "request-scoped". `x-audience` and `x-recipient` would suggest that the annotation decides who receives the message, which it does not. `x-route` would suggest a transport path.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**A class for each update only (history, current, live)**: This is enough to answer `session/resume`. It is not enough to merge partial updates such as `session_info_update`, or to store a session in less space than its raw updates.
+
+**A scope field on each message**: This changes the wire and repeats in every message a fact that is fixed for the method.
+
+**A default scope of `sessionId`**: This drops methods that have no `sessionId` and misplaces a request-scoped message that also carries one.
+
+**A delivery mode for each method, such as one connection or all**: This puts a policy into the schema that differs between deployments.
+
+**Downloading the annotations at run time, or a method that returns them on demand**: A download needs network access and does not cover an Agent that is newer than the published release. A method makes the receiver wait when the first unknown message arrives.
+
+## Revision history
+
+- 2026-11-17: Initial draft.
