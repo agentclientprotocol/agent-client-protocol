@@ -4243,7 +4243,7 @@ pub enum SessionConfigOptionValue {
     /// Agents MUST reject a `session/set_config_option` request with a value type
     /// they do not support with `-32602`.
     #[serde(untagged)]
-    Other(OtherSessionConfigOptionValue),
+    Other(Box<OtherSessionConfigOptionValue>),
 }
 
 /// Custom or future session configuration option value payload.
@@ -4352,11 +4352,12 @@ impl<'de> Deserialize<'de> for SessionConfigOptionValue {
                 })?;
                 Ok(Self::Boolean { value })
             }
-            _ => Ok(Self::Other(OtherSessionConfigOptionValue {
+            _ => Ok(OtherSessionConfigOptionValue {
                 type_,
                 value,
                 fields,
-            })),
+            }
+            .into()),
         }
     }
 }
@@ -4412,6 +4413,12 @@ impl From<SessionConfigValueId> for SessionConfigOptionValue {
 impl From<bool> for SessionConfigOptionValue {
     fn from(value: bool) -> Self {
         Self::Boolean { value }
+    }
+}
+
+impl From<OtherSessionConfigOptionValue> for SessionConfigOptionValue {
+    fn from(value: OtherSessionConfigOptionValue) -> Self {
+        Self::Other(Box::new(value))
     }
 }
 
@@ -10029,12 +10036,16 @@ mod test_serialization {
     fn test_session_config_option_value_roundtrip_other() {
         let mut fields = IndexMap::new();
         fields.insert("maxLength".to_string(), json!(200));
-        let original = SessionConfigOptionValue::Other(OtherSessionConfigOptionValue::new(
+        let original = SessionConfigOptionValue::from(OtherSessionConfigOptionValue::new(
             "text",
             json!("freeform input"),
             fields,
         ));
         let json = serde_json::to_value(&original).unwrap();
+        assert_eq!(
+            json,
+            json!({"type": "text", "value": "freeform input", "maxLength": 200})
+        );
         let roundtripped: SessionConfigOptionValue = serde_json::from_value(json).unwrap();
         assert_eq!(original, roundtripped);
     }
