@@ -1,7 +1,9 @@
 allowed-duplicate-crates = [
+    # serde_with supports multiple schemars and indexmap majors. Each indexmap brings its own hashbrown.
     "hashbrown",
     "indexmap",
     "schemars",
+    # The derive macros do not all use the same syn major yet.
     "syn",
 ]
-doc-valid-idents = ["CommonMark", ".."]
+doc-valid-idents = ["CommonMark", "OpenAI", ".."]

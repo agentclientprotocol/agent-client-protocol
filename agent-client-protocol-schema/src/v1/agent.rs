@@ -4980,7 +4980,6 @@ impl Usage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
-#[expect(clippy::doc_markdown)]
 pub enum LlmProtocol {
     /// Anthropic API protocol.
     Anthropic,
@@ -6911,7 +6910,10 @@ pub(crate) const AUTH_STATUS_METHOD_NAME: &str = "auth/status";
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "TODO(next major): box InitializeRequest in the v1 enum"
+)]
 pub enum ClientRequest {
     /// Establishes the connection with a client and negotiates protocol capabilities.
     ///
@@ -7170,7 +7172,10 @@ impl_request_dispatch! {
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "TODO(next major): box InitializeResponse in the v1 enum"
+)]
 pub enum AgentResponse {
     /// Successful result returned for a `initialize` request.
     InitializeResponse(InitializeResponse),
@@ -7241,7 +7246,6 @@ pub enum AgentResponse {
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
-#[allow(clippy::large_enum_variant)]
 pub enum ClientNotification {
     /// Cancels ongoing operations for a session.
     ///

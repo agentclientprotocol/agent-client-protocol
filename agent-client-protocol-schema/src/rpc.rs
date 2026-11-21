@@ -16,9 +16,9 @@ pub use crate::v1::{Request, RequestId, Response};
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[allow(
+#[expect(
     clippy::exhaustive_structs,
-    reason = "This comes from the JSON-RPC specification itself"
+    reason = "callers construct notifications with the fields defined by JSON-RPC"
 )]
 #[cfg_attr(feature = "schemars", schemars(rename = "{Params}", extend("x-docs-ignore" = true)))]
 pub struct Notification<Params> {
@@ -80,15 +80,12 @@ pub struct EmptyJsonRpcBatch;
 
 impl std::error::Error for EmptyJsonRpcBatch {}
 
+// TODO(next major): Remove JsonRpcBatch, its v1 re-export, and EmptyJsonRpcBatch.
 /// A non-empty JSON-RPC 2.0 batch message.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[serde(transparent)]
-#[allow(
-    clippy::exhaustive_structs,
-    reason = "This comes from the JSON-RPC specification itself"
-)]
 pub struct JsonRpcBatch<M>(
     #[cfg_attr(feature = "schemars", schemars(length(min = 1)))] Vec<JsonRpcMessage<M>>,
 );

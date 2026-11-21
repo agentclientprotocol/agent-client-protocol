@@ -20,9 +20,9 @@ use serde_with::skip_serializing_none;
     Debug, PartialEq, Clone, Hash, Eq, Deserialize, Serialize, PartialOrd, Ord, Display, From,
 )]
 #[serde(untagged)]
-#[allow(
+#[expect(
     clippy::exhaustive_enums,
-    reason = "This comes from the JSON-RPC specification itself"
+    reason = "the wire ID is null, an integer, or a string"
 )]
 #[from(String, i64)]
 pub enum RequestId {
@@ -39,9 +39,9 @@ pub enum RequestId {
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[allow(
+#[expect(
     clippy::exhaustive_structs,
-    reason = "This comes from the JSON-RPC specification itself"
+    reason = "callers construct requests with the fields defined by JSON-RPC"
 )]
 #[cfg_attr(feature = "schemars", schemars(rename = "{Params}", extend("x-docs-ignore" = true)))]
 pub struct Request<Params> {
@@ -56,9 +56,9 @@ pub struct Request<Params> {
 /// A JSON-RPC response object.
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-#[allow(
+#[expect(
     clippy::exhaustive_enums,
-    reason = "This comes from the JSON-RPC specification itself"
+    reason = "a JSON-RPC response contains either a result or an error"
 )]
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(rename = "{Result}", extend("x-docs-ignore" = true)))]

@@ -15,6 +15,10 @@ use crate::IntoOption;
 use super::SessionId;
 use super::{ContentBlock, Error, Meta, TerminalId};
 
+fn is_default<T: Default + PartialEq>(value: &T) -> bool {
+    *value == T::default()
+}
+
 /// Represents a tool call that the language model has requested.
 ///
 /// Tool calls are actions that the agent executes on behalf of the language model,
@@ -44,12 +48,12 @@ pub struct ToolCall {
     /// Helps clients choose appropriate icons and UI treatment.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default, skip_serializing_if = "ToolKind::is_default")]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub kind: ToolKind,
     /// Current execution status of the tool call.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
-    #[serde(default, skip_serializing_if = "ToolCallStatus::is_default")]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub status: ToolCallStatus,
     /// Content produced by the tool call.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
@@ -496,13 +500,6 @@ pub enum ToolKind {
     Other,
 }
 
-impl ToolKind {
-    #[expect(clippy::trivially_copy_pass_by_ref, reason = "Required by serde")]
-    fn is_default(&self) -> bool {
-        matches!(self, ToolKind::Other)
-    }
-}
-
 /// Execution status of a tool call.
 ///
 /// Tool calls progress through different statuses during their lifecycle.
@@ -525,13 +522,6 @@ pub enum ToolCallStatus {
     Failed,
 }
 
-impl ToolCallStatus {
-    #[expect(clippy::trivially_copy_pass_by_ref, reason = "Required by serde")]
-    fn is_default(&self) -> bool {
-        matches!(self, ToolCallStatus::Pending)
-    }
-}
-
 /// Content produced by a tool call.
 ///
 /// Tool calls can produce different types of content including
@@ -543,7 +533,13 @@ impl ToolCallStatus {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[cfg_attr(feature = "schemars", schemars(extend("discriminator" = {"propertyName": "type"})))]
 #[non_exhaustive]
-#[expect(clippy::large_enum_variant)]
+#[cfg_attr(
+    target_pointer_width = "64",
+    expect(
+        clippy::large_enum_variant,
+        reason = "TODO(next major): box Content in the v1 enum"
+    )
+)]
 pub enum ToolCallContent {
     /// Standard content block (text, images, resources).
     Content(Content),

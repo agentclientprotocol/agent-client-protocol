@@ -5677,7 +5677,6 @@ impl Usage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
-#[expect(clippy::doc_markdown)]
 pub enum LlmProtocol {
     /// Anthropic API protocol.
     Anthropic,

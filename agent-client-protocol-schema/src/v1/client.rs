@@ -4882,7 +4882,6 @@ pub(crate) const AUTH_STATUS_UPDATE_NOTIFICATION: &str = "auth/status_update";
 #[serde(untagged)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
-#[allow(clippy::large_enum_variant)]
 pub enum AgentRequest {
     /// Writes content to a text file in the client's file system.
     ///
@@ -5045,7 +5044,10 @@ pub enum ClientResponse {
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
-#[expect(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "TODO(next major): box SessionNotification in the v1 enum"
+)]
 #[cfg_attr(feature = "schemars", schemars(inline))]
 #[non_exhaustive]
 pub enum AgentNotification {

@@ -66,22 +66,20 @@ fn publication_doc_links(text: &str) -> String {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
-#[allow(clippy::large_enum_variant)]
 enum AgentOutgoingMessage {
-    Request(Request<AgentRequest>),
-    Response(Response<AgentResponse>),
-    Notification(Notification<AgentNotification>),
+    Request(Box<Request<AgentRequest>>),
+    Response(Box<Response<AgentResponse>>),
+    Notification(Box<Notification<AgentNotification>>),
 }
 
 /// All messages that a client can send to an agent.
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
-#[allow(clippy::large_enum_variant)]
 enum ClientOutgoingMessage {
-    Request(Request<ClientRequest>),
-    Response(Response<ClientResponse>),
-    Notification(Notification<ClientNotification>),
+    Request(Box<Request<ClientRequest>>),
+    Response(Box<Response<ClientResponse>>),
+    Notification(Box<Notification<ClientNotification>>),
 }
 
 /// All messages that a conductor and its proxies send each other.
@@ -89,18 +87,16 @@ enum ClientOutgoingMessage {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 #[schemars(inline)]
-#[allow(clippy::large_enum_variant)]
 enum ProxyMessage {
-    Request(Request<ProxyRequest>),
-    Response(Response<ProxyResponse>),
-    Notification(Notification<ProxyNotification>),
+    Request(Box<Request<ProxyRequest>>),
+    Response(Box<Response<ProxyResponse>>),
+    Notification(Box<Notification<ProxyNotification>>),
 }
 
 #[expect(dead_code)]
 #[derive(JsonSchema)]
 #[serde(untagged)]
 #[schemars(title = "Agent Client Protocol")]
-#[allow(clippy::large_enum_variant)]
 enum AcpTypes {
     Agent(JsonRpcMessage<AgentOutgoingMessage>),
     Client(JsonRpcMessage<ClientOutgoingMessage>),
@@ -2037,6 +2033,51 @@ mod markdown_generator {
     use std::path::{Path, PathBuf};
     use std::process::Command;
 
+    type Methods = BTreeMap<String, Vec<(String, Value)>>;
+
+    #[derive(Default)]
+    struct Sections {
+        agent: Methods,
+        client: Methods,
+        protocol: Methods,
+        proxy: Methods,
+        referenced: Vec<(String, Value)>,
+    }
+
+    impl Sections {
+        fn from_definitions(definitions: &BTreeMap<String, Value>) -> Self {
+            let mut sections = Self::default();
+            for (name, def) in definitions {
+                if def.get("x-docs-ignore").and_then(Value::as_bool) == Some(true) {
+                    continue;
+                }
+                let entry = (name.clone(), def.clone());
+                let Some(side) = def.get("x-side").and_then(Value::as_str) else {
+                    sections.referenced.push(entry);
+                    continue;
+                };
+                let method = def["x-method"].as_str().unwrap();
+                let methods = match side {
+                    "agent" => &mut sections.agent,
+                    "client" => &mut sections.client,
+                    "protocol" => &mut sections.protocol,
+                    "proxy" => &mut sections.proxy,
+                    "both" => {
+                        sections
+                            .agent
+                            .entry(method.to_owned())
+                            .or_default()
+                            .push(entry.clone());
+                        &mut sections.client
+                    }
+                    _ => unimplemented!("Unexpected side {side}"),
+                };
+                methods.entry(method.to_owned()).or_default().push(entry);
+            }
+            sections
+        }
+    }
+
     pub struct MarkdownGenerator {
         definitions: BTreeMap<String, Value>,
         output: String,
@@ -2052,14 +2093,7 @@ mod markdown_generator {
             }
         }
 
-        #[expect(clippy::too_many_lines)]
-        pub fn generate(&mut self, schema: &Value) -> String {
-            // Extract definitions
-            if let Some(defs) = schema.get("$defs").and_then(|v| v.as_object()) {
-                self.definitions = defs.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-            }
-
-            // Start with title and frontmatter
+        fn write_header(&mut self) {
             writeln!(&mut self.output, "---").unwrap();
             writeln!(&mut self.output, "title: \"Schema\"").unwrap();
             writeln!(
@@ -2086,63 +2120,24 @@ mod markdown_generator {
                 .unwrap();
             }
             writeln!(&mut self.output).unwrap();
+        }
 
-            let mut agent_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
-            let mut client_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
-            let mut protocol_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
-            let mut proxy_types: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
-            let mut referenced_types: Vec<(String, Value)> = Vec::new();
-
-            for (name, def) in &self.definitions {
-                if def
-                    .get("x-docs-ignore")
-                    .and_then(serde_json::Value::as_bool)
-                    .unwrap_or(false)
-                {
-                    continue;
-                }
-
-                if let Some(side) = def.get("x-side").and_then(|v| v.as_str()) {
-                    let method = def.get("x-method").unwrap().as_str().unwrap();
-
-                    let types = match side {
-                        "agent" => &mut agent_types,
-                        "client" => &mut client_types,
-                        "protocol" => &mut protocol_types,
-                        "proxy" => &mut proxy_types,
-                        "both" => {
-                            let entry = (name.clone(), def.clone());
-                            agent_types
-                                .entry(method.to_string())
-                                .or_default()
-                                .push(entry.clone());
-                            client_types
-                                .entry(method.to_string())
-                                .or_default()
-                                .push(entry);
-                            continue;
-                        }
-                        _ => unimplemented!("Unexpected side {side}"),
-                    };
-
-                    types
-                        .entry(method.to_string())
-                        .or_default()
-                        .push((name.clone(), def.clone()));
-                } else {
-                    referenced_types.push((name.clone(), def.clone()));
-                }
+        pub fn generate(&mut self, schema: &Value) -> String {
+            if let Some(defs) = schema.get("$defs").and_then(Value::as_object) {
+                self.definitions = defs.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
             }
+            self.write_header();
 
+            let sections = Sections::from_definitions(&self.definitions);
             let side_docs = extract_side_docs();
             let mut duplicate_methods = BTreeSet::new();
-            for method in agent_types.keys() {
-                if client_types.contains_key(method) || protocol_types.contains_key(method) {
+            for method in sections.agent.keys() {
+                if sections.client.contains_key(method) || sections.protocol.contains_key(method) {
                     duplicate_methods.insert(method.clone());
                 }
             }
-            for method in client_types.keys() {
-                if protocol_types.contains_key(method) {
+            for method in sections.client.keys() {
+                if sections.protocol.contains_key(method) {
                     duplicate_methods.insert(method.clone());
                 }
             }
@@ -2159,7 +2154,7 @@ requests from Clients and execute tasks using language models and tools."
             .unwrap();
             writeln!(&mut self.output).unwrap();
 
-            for (method, types) in agent_types {
+            for (method, types) in sections.agent {
                 let anchor_prefix = duplicate_methods.contains(&method).then_some("agent");
                 self.generate_method(
                     anchor_prefix,
@@ -2181,7 +2176,7 @@ and control access to resources."
             )
             .unwrap();
 
-            for (method, types) in client_types {
+            for (method, types) in sections.client {
                 let anchor_prefix = duplicate_methods.contains(&method).then_some("client");
                 self.generate_method(
                     anchor_prefix,
@@ -2191,7 +2186,7 @@ and control access to resources."
                 );
             }
 
-            if !proxy_types.is_empty() {
+            if !sections.proxy.is_empty() {
                 writeln!(&mut self.output, "## Proxy").unwrap();
                 writeln!(&mut self.output).unwrap();
                 writeln!(
@@ -2205,17 +2200,30 @@ Ordinary clients and agents never send or receive these messages. A conductor se
                 .unwrap();
                 writeln!(&mut self.output).unwrap();
 
-                for (method, types) in proxy_types {
+                for (method, types) in sections.proxy {
                     self.generate_method(None, &method, side_docs.proxy_method_doc(&method), types);
                 }
             }
-            {
-                writeln!(&mut self.output, "## Protocol level").unwrap();
-                writeln!(&mut self.output).unwrap();
-                #[cfg(not(feature = "unstable_protocol_v2"))]
-                writeln!(
-                    &mut self.output,
-                    "Defines the notifications that both agents and clients can send.
+            self.document_protocol_methods(sections.protocol, &side_docs, &duplicate_methods);
+
+            for (name, def) in sections.referenced {
+                self.document_type(2, &name, &def);
+            }
+            self.output.clone()
+        }
+
+        fn document_protocol_methods(
+            &mut self,
+            methods: Methods,
+            side_docs: &SideDocs,
+            duplicate_methods: &BTreeSet<String>,
+        ) {
+            writeln!(&mut self.output, "## Protocol level").unwrap();
+            writeln!(&mut self.output).unwrap();
+            #[cfg(not(feature = "unstable_protocol_v2"))]
+            writeln!(
+                &mut self.output,
+                "Defines the notifications that both agents and clients can send.
 
 Notifications whose methods start with '$/' are messages which are protocol
 implementation dependent and might not be implementable in all clients or
@@ -2223,37 +2231,29 @@ agents. For example if the implementation uses a single threaded synchronous
 programming language then there is little it can do to react to a
 `$/cancel_request` notification. If an agent or client receives notifications
 starting with '$/' it is free to ignore the notification."
-                )
-                .unwrap();
-                #[cfg(feature = "unstable_protocol_v2")]
-                writeln!(
-                    &mut self.output,
-                    "Defines the notifications that both Agents and Clients can send.
+            )
+            .unwrap();
+            #[cfg(feature = "unstable_protocol_v2")]
+            writeln!(
+                &mut self.output,
+                "Defines the notifications that both Agents and Clients can send.
 
 Their methods start with `$/`. Acting on one is optional, because it might not be
 implementable in every Client or Agent. For example, a single-threaded synchronous
 implementation can do little to react to a `$/cancel_request` notification. An Agent
 or Client **MAY** ignore a `$/` notification it cannot act on."
-                )
-                .unwrap();
+            )
+            .unwrap();
 
-                for (method, types) in protocol_types {
-                    let anchor_prefix = duplicate_methods.contains(&method).then_some("protocol");
-                    self.generate_method(
-                        anchor_prefix,
-                        &method,
-                        side_docs.protocol_method_doc(&method),
-                        types,
-                    );
-                }
+            for (method, types) in methods {
+                let anchor_prefix = duplicate_methods.contains(&method).then_some("protocol");
+                self.generate_method(
+                    anchor_prefix,
+                    &method,
+                    side_docs.protocol_method_doc(&method),
+                    types,
+                );
             }
-
-            referenced_types.sort_by_key(|(name, _)| name.clone());
-            for (name, def) in referenced_types {
-                self.document_type(2, &name, &def);
-            }
-
-            self.output.clone()
         }
 
         fn generate_method(
@@ -2410,15 +2410,43 @@ or Client **MAY** ignore a `$/` notification it cannot act on."
             self.document_variant_with_refs(variant, &mut BTreeSet::new());
         }
 
-        #[expect(clippy::too_many_lines)]
         fn document_variant_with_refs(
             &mut self,
             variant: &Value,
             active_references: &mut BTreeSet<String>,
         ) {
-            let enum_values = variant.get("enum").and_then(|v| v.as_array());
-            let merged_variant = self.merge_variant_definition(variant);
+            let enum_values = variant.get("enum").and_then(Value::as_array);
+            self.write_variant_header(variant, enum_values.map(Vec::as_slice));
 
+            let description = Self::get_def_description(variant);
+            if let Some(desc) = &description {
+                writeln!(&mut self.output, "{desc}").unwrap();
+            }
+            if let Some(values) = enum_values {
+                if description.is_some() {
+                    writeln!(&mut self.output).unwrap();
+                }
+                writeln!(
+                    &mut self.output,
+                    "**Values:** {}",
+                    Self::format_enum_values(values)
+                )
+                .unwrap();
+            } else if description.is_none() {
+                writeln!(&mut self.output, "{{\"\"}}").unwrap();
+            }
+
+            self.document_variant_properties(variant);
+            // Traverse the original composition, not the merged properties: each
+            // conjunctive member can introduce its own independent alternatives.
+            // Keep their required fields out of the shared property list.
+            self.document_nested_variants(variant, active_references);
+
+            writeln!(&mut self.output, "</ResponseField>").unwrap();
+            writeln!(&mut self.output).unwrap();
+        }
+
+        fn write_variant_header(&mut self, variant: &Value, enum_values: Option<&[Value]>) {
             write!(&mut self.output, "<ResponseField name=\"").unwrap();
 
             // Get variant name
@@ -2482,27 +2510,9 @@ or Client **MAY** ignore a `$/` notification it cannot act on."
             }
 
             writeln!(&mut self.output, "\">").unwrap();
+        }
 
-            // Get description
-            if let Some(desc) = Self::get_def_description(variant) {
-                writeln!(&mut self.output, "{desc}").unwrap();
-            }
-
-            if let Some(enum_values) = enum_values {
-                if Self::get_def_description(variant).is_some() {
-                    writeln!(&mut self.output).unwrap();
-                }
-                writeln!(
-                    &mut self.output,
-                    "**Values:** {}",
-                    Self::format_enum_values(enum_values)
-                )
-                .unwrap();
-            } else if Self::get_def_description(variant).is_none() {
-                writeln!(&mut self.output, "{{\"\"}}").unwrap();
-            }
-
-            // Collect all properties and required fields
+        fn document_variant_properties(&mut self, variant: &Value) {
             let mut merged_props = serde_json::Map::new();
             let mut merged_required = Vec::new();
 
@@ -2522,9 +2532,8 @@ or Client **MAY** ignore a `$/` notification it cannot act on."
                 }
             };
 
-            // 1. Check for $ref (direct)
-            if let Some(merged_variant) = &merged_variant {
-                merge_from(merged_variant);
+            if let Some(merged_variant) = self.merge_variant_definition(variant) {
+                merge_from(&merged_variant);
             } else {
                 // 1. Check for $ref (direct)
                 if let Some(ref_val) = variant.get("$ref").and_then(|v| v.as_str()) {
@@ -2564,14 +2573,6 @@ or Client **MAY** ignore a `$/` notification it cannot act on."
                 writeln!(&mut self.output).unwrap();
                 writeln!(&mut self.output, "</Expandable>").unwrap();
             }
-
-            // Traverse the original composition, not the merged properties: each
-            // conjunctive member can introduce its own independent alternatives.
-            // Keep their required fields out of the shared property list.
-            self.document_nested_variants(variant, active_references);
-
-            writeln!(&mut self.output, "</ResponseField>").unwrap();
-            writeln!(&mut self.output).unwrap();
         }
 
         fn document_nested_variants(
@@ -3307,7 +3308,6 @@ or Client **MAY** ignore a `$/` notification it cannot act on."
         })
     }
 
-    #[expect(clippy::too_many_lines)]
     fn extract_side_docs() -> SideDocs {
         let output = Command::new("cargo")
             .current_dir(super::repo_root())
@@ -3352,98 +3352,22 @@ or Client **MAY** ignore a `$/` notification it cannot act on."
         let mut side_docs = SideDocs::default();
 
         if let Some(index) = doc["index"].as_object() {
-            for (_, item) in index {
-                if item["name"].as_str() == Some("ClientRequest")
-                    && is_current_protocol_item(item)
+            for item in index.values() {
+                let docs = match item["name"].as_str() {
+                    Some("ClientRequest" | "ClientNotification") => &mut side_docs.agent,
+                    Some("AgentRequest" | "AgentNotification") => &mut side_docs.client,
+                    Some("ProxyRequest" | "ProxyNotification") => &mut side_docs.proxy,
+                    Some("ProtocolLevelNotification") => &mut side_docs.protocol,
+                    _ => continue,
+                };
+                if is_current_protocol_item(item)
                     && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
                 {
                     for variant_id in variants {
-                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
+                        if let Some(variant) = index.get(&variant_id.to_string())
                             && let Some(name) = variant["name"].as_str()
                         {
-                            side_docs.agent.insert(
-                                name.to_string(),
-                                variant["docs"].as_str().unwrap_or_default().to_string(),
-                            );
-                        }
-                    }
-                }
-
-                if item["name"].as_str() == Some("ClientNotification")
-                    && is_current_protocol_item(item)
-                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
-                {
-                    for variant_id in variants {
-                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
-                            && let Some(name) = variant["name"].as_str()
-                        {
-                            side_docs.agent.insert(
-                                name.to_string(),
-                                variant["docs"].as_str().unwrap_or_default().to_string(),
-                            );
-                        }
-                    }
-                }
-
-                if item["name"].as_str() == Some("AgentRequest")
-                    && is_current_protocol_item(item)
-                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
-                {
-                    for variant_id in variants {
-                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
-                            && let Some(name) = variant["name"].as_str()
-                        {
-                            side_docs.client.insert(
-                                name.to_string(),
-                                variant["docs"].as_str().unwrap_or_default().to_string(),
-                            );
-                        }
-                    }
-                }
-
-                if item["name"].as_str() == Some("AgentNotification")
-                    && is_current_protocol_item(item)
-                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
-                {
-                    for variant_id in variants {
-                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
-                            && let Some(name) = variant["name"].as_str()
-                        {
-                            side_docs.client.insert(
-                                name.to_string(),
-                                variant["docs"].as_str().unwrap_or_default().to_string(),
-                            );
-                        }
-                    }
-                }
-
-                if matches!(
-                    item["name"].as_str(),
-                    Some("ProxyRequest" | "ProxyNotification")
-                ) && is_current_protocol_item(item)
-                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
-                {
-                    for variant_id in variants {
-                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
-                            && let Some(name) = variant["name"].as_str()
-                        {
-                            side_docs.proxy.insert(
-                                name.to_string(),
-                                variant["docs"].as_str().unwrap_or_default().to_string(),
-                            );
-                        }
-                    }
-                }
-
-                if item["name"].as_str() == Some("ProtocolLevelNotification")
-                    && is_current_protocol_item(item)
-                    && let Some(variants) = item["inner"]["enum"]["variants"].as_array()
-                {
-                    for variant_id in variants {
-                        if let Some(variant) = doc["index"][variant_id.to_string()].as_object()
-                            && let Some(name) = variant["name"].as_str()
-                        {
-                            side_docs.protocol.insert(
+                            docs.insert(
                                 name.to_string(),
                                 variant["docs"].as_str().unwrap_or_default().to_string(),
                             );
