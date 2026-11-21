@@ -149,7 +149,7 @@ impl ToolCallUpdate {
         self
     }
 
-    /// Human-readable title describing what the tool is doing.
+    /// Human-readable plain-text title describing what the tool is doing.
     #[must_use]
     pub fn title(mut self, title: impl IntoMaybeUndefined<String>) -> Self {
         self.title = title.into_maybe_undefined();

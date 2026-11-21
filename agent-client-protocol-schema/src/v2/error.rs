@@ -38,8 +38,8 @@ pub struct Error {
     /// A number indicating the error type that occurred.
     /// This MUST be an integer as defined in the JSON-RPC specification.
     pub code: ErrorCode,
-    /// A string providing a short description of the error.
-    /// The message SHOULD be limited to a concise single sentence.
+    /// A short, human-readable description of the error, in plain text.
+    /// The sender SHOULD limit the message to a single concise sentence.
     pub message: String,
     /// Optional primitive or structured value that contains additional information about the error.
     /// This may include debugging information or context-specific details.

@@ -94,8 +94,9 @@ Each command carries a required `type` discriminator. Currently the only type is
 </ResponseField>
 
 <ResponseField name="name" type="string" required>
-  The command name without the leading `/`, such as `web`, `test`, or `plan`.
-  **MUST NOT** contain whitespace and **MUST** be unique within the list.
+  The plain-text command name without the leading `/`, such as `web`, `test`, or
+  `plan`. **MUST NOT** contain whitespace and **MUST** be unique within the
+  list.
 </ResponseField>
 
 <ResponseField name="description" type="string" required>
@@ -113,7 +114,8 @@ Command entries can add custom or future `type` values. Custom command types **M
 Currently supports text input with `type: "text"`:
 
 <ResponseField name="hint" type="string" required>
-  A hint to display when the input hasn't been provided yet
+  Plain-text hint about the input the command expects. The Client can display it
+  when the user hasn't provided input yet.
 </ResponseField>
 
 Command input specifications can add custom or future `type` values. Custom input types **MUST** begin with `_`. Unknown non-underscore input types are reserved for future ACP variants. Clients that cannot render an input specification **SHOULD** preserve it when storing, replaying, proxying, or forwarding command metadata, and otherwise display the command without structured input.

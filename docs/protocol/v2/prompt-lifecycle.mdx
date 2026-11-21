@@ -830,7 +830,7 @@ The following `compaction_update` fields are optional, nullable patches:
 | Field     | Type             | Meaning                                                                               |
 | --------- | ---------------- | ------------------------------------------------------------------------------------- |
 | `summary` | `ContentBlock[]` | The unencrypted, user-displayable summary content produced or retained by compaction. |
-| `error`   | `string`         | A human-readable error description.                                                   |
+| `error`   | `string`         | Human-readable details of a compaction error, in plain text.                          |
 | `_meta`   | `object`         | Extensible metadata for the compaction entity.                                        |
 
 For each patch field, omission leaves the stored value unchanged, `null` clears

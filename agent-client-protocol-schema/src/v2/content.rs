@@ -84,6 +84,7 @@ pub enum ContentBlock {
     /// Text content. May be plain text or formatted with Markdown.
     ///
     /// All Agents MUST support text content blocks in prompts.
+    /// Clients SHOULD join adjacent text blocks without a separator before rendering.
     /// Clients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown
     /// extensions.
     Text(TextContent),
@@ -215,7 +216,7 @@ fn other_content_block_schema(schema: &mut Schema) {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct TextContent {
-    /// Text payload carried by this content block.
+    /// Text payload carried by this content block. It may be plain text or Markdown.
     pub text: String,
     /// Optional annotations that help Clients decide how to display or route this content.
     ///
@@ -492,7 +493,7 @@ pub enum EmbeddedResourceResource {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextResourceContents {
-    /// Text payload carried by this content block.
+    /// The contents of the resource. Its `mimeType`, when provided, describes the format.
     pub text: String,
     /// URI associated with this resource or media payload.
     #[cfg_attr(feature = "schemars", schemars(url))]
@@ -619,19 +620,20 @@ impl BlobResourceContents {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResourceLink {
-    /// Human-readable name shown for this protocol object.
+    /// Human-readable name shown for the linked resource, in plain text.
     pub name: String,
     /// URI associated with this resource or media payload.
     #[cfg_attr(feature = "schemars", schemars(url))]
     pub uri: String,
-    /// Optional display title for end-user UI.
+    /// Optional plain-text display title for the resource, intended for end users.
     ///
     /// Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Optional human-readable details shown with this protocol object.
+    /// Optional human-readable description shown with the link. It describes the resource
+    /// contents in plain text.
     ///
     /// Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -702,7 +704,7 @@ impl ResourceLink {
         self
     }
 
-    /// Sets or clears the optional `description` field.
+    /// Sets or clears the plain-text description shown with the resource link.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -730,7 +732,7 @@ impl ResourceLink {
         self
     }
 
-    /// Sets or clears the optional `title` field.
+    /// Sets or clears the plain-text display title for the resource.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();

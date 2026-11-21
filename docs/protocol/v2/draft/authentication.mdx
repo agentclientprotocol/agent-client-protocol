@@ -97,7 +97,7 @@ authentication through `auth/login`. Every authentication method **MUST** includ
 }
 ```
 
-The optional `description` may contain Markdown.
+The `name` is the method's human-readable label, in plain text. Its optional `description` may contain Markdown. In contrast, the `label` and `description` of an [account](/protocol/v2/draft/schema#authaccount) reported by `auth/status` are plain text.
 
 The `terminal` type tells the Client to run the configured Agent program
 interactively:

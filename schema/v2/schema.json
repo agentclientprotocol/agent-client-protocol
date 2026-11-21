@@ -208,7 +208,7 @@
           ]
         },
         "title": {
-          "description": "Human-readable title for the permission prompt.\n\nThis title is specific to the permission prompt and does not update any\nsubject's displayed title.",
+          "description": "Human-readable title shown with the permission prompt, in plain text.\n\nThis title is specific to the permission prompt and does not update any\nsubject's displayed title.",
           "type": "string"
         },
         "description": {
@@ -665,7 +665,7 @@
       "description": "Content blocks represent displayable information in the Agent Client Protocol.\n\nContent blocks appear in:\n- User prompts sent via `session/prompt`\n- Language model output reported through `session/update` notifications as\n  message updates or streamed chunks\n- Progress updates and results from tool calls\n\nThis structure is compatible with the Model Context Protocol (MCP), so Agents can\nforward content from MCP tool outputs without transformation.\n\nSee protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content)",
       "anyOf": [
         {
-          "description": "Text content. May be plain text or formatted with Markdown.\n\nAll Agents MUST support text content blocks in prompts.\nClients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown\nextensions.",
+          "description": "Text content. May be plain text or formatted with Markdown.\n\nAll Agents MUST support text content blocks in prompts.\nClients SHOULD join adjacent text blocks without a separator before rendering.\nClients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown\nextensions.",
           "type": "object",
           "properties": {
             "type": {
@@ -872,7 +872,7 @@
       "type": "object",
       "properties": {
         "text": {
-          "description": "Text payload carried by this content block.",
+          "description": "Text payload carried by this content block. It may be plain text or Markdown.",
           "type": "string"
         },
         "annotations": {
@@ -1058,7 +1058,7 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Human-readable name shown for this protocol object.",
+          "description": "Human-readable name shown for the linked resource, in plain text.",
           "type": "string"
         },
         "uri": {
@@ -1067,12 +1067,12 @@
           "format": "uri"
         },
         "title": {
-          "description": "Optional display title for end-user UI.\n\nOmitted and `null` are equivalent and mean no title is provided.",
+          "description": "Optional plain-text display title for the resource, intended for end users.\n\nOmitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Optional human-readable details shown with this protocol object.\n\nOmitted and `null` are equivalent and mean no description is provided.",
+          "description": "Optional human-readable description shown with the link. It describes the resource\ncontents in plain text.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -1153,7 +1153,7 @@
       "type": "object",
       "properties": {
         "text": {
-          "description": "Text payload carried by this content block.",
+          "description": "The contents of the resource. Its `mimeType`, when provided, describes the format.",
           "type": "string"
         },
         "uri": {
@@ -1795,7 +1795,7 @@
           ]
         },
         "name": {
-          "description": "Human-readable label to display to the user.",
+          "description": "Human-readable label for this choice, shown to the user as plain text.",
           "type": "string"
         },
         "kind": {
@@ -1854,7 +1854,7 @@
       "type": "object",
       "properties": {
         "message": {
-          "description": "A human-readable message describing what input is needed.",
+          "description": "A plain-text message explaining to the user what the Agent needs and why.",
           "type": "string"
         },
         "_meta": {
@@ -2029,7 +2029,7 @@
           ]
         },
         "title": {
-          "description": "Optional title for the schema.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
+          "description": "Optional plain-text title for the form as a whole.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2048,7 +2048,7 @@
           }
         },
         "description": {
-          "description": "Optional description of what this schema represents.\n\nOptional. Omitted and `null` are equivalent and mean no schema description is provided.",
+          "description": "Optional plain-text description of what the form asks the user to provide.\n\nOptional. Omitted and `null` are equivalent and mean no schema description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2262,11 +2262,11 @@
           "type": "string"
         },
         "title": {
-          "description": "Human-readable title for this option.",
+          "description": "Human-readable title for this choice, in plain text. `const` holds the corresponding value.",
           "type": "string"
         },
         "description": {
-          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
+          "description": "Plain-text description to help the user choose between options.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2284,12 +2284,12 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
+          "description": "Optional plain-text label for this field in the form.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
+          "description": "Plain-text help for the user filling out this field.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2350,12 +2350,12 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
+          "description": "Optional plain-text label for this field in the form.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
+          "description": "Plain-text help for the user filling out this field.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2388,12 +2388,12 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
+          "description": "Optional plain-text label for this field in the form.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
+          "description": "Plain-text help for the user filling out this field.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2426,12 +2426,12 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
+          "description": "Optional plain-text label for this field in the form.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
+          "description": "Plain-text help for the user filling out this field.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2557,12 +2557,12 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Optional title for the property.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
+          "description": "Optional plain-text label for this field in the form.\n\nOptional. Omitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "Human-readable description.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
+          "description": "Plain-text help for the user filling out this field.\n\nOptional. Omitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -2927,11 +2927,11 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Intended for programmatic or logical use, but can be used as a display\nname fallback if title isn't present.",
+          "description": "Name intended for programmatic or logical use. It can also serve as the\nplain-text display name when `title` is absent.",
           "type": "string"
         },
         "title": {
-          "description": "Intended for UI and end-user contexts and optimized to be human-readable\nand easily understood.\n\nIf not provided, the name SHOULD be used for display.\n\nOmitted and `null` are equivalent and mean the `name` is used for display.",
+          "description": "Optional human-readable title chosen to make the implementation easy to\nrecognize in the user interface. The title is plain text.\n\nOmission and `null` are equivalent. When displaying an implementation without a title,\nthe receiver SHOULD use `name`.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3349,7 +3349,7 @@
               ]
             },
             "name": {
-              "description": "Human-readable name of the authentication method.",
+              "description": "Human-readable name of the authentication method, shown to users as plain text.",
               "type": "string"
             }
           },
@@ -3420,7 +3420,7 @@
           ]
         },
         "name": {
-          "description": "Human-readable name of the authentication method.",
+          "description": "Human-readable name of the authentication method, shown to users as plain text.",
           "type": "string"
         },
         "description": {
@@ -3466,7 +3466,7 @@
           ]
         },
         "name": {
-          "description": "Human-readable name of the authentication method.",
+          "description": "Human-readable name of the authentication method, shown to users as plain text.",
           "type": "string"
         },
         "description": {
@@ -3579,7 +3579,7 @@
           ]
         },
         "name": {
-          "description": "Human-readable label for the option.",
+          "description": "Human-readable label the Client can display for the option, in plain text.",
           "type": "string"
         },
         "description": {
@@ -3753,7 +3753,7 @@
           ]
         },
         "name": {
-          "description": "Human-readable label for this option value.",
+          "description": "Human-readable label the Client can display for this option value, in plain text.",
           "type": "string"
         },
         "description": {
@@ -3783,7 +3783,7 @@
           ]
         },
         "name": {
-          "description": "Human-readable label for this group.",
+          "description": "Human-readable label the Client can display as a plain-text group header.",
           "type": "string"
         },
         "options": {
@@ -3872,7 +3872,7 @@
               "type": "string"
             },
             "name": {
-              "description": "Command name. MUST NOT contain whitespace and MUST be unique within the command list.",
+              "description": "Plain-text command name. MUST NOT contain whitespace and MUST be unique within the command list.",
               "type": "string"
             },
             "description": {
@@ -3952,7 +3952,7 @@
       "type": "object",
       "properties": {
         "hint": {
-          "description": "A hint to display when the input hasn't been provided yet",
+          "description": "Plain-text hint about the input the command expects. The Client can display it\nwhen the user hasn't provided input yet.",
           "type": "string"
         },
         "_meta": {
@@ -3969,7 +3969,7 @@
       "type": "object",
       "properties": {
         "name": {
-          "description": "Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).\n\nMUST NOT contain whitespace and MUST be unique within the command list.",
+          "description": "Plain-text command name without the leading `/`, such as `create_plan` or `research_codebase`.\n\nMUST NOT contain whitespace and MUST be unique within the command list.",
           "type": "string"
         },
         "description": {
@@ -4061,7 +4061,7 @@
           "x-deserialize-default-on-null": true
         },
         "title": {
-          "description": "Human-readable title for the session\n\nOmitted and `null` are equivalent and mean no title is provided.",
+          "description": "Human-readable title for the session, in plain text.\n\nOmitted and `null` are equivalent and mean no title is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -4261,7 +4261,7 @@
           ]
         },
         "message": {
-          "description": "A string providing a short description of the error.\nThe message SHOULD be limited to a concise single sentence.",
+          "description": "A short, human-readable description of the error, in plain text.\nThe sender SHOULD limit the message to a single concise sentence.",
           "type": "string"
         },
         "data": {
@@ -6630,7 +6630,7 @@
       "type": "object",
       "properties": {
         "title": {
-          "description": "Human-readable title for the session. Set to null to clear.",
+          "description": "Human-readable title for the session, in plain text. Set to `null` to clear.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -6831,7 +6831,7 @@
           "x-deserialize-skip-invalid-items": true
         },
         "error": {
-          "description": "Human-readable error details for the compaction.",
+          "description": "Human-readable details of a compaction error, in plain text.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -6934,7 +6934,7 @@
           ]
         },
         "title": {
-          "description": "The parent's human-readable display title for this child. It need not be unique.\n\nOptional and nullable. Omitted means unchanged. `null` clears it. If no\ntitle is set, the Client chooses a fallback presentation.",
+          "description": "The parent's human-readable display title for this child, in plain text. It need not be unique.\n\nOptional and nullable. Omitted means unchanged. `null` clears it. If no\ntitle is set, the Client chooses a fallback presentation.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },

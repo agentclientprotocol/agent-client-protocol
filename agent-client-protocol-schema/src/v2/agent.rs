@@ -198,15 +198,14 @@ impl InitializeResponse {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Implementation {
-    /// Intended for programmatic or logical use, but can be used as a display
-    /// name fallback if title isn't present.
+    /// Name intended for programmatic or logical use. It can also serve as the
+    /// plain-text display name when `title` is absent.
     pub name: String,
-    /// Intended for UI and end-user contexts and optimized to be human-readable
-    /// and easily understood.
+    /// Optional human-readable title chosen to make the implementation easy to
+    /// recognize in the user interface. The title is plain text.
     ///
-    /// If not provided, the name SHOULD be used for display.
-    ///
-    /// Omitted and `null` are equivalent and mean the `name` is used for display.
+    /// Omission and `null` are equivalent. When displaying an implementation without a title,
+    /// the receiver SHOULD use `name`.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
@@ -238,10 +237,10 @@ impl Implementation {
         }
     }
 
-    /// Intended for UI and end-user contexts and optimized to be human-readable
-    /// and easily understood.
+    /// Optional human-readable title chosen to make the implementation easy to
+    /// recognize in the user interface. The title is plain text.
     ///
-    /// If not provided, the name SHOULD be used for display.
+    /// When displaying an implementation without a title, the receiver SHOULD use `name`.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
@@ -699,11 +698,11 @@ pub enum AuthState {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct AuthAccount {
-    /// Human-readable name for the account, suitable for display on its own,
+    /// Human-readable name for the account, suitable for display on its own as plain text,
     /// for example `Claude Max`, `OpenAI API key`, or `Vertex AI`.
     pub label: String,
-    /// Short text shown with the label, such as the credential source, for example
-    /// `API key helper`. MUST NOT contain credentials.
+    /// Short plain-text description shown with the label, such as the credential source
+    /// `API key helper`. Agents MUST NOT put credentials in this field.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is reported.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -768,7 +767,7 @@ impl AuthAccount {
         }
     }
 
-    /// Short text shown with the label, such as the credential source.
+    /// Short plain-text description shown with the label, such as the credential source.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -984,7 +983,7 @@ impl AuthMethod {
         }
     }
 
-    /// The human-readable name of this authentication method.
+    /// Human-readable name of the authentication method, shown to users as plain text.
     #[must_use]
     pub fn name(&self) -> &str {
         match self {
@@ -1042,7 +1041,7 @@ pub struct OtherAuthMethod {
     pub type_: String,
     /// Unique identifier for this authentication method.
     pub method_id: AuthMethodId,
-    /// Human-readable name of the authentication method.
+    /// Human-readable name of the authentication method, shown to users as plain text.
     pub name: String,
     /// The remaining fields of the unknown authentication method payload, preserved verbatim,
     /// including `description` and `_meta`.
@@ -1125,7 +1124,7 @@ fn other_auth_method_schema(schema: &mut Schema) {
 pub struct AuthMethodAgent {
     /// Unique identifier for this authentication method.
     pub method_id: AuthMethodId,
-    /// Human-readable name of the authentication method.
+    /// Human-readable name of the authentication method, shown to users as plain text.
     pub name: String,
     /// Optional human-readable description of this authentication method.
     /// May contain Markdown.
@@ -1195,7 +1194,7 @@ impl AuthMethodAgent {
 pub struct AuthMethodTerminal {
     /// Unique identifier for this authentication method.
     pub method_id: AuthMethodId,
-    /// Human-readable name of the authentication method.
+    /// Human-readable name of the authentication method, shown to users as plain text.
     pub name: String,
     /// Optional human-readable description of this authentication method.
     /// May contain Markdown.
@@ -3505,7 +3504,7 @@ pub struct SessionInfo {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub additional_directories: Vec<AbsolutePath>,
 
-    /// Human-readable title for the session
+    /// Human-readable title for the session, in plain text.
     ///
     /// Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -3571,7 +3570,7 @@ impl SessionInfo {
         self
     }
 
-    /// Human-readable title for the session
+    /// Human-readable title for the session, in plain text.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
@@ -3635,7 +3634,7 @@ impl SessionInfo {
 pub struct SetSessionTitleRequest {
     /// The ID of the session to retitle.
     pub session_id: SessionId,
-    /// The new title for the session.
+    /// The new plain-text title for the session.
     ///
     /// Required and non-null. Omission and explicit `null` are both invalid. The Agent MAY
     /// normalize the title before storing it, for example by trimming whitespace or
@@ -3693,7 +3692,7 @@ impl SetSessionTitleRequest {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SetSessionTitleResponse {
-    /// The title the Agent stored.
+    /// The plain-text title the Agent stored.
     ///
     /// This differs from the requested title if the Agent normalized it. Clients SHOULD
     /// display this value rather than the one they sent.
@@ -3793,7 +3792,7 @@ impl SessionConfigGroupId {
 pub struct SessionConfigSelectOption {
     /// Unique identifier for this option value.
     pub value: SessionConfigValueId,
-    /// Human-readable label for this option value.
+    /// Human-readable label the Client can display for this option value, in plain text.
     pub name: String,
     /// Optional description for this option value.
     /// May contain Markdown.
@@ -3827,7 +3826,8 @@ impl SessionConfigSelectOption {
         }
     }
 
-    /// Sets or clears the optional `description` field.
+    /// Sets or clears the description of what this option value does.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -3856,7 +3856,7 @@ impl SessionConfigSelectOption {
 pub struct SessionConfigSelectGroup {
     /// Identifier for this group. MUST be unique within the option.
     pub group_id: SessionConfigGroupId,
-    /// Human-readable label for this group.
+    /// Human-readable label the Client can display as a plain-text group header.
     pub name: String,
     /// The set of option values in this group. MUST contain at least one value.
     #[serde_as(deserialize_as = "DefaultOnError<VecSkipError<_>>")]
@@ -4113,7 +4113,7 @@ fn other_session_config_kind_schema(schema: &mut Schema) {
 pub struct SessionConfigOption {
     /// Identifier for the configuration option. MUST be unique within `configOptions`.
     pub config_id: SessionConfigId,
-    /// Human-readable label for the option.
+    /// Human-readable label the Client can display for the option, in plain text.
     pub name: String,
     /// Optional description for the Client to display to the user.
     /// May contain Markdown.
@@ -4192,7 +4192,8 @@ impl SessionConfigOption {
         )
     }
 
-    /// Sets or clears the optional `description` field.
+    /// Sets or clears the description of what this option controls.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();

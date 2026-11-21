@@ -76,9 +76,9 @@ pub struct EnumOption {
     /// The constant value for this option.
     #[serde(rename = "const")]
     pub value: String,
-    /// Human-readable title for this option.
+    /// Human-readable title for this choice, in plain text. `const` holds the corresponding value.
     pub title: String,
-    /// Human-readable description.
+    /// Plain-text description to help the user choose between options.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -109,7 +109,7 @@ impl EnumOption {
         }
     }
 
-    /// Human-readable description.
+    /// Plain-text description to help the user choose between options.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -141,14 +141,14 @@ impl EnumOption {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct StringPropertySchema {
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -248,14 +248,14 @@ impl StringPropertySchema {
         }
     }
 
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
         self
     }
 
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -326,14 +326,14 @@ impl StringPropertySchema {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct NumberPropertySchema {
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -376,14 +376,14 @@ impl NumberPropertySchema {
         Self::default()
     }
 
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
         self
     }
 
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -433,14 +433,14 @@ impl NumberPropertySchema {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IntegerPropertySchema {
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -483,14 +483,14 @@ impl IntegerPropertySchema {
         Self::default()
     }
 
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
         self
     }
 
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -540,14 +540,14 @@ impl IntegerPropertySchema {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BooleanPropertySchema {
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -580,14 +580,14 @@ impl BooleanPropertySchema {
         Self::default()
     }
 
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
         self
     }
 
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -822,14 +822,14 @@ impl<'de> Deserialize<'de> for MultiSelectItems {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MultiSelectPropertySchema {
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default)]
     pub title: Option<String>,
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -899,14 +899,14 @@ impl MultiSelectPropertySchema {
         }
     }
 
-    /// Optional title for the property.
+    /// Optional plain-text label for this field in the form.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
         self
     }
 
-    /// Human-readable description.
+    /// Plain-text help for the user filling out this field.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -1104,7 +1104,7 @@ pub struct ElicitationSchema {
     /// Type discriminator. Always `"object"`. Any other value is rejected.
     #[serde(rename = "type")]
     pub type_: ElicitationSchemaType,
-    /// Optional title for the schema.
+    /// Optional plain-text title for the form as a whole.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no title is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1118,7 +1118,7 @@ pub struct ElicitationSchema {
     /// Optional. Omitted and `null` are equivalent and mean no property names are required.
     #[serde(default)]
     pub required: Option<Vec<String>>,
-    /// Optional description of what this schema represents.
+    /// Optional plain-text description of what the form asks the user to provide.
     ///
     /// Optional. Omitted and `null` are equivalent and mean no schema description is provided.
     #[serde_as(deserialize_as = "DefaultOnError")]
@@ -1157,14 +1157,14 @@ impl ElicitationSchema {
         Self::default()
     }
 
-    /// Optional title for the schema.
+    /// Optional plain-text title for the form as a whole.
     #[must_use]
     pub fn title(mut self, title: impl IntoOption<String>) -> Self {
         self.title = title.into_option();
         self
     }
 
-    /// Optional description of what this schema represents.
+    /// Optional plain-text description of what the form asks the user to provide.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -1612,7 +1612,7 @@ pub struct CreateElicitationRequest {
     /// The elicitation mode and its mode-specific fields.
     #[serde(flatten)]
     pub mode: ElicitationMode,
-    /// A human-readable message describing what input is needed.
+    /// A plain-text message explaining to the user what the Agent needs and why.
     pub message: String,
     /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.

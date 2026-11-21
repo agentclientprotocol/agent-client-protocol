@@ -1136,7 +1136,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
-  A human-readable message describing what input is needed.
+  A plain-text message explaining to the user what the Agent needs and why.
 </ResponseField>
 
 **Variants:**
@@ -1473,7 +1473,7 @@ Omitted and `null` are equivalent and mean no structured subject was provided.
 
 </ResponseField>
 <ResponseField name="title" type={"string"} required>
-  Human-readable title for the permission prompt.
+  Human-readable title shown with the permission prompt, in plain text.
 
 This title is specific to the permission prompt and does not update any
 subject's displayed title.
@@ -1858,7 +1858,7 @@ same-named variables in the base launch configuration.
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
+  Human-readable name of the authentication method, shown to users as plain text.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"terminal"`.
@@ -1893,7 +1893,7 @@ Omitted and `null` are equivalent and mean no description is provided.
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
+  Human-readable name of the authentication method, shown to users as plain text.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"agent"`.
@@ -1919,7 +1919,7 @@ data, and otherwise ignore the method or display it generically.
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
+  Human-readable name of the authentication method, shown to users as plain text.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   Custom or future authentication method type.
@@ -1962,7 +1962,7 @@ Omitted and `null` are equivalent and mean no description is provided.
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
+  Human-readable name of the authentication method, shown to users as plain text.
 </ResponseField>
 
 ## <span class="font-mono">AuthMethodId</span>
@@ -2012,7 +2012,7 @@ same-named variables in the base launch configuration.
   Unique identifier for this authentication method.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name of the authentication method.
+  Human-readable name of the authentication method, shown to users as plain text.
 </ResponseField>
 
 ## <span class="font-mono">AvailableCommand</span>
@@ -2047,7 +2047,7 @@ Omitted and `null` are equivalent and mean the command takes no input.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).
+  Plain-text command name without the leading `/`, such as `create_plan` or `research_codebase`.
 
 MUST NOT contain whitespace and MUST be unique within the command list.
 
@@ -2078,7 +2078,7 @@ slash command.
 May contain Markdown.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Command name. MUST NOT contain whitespace and MUST be unique within the command list.
+  Plain-text command name. MUST NOT contain whitespace and MUST be unique within the command list.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   Custom or future command type.
@@ -2112,7 +2112,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
-  A hint to display when the input hasn't been provided yet
+  Plain-text hint about the input the command expects. The Client can display it
+when the user hasn't provided input yet.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"text"`.
@@ -2396,13 +2397,13 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -2523,7 +2524,7 @@ Omitted and `null` are equivalent and mean the command takes no input.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).
+  Plain-text command name without the leading `/`, such as `create_plan` or `research_codebase`.
 
 MUST NOT contain whitespace and MUST be unique within the command list.
 
@@ -2649,7 +2650,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
 <ResponseField name="error" type={"string | null"} >
-  Human-readable error details for the compaction.
+  Human-readable details of a compaction error, in plain text.
 </ResponseField>
 <ResponseField name="status" type={<><span><a href="#compactionstatus">CompactionStatus</a></span><span> | null</span></>} >
   Current lifecycle status.
@@ -2724,6 +2725,7 @@ See protocol docs: [Content](https://agentclientprotocol.com/protocol/v2/content
 Text content. May be plain text or formatted with Markdown.
 
 All Agents MUST support text content blocks in prompts.
+Clients SHOULD join adjacent text blocks without a separator before rendering.
 Clients SHOULD render this text as CommonMark and MAY support GitHub Flavored Markdown
 extensions.
 
@@ -2744,7 +2746,7 @@ Omitted and `null` are equivalent and mean no annotations are provided.
 
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
-  Text payload carried by this content block.
+  Text payload carried by this content block. It may be plain text or Markdown.
 </ResponseField>
 <ResponseField name="type" type={"string"} required>
   The discriminator value. Must be `"text"`.
@@ -2857,7 +2859,8 @@ Omitted and `null` are equivalent and mean no annotations are provided.
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Optional human-readable details shown with this protocol object.
+  Optional human-readable description shown with the link. It describes the resource
+contents in plain text.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -2875,7 +2878,7 @@ Omitted and `null` are equivalent and mean the MIME type is not specified.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name shown for this protocol object.
+  Human-readable name shown for the linked resource, in plain text.
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
@@ -2886,7 +2889,7 @@ Omitted and `null` are equivalent and mean the size is not known.
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional display title for end-user UI.
+  Optional plain-text display title for the resource, intended for end users.
 
 Omitted and `null` are equivalent and mean no title is provided.
 
@@ -3529,7 +3532,7 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3569,7 +3572,7 @@ Optional. Omitted and `null` are equivalent and mean no titled single-select cho
 declared by `oneOf`.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -3601,7 +3604,7 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3619,7 +3622,7 @@ Optional. Omitted and `null` are equivalent and mean there is no inclusive lower
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -3651,7 +3654,7 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3669,7 +3672,7 @@ Optional. Omitted and `null` are equivalent and mean there is no inclusive lower
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -3701,13 +3704,13 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -3739,7 +3742,7 @@ Optional. Omitted and `null` are equivalent and mean no default selections are p
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3764,7 +3767,7 @@ Optional. Omitted and `null` are equivalent and mean there is no minimum selecti
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -3838,7 +3841,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Optional description of what this schema represents.
+  Optional plain-text description of what the form asks the user to provide.
 
 Optional. Omitted and `null` are equivalent and mean no schema description is provided.
 
@@ -3853,7 +3856,7 @@ Optional. Omitted and `null` are equivalent and mean no property names are requi
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the schema.
+  Optional plain-text title for the form as a whole.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -4022,7 +4025,7 @@ Omitted and `null` are equivalent and mean the MIME type is not specified.
 
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
-  Text payload carried by this content block.
+  The contents of the resource. Its `mimeType`, when provided, describes the format.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
   URI associated with this resource or media payload.
@@ -4089,13 +4092,13 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   The constant value for this option.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text description to help the user choose between options.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="title" type={"string"} required>
-  Human-readable title for this option.
+  Human-readable title for this choice, in plain text. `const` holds the corresponding value.
 </ResponseField>
 
 ## <span class="font-mono">EnvVariable</span>
@@ -4148,8 +4151,8 @@ define a shape: `UnsupportedProtocolVersionErrorData` for `-32022`, and
 
 </ResponseField>
 <ResponseField name="message" type={"string"} required>
-  A string providing a short description of the error.
-The message SHOULD be limited to a concise single sentence.
+  A short, human-readable description of the error, in plain text.
+The sender SHOULD limit the message to a single concise sentence.
 </ResponseField>
 
 ## <span class="font-mono">ErrorCode</span>
@@ -4633,16 +4636,15 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Intended for programmatic or logical use, but can be used as a display
-name fallback if title isn't present.
+  Name intended for programmatic or logical use. It can also serve as the
+plain-text display name when `title` is absent.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Intended for UI and end-user contexts and optimized to be human-readable
-and easily understood.
+  Optional human-readable title chosen to make the implementation easy to
+recognize in the user interface. The title is plain text.
 
-If not provided, the name SHOULD be used for display.
-
-Omitted and `null` are equivalent and mean the `name` is used for display.
+Omission and `null` are equivalent. When displaying an implementation without a title,
+the receiver SHOULD use `name`.
 
 </ResponseField>
 <ResponseField name="version" type={"string"} required>
@@ -4673,7 +4675,7 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -4691,7 +4693,7 @@ Optional. Omitted and `null` are equivalent and mean there is no inclusive lower
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -5058,7 +5060,7 @@ Optional. Omitted and `null` are equivalent and mean no default selections are p
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -5083,7 +5085,7 @@ Optional. Omitted and `null` are equivalent and mean there is no minimum selecti
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -5176,7 +5178,7 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -5194,7 +5196,7 @@ Optional. Omitted and `null` are equivalent and mean there is no inclusive lower
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -5220,7 +5222,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   What selecting this option means. Clients can also use it to choose how to display the option.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable label to display to the user.
+  Human-readable label for this choice, shown to the user as plain text.
 </ResponseField>
 <ResponseField name="optionId" type={<a href="#permissionoptionid">PermissionOptionId</a>} required>
   Identifier for this permission option. MUST be unique within the request.
@@ -6050,7 +6052,8 @@ Omitted and `null` are equivalent and mean no annotations are provided.
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Optional human-readable details shown with this protocol object.
+  Optional human-readable description shown with the link. It describes the resource
+contents in plain text.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -6068,7 +6071,7 @@ Omitted and `null` are equivalent and mean the MIME type is not specified.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable name shown for this protocol object.
+  Human-readable name shown for the linked resource, in plain text.
 </ResponseField>
 <ResponseField name="size" type={"integer | null"} >
   Optional size of the linked resource in bytes, if known.
@@ -6079,7 +6082,7 @@ Omitted and `null` are equivalent and mean the size is not known.
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional display title for end-user UI.
+  Optional plain-text display title for the resource, intended for end users.
 
 Omitted and `null` are equivalent and mean no title is provided.
 
@@ -6327,7 +6330,7 @@ Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable label for the option.
+  Human-readable label the Client can display for the option, in plain text.
 </ResponseField>
 
 **Variants:**
@@ -6482,7 +6485,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
   Identifier for this group. MUST be unique within the option.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable label for this group.
+  Human-readable label the Client can display as a plain-text group header.
 </ResponseField>
 <ResponseField name="options" type={<a href="#sessionconfigselectoption">SessionConfigSelectOption[]</a>} required>
   The set of option values in this group. MUST contain at least one value.
@@ -6512,7 +6515,7 @@ Omitted and `null` are equivalent and mean no description is provided.
 
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
-  Human-readable label for this option value.
+  Human-readable label the Client can display for this option value, in plain text.
 </ResponseField>
 <ResponseField name="value" type={<a href="#sessionconfigvalueid">SessionConfigValueId</a>} required>
   Unique identifier for this option value.
@@ -6599,7 +6602,7 @@ reports no additional roots.
   Unique identifier for the session
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Human-readable title for the session
+  Human-readable title for the session, in plain text.
 
 Omitted and `null` are equivalent and mean no title is provided.
 
@@ -6640,7 +6643,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Human-readable title for the session. Set to null to clear.
+  Human-readable title for the session, in plain text. Set to `null` to clear.
 </ResponseField>
 <ResponseField name="updatedAt" type={"string | null"} >
   RFC 3339 timestamp of last activity. Set to null to clear.
@@ -7666,7 +7669,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
   The discriminator value. Must be `"session_info_update"`.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Human-readable title for the session. Set to null to clear.
+  Human-readable title for the session, in plain text. Set to `null` to clear.
 </ResponseField>
 <ResponseField name="updatedAt" type={"string | null"} >
   RFC 3339 timestamp of last activity. Set to null to clear.
@@ -7777,7 +7780,7 @@ See protocol docs: [Metadata Patches](https://agentclientprotocol.com/protocol/v
   The Agent-owned ID of this compaction, unique within the session.
 </ResponseField>
 <ResponseField name="error" type={"string | null"} >
-  Human-readable error details for the compaction.
+  Human-readable details of a compaction error, in plain text.
 </ResponseField>
 <ResponseField name="sessionUpdate" type={"string"} required>
   The discriminator value. Must be `"compaction_update"`.
@@ -7910,7 +7913,7 @@ A concrete `StateUpdate` replaces the entire previous snapshot.
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  The parent's human-readable display title for this child. It need not be unique.
+  The parent's human-readable display title for this child, in plain text. It need not be unique.
 
 Optional and nullable. Omitted means unchanged. `null` clears it. If no
 title is set, the Client chooses a fallback presentation.
@@ -8441,7 +8444,7 @@ Optional. Omitted and `null` are equivalent and mean no default value is provide
 
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
-  Human-readable description.
+  Plain-text help for the user filling out this field.
 
 Optional. Omitted and `null` are equivalent and mean no description is provided.
 
@@ -8481,7 +8484,7 @@ Optional. Omitted and `null` are equivalent and mean no titled single-select cho
 declared by `oneOf`.
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  Optional title for the property.
+  Optional plain-text label for this field in the form.
 
 Optional. Omitted and `null` are equivalent and mean no title is provided.
 
@@ -8610,7 +8613,7 @@ A concrete `StateUpdate` replaces the entire previous snapshot.
 
 </ResponseField>
 <ResponseField name="title" type={"string | null"} >
-  The parent's human-readable display title for this child. It need not be unique.
+  The parent's human-readable display title for this child, in plain text. It need not be unique.
 
 Optional and nullable. Omitted means unchanged. `null` clears it. If no
 title is set, the Client chooses a fallback presentation.
@@ -8983,7 +8986,8 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/e
 
 </ResponseField>
 <ResponseField name="hint" type={"string"} required>
-  A hint to display when the input hasn't been provided yet
+  Plain-text hint about the input the command expects. The Client can display it
+when the user hasn't provided input yet.
 </ResponseField>
 
 ## <span class="font-mono">TextContent</span>
@@ -9009,7 +9013,7 @@ Omitted and `null` are equivalent and mean no annotations are provided.
 
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
-  Text payload carried by this content block.
+  Text payload carried by this content block. It may be plain text or Markdown.
 </ResponseField>
 
 ## <span class="font-mono">TextResourceContents</span>
@@ -9035,7 +9039,7 @@ Omitted and `null` are equivalent and mean the MIME type is not specified.
 
 </ResponseField>
 <ResponseField name="text" type={"string"} required>
-  Text payload carried by this content block.
+  The contents of the resource. Its `mimeType`, when provided, describes the format.
 </ResponseField>
 <ResponseField name="uri" type={"string"} required>
   URI associated with this resource or media payload.

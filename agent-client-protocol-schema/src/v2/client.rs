@@ -743,7 +743,7 @@ impl Notice {
         }
     }
 
-    /// Sets or clears the optional description.
+    /// Sets or clears the additional plain-text detail or guidance shown with the notice.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -827,7 +827,7 @@ pub struct CompactionUpdate {
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true, "x-deserialize-skip-invalid-items" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub summary: MaybeUndefined<Vec<ContentBlock>>,
-    /// Human-readable error details for the compaction.
+    /// Human-readable details of a compaction error, in plain text.
     #[serde_as(deserialize_as = "DefaultOnError<MaybeUndefined<_>>")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -877,7 +877,7 @@ impl CompactionUpdate {
         self
     }
 
-    /// Sets, clears, or omits the error details patch.
+    /// Sets, clears, or omits the plain-text error details patch.
     #[must_use]
     pub fn error(mut self, error: impl IntoMaybeUndefined<String>) -> Self {
         self.error = error.into_maybe_undefined();
@@ -1586,7 +1586,7 @@ impl ReplayComplete {
 pub struct SubagentUpdate {
     /// The opaque session ID identifying the child in all ACP messages.
     pub session_id: SessionId,
-    /// The parent's human-readable display title for this child. It need not be unique.
+    /// The parent's human-readable display title for this child, in plain text. It need not be unique.
     ///
     /// Optional and nullable. Omitted means unchanged. `null` clears it. If no
     /// title is set, the Client chooses a fallback presentation.
@@ -1669,14 +1669,15 @@ impl SubagentUpdate {
         }
     }
 
-    /// Sets, clears, or leaves unchanged the parent's display title for the child.
+    /// Sets, clears, or leaves unchanged the parent's display title for the child, in plain text.
     #[must_use]
     pub fn title(mut self, title: impl IntoMaybeUndefined<String>) -> Self {
         self.title = title.into_maybe_undefined();
         self
     }
 
-    /// Sets, clears, or leaves unchanged the parent's description of the child.
+    /// Sets, clears, or leaves unchanged the parent's description of the child's role or purpose.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(mut self, description: impl IntoMaybeUndefined<String>) -> Self {
         self.description = description.into_maybe_undefined();
@@ -2038,7 +2039,7 @@ impl ConfigOptionUpdate {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SessionInfoUpdate {
-    /// Human-readable title for the session. Set to null to clear.
+    /// Human-readable title for the session, in plain text. Set to `null` to clear.
     #[serde_as(deserialize_as = "DefaultOnError")]
     #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
@@ -2073,7 +2074,7 @@ impl SessionInfoUpdate {
         Self::default()
     }
 
-    /// Human-readable title for the session. Set to null to clear.
+    /// Human-readable title for the session, in plain text. Set to `null` to clear.
     #[must_use]
     pub fn title(mut self, title: impl IntoMaybeUndefined<String>) -> Self {
         self.title = title.into_maybe_undefined();
@@ -3443,7 +3444,7 @@ pub enum AvailableCommand {
 }
 
 impl AvailableCommand {
-    /// Command name (e.g., `create_plan`, `research_codebase`).
+    /// Plain-text command name, such as `create_plan` or `research_codebase`.
     #[must_use]
     pub fn name(&self) -> &str {
         match self {
@@ -3499,7 +3500,7 @@ pub struct OtherAvailableCommand {
     /// future ACP variants.
     #[serde(rename = "type")]
     pub type_: String,
-    /// Command name. MUST NOT contain whitespace and MUST be unique within the command list.
+    /// Plain-text command name. MUST NOT contain whitespace and MUST be unique within the command list.
     pub name: String,
     /// Human-readable description of what the command does.
     /// May contain Markdown.
@@ -3592,7 +3593,7 @@ fn other_available_command_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Command {
-    /// Command name without the leading `/` (e.g., `create_plan`, `research_codebase`).
+    /// Plain-text command name without the leading `/`, such as `create_plan` or `research_codebase`.
     ///
     /// MUST NOT contain whitespace and MUST be unique within the command list.
     pub name: String,
@@ -3672,7 +3673,7 @@ impl Command {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Skill {
-    /// Skill name. The Client uses it to refer to the skill in a `skill` content block.
+    /// Plain-text skill name. The Client uses it to refer to the skill in a `skill` content block.
     ///
     /// MUST NOT contain whitespace and MUST be unique within the command list,
     /// across commands and skills. It need not match the `name` in the skill's
@@ -3836,7 +3837,8 @@ fn other_available_command_input_schema(schema: &mut Schema) {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TextCommandInput {
-    /// A hint to display when the input hasn't been provided yet
+    /// Plain-text hint about the input the command expects. The Client can display it
+    /// when the user hasn't provided input yet.
     pub hint: String,
     /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
@@ -3891,7 +3893,7 @@ impl TextCommandInput {
 pub struct RequestPermissionRequest {
     /// The session ID for this request.
     pub session_id: SessionId,
-    /// Human-readable title for the permission prompt.
+    /// Human-readable title shown with the permission prompt, in plain text.
     ///
     /// This title is specific to the permission prompt and does not update any
     /// subject's displayed title.
@@ -3964,7 +3966,8 @@ impl RequestPermissionRequest {
         }
     }
 
-    /// Sets or clears the optional `description` field.
+    /// Sets or clears the explanation of why permission is needed.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(mut self, description: impl IntoOption<String>) -> Self {
         self.description = description.into_option();
@@ -4227,7 +4230,7 @@ fn other_request_permission_subject_schema(schema: &mut Schema) {
 pub struct PermissionOption {
     /// Identifier for this permission option. MUST be unique within the request.
     pub option_id: PermissionOptionId,
-    /// Human-readable label to display to the user.
+    /// Human-readable label for this choice, shown to the user as plain text.
     pub name: String,
     /// What selecting this option means. Clients can also use it to choose how to display the option.
     pub kind: PermissionOptionKind,
