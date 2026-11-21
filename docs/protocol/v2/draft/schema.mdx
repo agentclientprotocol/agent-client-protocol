@@ -2489,6 +2489,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable explanation of why permission is needed.
+May contain Markdown.
 
 This text is specific to the permission prompt and does not update any
 subject's displayed content. Omitted and `null` are equivalent and mean no separate
@@ -3119,6 +3120,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable description of this authentication method.
+May contain Markdown.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3158,6 +3160,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable description of this authentication method.
+May contain Markdown.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3226,6 +3229,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable description of this authentication method.
+May contain Markdown.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3270,6 +3274,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional human-readable description of this authentication method.
+May contain Markdown.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -3368,6 +3373,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string"} required>
   Human-readable description of what the command does.
+May contain Markdown.
 </ResponseField>
 <ResponseField name="input" type={<><span><a href="#availablecommandinput">AvailableCommandInput</a></span><span> | null</span></>} >
   Input for the command if required
@@ -3410,6 +3416,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string"} required>
   Human-readable description of what the skill does, shown to users.
+May contain Markdown.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Skill name. The Client uses it to refer to the skill in a `skill` content block.
@@ -3450,6 +3457,7 @@ slash command.
 
 <ResponseField name="description" type={"string"} required>
   Human-readable description of what the command does.
+May contain Markdown.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Command name. MUST NOT contain whitespace and MUST be unique within the command list.
@@ -3940,6 +3948,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string"} required>
   Human-readable description of what the command does.
+May contain Markdown.
 </ResponseField>
 <ResponseField name="input" type={<><span><a href="#availablecommandinput">AvailableCommandInput</a></span><span> | null</span></>} >
   Input for the command if required
@@ -9043,6 +9052,7 @@ Omitted and `null` are equivalent and mean no category is provided.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description for the Client to display to the user.
+May contain Markdown.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -9236,6 +9246,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   Optional description for this option value.
+May contain Markdown.
 
 Omitted and `null` are equivalent and mean no description is provided.
 
@@ -10854,6 +10865,7 @@ effective working directory.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   The parent's human-readable description of the child's role or purpose.
+May contain Markdown.
 
 Optional and nullable. Omitted means unchanged. `null` clears it. This is
 current display metadata, not the history of instructions sent to the child.
@@ -11027,6 +11039,7 @@ See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/d
 </ResponseField>
 <ResponseField name="description" type={"string"} required>
   Human-readable description of what the skill does, shown to users.
+May contain Markdown.
 </ResponseField>
 <ResponseField name="name" type={"string"} required>
   Skill name. The Client uses it to refer to the skill in a `skill` content block.
@@ -11659,6 +11672,7 @@ effective working directory.
 </ResponseField>
 <ResponseField name="description" type={"string | null"} >
   The parent's human-readable description of the child's role or purpose.
+May contain Markdown.
 
 Optional and nullable. Omitted means unchanged. `null` clears it. This is
 current display metadata, not the history of instructions sent to the child.

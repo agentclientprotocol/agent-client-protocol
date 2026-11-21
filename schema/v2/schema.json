@@ -212,7 +212,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional human-readable explanation of why permission is needed.\n\nThis text is specific to the permission prompt and does not update any\nsubject's displayed content. Omitted and `null` are equivalent and mean no separate\npermission description was provided.",
+          "description": "Optional human-readable explanation of why permission is needed.\nMay contain Markdown.\n\nThis text is specific to the permission prompt and does not update any\nsubject's displayed content. Omitted and `null` are equivalent and mean no separate\npermission description was provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3424,7 +3424,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional human-readable description of this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
+          "description": "Optional human-readable description of this authentication method.\nMay contain Markdown.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3470,7 +3470,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional human-readable description of this authentication method.\n\nOmitted and `null` are equivalent and mean no description is provided.",
+          "description": "Optional human-readable description of this authentication method.\nMay contain Markdown.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3583,7 +3583,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description for the Client to display to the user.\n\nOmitted and `null` are equivalent and mean no description is provided.",
+          "description": "Optional description for the Client to display to the user.\nMay contain Markdown.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3757,7 +3757,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Optional description for this option value.\n\nOmitted and `null` are equivalent and mean no description is provided.",
+          "description": "Optional description for this option value.\nMay contain Markdown.\n\nOmitted and `null` are equivalent and mean no description is provided.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },
@@ -3876,7 +3876,7 @@
               "type": "string"
             },
             "description": {
-              "description": "Human-readable description of what the command does.",
+              "description": "Human-readable description of what the command does.\nMay contain Markdown.",
               "type": "string"
             }
           },
@@ -3973,7 +3973,7 @@
           "type": "string"
         },
         "description": {
-          "description": "Human-readable description of what the command does.",
+          "description": "Human-readable description of what the command does.\nMay contain Markdown.",
           "type": "string"
         },
         "input": {
@@ -6939,7 +6939,7 @@
           "x-deserialize-default-on-error": true
         },
         "description": {
-          "description": "The parent's human-readable description of the child's role or purpose.\n\nOptional and nullable. Omitted means unchanged. `null` clears it. This is\ncurrent display metadata, not the history of instructions sent to the child.",
+          "description": "The parent's human-readable description of the child's role or purpose.\nMay contain Markdown.\n\nOptional and nullable. Omitted means unchanged. `null` clears it. This is\ncurrent display metadata, not the history of instructions sent to the child.",
           "type": ["string", "null"],
           "x-deserialize-default-on-error": true
         },

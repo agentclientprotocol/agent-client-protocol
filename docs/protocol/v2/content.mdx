@@ -29,7 +29,9 @@ When displaying Agent output, Clients **SHOULD** show text content. For image, a
 
 Text may be plain text or Markdown. Clients **SHOULD** render it as [CommonMark](https://spec.commonmark.org/), and **MAY** support [GitHub Flavored Markdown](https://github.github.com/gfm/) extensions such as tables. Adjacent text blocks form one continuous text, and Clients **SHOULD** join them without a separator before rendering. This applies wherever a text block appears, including user messages, thoughts, and tool-call content. See [Rendering Agent Content](/protocol/v2/security#rendering-agent-content) for raw HTML.
 
-Other strings shown to users, such as a tool call `title`, a session `title`, and the `name` and `description` of a command or config option, are plain text unless the field's description says otherwise. Clients **SHOULD NOT** render them as Markdown.
+Other strings shown to users, such as a tool call `title`, a session `title`, and the `name` of a command or config option, are plain text unless the field's description says otherwise. Clients **SHOULD NOT** render them as Markdown.
+
+These `description` fields may contain Markdown, like a text block: the description of an [authentication method](/protocol/v2/authentication#authentication-method-types), a [command](/protocol/v2/slash-commands), a [config option](/protocol/v2/session-config-options) and each of its values, a [permission request](/protocol/v2/tool-calls#requesting-permission), and a [subagent](/protocol/v2/subagents). A [plan entry](/protocol/v2/agent-plan#plan-entries)'s `content` may too.
 
 ```json
 {

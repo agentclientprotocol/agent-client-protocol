@@ -1595,6 +1595,7 @@ pub struct SubagentUpdate {
     #[serde(default, skip_serializing_if = "MaybeUndefined::is_undefined")]
     pub title: MaybeUndefined<String>,
     /// The parent's human-readable description of the child's role or purpose.
+    /// May contain Markdown.
     ///
     /// Optional and nullable. Omitted means unchanged. `null` clears it. This is
     /// current display metadata, not the history of instructions sent to the child.
@@ -3454,6 +3455,7 @@ impl AvailableCommand {
     }
 
     /// Human-readable description of what the command does.
+    /// May contain Markdown.
     #[must_use]
     pub fn description(&self) -> &str {
         match self {
@@ -3500,6 +3502,7 @@ pub struct OtherAvailableCommand {
     /// Command name. MUST NOT contain whitespace and MUST be unique within the command list.
     pub name: String,
     /// Human-readable description of what the command does.
+    /// May contain Markdown.
     pub description: String,
     /// The remaining fields of the unknown command payload, preserved verbatim, including
     /// `_meta`.
@@ -3594,6 +3597,7 @@ pub struct Command {
     /// MUST NOT contain whitespace and MUST be unique within the command list.
     pub name: String,
     /// Human-readable description of what the command does.
+    /// May contain Markdown.
     pub description: String,
     /// Input for the command if required
     ///
@@ -3675,6 +3679,7 @@ pub struct Skill {
     /// frontmatter.
     pub name: String,
     /// Human-readable description of what the skill does, shown to users.
+    /// May contain Markdown.
     pub description: String,
     /// The absolute path of the file that defines the skill, normally its
     /// `SKILL.md`, on the machine the Agent runs on.
@@ -3892,6 +3897,7 @@ pub struct RequestPermissionRequest {
     /// subject's displayed title.
     pub title: String,
     /// Optional human-readable explanation of why permission is needed.
+    /// May contain Markdown.
     ///
     /// This text is specific to the permission prompt and does not update any
     /// subject's displayed content. Omitted and `null` are equivalent and mean no separate
