@@ -1,0 +1,63 @@
+---
+title: "Work attribution for reactive continuations"
+---
+
+Author(s): [j-asefa](https://github.com/j-asefa)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Give ACP Clients a way to associate foreground work and its output, tool calls, and approvals with the accepted prompt or background entity that caused it. A Client that collects results for individual requests could distinguish overlapping work and know which result to finalize when foreground work ends.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The [ACP v2 prompt lifecycle](https://agentclientprotocol.com/protocol/v2/prompt-lifecycle) separates prompt insertion from foreground completion. It identifies messages and tool calls, reports a session-level foreground state, and can list background work. When a background task causes a new foreground pass, the Agent reports the same lifecycle as for prompt-driven work. These signals describe what the session is doing. Clients that collect a result for a particular request also need to learn which work contributed to that result.
+
+Loop observed the following sequence with Antigravity CLI 1.5.14 over ACP v1 on Linux. The table summarizes a live stdio trace and omits request IDs, token counts, and message text. The probe used two allowlisted sleep commands. This is evidence from one Agent, and the v2 example below is a proposal for discussion.
+
+| Time from launch | Observed event                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| 14.13 s          | A usage update preceded the second command's `tool_call`.                                             |
+| 16.56 s          | The prompt returned `end_turn` while that command was still `in_progress`.                            |
+| 18.14 s          | The command reported `completed`.                                                                     |
+| 20.75 s          | The reactive pass streamed its final text.                                                            |
+| 20.81 s          | The Agent sent another usage update. No distinct completion event followed in the observation window. |
+
+[Antigravity issue and wire observations](https://github.com/google-antigravity/antigravity-cli/issues/1461#issuecomment-7061272417)
+
+The v2 foreground lifecycle addresses the missing end-of-pass signal shown here. Attribution is a separate question. For example, suppose a Client accepts prompt A, A starts a background tool, and the user sends prompt B before that tool finishes. If B triggers a permission request and A's background tool later wakes the model, the Client needs to tell whether the approval and subsequent output belong to B, A's follow-up, or a foreground pass both prompts contributed to.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Explore an optional, capability-negotiated relation between foreground work, its contributing user message IDs, and the background entities that trigger a continuation. Use the existing entity IDs wherever possible. A relation could be reported once per foreground pass if subsequent events have an unambiguous association. Otherwise, the Client needs a stable reference on the events it must attribute, including permission requests seen before related output.
+
+The proposal builds on `state_update` for foreground completion. If correlation is supported, the terminal foreground update should let the Client identify which work ended. An Agent should be able to omit attribution it cannot observe. The exact field names, which events need a reference, and whether one pass can have multiple contributors are open for discussion.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A test Agent accepts A, starts a background tool, and accepts B while the tool is still running. The fixture verifies that the Client can associate B's permission request with the correct work and associate the background-triggered pass with A's tool. It delivers that pass's final output before its terminal foreground update. The Client can finalize the corresponding result without interpreting silence or a usage update.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+<!-- Deferred while the attribution model is discussed. -->
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+Session-level state and history are sufficient for a Client that presents one conversation timeline. The proposed attribution is for Clients that publish independent results or route approvals by request. A timing heuristic cannot establish that relationship when multiple prompts are active.
+
+## Revision history
+
+<!-- Record substantive revisions after review. -->
