@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.34.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.34.0...schema-v1.34.1) - 2026-11-21
+
+### Other
+
+- *(schema)* reorder the protocol pages and rename Cancellation ([#2964](https://github.com/agentclientprotocol/agent-client-protocol/pull/2964))
+
 ## [1.34.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.33.0...schema-v1.34.0) - 2026-11-20
 
 ### Added
