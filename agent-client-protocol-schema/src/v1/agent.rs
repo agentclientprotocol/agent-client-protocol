@@ -4221,8 +4221,40 @@ pub enum McpServer {
     /// Stdio transport configuration
     ///
     /// All Agents MUST support this transport.
-    #[serde(untagged)]
+    #[serde(untagged, deserialize_with = "deserialize_stdio_mcp_server_fallback")]
     Stdio(McpServerStdio),
+}
+
+/// Deserializes the untagged `stdio` fallback of [`McpServer`].
+///
+/// A `http`, `sse`, or `acp` server that fails its own schema must not fall
+/// through to `stdio`, or the Agent would launch a local process for a remote
+/// server the Client described as one it cannot use.
+fn deserialize_stdio_mcp_server_fallback<'de, D>(
+    deserializer: D,
+) -> Result<McpServerStdio, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    let type_ = value.get("type").and_then(serde_json::Value::as_str);
+    if let Some(type_) = type_
+        && is_known_remote_mcp_transport(type_)
+    {
+        return Err(serde::de::Error::custom(format!(
+            "known MCP transport `{type_}` did not match its schema",
+        )));
+    }
+    McpServerStdio::deserialize(value).map_err(serde::de::Error::custom)
+}
+
+fn is_known_remote_mcp_transport(type_: &str) -> bool {
+    match type_ {
+        "http" | "sse" => true,
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        "acp" => true,
+        _ => false,
+    }
 }
 
 /// HTTP transport configuration for MCP.
@@ -9069,6 +9101,68 @@ mod test_serialization {
                 McpServer::Http(McpServerHttp::new("api", "https://example.com/mcp")),
                 McpServer::Sse(McpServerSse::new("events", "https://example.com/sse")),
             ]
+        );
+    }
+
+    #[test]
+    fn malformed_known_mcp_transport_does_not_fall_through_to_stdio() {
+        // The Agent launches a process from a stdio server, so a remote
+        // transport that fails its own schema is rejected instead of
+        // reinterpreted as a local command.
+        for type_ in ["http", "sse"] {
+            for payload in [
+                // The remote fields are present but malformed.
+                json!({
+                    "type": type_,
+                    "name": "server",
+                    "url": 42,
+                    "headers": [],
+                    "command": "/usr/bin/unexpected",
+                    "args": [],
+                    "env": []
+                }),
+                // The remote fields are absent entirely.
+                json!({
+                    "type": type_,
+                    "name": "server",
+                    "command": "/usr/bin/unexpected",
+                    "args": [],
+                    "env": []
+                }),
+            ] {
+                assert!(
+                    serde_json::from_value::<McpServer>(payload.clone()).is_err(),
+                    "{type_}: {payload}"
+                );
+                let request = json!({"cwd": "/repo", "mcpServers": [payload]});
+                assert!(
+                    ClientRequest::from_method_and_params("session/new", &request).is_err(),
+                    "{type_}"
+                );
+            }
+        }
+
+        // The fallback still covers a stdio server, with or without `type`.
+        for stdio in [
+            json!({"name": "fs", "command": "/usr/bin/fs-mcp", "args": [], "env": []}),
+            json!({"type": "stdio", "name": "fs", "command": "/usr/bin/fs-mcp", "args": [], "env": []}),
+        ] {
+            assert_eq!(
+                serde_json::from_value::<McpServer>(stdio).unwrap(),
+                McpServer::Stdio(McpServerStdio::new("fs", "/usr/bin/fs-mcp"))
+            );
+        }
+
+        #[cfg(feature = "unstable_mcp_over_acp")]
+        assert!(
+            serde_json::from_value::<McpServer>(json!({
+                "type": "acp",
+                "name": "server",
+                "command": "/usr/bin/unexpected",
+                "args": [],
+                "env": []
+            }))
+            .is_err()
         );
     }
 
