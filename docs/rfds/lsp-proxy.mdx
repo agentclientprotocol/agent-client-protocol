@@ -1,0 +1,356 @@
+---
+title: "Language Server Proxy"
+---
+
+Author(s): [@ojkelly](https://github.com/ojkelly)
+
+## Elevator pitch
+
+Add two Client methods, `lsp/servers` and `lsp/request`, that let an Agent send
+LSP requests to the language servers the Client is already running. The Agent
+supplies an LSP method name and params and receives the server's raw result.
+
+The Client, in ACP terms the editor, remains the only LSP client. It owns the
+server processes, document synchronisation, and buffer state, and the Agent
+reaches its servers only through these two methods.
+
+## What we propose to do about it
+
+Add an `lsp` Client capability and two Client methods:
+
+- `lsp/servers` lists the language servers the Client runs for a session, with
+  each server's capabilities, and the LSP methods the Client will forward.
+- `lsp/request` forwards one LSP request to one of those servers and returns
+  the server's result unchanged.
+
+The Client keeps its servers synchronised with the files under the session's
+roots, including changes the Agent makes with its own tools, so the Agent
+opens and synchronises nothing.
+
+## Shiny future
+
+An Agent calls `lsp/servers`, picks the server whose workspace contains the
+file it cares about, and sends `textDocument/definition`, `textDocument/references`,
+`textDocument/hover`, or `textDocument/diagnostic`. The answers come from the
+server the user's editor is running, including edits the Agent has just
+written.
+
+Agents build higher-level tools on the two methods. A rename tool, for
+example, resolves a one-based line and a symbol name to an LSP position,
+selects the server by workspace root and file extension, forwards
+`textDocument/rename`, and applies the returned edit through the Agent's own
+write path.
+
+## Implementation details and plan
+
+### Schema
+
+In v1 and v2:
+
+1. Add `lsp` as an optional object to `ClientCapabilities` in v1 and to
+   `capabilities` in v2.
+2. Add `LspServersRequest` (`sessionId`) and `LspServersResponse` (`servers`,
+   `availableMethods`), with `LspServer` as the entry type.
+3. Add `LspRequestRequest` (`sessionId`, `serverId`, `method`, `params`) and
+   `LspRequestResponse` (`lspResult`).
+4. Register `lsp/servers` and `lsp/request` as Client methods and add the
+   variants to `ClientRequest` and `ClientResponse`.
+5. Document the three `error.data.reason` values.
+
+Following the repository's naming rule, the trait methods are `lsp_servers`
+and `lsp_request`.
+
+#### Capability
+
+A Client that can forward LSP requests advertises it in `initialize`. In v1
+the field is `clientCapabilities.lsp`:
+
+```json
+{
+  "clientCapabilities": {
+    "lsp": {}
+  }
+}
+```
+
+In v2 it is `capabilities.lsp`:
+
+```json
+{
+  "capabilities": {
+    "lsp": {}
+  }
+}
+```
+
+Omitted or `null` both mean the Client does not support LSP forwarding. A
+present object means it does. Agents **MUST NOT** call `lsp/*` methods unless
+the capability is present.
+
+#### `lsp/servers`
+
+Lists the language servers the Client runs for a session, and the LSP methods
+it will forward.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "lsp/servers",
+  "params": {
+    "sessionId": "sess_abc123"
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "servers": [
+      {
+        "serverId": "rust-analyzer@/home/alice/project",
+        "name": "rust-analyzer",
+        "workspacePath": "/home/alice/project",
+        "languageId": "rust",
+        "fileExtensions": ["rs"],
+        "state": "running",
+        "capabilities": {
+          "positionEncoding": "utf-16",
+          "hoverProvider": true,
+          "definitionProvider": true,
+          "referencesProvider": true,
+          "renameProvider": { "prepareProvider": true },
+          "diagnosticProvider": { "workspaceDiagnostics": false },
+          "executeCommandProvider": {
+            "commands": [
+              "rust-analyzer.runSingle",
+              "rust-analyzer.showReferences"
+            ]
+          }
+        }
+      }
+    ],
+    "availableMethods": [
+      "textDocument/hover",
+      "textDocument/definition",
+      "textDocument/references",
+      "textDocument/diagnostic",
+      "textDocument/codeAction",
+      "workspace/symbol"
+    ]
+  }
+}
+```
+
+Each server entry carries:
+
+- `serverId` (string, required): an opaque identifier the Client mints and the
+  Agent passes back to `lsp/request`. It **MUST** be stable across restarts of
+  the same server in the same workspace root. Deriving it from the server's
+  name and workspace root satisfies this.
+- `name` (string, required): the server's display name, such as
+  `rust-analyzer`.
+- `workspacePath` (string, required): the absolute workspace root the server
+  was started for.
+- `languageId` (string, optional): the LSP language identifier the Client
+  associates with the server.
+- `fileExtensions` (string array, optional): extensions, without the dot,
+  that the server's language declares. An empty or omitted list means the
+  Client could not determine the server's extensions.
+- `state` (string, required): `starting`, `running`, or `not_running`.
+  Clients **MAY** report other values. Agents **MUST** treat any value other
+  than `running` as not accepting requests.
+- `capabilities` (object, required): the server's verbatim `initialize`
+  result `capabilities` object, including its `positionEncoding` and the
+  commands it accepts in `executeCommandProvider.commands`.
+
+`availableMethods` is the set of LSP methods the Client will forward to any
+server. A server's `capabilities` says what that server can answer. The Agent
+checks both.
+
+The Client **MUST** list only servers whose `workspacePath` overlaps the
+session's `cwd` or `additionalDirectories`, so an Agent cannot reach servers
+for projects outside the session.
+
+#### `lsp/request`
+
+Forwards one client-to-server LSP request and returns the server's result
+unchanged.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "lsp/request",
+  "params": {
+    "sessionId": "sess_abc123",
+    "serverId": "rust-analyzer@/home/alice/project",
+    "method": "textDocument/hover",
+    "params": {
+      "textDocument": { "uri": "file:///home/alice/project/src/main.rs" },
+      "position": { "line": 12, "character": 8 }
+    }
+  }
+}
+```
+
+````json
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "result": {
+    "lspResult": {
+      "contents": {
+        "kind": "markdown",
+        "value": "```rust\nfn main()\n```"
+      }
+    }
+  }
+}
+````
+
+- `method` (string, required): the LSP method name.
+- `params` (any, required): the LSP request params, exactly as the LSP
+  specification defines them for that method. The Client **MUST NOT** reshape
+  them. `null` is a valid value for methods that take no params.
+- `lspResult` (any, required in the response): the server's LSP result. `null`
+  means the server answered with no result.
+
+When the server answers with an LSP error, the Client returns a JSON-RPC error
+whose `data` carries the server's `code`, `message`, and `data` verbatim.
+
+#### Errors
+
+Beyond the LSP error passthrough above, the Client returns `-32602` Invalid
+params with `error.data.reason` set to one of:
+
+- `unknown_server`: no server with that `serverId` is listed for the session.
+  A restart never produces this error, since `serverId` is stable. The Agent
+  should re-list.
+- `server_not_running`: the server is listed but its `state` is not
+  `running`. The error **MUST** carry the current `state` in `error.data`.
+  The Agent should retry with the same id.
+- `method_not_forwarded`: the method is not in `availableMethods`.
+
+Each error **SHOULD** include the current server list or method list in
+`error.data`.
+
+### Client behaviour
+
+#### What is forwarded
+
+Only client-to-server **requests** are forwarded.
+
+The Client **MUST** refuse:
+
+- Notifications in either direction.
+- Connection lifecycle: `initialize`, `initialized`, `shutdown`, `exit`.
+- Document lifecycle: `textDocument/didOpen`, `didChange`, `didClose`,
+  `didSave`, `willSave`, `willSaveWaitUntil`, and the `workspace/did*`
+  family.
+- Server-to-client requests such as `workspace/applyEdit` and
+  `client/registerCapability`.
+- File lifecycle: `workspace/willCreateFiles`, `workspace/willRenameFiles`,
+  and `workspace/willDeleteFiles`.
+- Editor interaction: `textDocument/foldingRange`,
+  `textDocument/selectionRange`, `textDocument/linkedEditingRange`, and
+  `textDocument/onTypeFormatting`.
+
+Everything else is at the Client's discretion.
+
+#### Document state
+
+The editor has already sent every open, change, and save to the server, so the
+server answers from the buffers the user has open, including unsaved edits.
+The Agent opens and synchronises nothing.
+
+A Client advertising `lsp` asserts that the servers reachable through
+`lsp/request` are its own and track the files under the session's roots,
+whatever process changed them. When the Agent writes a file with its own
+tools, the Client **MUST** pass the change to the server the same way it
+passes on any change made outside the editor. A Client that cannot observe
+writes under the session's roots **MUST NOT** advertise `lsp`.
+
+When the user has unsaved edits in a buffer and the Agent writes the same file
+on disk, the server answers from the buffer. How the Client resolves that
+conflict is outside this RFD.
+
+A server only answers `textDocument/*` requests for documents it has been
+told about. When `params.textDocument.uri` names a file that is not open in
+the editor, the Client **MUST** open it for the server for at least the
+duration of the request, and **MAY** close it afterwards.
+
+#### Positions and URIs
+
+Positions in `params` and `lspResult` are LSP positions: zero-based `line`,
+and `character` counted in the server's `positionEncoding`, defaulting to
+`utf-16`. The Client does not convert positions. Document URIs are absolute
+`file:` URIs.
+
+#### Cancellation
+
+`lsp/request` is an ordinary ACP request, so
+[request cancellation](/rfds/request-cancellation) applies. A Client that
+receives `$/cancel_request` for an in-flight `lsp/request` **SHOULD** send
+`$/cancelRequest` to the server and respond with the request-cancelled error.
+
+## Frequently asked questions
+
+### How does the Agent choose a server for a file?
+
+From the listing: filter running servers whose `workspacePath` contains the
+file, prefer one whose `fileExtensions` names the file's extension, then
+narrow by the capability field the operation needs, and prefer the most
+specific root.
+
+### Can an Agent apply its own permission policy per method?
+
+Yes. LSP method names are a fixed vocabulary, so an Agent can use them as a
+permission key in its own policy without protocol support.
+
+### Does this cover server-to-client notifications?
+
+No. An Agent cannot subscribe to `textDocument/publishDiagnostics`,
+`$/progress`, or similar. Diagnostics are reachable through
+`textDocument/diagnostic` and `workspace/diagnostic` where the server
+implements the pull model. A subscription would need a new Client to Agent
+notification and is left for a later revision.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+**The Agent runs its own language server.** The Agent has to find, download,
+version, and launch a server for every language it meets, and act as the LSP
+client for it. ACP sends no notification when the user edits a buffer, so the
+Agent either resyncs whole files before every request or answers from stale
+text, and unsaved edits in the editor are invisible to it. When the editor and
+the Agent both run a server over the same directory, the two diverge and
+their diagnostics disagree. Servers such as `rust-analyzer`, `clangd`, and
+`tsserver` hold workspace indexes measured in gigabytes, and every extra
+instance repeats the index, the build scripts, and the macro expansion the
+editor has already run. Users also end up with a copy of each server on disk
+per Agent that installs it.
+
+**A daemon hosts one server per workspace for several Agents.** This removes
+the duplicated memory, but the daemon is still a second LSP client with no
+view of the editor's buffers, so the synchronisation problem is unchanged.
+
+**The Agent uses text and syntax only.** Grep and tree-sitter cannot resolve
+a name across files, distinguish a method from a field with the same name, or
+report a type error before the build does. Renaming a symbol shows the gap
+most clearly. A language server answers `textDocument/rename` with every
+reference in one `WorkspaceEdit`, which for a widely used symbol can span
+thousands of sites across many files. Without it, an Agent searches for the
+name, reads each candidate file to decide whether the match is the same
+symbol, and edits them one at a time. On a large codebase this takes some
+Agents hours, and still misses references the search did not find.
+
+**Typed ACP methods per LSP operation.** A typed table would be a partial copy
+of the LSP specification that lags it permanently: methods outside the table
+are unreachable, and each new LSP method needs an ACP change. With an opaque
+payload, a Client supports a new method as soon as it forwards it, and Agents
+that want typed convenience build it on top.
+
+The editor already runs a synchronised server for every language the user is
+working in. Reaching it through two methods avoids all of these costs.
