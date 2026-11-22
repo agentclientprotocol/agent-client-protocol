@@ -6451,7 +6451,15 @@
               ]
             }
           },
-          "required": ["value"]
+          "required": ["value"],
+          "not": {
+            "properties": {
+              "type": {
+                "const": "boolean"
+              }
+            },
+            "required": ["type"]
+          }
         }
       ],
       "x-side": "agent",

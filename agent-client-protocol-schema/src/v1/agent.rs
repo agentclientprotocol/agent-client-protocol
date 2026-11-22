@@ -4022,6 +4022,7 @@ pub enum SessionConfigOptionValue {
     /// values with string payloads also gracefully deserialize into this
     /// variant.
     #[serde(untagged)]
+    #[cfg_attr(feature = "schemars", schemars(extend("not" = {"properties": {"type": {"const": "boolean"}}, "required": ["type"]})))]
     ValueId {
         /// The value ID.
         value: SessionConfigValueId,
