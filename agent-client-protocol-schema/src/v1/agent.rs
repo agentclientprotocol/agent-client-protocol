@@ -4250,8 +4250,30 @@ pub enum McpServer {
     /// Stdio transport configuration
     ///
     /// All Agents MUST support this transport.
-    #[serde(untagged)]
+    #[serde(untagged, deserialize_with = "deserialize_stdio_server")]
     Stdio(McpServerStdio),
+}
+
+fn deserialize_stdio_server<'de, D>(deserializer: D) -> Result<McpServerStdio, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    // Inspect the tag without collecting into a JSON object: flatten keeps
+    // duplicate fields visible to the stdio configuration's deserializer.
+    #[derive(Deserialize)]
+    struct Wire {
+        #[serde(default, rename = "type")]
+        transport: crate::MaybeUndefined<String>,
+        #[serde(flatten)]
+        server: McpServerStdio,
+    }
+
+    let wire = Wire::deserialize(deserializer)?;
+    if wire.transport.is_undefined() || wire.transport.contains_value(&"stdio") {
+        Ok(wire.server)
+    } else {
+        Err(serde::de::Error::custom("expected stdio transport"))
+    }
 }
 
 /// HTTP transport configuration for MCP.
@@ -7463,6 +7485,10 @@ mod test_serialization {
             })
         );
 
+        let mut tagged = json.clone();
+        tagged["type"] = json!("stdio");
+        assert_eq!(serde_json::from_value::<McpServer>(tagged).unwrap(), server);
+
         let deserialized: McpServer = serde_json::from_value(json).unwrap();
         match deserialized {
             McpServer::Stdio(McpServerStdio {
@@ -7480,6 +7506,45 @@ mod test_serialization {
                 assert_eq!(env[0].value, "secret123");
             }
             _ => panic!("Expected Stdio variant"),
+        }
+    }
+
+    #[test]
+    fn mcp_server_stdio_does_not_override_another_transport() {
+        for transport in [
+            json!("http"),
+            json!("sse"),
+            json!("acp"),
+            json!("future"),
+            json!(null),
+            json!(0),
+            json!({"stdio": null}),
+        ] {
+            let params = json!({
+                "cwd": "/repo",
+                "mcpServers": [{
+                    "type": transport, "name": "docs", "url": 42, "headers": [],
+                    "command": "/bin/docs-mcp", "args": [], "env": []
+                }]
+            });
+            assert!(
+                matches!(
+                    ClientRequest::from_method_and_params("session/new", &params),
+                    Err(crate::MethodDispatchError::InvalidPayload { .. })
+                ),
+                "unexpectedly accepted transport {transport}"
+            );
+        }
+    }
+
+    #[test]
+    fn mcp_server_stdio_rejects_duplicate_fields() {
+        // Parsing into serde_json::Value first would discard the duplicate.
+        for raw in [
+            r#"{"name":"a","name":"b","command":"/bin/docs-mcp","args":[],"env":[]}"#,
+            r#"{"type":"stdio","type":"stdio","name":"a","command":"/bin/docs-mcp","args":[],"env":[]}"#,
+        ] {
+            assert!(serde_json::from_str::<McpServer>(raw).is_err(), "{raw}");
         }
     }
 
