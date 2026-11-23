@@ -91,6 +91,7 @@ The Agent **MUST** send the announcing `subagent_update` before any request or n
 - a `session_message` that names the child as sender or recipient
 - a [`session` content item](/protocol/v1/draft/tool-calls#sessions) that references the child
 - `session/request_permission`, `elicitation/create`, `fs/read_text_file`, `fs/write_text_file`, and `terminal/*` requests for the child
+- an unstable `mcp/message` request whose `sessionId` names the child
 
 The rule also applies to short-lived work.
 
@@ -153,6 +154,8 @@ A child `sessionId` identifies a conversation, not one task, turn, or tool call.
 - A parent's request for permission to create or delegate to a child belongs to the parent. It does not require the child to be announced first.
 
 The Agent chooses the child's working directory, MCP servers, and tools, and they can differ from the parent's. Requests the Agent sends for a child, such as `session/request_permission`, `fs/write_text_file`, or `terminal/create`, pass through the same Client capabilities and permission checks as the parent's. The Agent **MUST NOT** use a child to get around a restriction the Client placed on the parent session.
+
+A child can use an MCP server that the Client provides over the ACP connection when the server was declared to one of the child's ancestors. `sessionId` is optional on the unstable `mcp/message` request, so it is the one request for a child's work that the Agent can send without the child's `sessionId`. The Agent **SHOULD** send the child's `sessionId` when it knows that the request is for the child's work, and **MUST NOT** send another session's ID in its place. A Client that needs the session to run the request **MAY** reject a request that has no `sessionId`. See the [MCP over ACP RFD](/rfds/mcp-over-acp#session-and-tool-call-attribution).
 
 ## Child session updates
 
