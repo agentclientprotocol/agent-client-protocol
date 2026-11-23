@@ -3,6 +3,12 @@ allowed-duplicate-crates = [
     "hashbrown",
     "indexmap",
     "schemars",
+    # serde_with supports both jiff 0.2 and 1.x, so Cargo.lock includes both sets of crates.
+    "jiff",
+    "jiff-core",
+    "jiff-static",
+    "jiff-tzdb",
+    "jiff-tzdb-platform",
     # The derive macros do not all use the same syn major yet.
     "syn",
 ]
