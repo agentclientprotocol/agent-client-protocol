@@ -24,6 +24,8 @@ There are three identities, with different purposes:
 - **`requestId`** is a caller-generated opaque string identifying one logical MCP request. It is used as the inner MCP JSON-RPC ID and is preserved across ACP proxies.
 - **Outer JSON-RPC `id`** identifies the ACP request on one hop. A proxy may renumber it when forwarding.
 
+A request can also carry `sessionId` and `toolCallId`, which name the ACP session and tool call it was sent for. Both are optional. See [Session and tool call attribution](#session-and-tool-call-attribution).
+
 Every operation carries its own MCP version, client capabilities, and other request context. Nothing about a previous request establishes that context for the next one. A subscription may keep one request alive; that is not a session for unrelated calls.
 
 Stateless MCP does not require stateless application services. Providers may reuse tool implementations, database pools, caches, and authorization services. Execution and notification permissions belong to each operation, while application state may outlive it. Discovery, listing, and execution must use that operation's explicit caller context, not the identity or capabilities of an earlier request.
@@ -56,7 +58,7 @@ The client checks the agent's ACP MCP capability, then includes a declaration in
 
 The provider generates the opaque `serverId`. A server ID identifies one registration for the lifetime of the ACP connection and must not be rebound to a different registration, including after removal. The same registration may be offered to multiple ACP sessions; distinct offerings use distinct server IDs rather than hidden per-MCP-connection catalogs.
 
-The provider must be ready to serve requests when it publishes the declaration. An agent may invoke tools or discover the server before returning the ACP session ID.
+The provider must be ready to serve requests when it publishes the declaration. An agent may invoke tools or discover the server before returning the ACP session ID. Those requests carry no `sessionId`. See [Requests without attribution](#requests-without-attribution).
 
 Only the owning provider claims requests for its registered IDs. Intermediaries without a matching registration forward the request. If no provider can resolve the ID, the final recipient returns the binding's server-unavailable error.
 
@@ -177,13 +179,13 @@ Senders MUST include exactly one of `result` or `error` in the carrier. `result`
 
 Outer ACP errors are reserved for failures to admit, route, or execute the binding itself:
 
-| Code     | Meaning                                                            |
-| -------- | ------------------------------------------------------------------ |
-| `-32602` | Malformed ACP envelope or duplicate active `(serverId, requestId)` |
-| `-32800` | ACP operation cancelled                                            |
-| `-33000` | Binding resource limit exceeded                                    |
-| `-33001` | Server registration unavailable                                    |
-| `-33002` | Backend or transport failed without a valid MCP outcome            |
+| Code     | Meaning                                                                                                                                           |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-32602` | Malformed ACP envelope, duplicate active `(serverId, requestId)`, a `sessionId` the provider rejects, or a missing `sessionId` the provider needs |
+| `-32800` | ACP operation cancelled                                                                                                                           |
+| `-33000` | Binding resource limit exceeded                                                                                                                   |
+| `-33001` | Server registration unavailable                                                                                                                   |
+| `-33002` | Backend or transport failed without a valid MCP outcome                                                                                           |
 
 These binding-specific codes do not allocate new meanings in MCP's reserved `-32000` through `-32019` range. No implementation may report overload as ACP's authentication-required error. A malformed inner MCP request or an MCP error returned by a backend belongs in the outcome carrier instead.
 
@@ -197,9 +199,100 @@ Discovery's `supportedVersions` describes the revisions available through this b
 
 The inner `params` field accepts an object or `null` and is optional at the envelope level. Omission and `null` both mean no inner parameters; positional arrays are invalid. This does not relax MCP's requirements: a valid 2026-07-28 request must include its required metadata in `params._meta`.
 
+`sessionId` and `toolCallId` are optional strings on requests. Omission and `null` are equivalent. See [Session and tool call attribution](#session-and-tool-call-attribution).
+
 An optional outer `_meta` object alongside `serverId` is ACP envelope metadata. Omission and `null` are equivalent. It is distinct from MCP metadata inside the inner parameters or result, which must be preserved.
 
 Providers validate the per-request MCP version and capabilities. Missing or malformed required inner metadata is an MCP invalid-parameters outcome. An unsupported version is MCP's `UnsupportedProtocolVersion` error (`-32022`), with the supported and requested versions, inside the outcome carrier. This binding's supported set contains only 2026-07-28: a caller without a mutual version surfaces that error rather than falling back to `initialize` or an earlier revision.
+
+## Session and tool call attribution
+
+`serverId` selects a server. It does not say which ACP session a request was sent for, or which tool call. The same registration can be offered to several sessions, and a [child session](/protocol/v1/subagents) can use a server that was declared to its parent.
+
+A provider needs the session for two things:
+
+- **To run the request.** A provider that runs each session's tools in that session's working directory or sandbox cannot run a request until it knows the session.
+- **To show the request.** A client shows what its tool is doing in the transcript of the session that made the call. For a child session, that is the child's transcript.
+
+The session does not say where in the transcript a request belongs. The agent reports a tool call in `session/update`, and the client serves the `mcp/message` request for it. Nothing tells the client that the two are the same work. `toolCallId` does. A client uses it to:
+
+- **Show its own view of the tool call.** The agent's report of an MCP tool is often little more than the tool's name and JSON. The client that ran the tool knows the diff it applied, the terminal it started, or the files it opened. It can draw that in the entry of the tool call, instead of in a second entry beside it.
+- **Show output while the tool runs.** The client can show its tool's output on the tool call as the tool produces it, without waiting for the agent to send it back in a tool call update.
+- **Tell concurrent calls apart.** Two calls of the same tool with the same arguments in one session differ only in their tool call.
+- **Join the other messages about the same tool call.** `session/request_permission` and `elicitation/create` can already name a tool call. When a tool answers with `input_required` and the agent collects the input with `elicitation/create`, the client can tell that the prompt belongs to the request it just answered.
+
+An `mcp/message` request can name the ACP work that caused it:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 21,
+  "method": "mcp/message",
+  "params": {
+    "serverId": "project-tools:7a72",
+    "requestId": "mcp-request:b204",
+    "sessionId": "sess_child_1",
+    "toolCallId": "call_001",
+    "method": "tools/call",
+    "params": {
+      "name": "search_workspace",
+      "arguments": {
+        "query": "TODO"
+      },
+      "_meta": {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities": {},
+        "io.modelcontextprotocol/clientInfo": {
+          "name": "example-agent",
+          "version": "1"
+        }
+      }
+    }
+  }
+}
+```
+
+- **`sessionId`** is the session whose work caused the request. It is the ID the agent uses on `session/update` for that work. For work in a child session that the agent exposes, that is the child's ID, even when the server was declared to an ancestor.
+- **`toolCallId`** is the tool call in that session that the request is part of. It is the ID the agent uses to report the call in `session/update`.
+
+Both fields are optional. Omitted and `null` are equivalent. The agent MUST NOT send `toolCallId` without `sessionId`. Only requests carry the fields. A notification belongs to its request through `requestId`.
+
+The link runs one way, from an MCP request to a tool call. A tool call that the agent reports says nothing about whether an `mcp/message` request will follow. The fields also do not tie a request to the lifetime of that work. Cancelling a tool call or a session's work does not cancel the `mcp/message` requests that name it. The agent cancels a request it no longer needs with `$/cancel_request`, as for any other request.
+
+### What the agent sends
+
+- The agent SHOULD include each field when it knows the value. An agent that cannot tell which session or tool call a request belongs to omits the field. It MUST NOT send the root session's ID, the latest tool call's ID, or any other guess in its place. A provider can reject a request that has no `sessionId`.
+- The agent MUST NOT send a `sessionId` unless the session is active on the connection, or is a child session that the agent has announced with `subagent_update` and whose root session is active. A session becomes active with the response to its setup request, so a request the agent sends before that response has no `sessionId`.
+- The agent MUST NOT send a `sessionId` for a server that was not declared to that session or to one of its ancestors. The servers declared to a session are the `mcpServers` of its most recent setup request on the connection.
+- The agent SHOULD report a tool call in `session/update` before it sends a request that names it. An agent that cannot order the two still sends `toolCallId`. An agent that does not report the tool call omits it.
+- More than one request can carry the same `toolCallId`, such as an MRTR retry.
+
+### What the provider does
+
+- A provider MAY ignore both fields.
+- A provider MAY use `sessionId` to choose which session a request acts on, or where its output is shown. Before it does, it MUST check that the session is active on the connection or is an announced child of an active session, and that the server was declared to it or to one of its ancestors. If the check fails, the provider MUST reject the request with `-32602` before it runs the inner MCP request. It MUST NOT run the request for another session instead.
+- A provider that needs the session to run a request MAY reject a request that has no `sessionId`, with `-32602`, before it runs the inner MCP request.
+- A provider MUST NOT reject or delay a request because `toolCallId` is missing or names a tool call it does not know. Many requests are not part of a tool call, and the agent's report can arrive after the request. The provider can keep the association and apply it when the tool call is reported.
+- A provider MUST NOT treat either field as permission to run a request, as a key for deduplicating requests, or as a sign that a tool call started or finished. The status of a tool call comes from `session/update`.
+
+### Requests without attribution
+
+Some requests have no session to name. An agent can discover a server once and share the result between sessions. A request the agent sends while it handles a setup request comes before the session is active. An [HTTP client](#proxying-and-http-adaptation) does not say which session it is working for.
+
+A provider that rejects every request without a `sessionId` therefore also rejects discovery during session setup, and every request from an agent that sends no attribution. A provider that needs a session for those requests declares a separate `serverId` in each session setup request. The `serverId` then identifies the session the server was declared to. It cannot identify a child session that uses the server. `sessionId` adds that.
+
+### Alternatives considered
+
+- **A required scope on every request.** `elicitation/create` requires exactly one of `sessionId` or the `requestId` of a pending request. That fits a request the user has to answer. An HTTP adapter or a discovery request can have no session, and many providers can serve those requests anyway. A required field would make the agent invent a session for them. With optional fields, only a provider that needs the session rejects the request.
+- **A required report before the request.** If `toolCallId` had to name a tool call the provider has already seen, the provider could reject an unknown ID. Some agents report tool calls and run them on separate paths, so the rule would make them delay the request or drop the field. The provider still could not tell a late report from one that never comes. Reporting first is a SHOULD instead.
+- **Matching a request to a tool call by name and arguments.** A client could compare the tool name and arguments of a request with the raw input of the tool calls the agent reports. The agent chooses the title and raw input it reports, and can leave the raw input out. Two concurrent calls can have the same name and arguments.
+- **A session ID in the tool's arguments.** The model would have to copy the value correctly on every call. The value would say which session to act on, not which session made the call.
+- **A marker on the tool call.** A tool call update could say that an `mcp/message` request will follow. That ties what the agent reports to the transport one tool uses, and the provider still has to match the two.
+
+### Open questions
+
+- Which error a provider returns for a `sessionId` it rejects, and for a missing one it needs. `-32602` matches the other envelope failures of this binding. `-32002` is the code for an unknown session, but ACP defines it only for requests the client sends. A code of its own for the missing `sessionId` would tell the agent that the request can succeed with attribution.
+- Whether an agent should advertise that it attributes requests, for example inside the `acp` MCP capability. A provider that needs `sessionId` could then tell at `initialize` that an agent never sends it, and declare a separate `serverId` for each session or no server at all.
 
 ## Request-scoped notifications
 
@@ -262,13 +355,13 @@ Bound notification buffering, frame sizes, and outstanding work. Retain resource
 
 MCP 2026-07-28 replaces reverse JSON-RPC calls with MRTR. For `tools/call`, `resources/read`, or `prompts/get`, a provider may return `resultType: "input_required"` with input requests and/or opaque `requestState`. That completes the current ACP request.
 
-The agent obtains the requested input, then issues a fresh `mcp/message` request for the original operation with `inputResponses` and the exact opaque state. Each retry supplies its own MCP metadata and uses a fresh logical request ID. The transport must not parse retry state, automatically approve an elicitation, or replay side-effecting calls without the agent's policy.
+The agent obtains the requested input, then issues a fresh `mcp/message` request for the original operation with `inputResponses` and the exact opaque state. Each retry supplies its own MCP metadata and uses a fresh logical request ID. It carries the same `sessionId` and `toolCallId` as the request it continues, when the agent sends them. The transport must not parse retry state, automatically approve an elicitation, or replay side-effecting calls without the agent's policy.
 
 This flow needs neither a persistent MCP session nor a provider-originated ACP request.
 
 ## Proxying and HTTP adaptation
 
-Proxies preserve `serverId`, logical `requestId`, inner payloads, and metadata. Normal ACP forwarding handles outer responses and, where supported, hop-local cancellation. Providers claim requests for their declared servers; other components forward them normally. There is no conductor MCP connection table or special connect/disconnect routing.
+Proxies preserve `serverId`, logical `requestId`, `sessionId`, `toolCallId`, inner payloads, and metadata. A proxy that rewrites session IDs or tool call IDs on `session/update` rewrites them the same way on `mcp/message`. Normal ACP forwarding handles outer responses and, where supported, hop-local cancellation. Providers claim requests for their declared servers; other components forward them normally. There is no conductor MCP connection table or special connect/disconnect routing.
 
 An optional adapter may expose a native server to a **modern MCP HTTP client**. HTTP capability alone does not prove that an agent supports this MCP revision. The adapter must not add a legacy fallback.
 
@@ -280,6 +373,8 @@ The HTTP endpoint can be reused, but every POST represents its own request:
 - Validate protocol-version, method, name, and applicable mirrored tool-parameter headers against the body, including required value decoding.
 - Validate supplied Origin headers, bind local listeners to loopback, and enforce access control. A random port is not authentication.
 - Allocate independent logical MCP IDs for overlapping HTTP request IDs. Translate MCP ID references at this transport boundary, including subscription IDs, while preserving progress tokens and opaque state. ACP proxies do not perform that translation.
+
+An MCP HTTP request does not say which ACP session or tool call it belongs to. The adapter sends `mcp/message` without `sessionId` and `toolCallId` unless its host supplies them. A host that runs the agent's tools can do that. For example, it records the session of each tool call before the tool runs, then matches the tool call ID that the MCP client puts in the request's `_meta`. The adapter MUST NOT infer the session from the order or timing of requests, or from the session that was active last. A request it cannot match is sent without attribution, and a provider that needs the session can reject it.
 
 ### Native-tool re-export
 
@@ -295,6 +390,8 @@ HTTP is an adapter, not a prerequisite for the native protocol. Its validation a
 
 Server IDs and request IDs are routing identifiers, not credentials. Providers bind server ownership and visibility to the supplying ACP component and authorized callers. Self-reported MCP `clientInfo` is not an authentication identity.
 
+`sessionId` and `toolCallId` are statements by the agent, not credentials. A provider that chooses a session by `sessionId` first checks it against the sessions the server was declared to, and authorizes an attributed request the way it authorizes any other.
+
 Keep outer ACP metadata separate from inner MCP metadata. Do not persist runtime credentials from rewritten HTTP declarations in traces.
 
 Servers treat MRTR state as attacker-controlled input. Where it influences authorization or business logic, protect integrity and address principal binding, expiry, replay, and single-use requirements. Intermediaries keep it opaque.
@@ -304,6 +401,8 @@ Tool lists vary by explicit server identity and authorization scope, not hidden 
 ## Implementation and validation
 
 The Rust implementation uses each ACP version's unstable `MessageMcpRequest`, `MessageMcpResponse`, `MessageMcpNotification`, `McpError`, and `McpRequestId` schema types. The v1 and v2 response and error types are defined independently so either version can evolve without changing the other. Their JSON representation is currently the same.
+
+`sessionId` and `toolCallId` are fields of each version's `MessageMcpRequest`. No implementation sends or checks them yet. An unpublished prototype test against the Claude Code adapter showed that an HTTP adapter can produce them. A `PreToolUse` hook records the session of each tool-use ID, and Claude Code puts that ID in the `_meta` of `tools/call`. With a parent session and two concurrent child sessions that call the same tool on one server, each request named the session and tool call that the adapter reported in `session/update`.
 
 The SDK's target API separates a reusable `McpService` from each owned operation. A `McpRequestContext` supplies logical/server identity, validated metadata and capabilities, cancellation, and request-scoped notifications. A backend factory is an explicit adapter for implementations that need per-operation construction, not a requirement imposed by stateless MCP. Integration adapters must supervise any tasks spawned by their underlying library, not assume dropping a wrapper joins detached handlers.
 
@@ -333,4 +432,4 @@ The Rust reference implementation supervises cancellation and joins owned backen
 
 Normative MCP references: [2026-07-28 specification](https://modelcontextprotocol.io/specification/2026-07-28), [versioning](https://modelcontextprotocol.io/specification/2026-07-28/basic/lifecycle), [MRTR](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr), [subscriptions](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions), [cancellation](https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation), and [Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http).
 
-This proposal was split from the [proxy-chain RFD](./proxy-chains). Earlier drafts used server `id`/`acpId`, an MCP connection ID, connect/disconnect methods, and reverse requests. Those drafts and the stateful implementation checkpoint are not compatibility commitments. This revision replaces them with server-addressed requests and request-scoped notifications targeting MCP 2026-07-28 only.
+This proposal was split from the [proxy-chain RFD](./proxy-chains). Earlier drafts used server `id`/`acpId`, an MCP connection ID, connect/disconnect methods, and reverse requests. Those drafts and the stateful implementation checkpoint are not compatibility commitments. This revision replaces them with server-addressed requests and request-scoped notifications targeting MCP 2026-07-28 only. A later revision added the optional `sessionId` and `toolCallId` fields that attribute a request to an ACP session and tool call.

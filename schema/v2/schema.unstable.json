@@ -2774,7 +2774,7 @@
       "required": ["elicitationId", "url"]
     },
     "MessageMcpRequest": {
-      "description": "**UNSTABLE**\n\nRequest parameters for `mcp/message`, sent from consumer to provider.",
+      "description": "**UNSTABLE**\n\nRequest parameters for `mcp/message`, sent from consumer to provider.\n\n`sessionId` and `toolCallId` name the session and tool call the request was\nsent for. Both are optional. The provider can use `sessionId` to choose\nwhich session the request runs for, and `toolCallId` to show the request\nwith the tool call that the Agent reports. Neither field grants\npermission to run the request.\n\nSee RFD: [MCP-over-ACP](https://agentclientprotocol.com/rfds/mcp-over-acp#session-and-tool-call-attribution)",
       "type": "object",
       "properties": {
         "serverId": {
@@ -2802,6 +2802,29 @@
           "type": ["object", "null"],
           "additionalProperties": true
         },
+        "sessionId": {
+          "description": "The session whose work caused this request. It is the `sessionId` the\nAgent uses on `session/update` for that work. For a child session's work,\nthat is the child's ID.\n\nOptional. Omitted and `null` are equivalent and mean the Agent supplied\nno session. The Agent SHOULD include it when it knows the session, and\nMUST NOT send another session's ID when it does not. A provider that\nneeds the session to run the request MAY reject a request without it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "toolCallId": {
+          "description": "The tool call in that session that this request is part of. It is the\n`toolCallId` the Agent uses to report the call in `session/update`. The\nAgent SHOULD report the tool call before it sends the request.\n\nOptional. Omitted and `null` are equivalent and mean the Agent supplied\nno tool call. The Agent MUST NOT send it without `sessionId`. More than\none request can name the same tool call.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolCallId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-deserialize-default-on-error": true
+        },
         "_meta": {
           "description": "The _meta property is reserved by ACP to allow Clients and Agents to attach additional\nmetadata to their interactions. Omitted and `null` are equivalent and mean no metadata.\nImplementations MUST NOT assign meaning to keys they do not recognize.\nThis is ACP metadata, not the inner MCP message's `_meta`.\n\nSee protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)",
           "type": ["object", "null"],
@@ -2813,7 +2836,25 @@
       "x-side": "client",
       "x-method": "mcp/message",
       "x-scope": {
-        "mcpServer": ["serverId"]
+        "mcpServer": ["serverId"],
+        "session": ["sessionId"],
+        "toolCall": ["toolCallId"]
+      },
+      "if": {
+        "properties": {
+          "toolCallId": {
+            "type": "string"
+          }
+        },
+        "required": ["toolCallId"]
+      },
+      "then": {
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          }
+        },
+        "required": ["sessionId"]
       }
     },
     "McpServerAcpId": {

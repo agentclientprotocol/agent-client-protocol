@@ -9,7 +9,7 @@ use serde_with::{DefaultOnError, serde_as, skip_serializing_none};
 
 use crate::{IntoOption, MaybeUndefined};
 
-use super::{McpServerAcpId, Meta};
+use super::{McpServerAcpId, Meta, SessionId, ToolCallId};
 
 /// **UNSTABLE**
 ///
@@ -155,13 +155,25 @@ impl McpRequestId {
 /// **UNSTABLE**
 ///
 /// Request parameters for `mcp/message`, sent from consumer to provider.
+///
+/// `sessionId` and `toolCallId` name the session and tool call the request was
+/// sent for. Both are optional. The provider can use `sessionId` to choose
+/// which session the request runs for, and `toolCallId` to show the request
+/// with the tool call that the Agent reports. Neither field grants
+/// permission to run the request.
+///
+/// See RFD: [MCP-over-ACP](https://agentclientprotocol.com/rfds/mcp-over-acp#session-and-tool-call-attribution)
 #[serde_as]
 #[skip_serializing_none]
 #[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "schemars", schemars(extend("x-side" = "client", "x-method" = MCP_MESSAGE_METHOD_NAME)))]
-#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"mcpServer": ["serverId"]})))]
+#[cfg_attr(feature = "schemars", schemars(extend("x-scope" = {"mcpServer": ["serverId"], "session": ["sessionId"], "toolCall": ["toolCallId"]})))]
+#[cfg_attr(feature = "schemars", schemars(extend(
+    "if" = {"required": ["toolCallId"], "properties": {"toolCallId": {"type": "string"}}},
+    "then" = {"required": ["sessionId"], "properties": {"sessionId": {"type": "string"}}}
+)))]
 #[non_exhaustive]
 pub struct MessageMcpRequest {
     /// The declared ACP MCP server receiving this request.
@@ -173,6 +185,27 @@ pub struct MessageMcpRequest {
     /// Optional inner MCP params. Null is equivalent to omission.
     #[serde(default)]
     pub params: Option<serde_json::Map<String, serde_json::Value>>,
+    /// The session whose work caused this request. It is the `sessionId` the
+    /// Agent uses on `session/update` for that work. For a child session's work,
+    /// that is the child's ID.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the Agent supplied
+    /// no session. The Agent SHOULD include it when it knows the session, and
+    /// MUST NOT send another session's ID when it does not. A provider that
+    /// needs the session to run the request MAY reject a request without it.
+    #[serde(default)]
+    pub session_id: Option<SessionId>,
+    /// The tool call in that session that this request is part of. It is the
+    /// `toolCallId` the Agent uses to report the call in `session/update`. The
+    /// Agent SHOULD report the tool call before it sends the request.
+    ///
+    /// Optional. Omitted and `null` are equivalent and mean the Agent supplied
+    /// no tool call. The Agent MUST NOT send it without `sessionId`. More than
+    /// one request can name the same tool call.
+    #[serde_as(deserialize_as = "DefaultOnError")]
+    #[cfg_attr(feature = "schemars", schemars(extend("x-deserialize-default-on-error" = true)))]
+    #[serde(default)]
+    pub tool_call_id: Option<ToolCallId>,
     /// The _meta property is reserved by ACP to allow Clients and Agents to attach additional
     /// metadata to their interactions. Omitted and `null` are equivalent and mean no metadata.
     /// Implementations MUST NOT assign meaning to keys they do not recognize.
@@ -199,6 +232,8 @@ impl MessageMcpRequest {
             request_id: request_id.into(),
             method: method.into(),
             params: None,
+            session_id: None,
+            tool_call_id: None,
             meta: None,
         }
     }
@@ -210,6 +245,21 @@ impl MessageMcpRequest {
         params: impl IntoOption<serde_json::Map<String, serde_json::Value>>,
     ) -> Self {
         self.params = params.into_option();
+        self
+    }
+
+    /// Sets or clears the session whose work caused this request.
+    #[must_use]
+    pub fn session_id(mut self, session_id: impl IntoOption<SessionId>) -> Self {
+        self.session_id = session_id.into_option();
+        self
+    }
+
+    /// Sets or clears the tool call this request is part of. The Agent MUST
+    /// NOT send it without `sessionId`.
+    #[must_use]
+    pub fn tool_call_id(mut self, tool_call_id: impl IntoOption<ToolCallId>) -> Self {
+        self.tool_call_id = tool_call_id.into_option();
         self
     }
 
@@ -297,7 +347,7 @@ pub(crate) const MCP_MESSAGE_METHOD_NAME: &str = "mcp/message";
 mod tests {
     use serde_json::{Value, json};
 
-    use super::{McpError, MessageMcpResponse};
+    use super::{McpError, MessageMcpRequest, MessageMcpResponse, SessionId, ToolCallId};
     use crate::MaybeUndefined;
 
     #[test]
@@ -439,6 +489,60 @@ mod tests {
             serde_json::to_value(response).unwrap(),
             json!({"result": {"_meta": {"inner": true}}, "_meta": meta})
         );
+    }
+
+    #[test]
+    fn request_attribution_is_optional_and_null_means_omitted() {
+        let plain = MessageMcpRequest::new("s", "r", "tools/call");
+        let session = plain.clone().session_id(SessionId::new("child"));
+        for (attribution, expected) in [
+            (json!({}), plain.clone()),
+            (json!({"sessionId": null, "toolCallId": null}), plain),
+            (json!({"sessionId": "child"}), session.clone()),
+            (
+                json!({"sessionId": "child", "toolCallId": "call"}),
+                session.tool_call_id(ToolCallId::new("call")),
+            ),
+        ] {
+            let mut wire = json!({"serverId": "s", "requestId": "r", "method": "tools/call"});
+            wire.as_object_mut()
+                .unwrap()
+                .extend(attribution.as_object().unwrap().clone());
+            let parsed: MessageMcpRequest = serde_json::from_value(wire.clone()).unwrap();
+            assert_eq!(parsed, expected, "{wire}");
+            // Unset fields are left out, so a request without them is unchanged.
+            wire.as_object_mut().unwrap().retain(|_, v| !v.is_null());
+            assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+        }
+    }
+
+    #[test]
+    fn request_rejects_a_malformed_session_id() {
+        for session_id in [json!(42), json!({}), json!(["child"])] {
+            let wire = json!({
+                "serverId": "s",
+                "requestId": "r",
+                "method": "tools/call",
+                "sessionId": session_id,
+                "toolCallId": "call",
+            });
+            assert!(
+                serde_json::from_value::<MessageMcpRequest>(wire.clone()).is_err(),
+                "accepted {wire}"
+            );
+        }
+    }
+
+    #[cfg(feature = "schemars")]
+    #[test]
+    fn request_schema_requires_a_session_for_a_tool_call() {
+        let schema = serde_json::to_value(schemars::schema_for!(MessageMcpRequest)).unwrap();
+        assert_eq!(
+            schema["required"],
+            json!(["serverId", "requestId", "method"])
+        );
+        assert_eq!(schema["if"]["required"], json!(["toolCallId"]));
+        assert_eq!(schema["then"]["required"], json!(["sessionId"]));
     }
 
     #[cfg(feature = "schemars")]

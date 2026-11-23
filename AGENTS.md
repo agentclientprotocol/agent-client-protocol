@@ -39,6 +39,11 @@ All paths in the protocol should be absolute
 - Make the same change in both the stable page and its `draft/` copy, unless the change is draft-only
 - Run `npm run check` to make sure the json and zod schemas gets generated properly
 
+## Tests
+
+- The Node tests in `scripts/schema-tests` are only for JSON Schema validation. They load the published files in `schema/` and assert which values a JSON Schema validator accepts and rejects. Add a case there for a rule that the published schema states, such as a hand-written `if`/`then` or `oneOf`.
+- Don't test serialization, deserialization, or other Rust behavior there. Those tests go next to the type in `agent-client-protocol-schema`. Tests of how the schema is generated and annotated go in `schema-generator`.
+
 ## Writing spec prose and schema descriptions
 
 These apply to the `docs/protocol` pages and to Rust doc comments, which become the descriptions in the generated schema.
