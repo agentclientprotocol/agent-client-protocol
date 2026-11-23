@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [1.22.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.21.2...v1.22.0) - 2026-11-23
+
+### Added
+
+- *(unstable)* attribute mcp/message requests to a session and tool call ([#2988](https://github.com/agentclientprotocol/agent-client-protocol/pull/2988))
+
+### Fixed
+
+- *(schema)* reject a malformed MCP transport instead of launching it as stdio ([#2982](https://github.com/agentclientprotocol/agent-client-protocol/pull/2982))
+- *(schema)* reject string payloads for v1 boolean config setters ([#2981](https://github.com/agentclientprotocol/agent-client-protocol/pull/2981))
+
+### Other
+
+- *(unstable-v2)* clarify plain text and Markdown rendering ([#2978](https://github.com/agentclientprotocol/agent-client-protocol/pull/2978))
+
 ## [1.21.2](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.21.1...v1.21.2) - 2026-11-21
 
 ### Other

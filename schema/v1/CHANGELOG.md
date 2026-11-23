@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.35.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.34.1...schema-v1.35.0) - 2026-11-23
+
+### Added
+
+- *(unstable)* attribute mcp/message requests to a session and tool call ([#2988](https://github.com/agentclientprotocol/agent-client-protocol/pull/2988))
+
+### Fixed
+
+- *(schema)* reject string payloads for v1 boolean config setters ([#2981](https://github.com/agentclientprotocol/agent-client-protocol/pull/2981))
+
 ## [1.34.1](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.34.0...schema-v1.34.1) - 2026-11-21
 
 ### Other
