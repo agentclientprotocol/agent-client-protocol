@@ -4021,11 +4021,40 @@ pub enum SessionConfigOptionValue {
     /// This is the default when `type` is absent on the wire. Unknown `type`
     /// values with string payloads also gracefully deserialize into this
     /// variant.
-    #[serde(untagged)]
+    #[serde(untagged, deserialize_with = "deserialize_config_value_id_fallback")]
+    // Without `required` inside `not`, the schema would also reject legacy IDs with no `type`.
+    #[cfg_attr(feature = "schemars", schemars(extend("not" = {
+        "properties": {"type": {"const": "boolean"}},
+        "required": ["type"]
+    })))]
     ValueId {
         /// The value ID.
         value: SessionConfigValueId,
     },
+}
+
+fn deserialize_config_value_id_fallback<'de, D>(
+    deserializer: D,
+) -> Result<SessionConfigValueId, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    // An untagged struct variant accepts objects, not positional arrays.
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Fallback {
+        Id {
+            #[serde(default, rename = "type")]
+            value_type: serde_json::Value,
+            value: SessionConfigValueId,
+        },
+    }
+
+    let Fallback::Id { value_type, value } = Fallback::deserialize(deserializer)?;
+    if value_type == "boolean" {
+        return Err(serde::de::Error::custom("expected a boolean config value"));
+    }
+    Ok(value)
 }
 
 impl SessionConfigOptionValue {
@@ -7918,14 +7947,20 @@ mod test_serialization {
             serde_json::from_value::<NewSessionRequest>(value).unwrap(),
             request
         );
-        assert!(
-            serde_json::from_value::<NewSessionRequest>(json!({
-                "cwd": "/home/user/project",
-                "mcpServers": [],
-                "configOptions": [{"type": "boolean", "value": true}]
-            }))
-            .is_err()
-        );
+        for invalid in [
+            json!({"type": "boolean", "value": true}),
+            json!({"configId": "fast", "type": "boolean", "value": "false"}),
+        ] {
+            assert!(
+                serde_json::from_value::<NewSessionRequest>(json!({
+                    "cwd": "/home/user/project",
+                    "mcpServers": [],
+                    "configOptions": [invalid]
+                }))
+                .is_err(),
+                "{invalid}"
+            );
+        }
         assert_eq!(
             serde_json::to_value(SessionOptionsResponse::new()).unwrap(),
             json!({})
@@ -8526,16 +8561,14 @@ mod test_serialization {
     }
 
     #[test]
-    fn test_session_config_option_value_type_mismatch_boolean_with_string() {
-        // type says "boolean" but value is a string — falls to untagged ValueId
-        let json = json!({ "type": "boolean", "value": "not a bool" });
-        let result = serde_json::from_value::<SessionConfigOptionValue>(json);
-        // serde tries Boolean first (fails), then falls to untagged ValueId (succeeds)
-        assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap().as_value_id().unwrap().to_string(),
-            "not a bool"
-        );
+    fn test_set_session_config_option_request_rejects_boolean_with_string() {
+        let params = json!({
+            "sessionId": "s",
+            "configId": "fast",
+            "type": "boolean",
+            "value": "false"
+        });
+        assert!(serde_json::from_value::<SetSessionConfigOptionRequest>(params).is_err());
     }
 
     #[test]

@@ -951,6 +951,32 @@ mod schema_annotation_tests {
         }
     }
 
+    #[cfg(not(feature = "unstable_protocol_v2"))]
+    #[test]
+    fn generated_v1_config_value_id_fallback_excludes_boolean() {
+        let schema = root_schema_value();
+        for name in [
+            "SetSessionConfigOptionRequest",
+            #[cfg(feature = "unstable")]
+            "InitialSessionConfigOption",
+        ] {
+            let fallback = def_schema(&schema, name)["anyOf"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|variant| variant["title"] == "value_id")
+                .unwrap();
+            assert_eq!(
+                fallback["not"],
+                serde_json::json!({
+                    "properties": {"type": {"const": "boolean"}},
+                    "required": ["type"]
+                }),
+                "{name}: exclude the boolean tag, not an omitted type"
+            );
+        }
+    }
+
     #[cfg(feature = "unstable_protocol_v2")]
     #[test]
     fn generated_v2_fallback_schema_rejects_compaction_discriminators() {
