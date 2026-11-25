@@ -1,0 +1,363 @@
+---
+title: "Live voice sessions"
+---
+
+- Author(s): [@eljeffeg](https://github.com/eljeffeg)
+- Champion: _TBD_
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add an optional, capability-negotiated way for a Client to hold a live spoken conversation with an Agent's own voice model. Today the only audio ACP has is the `audio` content block: a finished recording attached to a prompt. This RFD adds:
+
+- A `voice` agent capability. It declares a **half-duplex** base level (turn-based: the user speaks, then the Agent replies) and an optional **full-duplex** level (both sides can speak at once, and the user can interrupt with barge-in). It also lists supported audio formats and transports.
+- `voice/start` and `voice/stop` methods. They open and close a voice channel attached to an existing session.
+- Audio streaming. Audio flows as JSON-RPC notifications on the existing connection by default, or over a negotiated WebSocket side channel when the Agent offers one (WebRTC is reserved for a follow-up).
+- Turn-taking and interruption: commit, speech-start and speech-stop events, barge-in, and truncation of agent speech.
+- Transcripts for **both** sides, delivered as ordinary `user_message` and `agent_message` session updates. History, replay, search, and memory stay text-first.
+- Rules for how permission requests, elicitation, cancellation, and privacy work while a voice turn is in progress.
+
+Client-side dictation stays as it is today and is out of scope. In dictation the Client does its own speech-to-text and sends a text prompt.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+ACP supports audio only as a static content block:
+
+```json
+{ "type": "audio", "mimeType": "audio/wav", "data": "UklGRiQAAABXQVZF..." }
+```
+
+An Agent opts in with `promptCapabilities.audio` (v1) or `session.prompt.audio` (v2). The block is a finished recording sent with a `session/prompt`. Nothing streams. The Agent can't hear the user while they are still talking, and it can't speak back. The Client also can't interrupt agent speech. That leaves three options, all poor:
+
+1. **Client-side dictation.** The Client does speech-to-text, sends text, and then runs its own text-to-speech on the reply. This works and will keep working. But the Agent's model never hears tone, hesitation, or overlapping speech, and every Client has to bundle and pay for its own STT/TTS stack. If the harness has a better voice model, that model goes unused.
+2. **Recorded clips.** Each user utterance is a separate `audio` prompt. Latency is high and there is no streaming reply. Turn-taking has no concept of interruption.
+3. **Out-of-band proprietary channels.** Harnesses are beginning to ship live voice models built on realtime speech-to-speech APIs, and each one exposes them in its own way. A Client that works with several harnesses must integrate each proprietary channel or give up on voice for that harness. Nothing ties that audio back to the ACP session, so transcripts, permission prompts, and cancellation all drift out of sync with what the session thinks is happening.
+
+The main motivation is case 3. If a harness has a voice channel, an orchestrating Client should be able to discover it through ACP and use it directly, without relaying audio through its own models. The Client still runs its own separate conversation with the user. It treats the harness's voice channel the way it treats any other model provider, as a capability it can call. To do that it needs a standard, negotiated way to open the channel and to keep the session's text history accurate.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+### Capability negotiation
+
+Agents that support live voice advertise a `voice` capability. In v2 it sits under `session` next to `prompt`. In v1 it sits under `agentCapabilities`.
+
+```json
+{
+  "capabilities": {
+    "session": {
+      "voice": {
+        "halfDuplex": {},
+        "fullDuplex": {},
+        "input": {
+          "formats": [
+            { "encoding": "pcm16", "sampleRate": 16000, "channels": 1 },
+            { "encoding": "opus", "sampleRate": 48000, "channels": 1 }
+          ]
+        },
+        "output": {
+          "formats": [
+            { "encoding": "pcm16", "sampleRate": 24000, "channels": 1 },
+            { "encoding": "opus", "sampleRate": 48000, "channels": 1 }
+          ]
+        },
+        "turnDetection": { "server": {}, "client": {} },
+        "transports": { "jsonrpc": {}, "websocket": {} }
+      }
+    }
+  }
+}
+```
+
+- `halfDuplex` is **required** whenever `voice` is present. Every voice-capable Agent supports turn-based voice.
+- `fullDuplex` is optional. If it is absent, the Agent does not accept user audio while it is speaking, except for the explicit interrupt path described below.
+- `input.formats` and `output.formats` list what the Agent accepts and produces. Every voice-capable Agent **MUST** support `pcm16` at 16000 Hz mono for input and `pcm16` at 24000 Hz mono for output. This gives every pair of implementations one format they can always agree on.
+- `turnDetection.server` means the Agent can detect the end of the user's speech on its own (server-side VAD). `turnDetection.client` means the Agent accepts explicit `voice/commit` from the Client. At least one of them **MUST** be present.
+- `transports.jsonrpc` is **required**. Side-channel transports are optional.
+
+Clients that want voice advertise `"voice": {}` in their capabilities, so Agents know they can send `voice_state` updates and `voice` transcript metadata. Agents **MUST NOT** send either to a Client that did not advertise it. Format and mode are chosen per channel in `voice/start`, so the client capability carries no further fields.
+
+An omitted `voice` and a `null` `voice` mean the same thing: voice is not supported. `encoding` is an open string enum that follows the [enum variant extension](/rfds/v2/enum-variant-extension) rules. Values beginning with `_` are reserved for implementation-specific codecs. Receivers **MUST** ignore formats they don't understand.
+
+### Opening a voice channel
+
+Voice is always attached to an existing session. The Client sends `voice/start`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "voice/start",
+  "params": {
+    "sessionId": "sess_abc123",
+    "mode": "full_duplex",
+    "input": { "encoding": "pcm16", "sampleRate": 16000, "channels": 1 },
+    "output": { "encoding": "pcm16", "sampleRate": 24000, "channels": 1 },
+    "turnDetection": "server",
+    "transport": "websocket",
+    "speaker": "alloy",
+    "language": "en"
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "voiceId": "voice_01",
+    "mode": "full_duplex",
+    "input": { "encoding": "pcm16", "sampleRate": 16000, "channels": 1 },
+    "output": { "encoding": "pcm16", "sampleRate": 24000, "channels": 1 },
+    "turnDetection": "server",
+    "transport": {
+      "type": "websocket",
+      "url": "wss://agent.example.com/voice/voice_01",
+      "token": "eyJ...",
+      "expiresAt": "2026-11-25T18:05:00Z"
+    }
+  }
+}
+```
+
+- `mode` is `half_duplex` or `full_duplex`. If the request omits it, the Agent picks `half_duplex`. An Agent **MUST** reject `full_duplex` with `-32602` if it did not advertise `fullDuplex`.
+- `speaker` (the voice persona) and `language` are optional hints. Agents that expose selectable speakers **SHOULD** also expose them as a [session config option](/protocol/v2/session-config-options) so they can be changed during the session.
+- A session has at most one active voice channel per connection. A second `voice/start` for the same session **MUST** fail unless the previous channel was stopped first.
+- The `transport` in the result is authoritative. If the Client asked for a side channel that the Agent can't provide, the Agent **MAY** fall back to `{ "type": "jsonrpc" }`.
+
+The channel is closed by `voice/stop` (`{ "sessionId", "voiceId" }`), by the Agent sending a `voice_state` update with `state: "closed"`, or when the session or connection closes. A channel in state `closed` is stopped: the Client does not need to send `voice/stop` and **MAY** send `voice/start` again. Stopping voice does **not** end the session. Text prompts keep working before, during, and after a voice channel.
+
+### Streaming audio
+
+**In-band (`jsonrpc`).** Audio frames travel as notifications. The data is base64 and the sequence number increases monotonically for each direction:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "voice/input_audio",
+  "params": {
+    "sessionId": "sess_abc123",
+    "voiceId": "voice_01",
+    "seq": 42,
+    "data": "AAEC..."
+  }
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "voice/output_audio",
+  "params": {
+    "sessionId": "sess_abc123",
+    "voiceId": "voice_01",
+    "messageId": "msg_agent_9",
+    "seq": 17,
+    "offsetMs": 3400,
+    "data": "AAEC..."
+  }
+}
+```
+
+- Frames **SHOULD** carry 20–100 ms of audio.
+- `voice/output_audio` names the `messageId` of the agent message it voices. `offsetMs` is the position of the frame within that message's audio, which is what makes truncation precise.
+- On the side channel, where frames have no `messageId`, offsets instead count from the start of the channel (see the wire format).
+- Audio frames are deliberately **not** session updates. They are not persisted, not replayed, and not delivered to other attached Clients unless those Clients opened their own channel.
+
+**Side channel.** If the result names `websocket`, the Client connects to the given endpoint and authenticates with the short-lived `token`. Audio then travels on the side channel as binary frames. `webrtc` is a reserved transport name; its signaling is left to a follow-up (see open questions). All _control_ traffic stays on the ACP connection: start, stop, commit, interrupt, transcripts, and state. That way the session's state machine lives in one place. The wire format of the side channel is defined in the implementation section.
+
+### Turn-taking
+
+The Agent reports the channel's state with a new `voice_state` session update:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "session/update",
+  "params": {
+    "sessionId": "sess_abc123",
+    "update": {
+      "sessionUpdate": "voice_state",
+      "voiceId": "voice_01",
+      "state": "user_speaking",
+      "event": "speech_started",
+      "userMessageId": "msg_user_8"
+    }
+  }
+}
+```
+
+`state` is one of `listening`, `user_speaking`, `thinking`, `agent_speaking`, `paused`, or `closed`. `event` is an optional open enum that says what caused the transition: `speech_started`, `speech_stopped`, `committed`, `interrupted`, or `playback_complete`. Each time the Agent starts voicing a new agent message, it emits `agent_speaking` with `agentMessageId` and `startOffsetMs`, the channel output offset where that message's audio begins. `startOffsetMs` is only sent when the transport is a side channel. This is how side-channel Clients, whose frames carry no `messageId`, map audio back to messages.
+
+**Half-duplex.**
+
+- With `turnDetection: "client"`, the Client streams audio and then sends `voice/commit` (`{ "sessionId", "voiceId" }`) to end the user's turn. This works like push-to-talk.
+- With `turnDetection: "server"`, the Agent decides when the turn ends and emits `speech_stopped`.
+- In both cases the committed audio becomes a user turn. The Agent assigns the user message's `messageId` and reports it as `userMessageId` on the first `voice_state` update of the turn (`speech_started`, or `committed` if no speech event came first), before any transcript chunk for that message. The turn then behaves as if `session/prompt` had been called: the session moves to `running`, the Agent responds, and the session returns to `idle`. While the session is `running` the Client **SHOULD NOT** send input audio, and the Agent **MAY** drop any input audio it receives.
+- To cut off a reply in half-duplex, the Client sends `voice/interrupt`.
+
+**Full-duplex.**
+
+- Input audio is accepted at any time.
+- If the user starts speaking while the Agent is speaking, the Agent **SHOULD** stop speaking (barge-in) and emit `voice_state` with `event: "interrupted"`.
+- On `event: "interrupted"`, the Client **MUST** discard any output audio it has buffered but not played, and **SHOULD** send `voice/interrupt` with the `messageId` and `playedMs` it actually played. Only the Client knows what was played. Until that arrives, the Agent treats the audio it sent as the upper bound for `playedMs`.
+- The Client **MAY** also send `voice/interrupt` explicitly, for example from a stop button:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "voice/interrupt",
+  "params": {
+    "sessionId": "sess_abc123",
+    "voiceId": "voice_01",
+    "messageId": "msg_agent_9",
+    "playedMs": 2150
+  }
+}
+```
+
+`messageId` names the agent message the user was hearing, which can lag behind what the Agent is generating, and `playedMs` reports how much of it the user heard. The two fields are optional but **MUST** be sent together. If both are omitted, the user has heard nothing yet (for example, stop was pressed while the Agent was `thinking`): the Agent **MUST NOT** start speaking the pending reply, and truncates any agent message it had begun with `playedMs: 0`. Later agent messages that the user never heard are also truncated with `playedMs: 0`. The Agent **MUST** mark the agent message `truncated` and record `playedMs` on it (see [Transcripts](#transcripts)). It **SHOULD** cut the transcript text and its own model context to that point as closely as its speech engine allows. Engines without word timings may keep the full text; readers then use `playedMs` to know the rest was not heard. An interruption stops _speech_. It does not by itself cancel work the Agent is doing, such as tool calls. Use `session/cancel` for that.
+
+### Transcripts
+
+The record of a voice conversation is its **transcript**, not its audio. Agents **MUST** transcribe both sides into the session's normal message history, live, as the conversation happens. Audio is only the transport: it is never the sole record of what was said, and a Client that ignores audio entirely still sees the whole conversation as text. An Agent whose engine cannot produce a transcript for one side **MUST NOT** advertise `voice`. This is the main reason to put voice in ACP instead of beside it: memory layers, search, and replay keep working on text.
+
+- The user's speech becomes a `user_message` and the Agent's speech becomes an `agent_message`. They are streamed with the usual `*_chunk` updates and keyed by `messageId`.
+- Each message carries a `voice` object with metadata:
+
+```json
+{
+  "sessionUpdate": "agent_message",
+  "messageId": "msg_agent_9",
+  "content": [{ "type": "text", "text": "Sure, I'll run the tests now and" }],
+  "voice": {
+    "voiceId": "voice_01",
+    "status": "truncated",
+    "playedMs": 2150
+  }
+}
+```
+
+- `voice.status` is `interim`, `final`, or `truncated`. An interim transcript is replaced through the normal whole-message upsert when the final text arrives. When barge-in happens, the Agent re-upserts the message with `status: "truncated"` and `playedMs`, cutting the text to what was heard where it can.
+- Transcripts never include the original audio (see privacy). Replay (`session/load`, `session/resume`) delivers transcripts only.
+- Thoughts, tool calls, and plans that happen during a voice turn are reported exactly as they are in a text turn.
+
+### Permissions and elicitation during a voice turn
+
+Voice changes how a request is presented to the user. It does not change the rules.
+
+- When the Agent issues a `session/request_permission` or `elicitation/create` during a voice turn, it **MUST** stop producing speech for the current reply and emit `voice_state` with `state: "paused"`. The session state becomes `requires_action`, as it would without voice; that is the signal for why the voice is paused.
+- The Client decides how to present the request. It **MAY** show it on screen, read it aloud with its own TTS, or both. The Agent **MAY** speak a short cue such as "I need your approval to run this command" _before_ it pauses. That spoken cue is not the request itself.
+- **A spoken answer is never an approval by itself.** If a Client lets the user answer a permission request by voice, the Client must interpret the speech and send an explicit `optionId` outcome. The Agent **MUST NOT** treat transcribed user speech as a permission or elicitation response. This keeps the existing guarantee that only an explicit selection counts as approval.
+- Secrets **MUST NOT** be collected by voice. URL-mode elicitation stays the only path for credentials. Clients **SHOULD** show URL-mode requests on screen.
+- Once the request resolves, the Agent resumes, and `voice_state` returns to `thinking` or `agent_speaking`.
+
+### Cancellation
+
+- `session/cancel` cancels the foreground voice turn in the same way it cancels a text turn. The Agent stops speaking, discards audio it has buffered, cancels pending permission requests and any elicitations that are no longer needed, finalizes the transcript with `status: "truncated"` where needed, and reports `idle` with `stopReason: "cancelled"`. The voice channel **stays open** in `listening`.
+- `voice/stop` closes the channel. If a turn is in progress, the Agent **MUST** treat the stop as an interruption of the speech, then decide based on its own policy whether the work continues as a text turn. It **SHOULD** let the work continue unless the Client also sends `session/cancel`.
+- `voice/interrupt` stops speech only, as described in [Turn-taking](#turn-taking).
+
+### Privacy and consent
+
+- Microphone permission is the Client's responsibility. A Client **MUST NOT** send `voice/start` without user consent, and **MUST** show a clear indicator whenever capture is active.
+- Agents **MUST NOT** keep raw user audio beyond what the active turn needs, unless the user has agreed to it. Transcripts follow the session's ordinary history policy.
+- Side-channel tokens **MUST** be short-lived, bound to a single `voiceId`, and scoped to audio only.
+- If an Agent forwards audio to a third-party speech provider, it **SHOULD** disclose this through a `notice` session update or in its documentation.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A user talks to a voice-enabled Client that is connected to a coding harness. The Client asks the harness to start voice and sees that the harness offers full-duplex Opus over WebSocket. The Client opens that channel and connects the user's microphone to it, so the user hears the harness's own model directly. The user interrupts mid-sentence. The harness stops, truncates the transcript to what was heard, and listens. When the harness needs to run a destructive command, it says "I need your OK for that," pauses, and raises an ordinary permission request. The Client shows a card and also offers a spoken yes or no, which it translates into an explicit `optionId`. Afterwards the whole exchange sits in the session history as plain text that the Client can search and summarize. The Client's own conversation with the user continues alongside, and the harness's voice service is one more model provider it can call on.
+
+For a harness without voice, nothing changes. The Client does dictation and TTS itself and sends text prompts. Simple Clients can support half-duplex push-to-talk over JSON-RPC with very little code, and richer Clients can use full-duplex over a side channel.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Schema additions
+
+| Item                                                           | Kind              | Direction      |
+| -------------------------------------------------------------- | ----------------- | -------------- |
+| `session.voice` (v2) / `agentCapabilities.voice` (v1)          | Agent capability  | Agent → Client |
+| `voice: {}` (v2) / `clientCapabilities.voice: {}` (v1)         | Client capability | Client → Agent |
+| `voice/start`, `voice/stop`, `voice/interrupt`, `voice/commit` | Requests          | Client → Agent |
+| `voice/input_audio`                                            | Notification      | Client → Agent |
+| `voice/output_audio`                                           | Notification      | Agent → Client |
+| `voice_state`                                                  | Session update    | Agent → Client |
+| `voice` on `user_message` / `agent_message`                    | Optional field    | Agent → Client |
+
+`AudioFormat` is `{ encoding: string, sampleRate: integer, channels: integer, _meta? }`. Defined values for `encoding` are `pcm16` (signed 16-bit little-endian, raw, no container) and `opus` (one Opus packet per frame, with no Ogg container). New values are added the same way as other open enums.
+
+Every new object accepts `_meta`.
+
+### Side-channel wire format
+
+- **WebSocket.** The Client connects to `url` with the token in the query string (`?token=<token>`), because browser WebSocket APIs cannot set an `Authorization` header. Agents **MUST** reject the token after first use or at `expiresAt`, whichever comes first, and **SHOULD** keep it out of access logs. Each binary message is one frame: an 8-byte header holding the `seq` (uint32 BE) and an offset in milliseconds (uint32 BE), followed by the encoded payload. For both directions the offset counts from the start of the channel: for input it is capture time, and for output it is milliseconds of audio sent on the channel; silence that is not sent does not count. It never resets between messages. Clients map output offsets to messages using the `startOffsetMs` on each `agent_speaking` update, and convert back to a per-message `playedMs` for `voice/interrupt`. Text messages are not used. The ACP connection stays the only control plane. If the side channel drops, the Agent emits `voice_state` with `closed`, and the Client **MAY** send `voice/start` again.
+- **WebRTC.** Not specified in this draft. Agents **MUST NOT** offer `webrtc` until a follow-up defines its signaling.
+
+### Versioning
+
+This RFD is purely additive, so it can land in v1, in v2, or in both. The examples above use the v2 shapes: `capabilities.session.voice`, the `state_update` lifecycle, and whole-message upserts. For v1, the turn lifecycle maps onto the `session/prompt` response with `stopReason`. Transcripts use `user_message_chunk` and `agent_message_chunk`, and because v1 chunks can only append, v1 transcripts keep the full text. Truncation is expressed by a final, empty chunk whose `_meta.voice` carries `status: "truncated"` and `playedMs`. Interim text can't be replaced in v1, so v1 Agents **MUST** send only `final` user transcripts.
+
+### Plan
+
+1. Add the RFD to the **Draft** group in `docs/docs.json` (`rfds/voice`).
+2. Add the schema types behind an `unstable_voice` flag in the Rust and TypeScript SDKs.
+3. Build a reference Agent that bridges a realtime speech-to-speech API over JSON-RPC (half-duplex and full-duplex), and a reference Client with push-to-talk and barge-in.
+4. Collect feedback from at least one harness that has its own voice model and one multi-harness Client, then move to **Preview**.
+5. Add the WebSocket side channel next, and specify WebRTC in a follow-up once there is demand.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **Leave voice to Clients (dictation plus TTS).** This stays supported and out of scope, but it can't use a harness's own voice model, which is the motivating case.
+- **Streaming `audio` content blocks inside `session/prompt`.** This overloads a request/response method with a long-lived bidirectional stream. It also has no natural place for barge-in or server VAD.
+- **Make every audio frame a `session/update`.** That would flood history and replay with audio. Separating raw audio (notifications, never persisted) from transcripts (session updates, persisted) keeps the history model clean.
+- **A side channel only.** This is the most efficient option, but it makes every implementation handle a second transport. The JSON-RPC baseline works over stdio with no extra infrastructure. The side channel is an optimization the two sides negotiate.
+- **Adopt one vendor's realtime event protocol wholesale.** Those protocols mix model configuration with transport and tie ACP to a single provider. This RFD borrows the useful ideas (server VAD, commit, truncate at the played offset) without the vendor-specific parts.
+
+### Why is half-duplex the required base level?
+
+Half-duplex can be built on every voice model and every Client, including simple push-to-talk ones. Full-duplex needs echo cancellation, VAD, and barge-in handling on both sides. Making it optional means small implementations can still interoperate.
+
+### How does this relate to MCP?
+
+ACP's `audio` block and elicitation are already aligned with MCP 2026-07-28. MCP has no streaming audio today. This RFD reuses MCP-aligned content blocks for transcripts and keeps elicitation unchanged, so a future MCP audio-streaming extension could map onto the same `AudioFormat` and transcript model. If MCP standardizes streaming audio first, this RFD should adopt its format vocabulary.
+
+### Can several Clients share one voice channel?
+
+Not in this draft. Transcripts reach every attached Client through session updates, but audio goes only to the Client that opened the channel. Fanning audio out to several Clients (for example a phone and a desktop) is an open question.
+
+### Open questions
+
+- **Codec baseline.** Is mandatory `pcm16` enough, or should Opus also be mandatory so the JSON-RPC path is usable over remote transports?
+- **Base64 overhead.** Base64 PCM over JSON-RPC costs about 43 KB/s at 16 kHz. Should the in-band path be limited to stdio and local use, or should we define a binary framing for the [WebSocket transport](/rfds/streamable-http-websocket-transport)?
+- **WebRTC.** What should signaling look like (SDP offer and answer methods, ICE/TURN configuration)? `webrtc` is reserved as a transport name until then.
+- **Text during voice.** How does a text `session/prompt` sent while a voice turn is running interleave with it: queued, merged, or treated as an interruption?
+- **Backpressure and latency.** Do we need explicit flow control (for example, the Agent advertising a jitter buffer size), or do timestamps and `offsetMs` suffice?
+- **Narrating tool calls.** Should Agents be told how to speak tool activity and plans, or is that left entirely to implementations?
+- **Voice and model selection.** Should `voice` and `language` move entirely into session config options with a new `voice` category?
+- **Interim transcript churn.** Should interim user transcripts be optional, given that they produce many upserts?
+- **Retention.** Should there be a `retainAudio` flag on `voice/start` so a Client can explicitly ask for user audio to be stored in history?
+- **Fan-out and handoff** across Clients (see the FAQ above).
+- **Scope.** Should voice target v1, v2, or both? The current draft is written against v2 and maps to v1 only loosely.
+
+## Revision history
+
+- 2026-11-25: Initial draft.
+- 2026-11-25: Review fixes: query-string side-channel token, `closed` counts as stopped, best-effort truncation with `playedMs` (including v1), `speaker` rename, bare client capability, agent-assigned user `messageId`, WebRTC deferred, G.711 and `requires_action` event removed.
+- 2026-11-25: Second review: `messageId` on `voice/interrupt`, channel-relative side-channel offsets with `startOffsetMs`, final-only user transcripts in v1, raw audio never kept in transcripts, corrected `voice_state` example.
+- 2026-11-25: Third review: optional paired `messageId`/`playedMs` on `voice/interrupt`, `startOffsetMs` side-channel only, output offset defined as audio sent, transcripts of both sides made mandatory as the session record.
+- 2026-11-25: Fourth review: on Agent-detected barge-in, the Client discards buffered audio and reports `playedMs` with `voice/interrupt`.
