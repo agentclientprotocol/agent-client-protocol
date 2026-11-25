@@ -538,7 +538,7 @@ The response contains the options the session would start with:
 
 ### Initial values
 
-Clients send the values the user picked in `configOptions` on `session/new`, `session/load`, `session/resume`, and, when the Agent supports it, `session/fork`. Each entry has the same shape as `session/set_config_option` without `sessionId`. `type` is optional and defaults to `id`, as on `session/set_config_option`. Clients only send `type: "boolean"` entries when they advertise `sessionCapabilities.configOptions.boolean`.
+Clients send the values the user picked in `configOptions` on `session/new`, `session/load`, `session/resume`, and, when the Agent supports it, `session/fork`. `configOptions` is optional. Omitted and `null` are equivalent to an empty list. Each entry has the same shape as `session/set_config_option` without `sessionId`. `type` is optional and defaults to `id`, as on `session/set_config_option`. Clients only send `type: "boolean"` entries when they advertise `sessionCapabilities.configOptions.boolean`.
 
 ```json
 {

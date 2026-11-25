@@ -805,7 +805,7 @@ this is the complete resulting additional-root list for the forked
 session.
 
 </ResponseField>
-<ResponseField name="configOptions" type={<a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a>} >
+<ResponseField name="configOptions" type={<><span><a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1024,7 +1024,7 @@ remains the base for relative paths. When omitted or empty, no
 additional roots are activated for the new session.
 
 </ResponseField>
-<ResponseField name="configOptions" type={<a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a>} >
+<ResponseField name="configOptions" type={<><span><a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
@@ -1146,7 +1146,7 @@ Implementations MUST NOT assign meaning to keys they do not recognize.
 See protocol docs: [Extensibility](https://agentclientprotocol.com/protocol/v2/draft/extensibility)
 
 </ResponseField>
-<ResponseField name="additionalDirectories" type={<a href="#absolutepath">AbsolutePath[]</a>} >
+<ResponseField name="additionalDirectories" type={<><span><a href="#absolutepath">AbsolutePath[]</a></span><span> | null</span></>} >
   Additional workspace roots to resolve options for. Each path MUST be absolute.
 
 Optional. Omitted and `null` are equivalent to an empty list.
@@ -1373,7 +1373,7 @@ session. It MAY differ from any previously used or reported list as long as
 the request `cwd` matches the session's `cwd`.
 
 </ResponseField>
-<ResponseField name="configOptions" type={<a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a>} >
+<ResponseField name="configOptions" type={<><span><a href="#initialsessionconfigoption">InitialSessionConfigOption[]</a></span><span> | null</span></>} >
   **UNSTABLE**
 
 This capability is not part of the spec yet, and may be removed or changed at any point.
