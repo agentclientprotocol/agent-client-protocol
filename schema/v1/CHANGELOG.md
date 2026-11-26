@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.36.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.35.0...schema-v1.36.0) - 2026-11-26
+
+### Added
+
+- *(schema)* stabilize speed config option category ([#2997](https://github.com/agentclientprotocol/agent-client-protocol/pull/2997))
+
 ## [1.35.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/schema-v1.34.1...schema-v1.35.0) - 2026-11-23
 
 ### Added
