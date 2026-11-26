@@ -849,7 +849,7 @@ The dedicated modes API is removed: the `modes` field on session responses, `ses
 ```
 
 - The option's identifier field is renamed from `id` to `configId`, matching the parameter name used by `session/set_config_option`.
-- The stable `category` values are `mode`, `model`, `model_config`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and **MUST** tolerate unknown categories.
+- The stable `category` values are `mode`, `model`, `model_config`, `speed`, and `thought_level`. Clients can use them for UX affordances (placement, shortcuts) and **MUST** tolerate unknown categories.
 - Agents **SHOULD** list the values of a `select` `thought_level` option from lowest to highest. v1 has no ordering rule for these values.
 - Clients change values with `session/set_config_option` (`sessionId`, `configId`, `type`, `value`). The required `type` discriminator is `"id"` with a string option ID or `"boolean"` with a boolean value. The response returns the full updated `configOptions` array, since one change can affect other options. Agent-initiated changes arrive as `config_option_update` session updates, which replace the v1 `current_mode_update`.
 

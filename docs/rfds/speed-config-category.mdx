@@ -52,8 +52,6 @@ A `speed` option can depend on other options, like any config option. For exampl
 
 `speed` is a more specific kind of `model_config`, in the same way that `thought_level` is. An option has one category, so an Agent that adopts `speed` changes its fast mode option from `model_config` to `speed`. Clients render both categories near the model selector, so the option stays in the same place. Clients that don't recognize `speed` already have to handle unknown categories.
 
-The `model_config` row in the category table currently lists "speed/quality trade-off" as an example. The draft pages drop that example. The stable pages change when `speed` is stabilized.
-
 ## Shiny future
 
 > How will things play out once this feature exists?
@@ -98,11 +96,11 @@ A speed selector:
 
 ### Schema
 
-`SessionConfigOptionCategory::Speed` remains behind `unstable_speed_config_category` during Preview. Without the feature, `"speed"` deserializes to `Other("speed")`. The [v1](/protocol/v1/draft/session-config-options#speed-options-unstable) and [v2](/protocol/v2/draft/session-config-options#speed-options-unstable) draft guides describe the category. Like other category values, `speed` needs no capability negotiation.
+The default schemas for both protocol versions include `speed`. Rust exposes it as `SessionConfigOptionCategory::Speed`. Like other category values, `speed` needs no capability negotiation. See the [v1 guide](/protocol/v1/session-config-options#speed-options) and the [v2 guide](/protocol/v2/session-config-options#speed-options).
 
 ### Implementations
 
-- The [Rust SDK 5.3.0](https://github.com/agentclientprotocol/rust-sdk/releases/tag/v5.3.0) and [TypeScript SDK 2.7.0](https://github.com/agentclientprotocol/typescript-sdk/releases/tag/v2.7.0) include the unstable category for both protocol versions.
+- The [Rust SDK 5.3.0](https://github.com/agentclientprotocol/rust-sdk/releases/tag/v5.3.0) and [TypeScript SDK 2.7.0](https://github.com/agentclientprotocol/typescript-sdk/releases/tag/v2.7.0) shipped the preview category for both protocol versions.
 - [`claude-agent-acp` 0.109.0](https://github.com/agentclientprotocol/claude-agent-acp/releases/tag/v0.109.0) tags `fast` with `speed`. [`codex-acp` 2.8.0](https://github.com/agentclientprotocol/codex-acp/releases/tag/v2.8.0) does the same for `fast-mode`.
 - [Zed](https://github.com/zed-industries/zed/pull/67190) and [Delta](https://delta.dev) use the category to find an Agent's fast mode toggle.
 
@@ -130,7 +128,7 @@ The rule is a **SHOULD**, and categories are for UX only. A Client still has to 
 
 ### Does this change `thought_level`?
 
-No. `thought_level` has the same shape (a few values on a scale) and no ordering rule. It is stable in v1, so a rule for it would be a separate, v2-only change.
+No. v1 leaves the order of `thought_level` values to the Agent. The [v2 guide](/protocol/v2/session-config-options#option-categories) has a separate ordering rule for `thought_level`.
 
 ### What about v1 Clients without boolean support?
 
@@ -148,3 +146,4 @@ Some Agents offer one control that changes the model, the reasoning effort, and 
 
 - 2026-11-13: Initial draft
 - 2026-11-20: Moved to Preview with implementations in the Claude and Codex adapters, Zed, and Delta
+- 2026-11-26: Moved to Completed and stabilized `speed` in the v1 and v2 schemas

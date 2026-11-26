@@ -1,0 +1,11 @@
+---
+title: The speed config option category is stable
+sidebarTitle: Speed config option category stabilized
+description: Agents can tag fast mode toggles and speed selectors with the speed session config option category.
+---
+
+**Published:** November 26, 2026
+
+Agents can now use `"category": "speed"` for an option that controls how fast the model responds. A Client can find that option across Agents, put it next to the model selector, or bind a shortcut to it. See the [Speed config option category RFD](/rfds/speed-config-category).
+
+For a `boolean` toggle, `true` selects the faster setting. Agents with several speeds can offer a `select` ordered from slowest to fastest. The category needs no capability negotiation. In v1, a boolean toggle still requires the Client's `session.configOptions.boolean` capability. See the [v1 guide](/protocol/v1/session-config-options#speed-options) and the [v2 guide](/protocol/v2/session-config-options#speed-options).
