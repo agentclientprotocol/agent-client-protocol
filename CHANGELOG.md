@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.23.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.22.0...v1.23.0) - 2026-11-26
+
+### Added
+
+- *(schema)* stabilize speed config option category ([#2997](https://github.com/agentclientprotocol/agent-client-protocol/pull/2997))
+
 ## [1.22.0](https://github.com/agentclientprotocol/agent-client-protocol/compare/v1.21.2...v1.22.0) - 2026-11-23
 
 ### Added
