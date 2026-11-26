@@ -3702,6 +3702,11 @@
           "const": "model_config"
         },
         {
+          "description": "Response speed selector, such as a fast mode toggle.",
+          "type": "string",
+          "const": "speed"
+        },
+        {
           "description": "Thought/reasoning level selector.",
           "type": "string",
           "const": "thought_level"

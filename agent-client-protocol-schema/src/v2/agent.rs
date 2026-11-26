@@ -3997,12 +3997,7 @@ pub enum SessionConfigOptionCategory {
     Model,
     /// Model-related configuration parameter.
     ModelConfig,
-    /// **UNSTABLE**
-    ///
-    /// This capability is not part of the spec yet, and may be removed or changed at any point.
-    ///
     /// Response speed selector, such as a fast mode toggle.
-    #[cfg(feature = "unstable_speed_config_category")]
     Speed,
     /// Thought/reasoning level selector.
     ThoughtLevel,
@@ -8764,7 +8759,6 @@ mod test_serialization {
             serde_json::to_value(&SessionConfigOptionCategory::ModelConfig).unwrap(),
             json!("model_config")
         );
-        #[cfg(feature = "unstable_speed_config_category")]
         assert_eq!(
             serde_json::to_value(&SessionConfigOptionCategory::Speed).unwrap(),
             json!("speed")
@@ -8787,7 +8781,6 @@ mod test_serialization {
             serde_json::from_str::<SessionConfigOptionCategory>("\"model_config\"").unwrap(),
             SessionConfigOptionCategory::ModelConfig
         );
-        #[cfg(feature = "unstable_speed_config_category")]
         assert_eq!(
             serde_json::from_str::<SessionConfigOptionCategory>("\"speed\"").unwrap(),
             SessionConfigOptionCategory::Speed
@@ -8811,16 +8804,6 @@ mod test_serialization {
         // Test round-trip of unknown category
         let json = serde_json::to_value(&unknown).unwrap();
         assert_eq!(json, json!("some_future_category"));
-    }
-
-    #[cfg(not(feature = "unstable_speed_config_category"))]
-    #[test]
-    fn test_session_config_option_speed_is_unknown_without_feature() {
-        let unknown: SessionConfigOptionCategory = serde_json::from_str("\"speed\"").unwrap();
-        assert_eq!(
-            unknown,
-            SessionConfigOptionCategory::Other("speed".to_string())
-        );
     }
 
     #[test]

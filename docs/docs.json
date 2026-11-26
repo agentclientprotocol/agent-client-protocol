@@ -240,8 +240,7 @@
                   "rfds/v2/session-replay-complete",
                   "rfds/v2/idempotency-keys"
                 ]
-              },
-              "rfds/speed-config-category"
+              }
             ]
           },
           {
@@ -271,7 +270,8 @@
               "rfds/session-notices",
               "rfds/client-system-prompt",
               "rfds/plan-operations",
-              "rfds/subagents"
+              "rfds/subagents",
+              "rfds/speed-config-category"
             ]
           }
         ]
@@ -297,6 +297,7 @@
           {
             "group": "Announcements",
             "pages": [
+              "announcements/speed-config-category-stabilized",
               "announcements/acp-v2-preview",
               "announcements/subagents-stabilized",
               "announcements/plan-operations-stabilized",
