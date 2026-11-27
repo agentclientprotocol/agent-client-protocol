@@ -213,7 +213,8 @@
               "rfds/session-options",
               "rfds/prompt-suggestions",
               "rfds/agent-skills",
-              "rfds/session-cursors"
+              "rfds/session-cursors",
+              "rfds/model-info"
             ]
           },
           {
