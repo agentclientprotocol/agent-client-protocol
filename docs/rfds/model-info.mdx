@@ -1,0 +1,219 @@
+---
+title: "Model details on model config option values"
+---
+
+Author(s): [alex09x](https://github.com/alex09x)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Let an Agent say a few facts about each model it offers, on the value it already sends in the `model` config option, so that a Client knows them before the user picks the model:
+
+- who published the model (`vendor`),
+- how much context the session would get with it (`contextWindow`),
+- what kinds of prompt content it can take (`inputModalities`),
+- which efforts it offers, with their names and descriptions, and which one it recommends (`thoughtLevels`, `recommendedThoughtLevel`).
+
+It also asks Agents to fill the `description` that model and effort values already have.
+
+Every new field is optional. An Agent sends only what it knows, and a Client never reads an absent field as zero or as "none". Selecting a model or an effort does not change.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+The model picker of an ACP session is a select option of category `model`, and the effort picker is a select option of category `thought_level`. Each value (`SessionConfigSelectOption`, the same in v1 and v2) has a `value`, a `name` and an optional `description`. A Client learns nothing else about a model before it uses it.
+
+### What three Agents send today
+
+We started three current Agents and read their `session/new` response:
+
+| Agent                              | Values in the `model` option                                   | `description` on models                                                    | `description` on efforts                                         | Publishers in one list                   |
+| ---------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------- |
+| claude-agent-acp 0.112.0           | 16 (aliases such as `default`, `opus`, `sonnet`, and full ids) | yes, e.g. `sonnet`: "Most efficient for simpler tasks"                     | no, names only                                                   | 1                                        |
+| codex-acp 2.12.1                   | 10                                                             | yes, e.g. `gpt-6.2-sol`: "Fast, go-to model for coding and everyday work." | yes, e.g. `high`: "Greater reasoning depth for complex problems" | 1                                        |
+| Antigravity CLI 1.5.17 (`agy acp`) | 11                                                             | no                                                                         | no, names only                                                   | 3: Gemini models, Claude models, gpt-oss |
+
+**Context window.** It reaches a Client only as `usage_update.size`, for the current model, once a session runs. In one session each, after a short prompt, claude-agent-acp reported `size: 1000000` and codex-acp `size: 828400`; the Antigravity CLI sends `size: 1048576` for its current model at session start. OpenCode sends it [after a prompt, when it knows the model's context size](https://github.com/anomalyco/opencode/blob/dev/services/site/src/docs/content/cli/acp.mdx). No Agent says it for the other values in the list.
+
+**Efforts.** The efforts a model offers depend on the model, but a session has one effort option, which holds the current model's efforts. An Agent replaces its values when the model changes. In OpenCode the effort option [is present only for models that have variants](https://github.com/anomalyco/opencode/blob/dev/services/site/src/docs/content/cli/acp.mdx). So a Client cannot know the efforts of a model it has not selected.
+
+codex-acp already works around this for JetBrains AIR clients: it puts each model's efforts and recommended effort on the model's value, under a vendor `_meta` key ([`reasoningEfforts`](https://github.com/agentclientprotocol/codex-acp/blob/main/docs/air-extensions.md#model-reasoning-efforts)), from the Codex app-server model list (`supportedReasoningEfforts`, `defaultReasoningEffort`). Other Clients do not get it.
+
+### Problems this causes
+
+- **A picker cannot show what matters for a choice.** It cannot show "1M context" next to a model, or dim image attachment for a model that takes no images, until the user has picked the model and started a session.
+- **A model and its effort cannot be chosen together.** A picker cannot show that one model offers `max` and another only `low` and `medium`. A Client that picks a model and an effort as one pair has to switch models to find out what the pair can be.
+- **Publishers cannot be compared across Agents.** An Agent can group its values under headings today, but there is no machine-readable publisher on a value. A Client cannot regroup a flat list, keep its own grouping, or tell whether two values from two Agents come from the same publisher, except by parsing names.
+- **Clients keep their own tables.** A Client that needs these facts keeps a table keyed by model ids, and the ids differ between Agents (`sonnet` in one, `anthropic/claude-sonnet-5-5` in another). A Client we build, which picks the model and effort of each run and asks a model of another publisher to review the result, keeps exactly such a hand-written table today.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+An optional `modelDetails` object on each value of a select option whose `category` is `model`. A v1 example (in v2 the option's `id` is `configId`):
+
+```json
+{
+  "id": "model",
+  "name": "Model",
+  "category": "model",
+  "type": "select",
+  "currentValue": "gpt-6.2-sol",
+  "options": [
+    {
+      "value": "gpt-6.2-sol",
+      "name": "6.2 Sol",
+      "description": "Fast, go-to model for coding and everyday work.",
+      "modelDetails": {
+        "vendor": "openai",
+        "contextWindow": 400000,
+        "inputModalities": ["image"],
+        "thoughtLevels": [
+          {
+            "value": "low",
+            "name": "Low",
+            "description": "Fast responses with lighter reasoning"
+          },
+          {
+            "value": "medium",
+            "name": "Medium",
+            "description": "Balances speed and reasoning depth for everyday tasks"
+          },
+          {
+            "value": "high",
+            "name": "High",
+            "description": "Greater reasoning depth for complex problems"
+          }
+        ],
+        "recommendedThoughtLevel": "medium"
+      }
+    }
+  ]
+}
+```
+
+(The model value and the names and descriptions of the model and its efforts are what codex-acp 2.12.1 sends; the other details are illustrative.)
+
+### Fields
+
+`ModelDetails`:
+
+| Field                     | Type                | Meaning                                                                                                                                           |
+| ------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vendor`                  | string              | The organization that published the model. See [Vendor values](#vendor-values).                                                                   |
+| `contextWindow`           | integer, at least 1 | Tokens of context the session would get if the user selected this value now: input and output together, the same quantity as `usage_update.size`. |
+| `inputModalities`         | string[]            | The kinds of prompt content, beyond text, that reach this model as such: `image`, `audio`.                                                        |
+| `thoughtLevels`           | `ThoughtLevel`[]    | The efforts this model offers, in the order the Agent shows them.                                                                                 |
+| `recommendedThoughtLevel` | string              | The `value` of the effort the Agent recommends for this model.                                                                                    |
+| `_meta`                   | object              | Extension metadata.                                                                                                                               |
+
+`ThoughtLevel`: `value` (required), `name` (required), `description` (optional), `_meta`, the same shape as a select value. The `value` is what the Client sets on the `thought_level` option once this model is selected.
+
+### Rules
+
+- **Optional.** Every field, `modelDetails` itself included, is optional. Omitted and `null` mean "not reported". An empty list is not valid; an Agent omits the field instead.
+- **Only what it knows.** An Agent reports a field only from a source about that model. It does not guess from a model name or from the provider it calls. For a model that is not in its catalog (a custom endpoint, a self-hosted model), it omits what it does not know, often everything.
+- **What the session would get.** `contextWindow` is the limit that would apply if the user selected this value now, with the session's account, plan and other options (for example a separate context-size option of category `model_config`). If that would give 200K of a model that can do 1M, the Agent sends 200000. When another option changes the limit, the Agent sends the updated values. `usage_update.size` stays the live figure for the current model.
+- **What reaches the model.** `inputModalities` lists the content kinds, named as ACP content blocks, that this model receives as such. It is bounded by the prompt capabilities the Agent advertises (v1 `agentCapabilities.promptCapabilities`, v2 `capabilities.session.prompt`). When present, the list is complete. If the Agent would turn an image into text before the model sees it, `image` is not in the list. A Client may then warn the user or turn off image attachment for that model. Text is always accepted and is not listed. A Client ignores values it does not know.
+- **Efforts.** `thoughtLevels` lists the efforts of this model, each with its name and description, so a Client can show them before the model is selected. When present, the list is complete. After the user selects the model, the Agent's `thought_level` option holds the same values. `recommendedThoughtLevel` is one of them; it is a recommendation, not a promise of what the Agent selects. If the current effort is not offered by the newly selected model, the Agent selects another effort as it does today, and the Client reads the result from the returned options before it sets an effort. Where the effort is part of the model value (such as `gpt-oss-120b-medium`), or the Agent has no `thought_level` option, the Agent omits both fields. If an Agent has more than one option of category `thought_level`, `thoughtLevels` refers to the one whose values change with the model.
+- **Aliases and routers.** For a value that stands for another model (`default`, `opus`), the Agent describes the model it resolves to now, and sends `config_option_update` when that changes. For a value that can resolve to different models from turn to turn (an `auto` router), the Agent reports a field only if it holds for every model the value can reach, and omits it otherwise.
+- **Malformed data.** A Client drops a malformed `modelDetails` and keeps the value, as it does for a malformed `description`. For example, `"modelDetails": {"contextWindow": "1M"}` gives a value with no details.
+
+### Descriptions of models and efforts
+
+The protocol already has a `description` on every select value. This RFD asks Agents to use it for the two options a user chooses a model by:
+
+- An Agent SHOULD send a `description` on each value of its `model` option: what the model is good for, in a short phrase.
+- An Agent SHOULD send a `description` on each value of its `thought_level` option, and on each `ThoughtLevel`: the trade-off of that effort.
+- Where the underlying tool shows such text to its own users, the Agent SHOULD pass the same text on, instead of a name only.
+
+codex-acp does all of this today. claude-agent-acp describes its models but sends effort names only, and the Antigravity CLI sends names only for both. A Client shows the name where a description is absent.
+
+### Vendor values
+
+`vendor` is an open set of lowercase identifiers. An Agent SHOULD use these values for these publishers: `anthropic`, `openai`, `google`, `meta`, `mistral`, `deepseek`, `alibaba`, `xai`, `moonshot`, `zhipu`. For another publisher it uses the publisher's short name, lowercase. A publisher that renames itself keeps its first identifier.
+
+`vendor` is the publisher of the model weights. A fine-tune or distillation published by another organization has that organization as its vendor. Open weights served by a third party keep their publisher: gpt-oss served by Google is `openai`. `vendor` says who made the model, not who serves it or which account pays for it.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+A model picker shows "6.2 Sol · OpenAI · 400K context" for every Agent that knows it, and the name and description alone for one that does not. It shows each model's efforts with their descriptions before the user switches to it, can group a flat list by publisher, and dims image attachment before the user sends an image to a model that would not see it.
+
+A Client that picks models itself reads these facts from the Agents instead of keeping its own table. It chooses a model and an effort as one pair, and it can ask a model of another publisher for a second opinion without guessing from names.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### Schema
+
+`SessionConfigSelectOption` gets one optional, nullable property, `modelDetails` of a new type `ModelDetails`, in both protocol versions, with a new type `ThoughtLevel` for its efforts. In Rust, `SessionConfigSelectOption::model_details: Option<ModelDetails>`; in TypeScript, `modelDetails?: ModelDetails | null`. Like `description`, it is marked so that the SDKs decode a malformed value as absent.
+
+The property is meaningful on the leaf values of an option whose `category` is `model`, also when the values are grouped. Agents do not send it on other options, and Clients ignore it there.
+
+No capability is needed. The property is additive, and a Client that does not know it ignores it.
+
+### Where it travels
+
+`modelDetails` travels with the config options:
+
+- **v1:** the responses of `session/new`, `session/load`, `session/resume` and, where supported, `session/fork`, the response of `session/set_config_option`, and `config_option_update`.
+- **v2:** the setup responses, the response of `session/set_config_option`, and `config_option_update`.
+
+Each of these sends the full option list, so a list that changes drops the details of values it no longer has. In the response of [`session/options`](/rfds/session-options), where supported, the details are a preview: they may change before the session starts, and the setup response replaces them. The alias rule's update applies only to a live session.
+
+### Where Agents get the data
+
+- **codex-acp:** `thoughtLevels` and `recommendedThoughtLevel` from `supportedReasoningEfforts` and `defaultReasoningEffort` of the Codex app-server model list, the data it already sends to AIR clients. `inputModalities` from the `inputModalities` of that list. `vendor: "openai"` only for models from the Codex catalog, not for custom-provider models. No context window per model in that list today.
+- **claude-agent-acp:** `vendor: "anthropic"`. We found no Claude Agent SDK call that gives a context window, modalities or efforts per model before a session, so the first version would send `vendor` only.
+- **Antigravity CLI:** `vendor` per model: its own list names Gemini, Claude and gpt-oss models.
+- **OpenCode:** `contextWindow` from its model catalog (its usage-limit code reads [`limit.context`](https://github.com/anomalyco/opencode/blob/dev/packages/tui/src/util/usage-limits.ts)), and efforts from each model's variants.
+
+### Plan
+
+1. Add `modelDetails`, `ModelDetails` and `ThoughtLevel` to the v1 and v2 schemas as unstable, with the Rust and TypeScript SDK types.
+2. Send a PR to codex-acp that sends `thoughtLevels`, `recommendedThoughtLevel`, `inputModalities` and `vendor` to every Client, next to its AIR key.
+3. Read the fields in the Client we build, which replaces its hand-written table with them.
+4. Stabilize each field on its own, once at least two Agents send it and one Client reads it. `contextWindow` stays unstable until an Agent sends it.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why on the config option value, and not a separate method?
+
+The model list already is the `model` option, and Agents keep it current. Details on its values cannot get out of step with it. The cost is size: the list is resent on every option change, and efforts add a few short entries per model. For the largest list we saw (16 values) that stays within a few kilobytes. A separate lookup per value (`model/details`) would save that, but it needs a new method, a cache in every Client and rules for when the cache is stale. If lists grow much larger, a lookup can be added later without changing these fields.
+
+### Why do efforts carry their names and descriptions, and not only values?
+
+Because the effort option of the session holds only the current model's efforts. A model that is not selected may offer an effort that is not in that option today, and a Client needs its name and description to show it.
+
+### Why no price, and no maximum output?
+
+No Agent we read can send either today. Prices also change, depend on region, plan and tier, and need a money shape that matches `Cost` of session usage. They belong in their own RFD, next to the quotas RFD ([#2316](https://github.com/agentclientprotocol/agent-client-protocol/pull/2316)) and session usage. A maximum output can be added when an Agent can send it.
+
+### Isn't `description` enough?
+
+`description` is for people. These fields are for code: a Client compares publishers, shows a context badge, turns attachments on and off, and offers the efforts of a model before switching to it. Parsing prose for that is fragile.
+
+### Why not `_meta`?
+
+That works today, and codex-acp does it for AIR clients. But every Client then has to learn every Agent's keys and units. A shared shape lets a Client read it once for all Agents.
+
+### What about Agents with one fixed model and no `model` option?
+
+They are out of scope here. If needed, the same `ModelDetails` can later describe the session's model elsewhere, for example in session info.
+
+### What alternative approaches did you consider, and why did you settle on this one?
+
+- **A Client-side public catalog**, such as models.dev. It covers context and modalities of well-known models, but a Client must map each Agent's values (aliases like `sonnet` included) to catalog ids. A catalog cannot say what this session would get, which efforts this Agent offers, or which publisher stands behind a value of an Agent that mixes publishers. A Client can still fall back to a catalog where details are absent.
+- **Keeping the union of all efforts in the `thought_level` option** and listing only values per model. It needs no names on the model, but it changes how today's Agents build their effort option, and it shows efforts the current model cannot use.
+- **A new config option category.** Config options are things a user sets; these are facts about the values of one option, so they belong on the values.
+
+## Revision history
+
+- Initial draft.
