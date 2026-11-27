@@ -1,0 +1,135 @@
+---
+title: "Permission config option category"
+---
+
+Author(s): [@Flitternie](https://github.com/Flitternie)
+
+## Elevator pitch
+
+> What are you proposing to change?
+
+Add a `permission` category to session configuration options. Agents tag the option that decides when they ask before acting (read-only, ask, accept edits, auto, full access) with `"category": "permission"`. Clients can then find that option for every Agent. They can put it in the same place, set a default for new sessions, and warn when a session runs with the least restrictive setting.
+
+## Status quo
+
+> How do things work today and what problems does this cause? Why would we change things?
+
+Every coding Agent lets the user choose how much it may do without asking, but over ACP that choice hides under `mode`, next to settings that do something else:
+
+| Agent       | Native setting                                                                    | Over ACP today                                                                                                                                                                                                                                                                                                                          |
+| ----------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code | Permission modes: Manual, Accept edits, Auto, Don't ask, Plan, Bypass permissions | [`claude-agent-acp`](https://github.com/agentclientprotocol/claude-agent-acp) sends them as one "Mode" option with `"category": "mode"`. Plan is one of the values.                                                                                                                                                                     |
+| Codex       | An approval policy and a sandbox mode                                             | [`codex-acp`](https://github.com/agentclientprotocol/codex-acp) sends presets (Read-only, Workspace access, Auto review, Full access) as "Mode", described as "Approval and sandboxing preset for the session", with `"category": "mode"`. Plan mode is a separate "Collaboration mode" option with `"category": "collaboration_mode"`. |
+| Antigravity | Modes Default, Accept edits, Auto, Plan                                           | `agy acp` sends the same four values as modes, mixing approval and planning.                                                                                                                                                                                                                                                            |
+| OpenCode    | Permission rules per tool (`edit`, `bash`, `webfetch`: allow / ask / deny)        | Not exposed. Its `mode` option selects its build and plan agents.                                                                                                                                                                                                                                                                       |
+
+So `mode` means an approval preset for one Agent, a mix of approval and planning for another, and an agent persona for a third. A Client can't tell which option controls approvals:
+
+- It can't show one permission control for every Agent, or a consistent indicator when a session may act without asking.
+- It can't apply the user's default ("ask before editing") to a new session without matching option ids or value names, which are Agent-defined.
+- Agents that separate the two settings have nowhere to put the second. `codex-acp` invented `collaboration_mode`, a name outside both the reserved categories and the `_` prefix for custom ones.
+
+This came up in the [sandbox capability and policy RFD](https://github.com/agentclientprotocol/agent-client-protocol/pull/1063). There, [anna239](https://github.com/anna239) suggested expressing such a setting as "a special config option … similar to how it's done for model and thinking level", and asked how it would differ from an agent mode. The table is the answer: today the approval setting is sometimes the mode, sometimes part of it, and sometimes absent, so a Client cannot rely on `mode` to find it. This RFD proposes the lighter half of that discussion: only the category, with no sandbox policy or new methods.
+
+## What we propose to do about it
+
+> What are you proposing to improve the situation?
+
+Add a `permission` variant to `SessionConfigOptionCategory`.
+
+- Agents use `permission` for an option that decides when the Agent asks the user before acting: which actions need approval, and how far it may reach without asking. It is the setting behind the Agent's `session/request_permission` calls.
+- Agents **SHOULD** list the values of a `select` `permission` option from most restrictive to least restrictive.
+- Agents **SHOULD NOT** use `permission` for an option that mainly changes how the Agent works, such as a plan mode or a persona, even when it also changes approvals. Those use `mode`.
+- When an Agent's native setting combines both (a plan value among permission values), the Agent chooses the category by the option's main purpose. It **MAY** split it into a `permission` option and a `mode` option.
+- Clients **SHOULD** show `permission` options with the session's controls, near the prompt input. Clients **MAY** mark the least restrictive values, for example with a warning colour.
+
+### Relationship to `mode`
+
+`permission` is a more specific kind of `mode`, as `speed` is of `model_config`. An option has one category, so an Agent whose "Mode" option is an approval preset changes it from `mode` to `permission`. Clients that don't recognize `permission` already handle unknown categories.
+
+## Shiny future
+
+> How will things play out once this feature exists?
+
+Users get the same permission control in every Client, for every Agent. A Client can open every new session with the user's chosen level of autonomy, and show at a glance which sessions may act without asking. Agents separate "how it works" (`mode`) from "what it may do without asking" (`permission`) without inventing categories.
+
+## Implementation details and plan
+
+> Tell me more about your implementation. What is your detailed implementation plan?
+
+### JSON format
+
+```json
+{
+  "id": "permission",
+  "name": "Permissions",
+  "description": "When the agent asks before acting",
+  "category": "permission",
+  "type": "select",
+  "currentValue": "workspace-write",
+  "options": [
+    {
+      "value": "read-only",
+      "name": "Read-only",
+      "description": "Ask before editing files or using the network"
+    },
+    {
+      "value": "workspace-write",
+      "name": "Workspace access",
+      "description": "Edit workspace files; ask before anything else"
+    },
+    {
+      "value": "auto",
+      "name": "Auto review",
+      "description": "Only ask for actions detected as unsafe"
+    },
+    {
+      "value": "full-access",
+      "name": "Full access",
+      "description": "Never ask"
+    }
+  ]
+}
+```
+
+### Schema
+
+Add `permission` to the draft schemas for both protocol versions, and `SessionConfigOptionCategory::Permission` in Rust. Like other category values, it needs no capability negotiation.
+
+### Adoption
+
+1. `codex-acp` tags its approval and sandbox preset with `permission`, and its collaboration mode with `mode`.
+2. `claude-agent-acp` tags its permission modes with `permission`. Plan can stay a value of that option, or move to a separate `mode` option.
+3. Agents with native permission rules, such as OpenCode, can expose a `permission` option where they expose nothing today.
+
+## Frequently asked questions
+
+> What questions have arisen over the course of authoring this document or during subsequent discussions?
+
+### Why not keep using `mode`?
+
+`mode` already covers several different things, as the table shows. A Client that wants a permission control has to special-case each Agent.
+
+### Can't adapters handle this?
+
+Not without the spec. Category names without a `_` prefix are reserved, so an adapter can only use `mode`, where Clients can't tell it from a persona or plan mode, or a custom `_` category that no other Client knows. `codex-acp`'s `collaboration_mode` shows the pressure to do something else.
+
+### Why `permission`?
+
+It matches the protocol's `session/request_permission`, and what Claude Code calls the setting ("permission modes"). `approval` would also fit Codex's naming; it is open for discussion.
+
+### Why not `sandbox`?
+
+A sandbox is how an Agent enforces limits, and only some Agents have one. The user's choice is when to be asked; the category names that, whatever enforces it.
+
+### Why order values from most to least restrictive?
+
+One order gives users the same list for every Agent, and tells a Client which end to warn about. As with `speed`, it is a **SHOULD**, and Clients still work with any order.
+
+### What about a plan mode?
+
+Plan changes what the Agent does, not only what it may do, so on its own it belongs to `mode`. Agents that keep it among permission values can keep the option tagged `permission` if approvals are its main purpose.
+
+## Revision history
+
+- Initial draft
